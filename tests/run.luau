@@ -23,7 +23,7 @@ require("./variant_spec")
 require("./deck_spec")
 require("./fusion_spec")
 require("./dpr_spec")
--- require("./income_spec")
+require("./income_spec")
 -- require("./savedata_spec")
 -- require("./requests_spec")
 
