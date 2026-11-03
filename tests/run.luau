@@ -5,9 +5,11 @@ local harness = require("./harness")
 
 local listed = {
 	tier_spec = true,
+	cards_spec = true,
 }
 
 require("./tier_spec")
+require("./cards_spec")
 
 local missing = 0
 for _, name in fs.readDir("tests") do
