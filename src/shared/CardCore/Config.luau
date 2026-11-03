@@ -17,6 +17,11 @@ local Config = {
 	VariantOdds = { Chromatic = 1 / 50, Redacted = 1 / 500, ZeroDay = 1 / 5000 },
 
 	StarterDeck = { "phase_dash", "overclock", "recon_pulse" },
+
+	-- Anything above these in a save is corrupt.
+	MaxStackCount = 1000000,
+	MaxCredits = 2 ^ 53,
+	MaxGunLevel = 100,
 }
 
 return Config

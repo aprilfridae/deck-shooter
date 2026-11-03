@@ -79,6 +79,32 @@ describe("SaveData.load", function()
 		expect(loaded.catalysts).toBe(0)
 	end)
 
+	it("drops absurdly large stack counts", function()
+		local loaded = SaveData.load(withStack("arc_mine:Prototype:ZeroDay", 1.7e308))
+		expect(loaded.stacks["arc_mine:Prototype:ZeroDay"]).toBeNil()
+		local also = SaveData.load(withStack("arc_mine:Prototype:ZeroDay", 1e7))
+		expect(also.stacks["arc_mine:Prototype:ZeroDay"]).toBeNil()
+	end)
+
+	it("keeps large but believable values", function()
+		local raw = withStack("arc_mine:Field:Base", 1000000)
+		raw.credits = 2 ^ 53
+		local loaded = SaveData.load(raw)
+		expect(loaded.stacks["arc_mine:Field:Base"]).toBe(1000000)
+		expect(loaded.credits).toBe(2 ^ 53)
+	end)
+
+	it("resets absurdly large credits, catalysts and gun levels", function()
+		local raw = SaveData.new()
+		raw.credits = 1e300
+		raw.catalysts = 1e300
+		raw.gunLevels = { 1e300, 2 }
+		local loaded = SaveData.load(raw)
+		expect(loaded.credits).toBe(0)
+		expect(loaded.catalysts).toBe(0)
+		expect(loaded.gunLevels).toEqual({ 0, 2 })
+	end)
+
 	it("resets bad gun levels", function()
 		local raw = SaveData.new()
 		raw.gunLevels = { -1, "x" }

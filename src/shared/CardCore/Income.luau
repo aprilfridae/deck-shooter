@@ -46,11 +46,14 @@ function Income.ratePerSecond(data: any, boost: number?): number
 end
 
 function Income.accrue(data: any, dt: number, boost: number?)
-	if not (dt > 0) then -- also catches NaN
+	if not (dt > 0) or dt == math.huge then -- also catches NaN
 		return
 	end
 	local seconds = math.min(dt, Config.MaxTickSeconds)
 	local earned = data.creditRemainder + Income.ratePerSecond(data, boost) * seconds
+	if earned ~= earned or earned == math.huge then
+		return -- never let a bad rate poison Credits
+	end
 	local whole = math.floor(earned)
 	data.credits += whole
 	data.creditRemainder = earned - whole

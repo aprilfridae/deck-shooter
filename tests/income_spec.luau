@@ -102,6 +102,22 @@ describe("Income.accrue", function()
 		expect(earned(data)).toBe(0)
 	end)
 
+	it("pays nothing for an infinite dt", function()
+		local data = SaveData.new()
+		Income.accrue(data, math.huge)
+		expect(earned(data)).toBe(0)
+	end)
+
+	it("never writes a non-finite amount into Credits", function()
+		local data = SaveData.new()
+		data.credits = 40
+		data.stacks["arc_mine:Prototype:ZeroDay"] = 1.7e308
+		Income.accrue(data, 1)
+		Income.accrue(data, 1)
+		expect(data.credits).toBe(40)
+		expect(data.creditRemainder).toBe(0)
+	end)
+
 	it("applies boost", function()
 		local data = SaveData.new()
 		Income.accrue(data, 1, 2)

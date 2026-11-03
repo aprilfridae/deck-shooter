@@ -40,8 +40,8 @@ function SaveData.new(): SaveData
 	return data
 end
 
-local function isCount(n: any): boolean
-	return type(n) == "number" and n >= 0 and n < math.huge and n == math.floor(n)
+local function isCount(n: any, max: number): boolean
+	return type(n) == "number" and n >= 0 and n <= max and n == math.floor(n)
 end
 
 local function cleanStacks(raw: any): { [string]: number }
@@ -50,7 +50,7 @@ local function cleanStacks(raw: any): { [string]: number }
 		return stacks
 	end
 	for key, n in raw do
-		if type(key) == "string" and isCount(n) and n > 0 then
+		if type(key) == "string" and isCount(n, Config.MaxStackCount) and n > 0 then
 			local cardId, tier, variant = Inventory.parse(key)
 			-- Unknown card ids stay, so a removed card can come back.
 			if cardId and Tier.isValid(tier) and Variant.isValid(variant) then
@@ -127,18 +127,18 @@ function SaveData.load(raw: any): (SaveData?, string?)
 
 	local data = SaveData.new()
 	data.stacks = cleanStacks(raw.stacks)
-	if isCount(raw.credits) then
+	if isCount(raw.credits, Config.MaxCredits) then
 		data.credits = raw.credits
 	end
 	if type(raw.creditRemainder) == "number" and raw.creditRemainder >= 0 and raw.creditRemainder < 1 then
 		data.creditRemainder = raw.creditRemainder
 	end
-	if isCount(raw.catalysts) then
+	if isCount(raw.catalysts, Config.MaxStackCount) then
 		data.catalysts = raw.catalysts
 	end
 	if type(raw.gunLevels) == "table" then
 		for i = 1, #data.gunLevels do
-			if isCount(raw.gunLevels[i]) then
+			if isCount(raw.gunLevels[i], Config.MaxGunLevel) then
 				data.gunLevels[i] = raw.gunLevels[i]
 			end
 		end
