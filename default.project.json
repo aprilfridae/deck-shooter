@@ -1,0 +1,17 @@
+{
+  "name": "DeckShooter",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "CardCore": { "$path": "src/shared/CardCore" }
+    },
+    "ServerScriptService": {
+      "CardCoreServer": { "$path": "src/server" }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "CardCoreClient": { "$path": "src/client" }
+      }
+    }
+  }
+}
