@@ -25,7 +25,7 @@ require("./fusion_spec")
 require("./dpr_spec")
 require("./income_spec")
 require("./savedata_spec")
--- require("./requests_spec")
+require("./requests_spec")
 
 local missing = 0
 for _, name in fs.readDir("tests") do
