@@ -102,6 +102,8 @@ Classes are free, change guns only, and work with any cards. Each class has 1 pr
 
 **Decided by River:** the M4 has almost no recoil and does 2x headshot damage. The AK-47 has high recoil and kills on any headshot. The sniper kills on any headshot. This replaces the parent spec's general headshot multiplier.
 
+**For now:** every class uses the Pistol as its sidearm. The machine pistol, revolver and auto-pistol stay in the gun data, unused, until River brings them back.
+
 Guns add 0 to Deck Power Rating, because gun upgrades wait until after launch.
 
 ## Hit checking

@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local GunConfig = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("GunConfig"))
+local GunAudio = require(script.Parent.GunAudio)
 local GunView = require(script.Parent.GunView)
 local Input = require(script.Parent.Input)
 local Recoil = require(script.Parent.Recoil)
@@ -60,6 +61,7 @@ local function fire(camera: Camera, aiming: boolean, now: number)
 		firedAt = workspace:GetServerTimeNow(),
 		aiming = aiming,
 	})
+	GunAudio.playShot(player:GetAttribute("GunId"))
 	Recoil.kick()
 	GunView.kick()
 end
