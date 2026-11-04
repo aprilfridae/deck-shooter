@@ -146,7 +146,7 @@ That change removes the last ceiling exemption, so every stat is back inside the
 | --- | --- | --- | --- | --- |
 | Phase Dash | Nearly invisible to other players after dashing | 1.2s | 1.35s | 1.5s |
 | Recon Pulse | Teammates see the marks, for this share of the reveal time | 80% | 90% | 100% |
-| Aegis Shell | Pushes nearby enemies when it breaks | 80% strength | 90% | 100% |
+| Aegis Shell | Pushes nearby enemies when it ends, whether it ran out or broke | 80% strength | 90% | 100% |
 
 ## Arenas
 

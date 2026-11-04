@@ -37,7 +37,7 @@ local Cards = {
 			set = "set_01",
 			cooldown = 25,
 			stats = { shieldHp = { 52, 58, 64 }, duration = { 3, 3.5, 3.75 } },
-			perk = "break_knockback",
+			perk = "end_knockback",
 		},
 	} :: { [string]: any },
 	ids = {} :: { string },

@@ -46,6 +46,10 @@ describe("Cards", function()
 		expect(Cards.stat("aegis_shell", "Prototype", "duration")).toBe(3.75)
 	end)
 
+	it("pushes enemies whenever an Aegis Shell ends", function()
+		expect(Cards.byId.aegis_shell.perk).toBe("end_knockback")
+	end)
+
 	it("has no ceiling exemptions left", function()
 		for _, id in Cards.ids do
 			expect(Cards.byId[id].ceilingExempt).toBeNil()

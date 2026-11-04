@@ -173,6 +173,7 @@ local function pushEnemies(owner: Player, center: Vector3, tier: string)
 				MoveGrace.give(other.player, Config.MoveGraceSeconds)
 				pushRemote:FireClient(other.player, velocity)
 			else
+				other.humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
 				other.root.AssemblyLinearVelocity = velocity
 			end
 		end
@@ -203,16 +204,19 @@ handlers.aegis_shell = function(player, target, slot)
 	local bubble = shieldBubble(target)
 	local shieldHp = Cards.stat(slot.cardId, slot.tier, "shieldHp")
 	target.model:SetAttribute("ShieldHp", shieldHp)
-	local stop = timed(player, Cards.stat(slot.cardId, slot.tier, "duration"), function()
+	-- Running out and being broken end it the same way. Dying does not push anyone.
+	local stop = timed(player, Cards.stat(slot.cardId, slot.tier, "duration"), function(ended)
 		bubble:Destroy()
 		target.shield = nil
 		target.model:SetAttribute("ShieldHp", nil)
+		if ended then
+			pushEnemies(player, target.root.Position, slot.tier)
+		end
 	end)
 	target.shield = {
 		hp = shieldHp,
 		onBreak = function()
-			stop(false)
-			pushEnemies(player, target.root.Position, slot.tier)
+			stop(true)
 		end,
 	}
 	return true
