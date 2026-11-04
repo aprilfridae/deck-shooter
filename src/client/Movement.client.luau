@@ -30,6 +30,8 @@ local MIN_AIR_FOR_DIP = 0.15
 local EFFECT_EASE = 7
 local POSE_SEND_GAP = 0.12 -- stays under the server's 10 per second limit
 local DASH_RADIUS = 1.5 -- keeps the body this far from a wall
+local DASH_BACK_START = 1.6
+local DASH_GROUND_REACH = 6
 
 local player = Players.LocalPlayer
 local humanoid: Humanoid? = nil
@@ -161,11 +163,23 @@ local function startDash(distance: number)
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = { humanoid.Parent :: Model }
-	local hit = workspace:Spherecast(root.Position, DASH_RADIUS, forward * distance, params)
+	params.RespectCanCollide = true
+
+	-- On the ground the path follows the slope, so a ramp does not stop the dash.
+	local ground = workspace:Raycast(root.Position, Vector3.new(0, -DASH_GROUND_REACH, 0), params)
+	if ground then
+		forward = (forward - ground.Normal * forward:Dot(ground.Normal)).Unit
+	end
+
+	-- A sphere cast misses anything it starts inside, so it starts behind the player
+	-- to catch a wall they are already touching.
+	local start = root.Position - forward * DASH_BACK_START
+	local hit = workspace:Spherecast(start, DASH_RADIUS, forward * (distance + DASH_BACK_START), params)
+	local travel = if hit then math.max(hit.Distance - DASH_BACK_START, 0) else distance
 	local from = root.Position
 	dash = {
 		from = from,
-		to = from + forward * (if hit then hit.Distance else distance),
+		to = from + forward * travel,
 		forward = forward,
 		startedAt = os.clock(),
 	}
@@ -304,8 +318,14 @@ end
 dashRemote.OnClientEvent:Connect(startDash)
 pushRemote.OnClientEvent:Connect(function(velocity: Vector3)
 	if humanoid and root and not climb and not dash then
+		local flat = Vector3.new(velocity.X, 0, velocity.Z)
+		MoveState.launch(state, flat.Magnitude, os.clock())
 		humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
 		root.AssemblyLinearVelocity = velocity
+		slideDirection = flat.Unit
+		airFromSlide = true
+		jumped = false
+		airStartedAt = os.clock()
 	end
 end)
 

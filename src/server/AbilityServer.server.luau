@@ -343,12 +343,24 @@ local function onTestDeck(player: Player, action: any)
 	resetCards(player)
 end
 
+-- Effects and mines end at death, not at the next spawn, so they can't outlive the player.
+local function onCharacter(player: Player, character: Model)
+	resetCards(player)
+	local humanoid = character:WaitForChild("Humanoid", 10) :: Humanoid?
+	if humanoid then
+		humanoid.Died:Once(function()
+			endEffects(player)
+			removeMine(player)
+		end)
+	end
+end
+
 local function onPlayer(player: Player)
-	player.CharacterAdded:Connect(function()
-		resetCards(player)
+	player.CharacterAdded:Connect(function(character)
+		onCharacter(player, character)
 	end)
 	if player.Character then
-		task.spawn(resetCards, player)
+		task.spawn(onCharacter, player, player.Character)
 	end
 end
 

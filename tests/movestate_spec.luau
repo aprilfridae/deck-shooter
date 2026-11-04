@@ -313,6 +313,14 @@ describe("MoveState", function()
 		expect(s.mode).toBe("Slide")
 	end)
 
+	it("launches at a given speed and holds it in the air", function()
+		local s = MoveState.new()
+		MoveState.step(s, on(sprinting), 0)
+		MoveState.launch(s, 60, 1)
+		expect(s.mode).toBe("Air")
+		expect(MoveState.speed(s, 1.3)).toBe(60)
+	end)
+
 	-- Review Focus 5
 	it("does not slide from crouch held before sprinting", function()
 		local s = MoveState.new()

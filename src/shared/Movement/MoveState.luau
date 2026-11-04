@@ -77,6 +77,14 @@ function MoveState.parry(state: State, now: number)
 	state.chained = false
 end
 
+-- Thrown into the air at this speed, for shoves from abilities.
+function MoveState.launch(state: State, speed: number, now: number)
+	state.carrySpeed = speed
+	state.mode = "Air"
+	state.airSince = now
+	state.chained = false
+end
+
 function MoveState.startClimb(state: State)
 	state.mode = "Climb"
 	state.chained = false
