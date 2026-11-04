@@ -7,11 +7,12 @@ return {
 	SlideDuration = 0.9,
 	SlideCooldown = 0,
 	CarryFade = 0.25,
+	SlideJumpBoost = 8, -- added to current speed when a jump cancels a slide
 	JumpHeight = 6,
 	LandFade = 0.6, -- how long landing keeps jump speed before it fades
 
-	-- Cheat checks. SpeedLimit is the slide start speed plus a margin.
-	SpeedLimit = 47,
+	-- Cheat checks. SpeedLimit is the fastest slide jump plus a margin.
+	SpeedLimit = 55,
 	SpeedWindow = 0.5,
 	LagStuds = 4,
 	MaxLagSeconds = 2, -- most stall time one position jump can be credited

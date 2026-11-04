@@ -77,7 +77,8 @@ function MoveState.step(state: State, input: Input, now: number)
 
 	if not input.grounded or (previous == "Slide" and input.jump) then
 		if previous ~= "Air" then
-			state.carrySpeed = current
+			local boost = if previous == "Slide" and input.jump then MoveConfig.SlideJumpBoost else 0
+			state.carrySpeed = current + boost
 			state.mode = "Air"
 		end
 		return

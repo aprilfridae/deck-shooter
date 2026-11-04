@@ -22,8 +22,9 @@ describe("SpeedLimit", function()
 		expect(run(SpeedLimit.new(0, 0, 0, 0), MoveConfig.SlideStartSpeed, 3)).toBeNil()
 	end)
 
-	it("keeps the limit above the slide start speed", function()
-		expect(MoveConfig.SpeedLimit >= MoveConfig.SlideStartSpeed + 5).toBe(true)
+	it("keeps the limit above the fastest slide jump", function()
+		local fastest = MoveConfig.SlideStartSpeed + MoveConfig.SlideJumpBoost
+		expect(MoveConfig.SpeedLimit >= fastest + 5).toBe(true)
 	end)
 
 	it("fails a speed hack and keeps the last valid position", function()
