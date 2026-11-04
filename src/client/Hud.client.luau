@@ -1,9 +1,12 @@
--- A basic HUD: crosshair, health, ammo, class and hit marker. Art comes later.
+-- A basic HUD: crosshair, health, ammo, class, cooldowns and hit marker. Art comes later.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local GunConfig = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("GunConfig"))
+local CardCore = ReplicatedStorage:WaitForChild("CardCore")
+local Cards = require(CardCore:WaitForChild("Cards"))
+local Config = require(CardCore:WaitForChild("Config"))
 
 local remotes = ReplicatedStorage:WaitForChild("GunRemotes")
 local hitRemote = remotes:WaitForChild("HitConfirm") :: RemoteEvent
@@ -13,6 +16,13 @@ local DARK = Color3.fromRGB(25, 25, 30)
 local HEADSHOT = Color3.fromRGB(255, 80, 70)
 local MARKER_SECONDS = 0.15
 local MAX_HEALTH = 100
+local SLOTS = 3
+local FIRST_KEY = 3
+local BAR_WIDTH = 260
+local BAR_GAP = 2
+local BAR_HEIGHT = 6
+local BAR_SPACING = 34
+local BARS_ABOVE = -84
 
 local player = Players.LocalPlayer
 
@@ -69,6 +79,47 @@ local classText = label(UDim2.new(0, 24, 1, -48), Vector2.new(0, 1), 16)
 
 local markerHideAt = 0
 
+local function cooldownBar(index: number)
+	local offset = BARS_ABOVE - (SLOTS - index) * BAR_SPACING
+	local name = label(UDim2.new(0, 24, 1, offset - BAR_HEIGHT - 2), Vector2.new(0, 1), 14)
+	local segments = {}
+	local count = Config.CooldownSegments
+	local width = (BAR_WIDTH - BAR_GAP * (count - 1)) / count
+	for i = 1, count do
+		local segment = Instance.new("Frame")
+		segment.AnchorPoint = Vector2.new(0, 1)
+		segment.Position = UDim2.new(0, 24 + (i - 1) * (width + BAR_GAP), 1, offset)
+		segment.Size = UDim2.fromOffset(width, BAR_HEIGHT)
+		segment.BorderSizePixel = 0
+		segment.Parent = gui
+		segments[i] = segment
+	end
+	return { name = name, segments = segments }
+end
+
+local bars = {}
+for index = 1, SLOTS do
+	bars[index] = cooldownBar(index)
+end
+
+local function showBar(index: number, now: number)
+	local bar = bars[index]
+	local card = Cards.byId[player:GetAttribute(`Ability{index}Id`) or ""]
+	bar.name.Visible = card ~= nil
+	local filled = 0
+	if card then
+		local tier = player:GetAttribute(`Ability{index}Tier`)
+		bar.name.Text = `{index + FIRST_KEY - 1}  {card.name} ({tier})`
+		local left = player:GetAttribute(`Ability{index}ReadyAt`) - now
+		local share = 1 - math.clamp(left / player:GetAttribute(`Ability{index}Cooldown`), 0, 1)
+		filled = math.floor(share * #bar.segments)
+	end
+	for i, segment in bar.segments do
+		segment.Visible = card ~= nil
+		segment.BackgroundColor3 = if i <= filled then WHITE else DARK
+	end
+end
+
 hitRemote.OnClientEvent:Connect(function(info)
 	marker.TextColor3 = if info.headshot then HEADSHOT else WHITE
 	marker.Text = if info.killed then "X" else "+"
@@ -86,6 +137,10 @@ RunService.RenderStepped:Connect(function()
 		local ammo = player:GetAttribute("Ammo")
 		ammoText.Text = if player:GetAttribute("Reloading") then `Reloading {ammo}` else `{ammo} / {gun.mag}`
 		gunText.Text = gun.name
+	end
+	local now = workspace:GetServerTimeNow()
+	for index = 1, SLOTS do
+		showBar(index, now)
 	end
 	if marker.Visible and os.clock() >= markerHideAt then
 		marker.Visible = false

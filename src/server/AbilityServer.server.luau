@@ -1,0 +1,198 @@
+-- Server side of ability cards: owns cooldowns and runs each card's effect.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local CardCore = ReplicatedStorage:WaitForChild("CardCore")
+local Ability = require(CardCore:WaitForChild("Ability"))
+local Cards = require(CardCore:WaitForChild("Cards"))
+local Deck = require(CardCore:WaitForChild("Deck"))
+local Tier = require(CardCore:WaitForChild("Tier"))
+local Weapon = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Weapon"))
+local GunTargets = require(script.Parent.GunTargets)
+local loadouts = require(script.Parent.Loadouts)
+local PlayerCards = require(script.Parent.PlayerCards)
+
+-- Test room only: two decks cover all 5 cards. Phase 4 removes these.
+local TEST_DECKS = {
+	{ "phase_dash", "overclock", "recon_pulse" },
+	{ "aegis_shell", "arc_mine", "phase_dash" },
+}
+
+local remotes = Instance.new("Folder")
+remotes.Name = "AbilityRemotes"
+local function remote(name: string): RemoteEvent
+	local event = Instance.new("RemoteEvent")
+	event.Name = name
+	event.Parent = remotes
+	return event
+end
+local useRemote = remote("Use")
+local testDeckRemote = remote("TestDeck")
+local revealRemote = remote("Reveal")
+remotes.Parent = ReplicatedStorage
+
+local slotsOf: { [Player]: { Ability.Slot } } = {}
+local effectsOf: { [Player]: { [(boolean) -> ()]: boolean } } = {}
+local testChoices: { [Player]: { deck: number, tier: number } } = {}
+
+local handlers: { [string]: (Player, GunTargets.Target, Ability.Slot) -> boolean? } = {}
+
+-- With no teams, everyone else is an enemy.
+local function isEnemy(owner: Player, target: GunTargets.Target): boolean
+	if target.player == owner then
+		return false
+	end
+	return not (owner.Team and target.player and target.player.Team == owner.Team)
+end
+
+-- Runs finish(true) after the time, or finish(false) if the player's cards reset first.
+local function timed(player: Player, seconds: number, finish: (boolean) -> ()): (boolean) -> ()
+	local function stop(expired: boolean)
+		local running = effectsOf[player]
+		if running and running[stop] then
+			running[stop] = nil
+			finish(expired)
+		end
+	end
+	effectsOf[player][stop] = true
+	task.delay(seconds, stop, true)
+	return stop
+end
+
+local function publish(player: Player)
+	local slots = slotsOf[player] or {}
+	for index = 1, Deck.SIZE do
+		local slot = slots[index]
+		player:SetAttribute(`Ability{index}Id`, slot and slot.cardId)
+		player:SetAttribute(`Ability{index}Tier`, slot and slot.tier)
+		player:SetAttribute(`Ability{index}ReadyAt`, slot and math.max(slot.readyAt, 0))
+		player:SetAttribute(`Ability{index}Cooldown`, slot and Cards.cooldown(slot.cardId, slot.tier))
+	end
+end
+
+local function endEffects(player: Player)
+	local running = effectsOf[player]
+	if running then
+		for stop in running do
+			stop(false)
+		end
+	end
+end
+
+local function deckFor(player: Player): { any }?
+	local choice = testChoices[player]
+	if not choice then
+		local data = PlayerCards.get(player)
+		return data and data.deck
+	end
+	local deck = {}
+	for i, cardId in TEST_DECKS[choice.deck] do
+		deck[i] = { cardId = cardId, tier = Tier.order[choice.tier] }
+	end
+	return deck
+end
+
+-- Every card comes back ready. Runs on each spawn until Phase 4 adds rounds.
+local function resetCards(player: Player)
+	endEffects(player)
+	effectsOf[player] = {}
+	slotsOf[player] = Ability.new(deckFor(player))
+	publish(player)
+end
+
+handlers.overclock = function(player, _, slot)
+	local loadout = loadouts[player]
+	if not loadout then
+		return false
+	end
+	local bonus = Cards.stat(slot.cardId, slot.tier, "fireRateBonus")
+	loadout.fireRateBonus = bonus
+	player:SetAttribute("FireRateBonus", bonus)
+	timed(player, Cards.stat(slot.cardId, slot.tier, "duration"), function(expired)
+		loadout.fireRateBonus = 0
+		player:SetAttribute("FireRateBonus", nil)
+		-- A respawn replaces the loadout, so only a current one gets the perk.
+		if expired and loadouts[player] == loadout then
+			Weapon.addAmmo(loadout, Ability.refillShots(Weapon.active(loadout).gun.mag, slot.tier))
+		end
+	end)
+	return true
+end
+
+handlers.recon_pulse = function(player, target, slot)
+	local radius = Cards.stat(slot.cardId, slot.tier, "radius")
+	local found = {}
+	for _, other in GunTargets.all() do
+		local inRange = (other.root.Position - target.root.Position).Magnitude <= radius
+		if inRange and isEnemy(player, other) and GunTargets.isAlive(other) then
+			table.insert(found, other.model)
+		end
+	end
+	revealRemote:FireClient(player, found, Cards.stat(slot.cardId, slot.tier, "revealTime"))
+	if player.Team then
+		for _, teammate in player.Team:GetPlayers() do
+			if teammate ~= player then
+				revealRemote:FireClient(teammate, found, Ability.teamRevealSeconds(slot.tier))
+			end
+		end
+	end
+	return true
+end
+
+local function onUse(player: Player, raw: any)
+	local index = Ability.parseSlot(raw)
+	local target = GunTargets.forPlayer(player)
+	local slots = slotsOf[player]
+	if not index or not target or not slots or not GunTargets.isAlive(target) then
+		return
+	end
+	local now = workspace:GetServerTimeNow()
+	local slot = Ability.ready(slots, index, now)
+	local handler = slot and handlers[slot.cardId]
+	if slot and handler and handler(player, target, slot) ~= false then
+		Ability.spend(slot, now)
+		publish(player)
+	end
+end
+
+local function onTestDeck(player: Player, action: any)
+	if not RunService:IsStudio() then
+		return
+	end
+	local choice = testChoices[player] or { deck = 1, tier = 1 }
+	if action == "deck" then
+		choice.deck = choice.deck % #TEST_DECKS + 1
+	elseif action == "tier" then
+		choice.tier = choice.tier % #Tier.order + 1
+	else
+		return
+	end
+	testChoices[player] = choice
+	resetCards(player)
+end
+
+local function onPlayer(player: Player)
+	player.CharacterAdded:Connect(function()
+		resetCards(player)
+	end)
+	if player.Character then
+		task.spawn(resetCards, player)
+	end
+end
+
+useRemote.OnServerEvent:Connect(onUse)
+testDeckRemote.OnServerEvent:Connect(onTestDeck)
+-- The save can finish loading after the first spawn.
+PlayerCards.profileLoaded:Connect(resetCards)
+
+Players.PlayerAdded:Connect(onPlayer)
+for _, player in Players:GetPlayers() do
+	task.spawn(onPlayer, player)
+end
+Players.PlayerRemoving:Connect(function(player)
+	endEffects(player)
+	effectsOf[player] = nil
+	slotsOf[player] = nil
+	testChoices[player] = nil
+end)
