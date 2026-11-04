@@ -4,7 +4,8 @@
     "$className": "DataModel",
     "ReplicatedStorage": {
       "CardCore": { "$path": "src/shared/CardCore" },
-      "Movement": { "$path": "src/shared/Movement" }
+      "Movement": { "$path": "src/shared/Movement" },
+      "Guns": { "$path": "src/shared/Guns" }
     },
     "Workspace": {
       "$properties": { "Gravity": 150 }
@@ -14,6 +15,9 @@
     },
     "StarterPlayer": {
       "$properties": { "CameraMode": "LockFirstPerson" },
+      "StarterCharacterScripts": {
+        "Health": { "$path": "src/character/Health.server.luau" }
+      },
       "StarterPlayerScripts": {
         "CardCoreClient": { "$path": "src/client" }
       }

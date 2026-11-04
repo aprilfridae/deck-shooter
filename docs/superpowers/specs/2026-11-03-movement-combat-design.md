@@ -1,6 +1,6 @@
 # Movement and Combat Design
 
-This sub-project delivers a fully playable match on PC: first-person movement, 5 guns across 4 classes, the 5 ability cards, and two round-based modes in blockout arenas. All numbers are starting values to tune by feel unless marked as decided.
+This sub-project delivers a fully playable match on PC: first-person movement, 5 guns across 4 classes, the 4 ability cards, and two round-based modes in blockout arenas. All numbers are starting values to tune by feel unless marked as decided.
 
 **Parent spec:** https://claude.ai/artifact/P6cgJtFzpNRJJcx53PMoMH. Where the two differ, this document wins for combat.
 
@@ -122,7 +122,6 @@ Each match reads deck and stats from Card core. Cards work in both modes and res
 | Overclock | 25s | Fire-rate bonus for the equipped gun |
 | Recon Pulse | 20s | Reveals enemies in a radius through walls |
 | Aegis Shell | 25s | Shield that takes body damage first |
-| Arc Mine | 30s | Placed mine with a 6-stud trigger, armed after 1 second, one active per player |
 
 - An instant-kill headshot breaks an active Aegis Shell and leaves the player alive. Other damage beyond the shield's remaining HP is lost.
 - The HUD shows cooldowns as segmented bars.
@@ -132,10 +131,22 @@ Each match reads deck and stats from Card core. Cards work in both modes and res
 | Card | Change |
 | --- | --- |
 | Aegis Shell | Prototype duration 3.75s (was 4s) |
-| Arc Mine | Prototype slow 1.875s (was 2s) |
-| Arc Mine | Prototype perk is now "hidden from enemies until triggered" (`hidden_until_triggered`), replacing 2 charges |
 
-Those changes remove both ceiling exemptions, so every stat is back inside the 20–25% limit.
+That change removes the last ceiling exemption, so every stat is back inside the 20–25% limit.
+
+**Decisions added before Phase 3**
+
+- Keys 3, 4 and 5 use deck slots 1, 2 and 3.
+- A cooldown starts when the ability is used, even while its effect runs.
+- Arc Mine is removed from the game, so there are 4 ability cards. Old saves keep their copies in case it returns, but it leaves the deck and the deck refills.
+- Overclock has no perk; it only raises fire rate. Every other card has its perk on every tier. Field perks are 80% as strong as Prototype and Black-Site perks are 90%.
+- Until Phase 4, the target dummy stands in as an enemy, and a temporary test key swaps deck and tier.
+
+| Card | Perk | Field | Black-Site | Prototype |
+| --- | --- | --- | --- | --- |
+| Phase Dash | Nearly invisible to other players after dashing | 1.2s | 1.35s | 1.5s |
+| Recon Pulse | Teammates see the marks, for this share of the reveal time | 80% | 90% | 100% |
+| Aegis Shell | Pushes nearby enemies when it ends, whether it ran out or broke | 80% strength | 90% | 100% |
 
 ## Arenas
 
@@ -167,7 +178,7 @@ Each phase gets its own plan and ends in something testable.
 
 1. **Movement:** controller, camera and cheat checks in a test room.
 2. **Guns:** classes, shooting, hit checking, health and ammo.
-3. **Abilities:** the 5 cards, HUD cooldown bars and the Card core data changes.
+3. **Abilities:** the 4 cards, HUD cooldown bars and the Card core data changes.
 4. **Matches:** round flow, both modes, blockout arenas and a basic score display.
 
 ## Risks
