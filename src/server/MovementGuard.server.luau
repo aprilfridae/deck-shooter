@@ -8,6 +8,8 @@ local SpeedLimit = require(ReplicatedStorage:WaitForChild("Movement"):WaitForChi
 local SAMPLE_EVERY_SECONDS = 0.1
 local SPAWN_GRACE_SECONDS = 1 -- the root part may not be at the spawn yet
 local PULLBACK_GRACE_SECONDS = 0.25 -- old client positions may still arrive
+local MAX_POSES_PER_SECOND = 10
+local POSES = { Normal = true, Crouch = true, Slide = true }
 
 type Guard = {
 	character: Model,
@@ -19,6 +21,34 @@ type Guard = {
 }
 
 local guards: { [Player]: Guard } = {}
+local poseWindows: { [Player]: { startedAt: number, count: number } } = {}
+
+local remotes = Instance.new("Folder")
+remotes.Name = "MovementRemotes"
+local poseRemote = Instance.new("RemoteEvent")
+poseRemote.Name = "Pose"
+poseRemote.Parent = remotes
+remotes.Parent = ReplicatedStorage
+
+local function allowPose(player: Player): boolean
+	local now = os.clock()
+	local window = poseWindows[player]
+	if not window or now - window.startedAt >= 1 then
+		poseWindows[player] = { startedAt = now, count = 1 }
+		return true
+	end
+	window.count += 1
+	return window.count <= MAX_POSES_PER_SECOND
+end
+
+poseRemote.OnServerEvent:Connect(function(player, pose)
+	if type(pose) ~= "string" or not POSES[pose] or not allowPose(player) then
+		return
+	end
+	if player.Character then
+		player.Character:SetAttribute("MovePose", pose)
+	end
+end)
 
 local function onCharacter(player: Player, character: Model)
 	local root = character:WaitForChild("HumanoidRootPart", 10) :: BasePart?
@@ -87,6 +117,7 @@ for _, player in Players:GetPlayers() do
 end
 Players.PlayerRemoving:Connect(function(player)
 	guards[player] = nil
+	poseWindows[player] = nil
 end)
 
 local waited = 0

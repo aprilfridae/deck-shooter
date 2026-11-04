@@ -6,6 +6,7 @@ local RunService = game:GetService("RunService")
 local Input = require(script.Parent.Input)
 local Movement = ReplicatedStorage:WaitForChild("Movement")
 local MoveState = require(Movement:WaitForChild("MoveState"))
+local poseRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("Pose") :: RemoteEvent
 
 local FIELD_OF_VIEW = 80
 local SLIDE_CAMERA_DROP = Vector3.new(0, -2, 0)
@@ -16,6 +17,14 @@ local humanoid: Humanoid? = nil
 local root: BasePart? = nil
 local state = MoveState.new()
 local slideDirection = Vector3.zero
+local sentPose = "Normal"
+
+local function poseFor(mode: string): string
+	if mode == "Slide" or mode == "Crouch" then
+		return mode
+	end
+	return "Normal"
+end
 
 local function onCharacter(character: Model)
 	humanoid = character:WaitForChild("Humanoid") :: Humanoid
@@ -23,6 +32,7 @@ local function onCharacter(character: Model)
 	humanoid.AutoRotate = false
 	state = MoveState.new()
 	slideDirection = Vector3.zero
+	sentPose = "Normal"
 	workspace.CurrentCamera.FieldOfView = FIELD_OF_VIEW
 end
 
@@ -44,6 +54,12 @@ local function onFrame(dt: number)
 	}, now)
 
 	humanoid.WalkSpeed = MoveState.speed(state, now)
+
+	local pose = poseFor(state.mode)
+	if pose ~= sentPose then
+		sentPose = pose
+		poseRemote:FireServer(pose)
+	end
 
 	local sliding = state.mode == "Slide"
 	if sliding then
