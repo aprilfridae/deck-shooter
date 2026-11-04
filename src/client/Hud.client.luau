@@ -142,8 +142,7 @@ RunService.RenderStepped:Connect(function()
 	end
 	local now = workspace:GetServerTimeNow()
 	local shield = character and character:GetAttribute("ShieldHp")
-	local slowed = character and now < (character:GetAttribute("SlowUntil") or 0)
-	statusText.Text = (if shield then `Shield {math.ceil(shield)}  ` else "") .. (if slowed then "Slowed" else "")
+	statusText.Text = if shield then `Shield {math.ceil(shield)}` else ""
 	for index = 1, SLOTS do
 		showBar(index, now)
 	end

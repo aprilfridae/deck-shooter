@@ -7,7 +7,7 @@ local MoveState = require("../src/shared/Movement/MoveState")
 
 local describe, it, expect = harness.describe, harness.it, harness.expect
 
-local deck = { { cardId = "phase_dash", tier = "Field" }, { cardId = "arc_mine", tier = "Prototype" } }
+local deck = { { cardId = "phase_dash", tier = "Field" }, { cardId = "aegis_shell", tier = "Prototype" } }
 
 describe("Ability", function()
 	it("accepts only whole slot numbers from 1 to 3", function()
@@ -53,15 +53,6 @@ describe("Ability", function()
 		expect(Ability.teamRevealSeconds("Field")).toBeCloseTo(1.6)
 		expect(Ability.teamRevealSeconds("Prototype")).toBeCloseTo(2.5)
 		expect(Ability.pushSpeed("Field")).toBeCloseTo(48)
-		expect(Ability.mineVisibility("Field")).toBeCloseTo(0.2)
-		expect(Ability.mineVisibility("BlackSite")).toBeCloseTo(0.1)
-		expect(Ability.mineVisibility("Prototype")).toBeCloseTo(0)
-	end)
-
-	it("arms a mine after 1 second and triggers it within 6 studs", function()
-		expect(Ability.mineTriggered(10, 10.9, 1)).toBe(false)
-		expect(Ability.mineTriggered(10, 11, 6)).toBe(true)
-		expect(Ability.mineTriggered(10, 11, 6.1)).toBe(false)
 	end)
 
 	-- The server sees a client's position late, so the guard must wait past that too.
@@ -81,10 +72,5 @@ describe("Ability", function()
 			slowest = math.max(slowest, t)
 		end
 		expect(Config.DashGraceSeconds >= Config.DashSeconds + slowest + SERVER_VIEW_DELAY).toBe(true)
-	end)
-
-	it("slows only until the slow ends", function()
-		expect(Ability.slowFactor(0.25, 10, 9)).toBeCloseTo(0.75)
-		expect(Ability.slowFactor(0.25, 10, 10)).toBe(1)
 	end)
 end)

@@ -14,23 +14,14 @@ local loadouts = require(script.Parent.Loadouts)
 local MoveGrace = require(script.Parent.MoveGrace)
 local PlayerCards = require(script.Parent.PlayerCards)
 
-local MINE_REACH = 10 -- how far down a floor can be from the player
-local MINE_SIZE = Vector3.new(0.4, 3, 3)
-local MINE_COLOR = Color3.fromRGB(255, 200, 60)
 local SHIELD_SIZE = 8
 local SHIELD_COLOR = Color3.fromRGB(90, 170, 255)
 
--- Test room only: two decks cover all 5 cards. Phase 4 removes these.
+-- Test room only: two decks cover all 4 cards. Phase 4 removes these.
 local TEST_DECKS = {
 	{ "phase_dash", "overclock", "recon_pulse" },
-	{ "aegis_shell", "arc_mine", "phase_dash" },
+	{ "aegis_shell", "phase_dash", "overclock" },
 }
-
-local hitRemote = ReplicatedStorage:WaitForChild("GunRemotes"):WaitForChild("HitConfirm") :: RemoteEvent
-
-local minesFolder = Instance.new("Folder")
-minesFolder.Name = "Mines"
-minesFolder.Parent = workspace
 
 local remotes = Instance.new("Folder")
 remotes.Name = "AbilityRemotes"
@@ -50,7 +41,6 @@ remotes.Parent = ReplicatedStorage
 local slotsOf: { [Player]: { Ability.Slot } } = {}
 local effectsOf: { [Player]: { [(boolean) -> ()]: boolean } } = {}
 local testChoices: { [Player]: { deck: number, tier: number } } = {}
-local minesOf: { [Player]: { part: BasePart, placedAt: number, slot: Ability.Slot } } = {}
 
 local handlers: { [string]: (Player, GunTargets.Target, Ability.Slot) -> boolean? } = {}
 
@@ -109,18 +99,9 @@ local function deckFor(player: Player): { any }?
 	return deck
 end
 
-local function removeMine(player: Player)
-	local mine = minesOf[player]
-	if mine then
-		mine.part:Destroy()
-		minesOf[player] = nil
-	end
-end
-
 -- Every card comes back ready. Runs on each spawn until Phase 4 adds rounds.
 local function resetCards(player: Player)
 	endEffects(player)
-	removeMine(player)
 	effectsOf[player] = {}
 	slotsOf[player] = Ability.new(deckFor(player))
 	publish(player)
@@ -237,76 +218,6 @@ handlers.aegis_shell = function(player, target, slot)
 	return true
 end
 
-local function floorBelow(target: GunTargets.Target): RaycastResult?
-	local exclude = {}
-	for model in GunTargets.all() do
-		table.insert(exclude, model)
-	end
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = exclude
-	return workspace:Raycast(target.root.Position, Vector3.new(0, -MINE_REACH, 0), params)
-end
-
-handlers.arc_mine = function(player, target, slot)
-	local floor = floorBelow(target)
-	if not floor then
-		return false
-	end
-	removeMine(player)
-	local part = Instance.new("Part")
-	part.Name = "ArcMine"
-	part.Shape = Enum.PartType.Cylinder
-	part.Size = MINE_SIZE
-	part.Color = MINE_COLOR
-	part.Anchored = true
-	part.CanCollide = false
-	part.CanQuery = false
-	part.CanTouch = false
-	part.CFrame = CFrame.new(floor.Position + Vector3.yAxis * MINE_SIZE.X / 2) * CFrame.Angles(0, 0, math.rad(90))
-	part:SetAttribute("OwnerId", player.UserId)
-	part:SetAttribute("Team", player.Team and player.Team.Name)
-	part:SetAttribute("Visibility", Ability.mineVisibility(slot.tier))
-	part.Parent = minesFolder
-	minesOf[player] = { part = part, placedAt = workspace:GetServerTimeNow(), slot = slot }
-	return true
-end
-
-local function explode(player: Player, position: Vector3, slot: Ability.Slot, now: number)
-	local damage = Cards.stat(slot.cardId, slot.tier, "damage")
-	local slowPct = Cards.stat(slot.cardId, slot.tier, "slowPct")
-	local slowSeconds = Cards.stat(slot.cardId, slot.tier, "slowSeconds")
-	for _, other in GunTargets.all() do
-		local inRange = (other.root.Position - position).Magnitude <= Config.MineTriggerStuds
-		if inRange and isEnemy(player, other) and GunTargets.isAlive(other) then
-			other.model:SetAttribute("SlowPct", slowPct)
-			other.model:SetAttribute("SlowUntil", now + slowSeconds)
-			local killed = GunTargets.damage(other, damage)
-			hitRemote:FireClient(player, { headshot = false, killed = killed })
-		end
-	end
-	local blast = Instance.new("Explosion")
-	blast.Position = position
-	blast.BlastPressure = 0
-	blast.DestroyJointRadiusPercent = 0
-	blast.Parent = workspace
-end
-
-local function checkMines()
-	local now = workspace:GetServerTimeNow()
-	for player, mine in minesOf do
-		local position = mine.part.Position
-		for _, other in GunTargets.all() do
-			local distance = (other.root.Position - position).Magnitude
-			if isEnemy(player, other) and GunTargets.isAlive(other) and Ability.mineTriggered(mine.placedAt, now, distance) then
-				removeMine(player)
-				explode(player, position, mine.slot, now)
-				break
-			end
-		end
-	end
-end
-
 local function onUse(player: Player, raw: any)
 	local index = Ability.parseSlot(raw)
 	local target = GunTargets.forPlayer(player)
@@ -338,14 +249,13 @@ local function onTestDeck(player: Player, action: any)
 	resetCards(player)
 end
 
--- Effects and mines end at death, not at the next spawn, so they can't outlive the player.
+-- Effects end at death, not at the next spawn, so they can't outlive the player.
 local function onCharacter(player: Player, character: Model)
 	resetCards(player)
 	local humanoid = character:WaitForChild("Humanoid", 10) :: Humanoid?
 	if humanoid then
 		humanoid.Died:Once(function()
 			endEffects(player)
-			removeMine(player)
 		end)
 	end
 end
@@ -361,7 +271,6 @@ end
 
 useRemote.OnServerEvent:Connect(onUse)
 testDeckRemote.OnServerEvent:Connect(onTestDeck)
-RunService.Heartbeat:Connect(checkMines)
 -- The save can finish loading after the first spawn.
 PlayerCards.profileLoaded:Connect(resetCards)
 
@@ -371,7 +280,6 @@ for _, player in Players:GetPlayers() do
 end
 Players.PlayerRemoving:Connect(function(player)
 	endEffects(player)
-	removeMine(player)
 	effectsOf[player] = nil
 	slotsOf[player] = nil
 	testChoices[player] = nil

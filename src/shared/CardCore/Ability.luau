@@ -44,16 +44,4 @@ function Ability.pushSpeed(tier: string): number
 	return Config.PushSpeed * Cards.perkScale(tier)
 end
 
-function Ability.mineVisibility(tier: string): number
-	return 1 - Cards.perkScale(tier)
-end
-
-function Ability.mineTriggered(placedAt: number, now: number, distance: number): boolean
-	return now - placedAt >= Config.MineArmSeconds and distance <= Config.MineTriggerStuds
-end
-
-function Ability.slowFactor(pct: number, untilTime: number, now: number): number
-	return if now < untilTime then 1 - pct else 1
-end
-
 return Ability
