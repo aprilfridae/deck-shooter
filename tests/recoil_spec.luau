@@ -179,4 +179,63 @@ describe("Gun patterns", function()
 		local m4 = Recoil.sample(GunConfig.guns.M4.pattern, 30)
 		expect(ak > m4).toBe(true)
 	end)
+
+	local function peaks(pattern: { { number } }): (number, number)
+		local up, side = 0, 0
+		for _, point in pattern do
+			up = math.max(up, point[2])
+			side = math.max(side, math.abs(point[3]))
+		end
+		return up, side
+	end
+
+	it("keeps every gun below its old recoil on both axes", function()
+		local old = {
+			M4 = { 7.8, 2 },
+			AK47 = { 11.4, 3.2 },
+			SMG = { 5.2, 1.6 },
+			Sniper = { 9, 0.5 },
+			Shotgun = { 12, 0.6 },
+			Pistol = { 6, 0.6 },
+			MachinePistol = { 5.4, 1.6 },
+			Revolver = { 10, 0.8 },
+			AutoPistol = { 4.8, 1 },
+		}
+		for id, gun in GunConfig.guns do
+			local up, side = peaks(gun.pattern)
+			expect(up < old[id][1]).toBe(true)
+			expect(side < old[id][2]).toBe(true)
+		end
+	end)
+
+	local AUTOMATICS = { "M4", "AK47", "SMG", "MachinePistol" }
+
+	it("climbs nearly straight for the first third of a magazine", function()
+		for _, id in AUTOMATICS do
+			local gun = GunConfig.guns[id]
+			local peakUp, peakSide = peaks(gun.pattern)
+			local up, side = Recoil.sample(gun.pattern, math.floor(gun.mag / 3))
+			expect(up >= peakUp * 0.7).toBe(true)
+			expect(math.abs(side) <= peakSide * 0.25).toBe(true)
+		end
+	end)
+
+	it("sweeps side to side in long runs, not quick zigzags", function()
+		for _, id in AUTOMATICS do
+			local gun = GunConfig.guns[id]
+			local direction, runStart, turns = 0, 0, 0
+			local _, before = Recoil.sample(gun.pattern, 0)
+			for shot = 1, gun.mag do
+				local _, side = Recoil.sample(gun.pattern, shot)
+				local now = if side > before then 1 elseif side < before then -1 else direction
+				if direction ~= 0 and now ~= direction then
+					expect(shot - runStart >= 5).toBe(true)
+					runStart = shot
+					turns += 1
+				end
+				direction, before = now, side
+			end
+			expect(turns <= 2).toBe(true)
+		end
+	end)
 end)
