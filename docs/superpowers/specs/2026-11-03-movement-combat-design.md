@@ -41,12 +41,13 @@ The code takes mode and team size as settings, so the other 4 combinations can o
 
 The mode uses original arena names and layouts.
 
-- **Arenas:** 7 in a line. Arena 4 is neutral, and each side's end arena is its home arena.
+- **Arenas:** 7 in a line. Matches start in arena 4, and each side's end arena is its home arena.
 - **Tower:** each arena has one tower. A living player within 6 studs presses E to capture it instantly. Towers can be retaken any number of times.
-- **Starting owner (assumption):** the tower in arena 4 starts unowned. In any other arena, it starts owned by the team defending that side.
+- **Attackers and defenders:** every round has one attacking team and one defending team. Defenders own the tower when the round starts.
+- **Who attacks:** the first round's roles are random. After that, the team that won the last round attacks. The tiebreaker arena's roles are random.
 - **Round length:** 40 seconds, or 60 seconds in a home arena.
-- **Winning a round:** the team that owns the tower when time expires wins. If nobody owns it, the Elimination tiebreak applies: more players alive, then more total health, then a replay.
-- **Elimination:** wiping the other team without owning the tower starts a countdown of up to 14 seconds to capture it. Failing to capture in time loses the round for the team that got the wipe. The enemy team stays dead, and the tower's owner when the countdown ends wins.
+- **Winning a round:** the team that owns the tower when time expires wins. Attackers must capture it and keep it; defenders win by holding it.
+- **Elimination:** the round ends at once if the team that owns the tower wipes the other team. Otherwise, the wiping team has up to 14 seconds to capture the tower. If they fail, they lose the round.
 - **Progress:** a round win moves the next round one arena toward the loser's home arena.
 - **Match win:** capturing the tower in the enemy's home arena wins the match immediately. A clean sweep takes 4 straight round wins.
 - **Limits:** 15 rounds at most. At 7-7, one deciding round is played in a dedicated tiebreaker arena, and it decides the match. If the limit is reached any other way, the team with more round wins takes the match.
