@@ -49,7 +49,7 @@ end
 
 function MoveState.speed(state: State, now: number): number
 	if state.mode == "Slide" then
-		local alpha = math.min((now - state.slideStart) / MoveConfig.SlideDuration, 1)
+		local alpha = math.min((now - state.slideStart) / MoveConfig.SlideFadeTime, 1)
 		return lerp(MoveConfig.SlideStartSpeed, MoveConfig.SprintSpeed, alpha)
 	elseif state.mode == "Air" then
 		return state.carrySpeed
@@ -111,14 +111,10 @@ function MoveState.step(state: State, input: Input, now: number)
 	end
 
 	if previous == "Slide" then
-		local slideEnd = state.slideStart + MoveConfig.SlideDuration
-		if now >= slideEnd then
-			state.nextSlide = slideEnd + MoveConfig.SlideCooldown
-		elseif pressed or input.jump or not input.grounded then
-			state.nextSlide = now + MoveConfig.SlideCooldown
-		else
+		if input.crouch and input.grounded and not input.jump then
 			return
 		end
+		state.nextSlide = now + MoveConfig.SlideCooldown
 	end
 
 	if not input.grounded or (previous == "Slide" and input.jump) then

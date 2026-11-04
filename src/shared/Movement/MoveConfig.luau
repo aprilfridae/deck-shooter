@@ -4,7 +4,7 @@ return {
 	CrouchSpeed = 8,
 	SprintSpeed = 24,
 	SlideStartSpeed = 42,
-	SlideDuration = 0.9,
+	SlideFadeTime = 0.9, -- slows to sprint speed over this long; lasts while crouch is held
 	SlideCooldown = 0,
 	CarryFade = 0.25,
 	SlideJumpBoost = 8, -- added to current speed when a jump cancels a slide
