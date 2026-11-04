@@ -1,35 +1,42 @@
 -- Camera kick from firing. Each shot lifts the aim, and it eases back after firing stops.
+-- The camera keeps whatever it is given, so only the change each frame is applied to it.
 local MAX_PITCH = math.rad(12)
 local SIDE_DRIFT = 0.3 -- share of the kick that can go left or right
 local SETTLE_DELAY = 0.12
 local KICK_EASE = 30
 local RETURN_EASE = 6
 
-local target = Vector2.zero -- x is yaw, y is pitch, in radians
-local current = Vector2.zero
+local targetPitch, targetYaw = 0, 0
+local currentPitch, currentYaw = 0, 0
 local sinceKick = math.huge
 
 local Recoil = {}
 
 function Recoil.kick(degrees: number)
-	local pitch = math.min(target.Y + math.rad(degrees), MAX_PITCH)
-	local yaw = target.X + math.rad(degrees) * SIDE_DRIFT * (2 * math.random() - 1)
-	target = Vector2.new(yaw, pitch)
+	targetPitch = math.min(targetPitch + math.rad(degrees), MAX_PITCH)
+	targetYaw += math.rad(degrees) * SIDE_DRIFT * (2 * math.random() - 1)
 	sinceKick = 0
 end
 
-function Recoil.update(dt: number, camera: Camera)
+-- Returns how far to turn the camera this frame, in radians.
+function Recoil.advance(dt: number): (number, number)
 	sinceKick += dt
 	if sinceKick > SETTLE_DELAY then
-		target *= math.exp(-dt * RETURN_EASE)
+		local settle = math.exp(-dt * RETURN_EASE)
+		targetPitch *= settle
+		targetYaw *= settle
 	end
-	current = current:Lerp(target, 1 - math.exp(-dt * KICK_EASE))
-	camera.CFrame *= CFrame.Angles(current.Y, current.X, 0)
+	local blend = 1 - math.exp(-dt * KICK_EASE)
+	local pitchStep = (targetPitch - currentPitch) * blend
+	local yawStep = (targetYaw - currentYaw) * blend
+	currentPitch += pitchStep
+	currentYaw += yawStep
+	return pitchStep, yawStep
 end
 
 function Recoil.reset()
-	target = Vector2.zero
-	current = Vector2.zero
+	targetPitch, targetYaw = 0, 0
+	currentPitch, currentYaw = 0, 0
 end
 
 return Recoil

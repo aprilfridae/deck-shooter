@@ -138,3 +138,18 @@ describe("ShotRequest", function()
 		expect(ShotRequest.originAllowed({ x = 0, y = 6.1, z = 0 }, rewound)).toBe(false)
 	end)
 end)
+
+describe("Lag compensation times", function()
+	it("rewinds targets past the firing time by ping and view delay", function()
+		expect(ShotRequest.viewTime(100, 0.05, 100.05)).toBeCloseTo(100 - 0.05 - ShotRequest.VIEW_DELAY)
+	end)
+
+	it("never rewinds targets further than the limit", function()
+		expect(ShotRequest.viewTime(100, 5, 100)).toBeCloseTo(99.8)
+	end)
+
+	it("looks for the shooter one ping after firing, up to now", function()
+		expect(ShotRequest.shooterTime(100, 0.05, 101)).toBeCloseTo(100.05)
+		expect(ShotRequest.shooterTime(100, 5, 100.1)).toBeCloseTo(100.1)
+	end)
+end)

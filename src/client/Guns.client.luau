@@ -12,15 +12,33 @@ local remotes = ReplicatedStorage:WaitForChild("GunRemotes")
 local fireRemote = remotes:WaitForChild("Fire") :: RemoteEvent
 local reloadRemote = remotes:WaitForChild("Reload") :: RemoteEvent
 local swapRemote = remotes:WaitForChild("Swap") :: RemoteEvent
-local ammoRemote = remotes:WaitForChild("AmmoChanged") :: RemoteEvent
 local loadoutRemote = remotes:WaitForChild("SetLoadout") :: RemoteEvent
+
+local AMMO_RESYNC_SECONDS = 0.3
 
 local player = Players.LocalPlayer
 local gun: any = nil
 local ammo = 0
+local serverAmmo = 0
 local reloading = false
 local lastFire = -math.huge
 local previous = { fire = false, reload = false, primary = false, sidearm = false, nextClass = false, nextRifle = false }
+
+-- The local count runs ahead while firing. A refused shot is corrected once firing stops.
+local function syncGun(now: number)
+	local gunId = player:GetAttribute("GunId")
+	if not gunId then
+		return
+	end
+	gun = GunConfig.guns[gunId]
+	reloading = player:GetAttribute("Reloading") == true
+	GunView.setSlot(player:GetAttribute("GunSlot"))
+	local latest = player:GetAttribute("Ammo")
+	if latest ~= serverAmmo or now - lastFire > AMMO_RESYNC_SECONDS then
+		ammo = latest
+		serverAmmo = latest
+	end
+end
 
 local function isAlive(): boolean
 	local character = player.Character
@@ -75,7 +93,8 @@ end
 
 local function onFrame(dt: number)
 	local camera = workspace.CurrentCamera
-	Recoil.update(dt, camera)
+	local pitch, yaw = Recoil.advance(dt)
+	camera.CFrame *= CFrame.Angles(pitch, yaw, 0)
 
 	if not isAlive() then
 		GunView.hide()
@@ -85,6 +104,7 @@ local function onFrame(dt: number)
 
 	local keys = Input.readGun()
 	local now = os.clock()
+	syncGun(now)
 	local climbing = player:GetAttribute("Climbing") == true
 	local aiming = keys.aim and gun ~= nil and not climbing and not reloading
 	player:SetAttribute("AimFov", if aiming then gun.aimFov else nil)
@@ -121,13 +141,6 @@ local function onFrame(dt: number)
 	previous.nextRifle = keys.nextRifle
 	GunView.update(dt, camera, aiming, reloading)
 end
-
-ammoRemote.OnClientEvent:Connect(function(info)
-	gun = GunConfig.guns[info.gunId]
-	ammo = info.ammo
-	reloading = info.reloading
-	GunView.setSlot(info.slot)
-end)
 
 player.CharacterAdded:Connect(function()
 	Recoil.reset()

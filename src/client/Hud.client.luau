@@ -6,7 +6,6 @@ local RunService = game:GetService("RunService")
 local GunConfig = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("GunConfig"))
 
 local remotes = ReplicatedStorage:WaitForChild("GunRemotes")
-local ammoRemote = remotes:WaitForChild("AmmoChanged") :: RemoteEvent
 local hitRemote = remotes:WaitForChild("HitConfirm") :: RemoteEvent
 
 local WHITE = Color3.fromRGB(255, 255, 255)
@@ -70,11 +69,6 @@ local classText = label(UDim2.new(0, 24, 1, -48), Vector2.new(0, 1), 16)
 
 local markerHideAt = 0
 
-ammoRemote.OnClientEvent:Connect(function(info)
-	ammoText.Text = if info.reloading then `Reloading {info.ammo}` else `{info.ammo} / {info.mag}`
-	gunText.Text = GunConfig.guns[info.gunId].name
-end)
-
 hitRemote.OnClientEvent:Connect(function(info)
 	marker.TextColor3 = if info.headshot then HEADSHOT else WHITE
 	marker.Text = if info.killed then "X" else "+"
@@ -87,6 +81,12 @@ RunService.RenderStepped:Connect(function()
 	local health = character and character:GetAttribute("Health") or 0
 	healthFill.Size = UDim2.fromScale(math.clamp(health / MAX_HEALTH, 0, 1), 1)
 	classText.Text = player:GetAttribute("Class") or ""
+	local gun = GunConfig.guns[player:GetAttribute("GunId")]
+	if gun then
+		local ammo = player:GetAttribute("Ammo")
+		ammoText.Text = if player:GetAttribute("Reloading") then `Reloading {ammo}` else `{ammo} / {gun.mag}`
+		gunText.Text = gun.name
+	end
 	if marker.Visible and os.clock() >= markerHideAt then
 		marker.Visible = false
 	end

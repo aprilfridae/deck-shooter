@@ -22,6 +22,16 @@ local function newSlot(gunId: string): Slot
 	return { gunId = gunId, gun = gun, ammo = gun.mag, lastShot = -math.huge, reloadDoneAt = nil }
 end
 
+-- True when neither gun has been fired, so changing loadout gives nothing away.
+function Weapon.isUntouched(loadout: Loadout): boolean
+	for _, slot in { loadout.slots.primary, loadout.slots.sidearm } do
+		if slot.ammo < slot.gun.mag or slot.reloadDoneAt then
+			return false
+		end
+	end
+	return true
+end
+
 function Weapon.newLoadout(class: string, rifle: string?): Loadout
 	local guns = GunConfig.classes[class]
 	local primary = if rifle and table.find(guns.primaries, rifle) then rifle else guns.primaries[1]

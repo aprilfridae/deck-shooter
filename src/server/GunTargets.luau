@@ -23,7 +23,9 @@ local GunTargets = {}
 function GunTargets.add(model: Model, player: Player?): Target?
 	local root = model:WaitForChild("HumanoidRootPart", 10) :: BasePart?
 	local humanoid = model:WaitForChild("Humanoid", 10) :: Humanoid?
-	if not root or not humanoid or not model:IsDescendantOf(workspace) then
+	-- A character is not in the workspace yet when CharacterAdded fires.
+	local current = if player then player.Character == model else model:IsDescendantOf(workspace)
+	if not root or not humanoid or not current then
 		return nil
 	end
 

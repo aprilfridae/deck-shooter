@@ -6,7 +6,9 @@ local MIN_DIRECTION = 1e-6
 
 type Point = { x: number, y: number, z: number }
 
-local ShotRequest = {}
+local ShotRequest = {
+	VIEW_DELAY = 0.08, -- how far behind the server other players are drawn; tune in play
+}
 
 local function isCoordinate(n: any): boolean
 	return type(n) == "number" and n == n and math.abs(n) <= MAX_COORDINATE
@@ -41,6 +43,16 @@ function ShotRequest.parse(raw: any, serverNow: number): any
 		firedAt = math.clamp(firedAt, serverNow - MAX_REWIND, serverNow),
 		aiming = raw.aiming == true,
 	}
+end
+
+-- When the targets the shooter was looking at were in those places on the server.
+function ShotRequest.viewTime(firedAt: number, ping: number, serverNow: number): number
+	return math.max(firedAt - ping - ShotRequest.VIEW_DELAY, serverNow - MAX_REWIND)
+end
+
+-- The shooter's own position reaches the server late, so it is recorded after they fired.
+function ShotRequest.shooterTime(firedAt: number, ping: number, serverNow: number): number
+	return math.min(firedAt + ping, serverNow)
 end
 
 function ShotRequest.originAllowed(origin: Point, rewound: Point): boolean

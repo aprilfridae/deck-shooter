@@ -36,12 +36,10 @@ local fireRemote = remote("Fire")
 local reloadRemote = remote("Reload")
 local swapRemote = remote("Swap")
 local hitRemote = remote("HitConfirm")
-local ammoRemote = remote("AmmoChanged")
 local loadoutRemote = remote("SetLoadout")
 remotes.Parent = ReplicatedStorage
 
 local loadouts: { [Player]: Weapon.Loadout } = {}
-local sentAmmo: { [Player]: string } = {}
 local requestWindows: { [Player]: { startedAt: number, count: number } } = {}
 
 local random = Random.new()
@@ -68,7 +66,7 @@ local function stanceOf(target: GunTargets.Target, aiming: boolean)
 	}
 end
 
-local function wallDistance(origin: Vector3, direction: Vector3): number
+local function firstWall(origin: Vector3, direction: Vector3): RaycastResult?
 	local exclude = {}
 	for model in GunTargets.all() do
 		table.insert(exclude, model)
@@ -77,18 +75,37 @@ local function wallDistance(origin: Vector3, direction: Vector3): number
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = exclude
 	params.RespectCanCollide = true
-	local hit = workspace:Raycast(origin, direction * MAX_RANGE, params)
+	return workspace:Raycast(origin, direction, params)
+end
+
+local function wallDistance(origin: Vector3, direction: Vector3): number
+	local hit = firstWall(origin, direction * MAX_RANGE)
 	return if hit then hit.Distance else MAX_RANGE
 end
 
+-- A shot must start near the shooter, with no wall between their body and its origin.
+local function originValid(shooter: GunTargets.Target, shot: any, ping: number, now: number): boolean
+	local origin = Vector3.new(shot.origin.x, shot.origin.y, shot.origin.z)
+	for _, time in { ShotRequest.shooterTime(shot.firedAt, ping, now), now } do
+		local past = History.at(shooter.history, time)
+		if past and ShotRequest.originAllowed(shot.origin, past) then
+			local body = Vector3.new(past.x, past.y, past.z)
+			if not firstWall(body, origin - body) then
+				return true
+			end
+		end
+	end
+	return false
+end
+
 -- The nearest living target this ray reaches before a wall.
-local function nearestHit(shooter: GunTargets.Target, shot: any, direction: any)
+local function nearestHit(shooter: GunTargets.Target, shot: any, direction: any, viewAt: number)
 	local origin = Vector3.new(shot.origin.x, shot.origin.y, shot.origin.z)
 	local nearest = wallDistance(origin, Vector3.new(direction.x, direction.y, direction.z))
 	local found, foundZone = nil, nil
 	for _, target in GunTargets.all() do
 		if target ~= shooter and GunTargets.isAlive(target) then
-			local past = History.at(target.history, shot.firedAt)
+			local past = History.at(target.history, viewAt)
 			if past then
 				local zone, distance = Hitbox.test(shot.origin, direction, past)
 				if zone and distance < nearest then
@@ -106,12 +123,13 @@ local function onFire(player: Player, raw: any)
 	if not shooter or not loadout or not GunTargets.isAlive(shooter) then
 		return
 	end
-	local shot = ShotRequest.parse(raw, workspace:GetServerTimeNow())
+	local now = workspace:GetServerTimeNow()
+	local shot = ShotRequest.parse(raw, now)
 	if not shot then
 		return
 	end
-	local rewound = History.at(shooter.history, shot.firedAt)
-	if not rewound or not ShotRequest.originAllowed(shot.origin, rewound) then
+	local ping = player:GetNetworkPing()
+	if not originValid(shooter, shot, ping, now) then
 		return
 	end
 	-- Uses the firing time, so network jitter does not refuse a legal shot.
@@ -122,11 +140,12 @@ local function onFire(player: Player, raw: any)
 
 	local gun = Weapon.active(loadout).gun
 	local angle = Spread.angle(gun, stanceOf(shooter, shot.aiming))
+	local viewAt = ShotRequest.viewTime(shot.firedAt, ping, now)
 	local totals: { [GunTargets.Target]: number } = {}
 	local headshot = false
 	for _ = 1, gun.pellets do
 		local direction = Spread.apply(shot.direction, angle, rng)
-		local target, zone, distance = nearestHit(shooter, shot, direction)
+		local target, zone, distance = nearestHit(shooter, shot, direction, viewAt)
 		if target then
 			local isHead = zone == "Head"
 			totals[target] = (totals[target] or 0) + Damage.hit(gun, distance, isHead)
@@ -158,21 +177,14 @@ local function onSwap(player: Player, slot: any)
 	end
 end
 
-local function sendAmmo(player: Player, loadout: Weapon.Loadout, now: number)
+-- Attributes, so a client that starts late still gets the current state.
+local function showGun(player: Player, loadout: Weapon.Loadout, now: number)
 	Weapon.update(loadout, now)
 	local slot = Weapon.active(loadout)
-	local reloading = slot.reloadDoneAt ~= nil
-	local summary = `{slot.gunId}:{slot.ammo}:{reloading}`
-	if sentAmmo[player] ~= summary then
-		sentAmmo[player] = summary
-		ammoRemote:FireClient(player, {
-			gunId = slot.gunId,
-			slot = loadout.active,
-			ammo = slot.ammo,
-			mag = slot.gun.mag,
-			reloading = reloading,
-		})
-	end
+	player:SetAttribute("GunId", slot.gunId)
+	player:SetAttribute("GunSlot", loadout.active)
+	player:SetAttribute("Ammo", slot.ammo)
+	player:SetAttribute("Reloading", slot.reloadDoneAt ~= nil)
 end
 
 local function applyLoadout(player: Player)
@@ -180,15 +192,16 @@ local function applyLoadout(player: Player)
 	local class = if data then data.class else DEFAULT_CLASS
 	local rifle = if data then data.rifle else DEFAULT_RIFLE
 	loadouts[player] = Weapon.newLoadout(class, rifle)
-	sentAmmo[player] = nil
 	player:SetAttribute("Class", class)
 	player:SetAttribute("Rifle", rifle)
 end
 
--- At full health a change can apply straight away. Otherwise it waits for respawn.
-local function applyIfUnhurt(player: Player)
+-- Applies straight away at full health with both guns unfired, so it can't refill a
+-- magazine or skip the fire rate. Otherwise it waits for respawn.
+local function applyIfUnused(player: Player)
 	local target = GunTargets.forPlayer(player)
-	if target and target.health >= target.humanoid.MaxHealth then
+	local loadout = loadouts[player]
+	if target and loadout and target.health >= target.humanoid.MaxHealth and Weapon.isUntouched(loadout) then
 		applyLoadout(player)
 	end
 end
@@ -201,7 +214,7 @@ local function onSetLoadout(player: Player, raw: any)
 	end
 	data.class = request.class
 	data.rifle = request.rifle
-	applyIfUnhurt(player)
+	applyIfUnused(player)
 end
 
 local function onPlayer(player: Player)
@@ -220,7 +233,7 @@ reloadRemote.OnServerEvent:Connect(onReload)
 swapRemote.OnServerEvent:Connect(onSwap)
 loadoutRemote.OnServerEvent:Connect(onSetLoadout)
 -- The save can finish loading after the first spawn.
-PlayerCards.profileLoaded:Connect(applyIfUnhurt)
+PlayerCards.profileLoaded:Connect(applyIfUnused)
 
 Players.PlayerAdded:Connect(onPlayer)
 for _, player in Players:GetPlayers() do
@@ -228,7 +241,6 @@ for _, player in Players:GetPlayers() do
 end
 Players.PlayerRemoving:Connect(function(player)
 	loadouts[player] = nil
-	sentAmmo[player] = nil
 	requestWindows[player] = nil
 end)
 
@@ -246,6 +258,6 @@ RunService.Heartbeat:Connect(function(dt)
 		History.record(target.history, position.X, position.Y, position.Z, pose, now)
 	end
 	for player, loadout in loadouts do
-		sendAmmo(player, loadout, now)
+		showGun(player, loadout, now)
 	end
 end)
