@@ -130,11 +130,28 @@ describe("GunSounds", function()
 			local guns = table.clone(class.primaries)
 			table.insert(guns, class.sidearm)
 			for _, gunId in guns do
-				local sound = GunSounds.shots[gunId]
-				expect(sound ~= nil).toBe(true)
-				local file = string.match(sound, "[^/]+$")
-				expect(fs.isFile(`assets/sounds/{file}`)).toBe(true)
+				local takes = GunSounds.shots[gunId]
+				expect(#takes >= 2).toBe(true)
+				for _, sound in takes do
+					local file = string.match(sound, "[^/]+$")
+					expect(fs.isFile(`assets/sounds/{file}`)).toBe(true)
+				end
 			end
 		end
+	end)
+end)
+
+describe("GunSounds.startOffset", function()
+	it("skips as much of the silent padding as the shot is late", function()
+		expect(GunSounds.startOffset(0.008)).toBeCloseTo(0.008)
+	end)
+
+	it("never skips past the padding into the shot", function()
+		expect(GunSounds.startOffset(0.05)).toBeCloseTo(GunSounds.paddingSeconds)
+	end)
+
+	it("plays from the start when a shot isn't late", function()
+		expect(GunSounds.startOffset(0)).toBe(0)
+		expect(GunSounds.startOffset(-0.01)).toBe(0)
 	end)
 end)

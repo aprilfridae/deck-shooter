@@ -7,75 +7,50 @@ local GunSounds = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("G
 
 local GunAudio = {}
 
-local shots: { [string]: Sound } = {}
-for gunId, soundId in GunSounds.shots do
-	local sound = Instance.new("Sound")
-	sound.Name = `Shot{gunId}`
-	sound.SoundId = soundId
-	sound.Volume = 1
-	sound.Parent = SoundService
-	shots[gunId] = sound
+local shots: { [string]: { Sound } } = {}
+local allSounds: { Sound } = {}
+for gunId, soundIds in GunSounds.shots do
+	shots[gunId] = {}
+	for take, soundId in soundIds do
+		local sound = Instance.new("Sound")
+		sound.Name = `Shot{gunId}{take}`
+		sound.SoundId = soundId
+		sound.Volume = 1
+		sound.Parent = SoundService
+		table.insert(shots[gunId], sound)
+		table.insert(allSounds, sound)
+	end
 end
 
 -- Loading up front stops the first shot from being late or silent.
 task.spawn(function()
-	local sounds = {}
-	for _, sound in shots do
-		table.insert(sounds, sound)
-	end
-	ContentProvider:PreloadAsync(sounds)
+	ContentProvider:PreloadAsync(allSounds)
 end)
 
-local held: Sound? = nil
-local heldGunId: string? = nil
+local lastTake: { [string]: number } = {}
 
--- Lets the shot that's playing finish, then stops.
-function GunAudio.releaseShot()
-	local sound = held
-	if not sound then
-		return
+-- Picks a random take, never the same one twice in a row.
+local function pickTake(gunId: string, count: number): number
+	local take = math.random(1, count)
+	if take == lastTake[gunId] then
+		take = take % count + 1
 	end
-	held = nil
-	heldGunId = nil
-	sound.Looped = false
-	local remaining = (sound.TimeLength - sound.TimePosition) / sound.PlaybackSpeed
-	task.delay(math.max(remaining, 0), function()
-		sound:Destroy()
-	end)
+	lastTake[gunId] = take
+	return take
 end
 
--- Automatic guns loop one shot while firing, so the audio engine keeps the beat exactly.
--- Frames can't: starting each shot separately lands up to a frame early or late.
-function GunAudio.holdShot(gunId: string, speed: number)
-	if heldGunId ~= gunId then
-		GunAudio.releaseShot()
-		local template = shots[gunId]
-		if not template then
-			return
-		end
-		local sound = template:Clone()
-		sound.Looped = true
-		sound.PlaybackSpeed = speed
-		sound.Parent = SoundService
-		sound:Play()
-		held = sound
-		heldGunId = gunId
-	elseif held then
-		held.PlaybackSpeed = speed
-	end
-end
-
--- Each shot gets its own copy, so a tail can ring out under the next shot.
-function GunAudio.playShot(gunId: string)
-	local template = shots[gunId]
-	if not template then
+-- Each shot gets its own copy, so every shot rings out under the ones after it.
+function GunAudio.playShot(gunId: string, lateness: number)
+	local takes = shots[gunId]
+	if not takes then
 		return
 	end
-	local shot = template:Clone()
+	local shot = takes[pickTake(gunId, #takes)]:Clone()
 	shot.Parent = SoundService
 	shot.Ended:Once(function()
 		shot:Destroy()
 	end)
+	shot.TimePosition = GunSounds.startOffset(lateness)
 	shot:Play()
 end
 
