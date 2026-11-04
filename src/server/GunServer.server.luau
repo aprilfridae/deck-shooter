@@ -36,6 +36,7 @@ local fireRemote = remote("Fire")
 local reloadRemote = remote("Reload")
 local swapRemote = remote("Swap")
 local hitRemote = remote("HitConfirm")
+local impactRemote = remote("Impacts")
 local loadoutRemote = remote("SetLoadout")
 remotes.Parent = ReplicatedStorage
 
@@ -78,11 +79,6 @@ local function firstWall(origin: Vector3, direction: Vector3): RaycastResult?
 	return workspace:Raycast(origin, direction, params)
 end
 
-local function wallDistance(origin: Vector3, direction: Vector3): number
-	local hit = firstWall(origin, direction * MAX_RANGE)
-	return if hit then hit.Distance else MAX_RANGE
-end
-
 -- A shot must start near the shooter, with no wall between their body and its origin.
 local function originValid(shooter: GunTargets.Target, shot: any, ping: number, now: number): boolean
 	local origin = Vector3.new(shot.origin.x, shot.origin.y, shot.origin.z)
@@ -98,10 +94,11 @@ local function originValid(shooter: GunTargets.Target, shot: any, ping: number, 
 	return false
 end
 
--- The nearest living target this ray reaches before a wall.
+-- The nearest living target this ray reaches before a wall, and the wall if there is one.
 local function nearestHit(shooter: GunTargets.Target, shot: any, direction: any, viewAt: number)
 	local origin = Vector3.new(shot.origin.x, shot.origin.y, shot.origin.z)
-	local nearest = wallDistance(origin, Vector3.new(direction.x, direction.y, direction.z))
+	local wall = firstWall(origin, Vector3.new(direction.x, direction.y, direction.z) * MAX_RANGE)
+	local nearest = if wall then wall.Distance else MAX_RANGE
 	local found, foundZone = nil, nil
 	for _, target in GunTargets.all() do
 		if target ~= shooter and GunTargets.isAlive(target) then
@@ -114,7 +111,7 @@ local function nearestHit(shooter: GunTargets.Target, shot: any, direction: any,
 			end
 		end
 	end
-	return found, foundZone, nearest
+	return found, foundZone, nearest, wall
 end
 
 local function onFire(player: Player, raw: any)
@@ -143,14 +140,20 @@ local function onFire(player: Player, raw: any)
 	local viewAt = ShotRequest.viewTime(shot.firedAt, ping, now)
 	local totals: { [GunTargets.Target]: number } = {}
 	local headshot = false
+	local impacts = {}
 	for _ = 1, gun.pellets do
 		local direction = Spread.apply(shot.direction, angle, rng)
-		local target, zone, distance = nearestHit(shooter, shot, direction, viewAt)
+		local target, zone, distance, wall = nearestHit(shooter, shot, direction, viewAt)
 		if target then
 			local isHead = zone == "Head"
 			totals[target] = (totals[target] or 0) + Damage.hit(gun, distance, isHead)
 			headshot = headshot or isHead
+		elseif wall then
+			table.insert(impacts, { position = wall.Position, normal = wall.Normal })
 		end
+	end
+	if #impacts > 0 then
+		impactRemote:FireAllClients(impacts)
 	end
 
 	for target, amount in totals do
