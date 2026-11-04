@@ -1,6 +1,6 @@
 # Sound List
 
-This list covers every sound the current game needs: 57 sounds, or 83 files once variations are counted.
+This list covers every sound the current game needs: 57 sounds, plus as many variations as you like.
 
 Work through the stages in order. Stage 1 changes the feel the most, and I can hook each stage up as soon as you finish it.
 
@@ -11,27 +11,25 @@ Work through the stages in order. Stage 1 changes the feel the most, and I can h
 - **Stereo:** plays directly in your ears.
 - **Length:** a starting target, not a rule. Follow your ears, except for reloads, which should match the time shown.
 
-## Stage 1: The core feel (20 sounds, 43 files)
+## Stage 1: The core feel (20 sounds)
 
 ### Gunshots
 
-Automatic guns need 1 stereo take of your own shot, and the other guns need 3. Every gun also needs 1 mono enemy version. The enemy version can be the same sound summed to mono, with less low end if that helps it sit behind your own gun.
+Each gun has 30 stereo takes of your own shot, and every shot picks one at random. `tools/pad-sounds.py` adds 20ms of silence to the front of each take, which keeps them on the beat, so run it after re-exporting. Shots can be any length, because each one rings out under the ones after it. Every gun also needs 1 mono enemy version. The enemy version can be the same sound summed to mono, with less low end if that helps it sit behind your own gun.
 
-Your own shot uses `gun-m4-shot-1.wav`. The enemy version uses `gun-m4-enemy.wav`.
-
-The M4, AK-47, SMG, machine pistol and auto-pistol loop one shot while the trigger is held, which keeps them exactly on the beat. Their shots must last exactly the time between shots, or the gun will sound out of step with its bullets. Each one also needs to end with a tiny fade so it doesn't click. If the last shot of a burst sounds chopped, add an optional tail for that gun, such as `gun-m4-tail.wav`, and it will play when you stop firing.
+Your own shots are saved as `gun-m4-1.wav` and so on. The enemy version uses `gun-m4-enemy.wav`.
 
 | Name | Gun | Character from the game | Time between shots | Length |
 | --- | --- | --- | --- | --- |
-| `gun-m4` | M4 | Assault rifle, controlled, almost no recoil | 100ms | 100ms |
-| `gun-ak47` | AK-47 | Assault rifle, heavier, high recoil | 111ms | 111ms |
-| `gun-smg` | SMG | Rusher gun, light and quick | 75ms | 75ms |
+| `gun-m4` | M4 | Assault rifle, controlled, almost no recoil | 100ms | 1.3s |
+| `gun-ak47` | AK-47 | Assault rifle, heavier, high recoil | 111ms | 1.3s |
+| `gun-smg` | SMG | Rusher gun, light and quick | 75ms | 1s |
 | `gun-sniper` | Sniper | One huge shot, kills on a headshot | 1.2s | 1s |
 | `gun-shotgun` | Shotgun | One big close-range blast | 0.8s | 0.7s |
 | `gun-pistol` | Pistol | Assault sidearm, plain and clean | 150ms | 0.3s |
-| `gun-machinepistol` | Machine pistol | Rusher sidearm, tiny and very fast | 67ms | 67ms |
+| `gun-machinepistol` | Machine pistol | Rusher sidearm, tiny and very fast | 67ms | 0.2s |
 | `gun-revolver` | Revolver | Marksman sidearm, slow and heavy | 400ms | 0.6s |
-| `gun-autopistol` | Auto-pistol | Breacher sidearm, mid-weight automatic | 109ms | 109ms |
+| `gun-autopistol` | Auto-pistol | Breacher sidearm, mid-weight automatic | 109ms | 0.25s |
 
 ### Hit feedback
 
@@ -56,7 +54,7 @@ These tell you what your shot did, so they need to cut through gunfire. One ster
 | `move-slide-start` | The burst at the start of a slide | Mono | 1 | 0.3s |
 | `move-slide-loop` | Scraping for as long as a slide lasts. Must loop with no click | Mono | 1 | 1–2s |
 
-## Stage 2: Guns in full (19 sounds, 22 files)
+## Stage 2: Guns in full (19 sounds)
 
 ### Reloads
 
@@ -96,7 +94,7 @@ One mono take each.
 | `bullet-whizz` | A shot flies past your head | Mono | 2 | 0.2s |
 | `death` | You die | Stereo | 1 | 0.8s |
 
-## Stage 3: Abilities and movement extras (18 sounds, 18 files)
+## Stage 3: Abilities and movement extras (18 sounds)
 
 ### Abilities
 
@@ -132,7 +130,7 @@ One take each.
 
 ## Upload limit
 
-Unverified accounts can upload 100 sounds every 30 days, and this list uses 83. Replacing sounds counts too, so you'd hit the limit quickly while tweaking them. ID verification raises it to 2,000.
+Unverified accounts can upload 100 sounds every 30 days, and the gunshots alone are 178 files, so uploading them needs ID verification (2,000 every 30 days) or fewer takes per gun.
 
 ## Not needed yet
 

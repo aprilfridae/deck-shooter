@@ -62,12 +62,7 @@ local function fire(camera: Camera, aiming: boolean, shotTime: number)
 		firedAt = shotTime,
 		aiming = aiming,
 	})
-	local gunId = player:GetAttribute("GunId")
-	if gun.automatic then
-		GunAudio.holdShot(gunId, 1 + (player:GetAttribute("FireRateBonus") or 0))
-	else
-		GunAudio.playShot(gunId)
-	end
+	GunAudio.playShot(player:GetAttribute("GunId"), workspace:GetServerTimeNow() - shotTime)
 	Recoil.kick()
 	GunView.kick()
 end
@@ -109,7 +104,6 @@ local function onFrame(dt: number)
 
 	if not isAlive() then
 		GunView.hide()
-		GunAudio.releaseShot()
 		player:SetAttribute("AimFov", nil)
 		return
 	end
@@ -144,10 +138,6 @@ local function onFrame(dt: number)
 		elseif pressed and gun and ammo <= 0 and not reloading then
 			reloadRemote:FireServer()
 		end
-	end
-
-	if not keys.fire or climbing or not canShoot() or not gun.automatic then
-		GunAudio.releaseShot()
 	end
 
 	previous.fire = keys.fire
