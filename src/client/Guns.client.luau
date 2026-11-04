@@ -53,13 +53,14 @@ end
 local function fire(camera: Camera, aiming: boolean, now: number)
 	lastFire = now
 	ammo -= 1
+	local pitch, yaw = Recoil.aimOffset(gun)
 	fireRemote:FireServer({
 		origin = point(camera.CFrame.Position),
-		direction = point(camera.CFrame.LookVector),
+		direction = point((camera.CFrame * CFrame.Angles(pitch, yaw, 0)).LookVector),
 		firedAt = workspace:GetServerTimeNow(),
 		aiming = aiming,
 	})
-	Recoil.kick(gun.recoil)
+	Recoil.kick()
 	GunView.kick()
 end
 

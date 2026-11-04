@@ -1,4 +1,6 @@
 -- Gun and class data. Times are seconds, distances are studs, spread and recoil are degrees.
+-- pattern is the spray: { shots fired, degrees up, degrees sideways } for where bullets land
+-- relative to the aim, joined by straight lines. recovery is shots forgiven per second.
 local AIM_FOV = 60
 local SIDEARM_FULL_TO = 40
 local SIDEARM_LOW_TO = 90
@@ -31,7 +33,8 @@ GunConfig.guns = {
 		lowScale = 0.7,
 		hipSpread = 1.5,
 		aimSpread = 0.2,
-		recoil = 0.1,
+		pattern = { { 1, 0.4, 0 }, { 4, 2.2, 0.2 }, { 9, 5.5, 0.6 }, { 14, 6.6, 2 }, { 20, 7.2, -1.8 }, { 26, 7.6, 1.6 }, { 30, 7.8, 0.4 } },
+		recovery = 12,
 	}),
 	AK47 = gun({
 		name = "AK-47",
@@ -46,7 +49,8 @@ GunConfig.guns = {
 		lowScale = 0.7,
 		hipSpread = 2,
 		aimSpread = 0.4,
-		recoil = 1.1,
+		pattern = { { 1, 0.6, 0 }, { 4, 3.2, 0.3 }, { 10, 8.5, 1 }, { 15, 9.8, 3.2 }, { 21, 10.6, -3 }, { 27, 11.2, 2.6 }, { 30, 11.4, 1 } },
+		recovery = 11,
 	}),
 	SMG = gun({
 		name = "SMG",
@@ -60,7 +64,8 @@ GunConfig.guns = {
 		lowScale = 0.6,
 		hipSpread = 2,
 		aimSpread = 0.8,
-		recoil = 0.35,
+		pattern = { { 1, 0.3, 0 }, { 5, 1.8, 0.4 }, { 10, 3.6, -0.8 }, { 16, 4.4, 1.6 }, { 23, 4.8, -1.6 }, { 32, 5.2, 0.8 } },
+		recovery = 16,
 	}),
 	Sniper = gun({
 		name = "Sniper",
@@ -74,7 +79,8 @@ GunConfig.guns = {
 		lowScale = 1,
 		hipSpread = 7,
 		aimSpread = 0,
-		recoil = 5,
+		pattern = { { 1, 7, 0.5 }, { 2, 9, -0.4 } },
+		recovery = 1.6,
 		aimFov = 30,
 	}),
 	Shotgun = gun({
@@ -90,7 +96,8 @@ GunConfig.guns = {
 		lowScale = 0,
 		hipSpread = 5,
 		aimSpread = 4,
-		recoil = 4,
+		pattern = { { 1, 5, 0.3 }, { 3, 10, -0.6 }, { 6, 12, 0.6 } },
+		recovery = 2.5,
 	}),
 	Pistol = gun({
 		name = "Pistol",
@@ -100,7 +107,8 @@ GunConfig.guns = {
 		reload = 1.4,
 		hipSpread = 1.5,
 		aimSpread = 0.4,
-		recoil = 0.6,
+		pattern = { { 1, 0.9, 0 }, { 4, 3, 0.3 }, { 8, 5, -0.6 }, { 12, 6, 0.5 } },
+		recovery = 10,
 	}),
 	MachinePistol = gun({
 		name = "Machine pistol",
@@ -111,7 +119,8 @@ GunConfig.guns = {
 		automatic = true,
 		hipSpread = 2.5,
 		aimSpread = 1,
-		recoil = 0.4,
+		pattern = { { 1, 0.4, 0 }, { 5, 2.4, -0.5 }, { 10, 4.4, 1.2 }, { 15, 5, -1.6 }, { 20, 5.4, 0.6 } },
+		recovery = 16,
 	}),
 	Revolver = gun({
 		name = "Revolver",
@@ -121,7 +130,8 @@ GunConfig.guns = {
 		reload = 2.2,
 		hipSpread = 2,
 		aimSpread = 0.3,
-		recoil = 2.5,
+		pattern = { { 1, 3, 0.2 }, { 3, 7, -0.5 }, { 6, 10, 0.8 } },
+		recovery = 5,
 	}),
 	AutoPistol = gun({
 		name = "Auto-pistol",
@@ -131,7 +141,8 @@ GunConfig.guns = {
 		reload = 1.5,
 		hipSpread = 1.8,
 		aimSpread = 0.6,
-		recoil = 0.5,
+		pattern = { { 1, 0.5, 0 }, { 4, 2.2, 0.4 }, { 8, 3.8, -0.8 }, { 15, 4.8, 1 } },
+		recovery = 13,
 	}),
 }
 
