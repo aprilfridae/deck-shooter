@@ -160,6 +160,40 @@ describe("MoveState", function()
 		expect(MoveState.speed(s, 0.5)).toBe(24)
 	end)
 
+	describe("fast fall", function()
+		local function airborne(crouch: boolean)
+			local s = MoveState.new()
+			MoveState.step(s, on({ moving = true, crouch = crouch, grounded = false }), 0)
+			return s
+		end
+
+		it("speeds up a fall while crouch is held", function()
+			expect(MoveState.fallVelocity(airborne(true), -10, 0.1)).toBeCloseTo(-45)
+		end)
+
+		it("leaves the rise of a jump alone", function()
+			expect(MoveState.fallVelocity(airborne(true), 30, 0.1)).toBe(30)
+		end)
+
+		it("does nothing without crouch", function()
+			expect(MoveState.fallVelocity(airborne(false), -10, 0.1)).toBe(-10)
+		end)
+
+		it("does nothing on the ground", function()
+			local s = MoveState.new()
+			MoveState.step(s, on({ moving = true, crouch = true }), 0)
+			expect(MoveState.fallVelocity(s, -10, 0.1)).toBe(-10)
+		end)
+
+		it("stops adding speed at the limit", function()
+			expect(MoveState.fallVelocity(airborne(true), -105, 0.1)).toBe(-110)
+		end)
+
+		it("does not slow a faster fall", function()
+			expect(MoveState.fallVelocity(airborne(true), -200, 0.1)).toBe(-200)
+		end)
+	end)
+
 	-- Review Focus 4
 	it("ends the slide when the player leaves the ground", function()
 		local s = MoveState.new()

@@ -60,6 +60,18 @@ function MoveState.speed(state: State, now: number): number
 	return base
 end
 
+-- Holding crouch while falling pulls the player down. A jump's rise is left
+-- alone, so a slide jump with crouch still held reaches full height first.
+function MoveState.fallVelocity(state: State, velocityY: number, dt: number): number
+	if state.mode ~= "Air" or not state.crouchHeld or velocityY >= 0 then
+		return velocityY
+	end
+	if velocityY <= -MoveConfig.FastFallMaxSpeed then
+		return velocityY
+	end
+	return math.max(velocityY - MoveConfig.FastFallAcceleration * dt, -MoveConfig.FastFallMaxSpeed)
+end
+
 function MoveState.step(state: State, input: Input, now: number)
 	local previous = state.mode
 	local current = MoveState.speed(state, now)

@@ -79,7 +79,7 @@ local function onFrame(dt: number)
 	local direction = humanoid.MoveDirection
 	local now = os.clock()
 	MoveState.step(state, {
-		moving = direction.Magnitude > 0,
+		moving = direction.Magnitude > 0 or airFromSlide,
 		sprint = keys.sprint,
 		crouch = keys.crouch,
 		jump = keys.jump,
@@ -98,7 +98,9 @@ local function onFrame(dt: number)
 	local sliding = state.mode == "Slide"
 	if sliding then
 		if not wasSliding then
-			slideDirection = direction.Unit
+			if direction.Magnitude > 0 then
+				slideDirection = direction.Unit
+			end
 		end
 		humanoid:Move(slideDirection, false)
 	end
@@ -111,6 +113,12 @@ local function onFrame(dt: number)
 	end
 	if airFromSlide and direction.Magnitude == 0 then
 		humanoid:Move(slideDirection, false)
+	end
+
+	local velocity = root.AssemblyLinearVelocity
+	local fallY = MoveState.fallVelocity(state, velocity.Y, dt)
+	if fallY ~= velocity.Y then
+		root.AssemblyLinearVelocity = Vector3.new(velocity.X, fallY, velocity.Z)
 	end
 
 	-- The view widens through slides and jumps, and landing dips the camera.
