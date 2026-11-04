@@ -119,7 +119,9 @@ describe("SpeedLimit", function()
 		for i = 1, 100 do
 			SpeedLimit.sample(track, 0, 0, 0, i / 10)
 		end
-		expect(SpeedLimit.sample(track, 100, 0, 0, 10.1)).toBe(false)
+		local credit = MoveConfig.SpeedLimit * MoveConfig.MaxLagSeconds + MoveConfig.LagStuds
+		expect(SpeedLimit.sample(track, credit + 1, 0, 0, 10.1)).toBe(false)
+		expect(credit <= 90).toBe(true) -- the one-time jump after standing still
 	end)
 
 	-- Review Focus 3

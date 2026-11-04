@@ -15,7 +15,7 @@ return {
 	SpeedLimit = 55,
 	SpeedWindow = 0.5,
 	LagStuds = 4,
-	MaxLagSeconds = 2, -- most stall time one position jump can be credited
+	MaxLagSeconds = 1.5, -- most stall time one position jump can be credited
 	MaxRiseSpeed = 60,
 	MaxStrikes = 5,
 }
