@@ -6,11 +6,13 @@ local RunService = game:GetService("RunService")
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local Ability = require(CardCore:WaitForChild("Ability"))
 local Cards = require(CardCore:WaitForChild("Cards"))
+local Config = require(CardCore:WaitForChild("Config"))
 local Deck = require(CardCore:WaitForChild("Deck"))
 local Tier = require(CardCore:WaitForChild("Tier"))
 local Weapon = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Weapon"))
 local GunTargets = require(script.Parent.GunTargets)
 local loadouts = require(script.Parent.Loadouts)
+local MoveGrace = require(script.Parent.MoveGrace)
 local PlayerCards = require(script.Parent.PlayerCards)
 
 -- Test room only: two decks cover all 5 cards. Phase 4 removes these.
@@ -30,6 +32,7 @@ end
 local useRemote = remote("Use")
 local testDeckRemote = remote("TestDeck")
 local revealRemote = remote("Reveal")
+local dashRemote = remote("Dash")
 remotes.Parent = ReplicatedStorage
 
 local slotsOf: { [Player]: { Ability.Slot } } = {}
@@ -99,6 +102,25 @@ local function resetCards(player: Player)
 	effectsOf[player] = {}
 	slotsOf[player] = Ability.new(deckFor(player))
 	publish(player)
+end
+
+handlers.phase_dash = function(player, target, slot)
+	MoveGrace.give(player, Config.MoveGraceSeconds)
+	dashRemote:FireClient(player, Cards.stat(slot.cardId, slot.tier, "distance"))
+
+	local original: { [Instance]: number } = {}
+	for _, part in target.model:GetDescendants() do
+		if (part:IsA("BasePart") or part:IsA("Decal")) and part.Transparency < 1 then
+			original[part] = part.Transparency
+			part.Transparency = Config.CamoTransparency
+		end
+	end
+	timed(player, Ability.camoSeconds(slot.tier), function()
+		for part, transparency in original do
+			(part :: any).Transparency = transparency
+		end
+	end)
+	return true
 end
 
 handlers.overclock = function(player, _, slot)

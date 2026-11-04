@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SpeedLimit = require(ReplicatedStorage:WaitForChild("Movement"):WaitForChild("SpeedLimit"))
+local MoveGrace = require(script.Parent.MoveGrace)
 
 local SAMPLE_EVERY_SECONDS = 0.1
 local SPAWN_GRACE_SECONDS = 1 -- the root part may not be at the spawn yet
@@ -104,6 +105,15 @@ local function check(player: Player, guard: Guard, now: number)
 		onFail(player, guard, now)
 	end
 end
+
+-- The move starts a round trip from now, so the grace has to outlast that too.
+MoveGrace.given:Connect(function(player, seconds)
+	local guard = guards[player]
+	if guard then
+		local grace = seconds + 2 * player:GetNetworkPing()
+		guard.settledAt = math.max(guard.settledAt, os.clock() + grace)
+	end
+end)
 
 local function onPlayer(player: Player)
 	player.CharacterAdded:Connect(function(character)

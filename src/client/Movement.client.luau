@@ -5,11 +5,14 @@ local RunService = game:GetService("RunService")
 
 local Input = require(script.Parent.Input)
 local Ledge = require(script.Parent.Ledge)
+local Config = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Config"))
 local Movement = ReplicatedStorage:WaitForChild("Movement")
 local Climb = require(Movement:WaitForChild("Climb"))
 local MoveConfig = require(Movement:WaitForChild("MoveConfig"))
 local MoveState = require(Movement:WaitForChild("MoveState"))
 local poseRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("Pose") :: RemoteEvent
+local abilityRemotes = ReplicatedStorage:WaitForChild("AbilityRemotes")
+local dashRemote = abilityRemotes:WaitForChild("Dash") :: RemoteEvent
 
 local FIELD_OF_VIEW = 80
 local SLIDE_CAMERA_DROP = Vector3.new(0, -2, 0)
@@ -23,6 +26,7 @@ local LAND_CAMERA_DIP = Vector3.new(0, -0.9, 0)
 local MIN_AIR_FOR_DIP = 0.15
 local EFFECT_EASE = 7
 local POSE_SEND_GAP = 0.12 -- stays under the server's 10 per second limit
+local DASH_RADIUS = 1.5 -- keeps the body this far from a wall
 
 local player = Players.LocalPlayer
 local humanoid: Humanoid? = nil
@@ -40,6 +44,9 @@ local jumpHeld = false
 
 type ClimbPath = { from: Vector3, top: Vector3, landing: Vector3, forward: Vector3, startedAt: number }
 local climb: ClimbPath? = nil
+
+type DashPath = { from: Vector3, to: Vector3, forward: Vector3, startedAt: number }
+local dash: DashPath? = nil
 
 local function poseFor(mode: string): string
 	if mode == "Slide" or mode == "Crouch" then
@@ -141,6 +148,45 @@ local function advanceClimb(path: ClimbPath, now: number)
 	end
 end
 
+-- A dash runs like a climb: a set path, then back to normal movement in the air.
+local function startDash(distance: number)
+	if not humanoid or not root or humanoid.Health <= 0 or climb or dash then
+		return
+	end
+	local direction = humanoid.MoveDirection
+	local forward = if direction.Magnitude > 0 then direction.Unit else flatLook()
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { humanoid.Parent :: Model }
+	local hit = workspace:Spherecast(root.Position, DASH_RADIUS, forward * distance, params)
+	local from = root.Position
+	dash = {
+		from = from,
+		to = from + forward * (if hit then hit.Distance else distance),
+		forward = forward,
+		startedAt = os.clock(),
+	}
+	MoveState.startClimb(state)
+	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+end
+
+local function advanceDash(path: DashPath, now: number)
+	local progress = math.min((now - path.startedAt) / Config.DashSeconds, 1)
+	root.CFrame = CFrame.new(path.from:Lerp(path.to, progress)) * root.CFrame.Rotation
+	root.AssemblyLinearVelocity = Vector3.zero
+
+	if progress >= 1 then
+		dash = nil
+		MoveState.finishClimb(state, now)
+		humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+		root.AssemblyLinearVelocity = path.forward * MoveConfig.SprintSpeed
+		slideDirection = path.forward
+		airFromSlide = true
+		jumped = false
+		airStartedAt = now
+	end
+end
+
 local function onCharacter(character: Model)
 	humanoid = character:WaitForChild("Humanoid") :: Humanoid
 	root = character:WaitForChild("HumanoidRootPart") :: BasePart
@@ -155,6 +201,7 @@ local function onCharacter(character: Model)
 	sentPose = "Normal"
 	jumpHeld = false
 	climb = nil
+	dash = nil
 	workspace.CurrentCamera.FieldOfView = FIELD_OF_VIEW
 end
 
@@ -178,6 +225,9 @@ local function onFrame(dt: number)
 		advanceClimb(climb, now)
 	end
 	player:SetAttribute("Climbing", climb ~= nil)
+	if dash then
+		advanceDash(dash, now)
+	end
 
 	MoveState.step(state, {
 		moving = direction.Magnitude > 0 or airFromSlide,
@@ -241,6 +291,8 @@ local function onFrame(dt: number)
 	local yaw = math.atan2(-workspace.CurrentCamera.CFrame.LookVector.X, -workspace.CurrentCamera.CFrame.LookVector.Z)
 	root.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, yaw, 0)
 end
+
+dashRemote.OnClientEvent:Connect(startDash)
 
 player.CharacterAdded:Connect(onCharacter)
 if player.Character then
