@@ -168,3 +168,31 @@ describe("Overclock hooks", function()
 		expect(Weapon.newLoadout("Assault", "M4").fireRateBonus).toBe(0)
 	end)
 end)
+
+describe("Weapon.nextShotTime", function()
+	it("waits until the gun is ready", function()
+		expect(Weapon.nextShotTime(10, 0.1, 10.09)).toBeNil()
+	end)
+
+	it("keeps shots an exact interval apart when a frame lands late", function()
+		expect(Weapon.nextShotTime(10, 0.1, 10.116)).toBeCloseTo(10.1)
+	end)
+
+	it("holds the average rate at 60 frames a second", function()
+		local shot = 0
+		local shots = 0
+		for frame = 1, 600 do
+			local due = Weapon.nextShotTime(shot, 0.1, frame / 60)
+			if due then
+				shot = due
+				shots += 1
+			end
+		end
+		expect(shots).toBe(100)
+	end)
+
+	it("starts fresh after a pause", function()
+		expect(Weapon.nextShotTime(10, 0.1, 12)).toBe(12)
+		expect(Weapon.nextShotTime(-math.huge, 0.1, 12)).toBe(12)
+	end)
+end)

@@ -1,6 +1,6 @@
 # Sound List
 
-This list covers every sound the current game needs: 57 sounds, or 93 files once variations are counted.
+This list covers every sound the current game needs: 57 sounds, or 83 files once variations are counted.
 
 Work through the stages in order. Stage 1 changes the feel the most, and I can hook each stage up as soon as you finish it.
 
@@ -11,27 +11,27 @@ Work through the stages in order. Stage 1 changes the feel the most, and I can h
 - **Stereo:** plays directly in your ears.
 - **Length:** a starting target, not a rule. Follow your ears, except for reloads, which should match the time shown.
 
-## Stage 1: The core feel (20 sounds, 53 files)
+## Stage 1: The core feel (20 sounds, 43 files)
 
 ### Gunshots
 
-Every gun needs 3 stereo takes of your own shot, plus 1 mono enemy version. The enemy version can be the same sound summed to mono, with less low end if that helps it sit behind your own gun.
+Automatic guns need 1 stereo take of your own shot, and the other guns need 3. Every gun also needs 1 mono enemy version. The enemy version can be the same sound summed to mono, with less low end if that helps it sit behind your own gun.
 
 Your own shot uses `gun-m4-shot-1.wav`. The enemy version uses `gun-m4-enemy.wav`.
 
-Shots cut to the time between shots are fine, as long as each one ends with a tiny fade so it doesn't click. If the last shot of a burst sounds chopped, add an optional tail for that gun, such as `gun-m4-tail.wav`, and it will play when you stop firing.
+The M4, AK-47, SMG, machine pistol and auto-pistol loop one shot while the trigger is held, which keeps them exactly on the beat. Their shots must last exactly the time between shots, or the gun will sound out of step with its bullets. Each one also needs to end with a tiny fade so it doesn't click. If the last shot of a burst sounds chopped, add an optional tail for that gun, such as `gun-m4-tail.wav`, and it will play when you stop firing.
 
 | Name | Gun | Character from the game | Time between shots | Length |
 | --- | --- | --- | --- | --- |
-| `gun-m4` | M4 | Assault rifle, controlled, almost no recoil | 100ms | 0.3s |
-| `gun-ak47` | AK-47 | Assault rifle, heavier, high recoil | 111ms | 0.35s |
-| `gun-smg` | SMG | Rusher gun, light and quick | 75ms | 0.25s |
+| `gun-m4` | M4 | Assault rifle, controlled, almost no recoil | 100ms | 100ms |
+| `gun-ak47` | AK-47 | Assault rifle, heavier, high recoil | 111ms | 111ms |
+| `gun-smg` | SMG | Rusher gun, light and quick | 75ms | 75ms |
 | `gun-sniper` | Sniper | One huge shot, kills on a headshot | 1.2s | 1s |
 | `gun-shotgun` | Shotgun | One big close-range blast | 0.8s | 0.7s |
 | `gun-pistol` | Pistol | Assault sidearm, plain and clean | 150ms | 0.3s |
-| `gun-machinepistol` | Machine pistol | Rusher sidearm, tiny and very fast | 67ms | 0.2s |
+| `gun-machinepistol` | Machine pistol | Rusher sidearm, tiny and very fast | 67ms | 67ms |
 | `gun-revolver` | Revolver | Marksman sidearm, slow and heavy | 400ms | 0.6s |
-| `gun-autopistol` | Auto-pistol | Breacher sidearm, mid-weight automatic | 109ms | 0.25s |
+| `gun-autopistol` | Auto-pistol | Breacher sidearm, mid-weight automatic | 109ms | 109ms |
 
 ### Hit feedback
 
@@ -132,7 +132,7 @@ One take each.
 
 ## Upload limit
 
-Unverified accounts can upload 100 sounds every 30 days, and this list uses 93. Replacing sounds counts too, so you'd hit the limit quickly while tweaking them. ID verification raises it to 2,000.
+Unverified accounts can upload 100 sounds every 30 days, and this list uses 83. Replacing sounds counts too, so you'd hit the limit quickly while tweaking them. ID verification raises it to 2,000.
 
 ## Not needed yet
 
