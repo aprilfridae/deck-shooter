@@ -7,19 +7,29 @@ local GunSounds = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("G
 
 local GunAudio = {}
 
-local shots: { [string]: { Sound } } = {}
 local allSounds: { Sound } = {}
+
+local function newSound(soundId: string): Sound
+	local sound = Instance.new("Sound")
+	sound.Name = string.match(soundId, "[^/]+$") or soundId
+	sound.SoundId = soundId
+	sound.Volume = 1
+	sound.Parent = SoundService
+	table.insert(allSounds, sound)
+	return sound
+end
+
+local shots: { [string]: { Sound } } = {}
 for gunId, soundIds in GunSounds.shots do
 	shots[gunId] = {}
-	for take, soundId in soundIds do
-		local sound = Instance.new("Sound")
-		sound.Name = `Shot{gunId}{take}`
-		sound.SoundId = soundId
-		sound.Volume = 1
-		sound.Parent = SoundService
-		table.insert(shots[gunId], sound)
-		table.insert(allSounds, sound)
+	for _, soundId in soundIds do
+		table.insert(shots[gunId], newSound(soundId))
 	end
+end
+
+local others: { [string]: Sound } = {}
+for _, soundId in { GunSounds.hits.body, GunSounds.hits.head, GunSounds.hits.kill, GunSounds.hurt } do
+	others[soundId] = newSound(soundId)
 end
 
 -- Loading up front stops the first shot from being late or silent.
@@ -39,19 +49,30 @@ local function pickTake(gunId: string, count: number): number
 	return take
 end
 
--- Each shot gets its own copy, so every shot rings out under the ones after it.
+-- Each play gets its own copy, so every sound rings out under the ones after it.
+local function playCopy(template: Sound, startAt: number)
+	local copy = template:Clone()
+	copy.Parent = SoundService
+	copy.Ended:Once(function()
+		copy:Destroy()
+	end)
+	copy.TimePosition = startAt
+	copy:Play()
+end
+
 function GunAudio.playShot(gunId: string, lateness: number)
 	local takes = shots[gunId]
-	if not takes then
-		return
+	if takes then
+		playCopy(takes[pickTake(gunId, #takes)], GunSounds.startOffset(lateness))
 	end
-	local shot = takes[pickTake(gunId, #takes)]:Clone()
-	shot.Parent = SoundService
-	shot.Ended:Once(function()
-		shot:Destroy()
-	end)
-	shot.TimePosition = GunSounds.startOffset(lateness)
-	shot:Play()
+end
+
+function GunAudio.playHit(headshot: boolean, killed: boolean)
+	task.delay(GunSounds.hitDelaySeconds, playCopy, others[GunSounds.hitSound(headshot, killed)], 0)
+end
+
+function GunAudio.playHurt()
+	task.delay(GunSounds.hitDelaySeconds, playCopy, others[GunSounds.hurt], 0)
 end
 
 return GunAudio

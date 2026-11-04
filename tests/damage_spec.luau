@@ -155,3 +155,39 @@ describe("GunSounds.startOffset", function()
 		expect(GunSounds.startOffset(-0.01)).toBe(0)
 	end)
 end)
+
+describe("GunSounds.hitSound", function()
+	it("matches what the shot did, with a kill first", function()
+		expect(GunSounds.hitSound(false, false)).toBe(GunSounds.hits.body)
+		expect(GunSounds.hitSound(true, false)).toBe(GunSounds.hits.head)
+		expect(GunSounds.hitSound(false, true)).toBe(GunSounds.hits.kill)
+		expect(GunSounds.hitSound(true, true)).toBe(GunSounds.hits.kill)
+	end)
+
+	it("has a file for every hit and the hurt sound", function()
+		for _, sound in { GunSounds.hits.body, GunSounds.hits.head, GunSounds.hits.kill, GunSounds.hurt } do
+			local file = string.match(sound, "[^/]+$")
+			expect(fs.isFile(`assets/sounds/{file}`)).toBe(true)
+		end
+	end)
+end)
+
+describe("GunSounds.hurtPlays", function()
+	it("plays when damage leaves you at 20 health or less", function()
+		expect(GunSounds.hurtPlays(45, 20)).toBe(true)
+		expect(GunSounds.hurtPlays(20, 7)).toBe(true)
+	end)
+
+	it("stays quiet above 20 health", function()
+		expect(GunSounds.hurtPlays(100, 21)).toBe(false)
+	end)
+
+	it("stays quiet when health doesn't drop", function()
+		expect(GunSounds.hurtPlays(20, 20)).toBe(false)
+		expect(GunSounds.hurtPlays(0, 15)).toBe(false)
+	end)
+
+	it("stays quiet when the damage kills you", function()
+		expect(GunSounds.hurtPlays(15, 0)).toBe(false)
+	end)
+end)

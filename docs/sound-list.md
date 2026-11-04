@@ -40,7 +40,7 @@ These tell you what your shot did, so they need to cut through gunfire. One ster
 | `hit-body` | Your shot hits someone's body | 0.1s |
 | `hit-head` | Your shot hits someone's head. It should feel clearly better than `hit-body` | 0.15s |
 | `hit-kill` | Your shot gets a kill | 0.4s |
-| `hurt` | You take damage | 0.2s |
+| `hurt` | Damage leaves you at 20 health or less | 0.4s |
 
 ### Movement
 
