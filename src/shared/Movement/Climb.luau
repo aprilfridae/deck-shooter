@@ -13,6 +13,10 @@ function Climb.classify(height: number): Kind?
 	return if height <= MoveConfig.ParryMaxHeight then "Parry" else "Climb"
 end
 
+function Climb.isFlat(normalY: number): boolean
+	return normalY >= MoveConfig.ClimbMinFlatness
+end
+
 -- The upward speed that carries the feet just past the edge.
 function Climb.riseSpeed(height: number, gravity: number): number
 	return math.sqrt(2 * gravity * (height + MoveConfig.ParryClearance))

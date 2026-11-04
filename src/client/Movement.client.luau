@@ -99,7 +99,7 @@ local function tryLedge(pressed: boolean, moveDirection: Vector3, now: number)
 	local character = humanoid.Parent :: Model
 
 	if pressed then
-		local heading = if state.mode == "Slide"
+		local heading = if state.mode == "Slide" or (airFromSlide and moveDirection.Magnitude == 0)
 			then slideDirection
 			elseif moveDirection.Magnitude > 0 then moveDirection.Unit
 			else flatLook()

@@ -6,7 +6,6 @@ local Climb = require(Movement:WaitForChild("Climb"))
 local MoveConfig = require(Movement:WaitForChild("MoveConfig"))
 
 local REACHES = { 1.5, 2.5, 3.5 } -- studs ahead of the character's centre
-local MIN_FLATNESS = 0.7
 local STAND_ROOM = 5.5
 local LANDING_INSET = 1
 local LANDING_LIFT = 0.1
@@ -55,7 +54,7 @@ function Ledge.find(character: Model, root: BasePart, forward: Vector3, rootHeig
 			if kind then
 				local landing = hit.Position + forward * LANDING_INSET + Vector3.new(0, rootHeight + LANDING_LIFT, 0)
 				if
-					hit.Normal.Y < MIN_FLATNESS
+					not Climb.isFlat(hit.Normal.Y)
 					or not isSolidScenery(hit.Instance)
 					or not canReach(root, hit.Position, landing)
 				then

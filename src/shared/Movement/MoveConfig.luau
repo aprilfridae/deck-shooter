@@ -18,6 +18,7 @@ return {
 
 	-- Heights are studs above the feet.
 	ClimbMinHeight = 1,
+	ClimbMinFlatness = 0.98, -- upward share of the surface normal
 	ParryMaxHeight = 4.5,
 	ParryClearance = 1.5,
 	ParryBoost = 6,

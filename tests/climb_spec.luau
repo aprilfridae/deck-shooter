@@ -23,6 +23,12 @@ describe("Climb", function()
 		expect(Climb.classify(12.1)).toBeNil()
 	end)
 
+	it("needs a flat top, so a ramp is not an edge", function()
+		expect(Climb.isFlat(1)).toBe(true)
+		expect(Climb.isFlat(math.cos(math.rad(15)))).toBe(false)
+		expect(Climb.isFlat(math.cos(math.rad(30)))).toBe(false)
+	end)
+
 	it("launches a parry high enough to clear the edge", function()
 		local rise = Climb.riseSpeed(4.5, 150)
 		-- height reached is rise^2 / 2g
