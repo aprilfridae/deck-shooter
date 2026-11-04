@@ -50,7 +50,14 @@ local jumpHeld = false
 type ClimbPath = { from: Vector3, top: Vector3, landing: Vector3, forward: Vector3, startedAt: number }
 local climb: ClimbPath? = nil
 
-type DashPath = { from: Vector3, to: Vector3, forward: Vector3, startedAt: number }
+type DashPath = {
+	from: Vector3,
+	to: Vector3,
+	forward: Vector3,
+	startedAt: number,
+	entrySpeed: number,
+	fallSpeed: number,
+}
 local dash: DashPath? = nil
 
 local function poseFor(mode: string): string
@@ -182,6 +189,8 @@ local function startDash(distance: number)
 		to = from + forward * travel,
 		forward = forward,
 		startedAt = os.clock(),
+		entrySpeed = MoveState.speed(state, os.clock()),
+		fallSpeed = root.AssemblyLinearVelocity.Y,
 	}
 	MoveState.startClimb(state)
 	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
@@ -194,10 +203,11 @@ local function advanceDash(path: DashPath, now: number)
 
 	if progress >= 1 then
 		dash = nil
-		MoveState.finishClimb(state, now)
+		MoveState.finishDash(state, path.entrySpeed, now)
 		humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
-		root.AssemblyLinearVelocity = path.forward * MoveConfig.SprintSpeed
-		slideDirection = path.forward
+		local speed = MoveState.speed(state, now)
+		root.AssemblyLinearVelocity = path.forward * speed + Vector3.yAxis * path.fallSpeed
+		slideDirection = Vector3.new(path.forward.X, 0, path.forward.Z).Unit
 		airFromSlide = true
 		jumped = false
 		airStartedAt = now

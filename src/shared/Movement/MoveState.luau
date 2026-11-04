@@ -85,6 +85,11 @@ function MoveState.launch(state: State, speed: number, now: number)
 	state.chained = false
 end
 
+-- A dash never ends slower than it started, so its momentum carries on.
+function MoveState.finishDash(state: State, entrySpeed: number, now: number)
+	MoveState.launch(state, math.max(entrySpeed, MoveConfig.DashExitSpeed), now)
+end
+
 function MoveState.startClimb(state: State)
 	state.mode = "Climb"
 	state.chained = false

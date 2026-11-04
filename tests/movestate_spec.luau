@@ -321,6 +321,19 @@ describe("MoveState", function()
 		expect(MoveState.speed(s, 1.3)).toBe(60)
 	end)
 
+	it("leaves a dash at the exit speed, in the air", function()
+		local s = MoveState.new()
+		MoveState.finishDash(s, 24, 1)
+		expect(s.mode).toBe("Air")
+		expect(MoveState.speed(s, 1.3)).toBe(42)
+	end)
+
+	it("keeps a faster speed through a dash", function()
+		local s = MoveState.new()
+		MoveState.finishDash(s, 56, 1)
+		expect(MoveState.speed(s, 1.3)).toBe(56)
+	end)
+
 	-- Review Focus 5
 	it("does not slide from crouch held before sprinting", function()
 		local s = MoveState.new()
