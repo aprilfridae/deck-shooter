@@ -160,6 +160,67 @@ describe("MoveState", function()
 		expect(MoveState.speed(s, 0.5)).toBe(24)
 	end)
 
+	describe("chain jump", function()
+		local airJump = { moving = true, jump = true, grounded = false }
+
+		-- Slide jump, hold crouch in the air, land into a slide at t = 1.
+		local function chained()
+			local s = MoveState.new()
+			sprintThenSlide(s, 0)
+			MoveState.step(s, on({ moving = true, sprint = true, crouch = true, jump = true, grounded = false }), 0.2)
+			MoveState.step(s, on(sliding), 1)
+			return s
+		end
+
+		it("launches faster from a slide that followed a fast fall", function()
+			local s = chained()
+			MoveState.step(s, on(airJump), 1.1)
+			expect(MoveState.speed(s, 1.1)).toBeCloseTo(56)
+		end)
+
+		it("jumps higher through the slide and the jump", function()
+			local s = chained()
+			expect(MoveState.jumpHeight(s)).toBe(10)
+			MoveState.step(s, on(airJump), 1.1)
+			expect(MoveState.jumpHeight(s)).toBe(10)
+		end)
+
+		it("keeps a plain slide jump at normal height", function()
+			local s = MoveState.new()
+			sprintThenSlide(s, 0)
+			expect(MoveState.jumpHeight(s)).toBe(6)
+			MoveState.step(s, on(airJump), 0.2)
+			expect(MoveState.jumpHeight(s)).toBe(6)
+			expect(MoveState.speed(s, 0.2)).toBeCloseTo(48)
+		end)
+
+		it("can chain again from another fast fall", function()
+			local s = chained()
+			MoveState.step(s, on({ moving = true, sprint = true, crouch = true, jump = true, grounded = false }), 1.1)
+			MoveState.step(s, on(sliding), 2)
+			expect(MoveState.jumpHeight(s)).toBe(10)
+		end)
+
+		it("ends when the player lands without sliding", function()
+			local s = chained()
+			MoveState.step(s, on(airJump), 1.1)
+			MoveState.step(s, on(sprinting), 2)
+			expect(MoveState.jumpHeight(s)).toBe(6)
+		end)
+
+		it("ends when the slide runs out", function()
+			local s = chained()
+			MoveState.step(s, on(sprinting), 2)
+			expect(MoveState.jumpHeight(s)).toBe(6)
+		end)
+
+		it("ends when the player slides off a ledge without jumping", function()
+			local s = chained()
+			MoveState.step(s, on({ moving = true, sprint = true, grounded = false }), 1.1)
+			expect(MoveState.jumpHeight(s)).toBe(6)
+		end)
+	end)
+
 	describe("fast fall", function()
 		local function airborne(crouch: boolean)
 			local s = MoveState.new()

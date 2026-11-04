@@ -23,7 +23,7 @@ describe("SpeedLimit", function()
 	end)
 
 	it("keeps the limit above the fastest slide jump", function()
-		local fastest = MoveConfig.SlideStartSpeed + MoveConfig.SlideJumpBoost
+		local fastest = MoveConfig.SlideStartSpeed + MoveConfig.ChainJumpBoost
 		expect(MoveConfig.SpeedLimit >= fastest + 5).toBe(true)
 	end)
 

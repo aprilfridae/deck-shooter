@@ -18,6 +18,7 @@ export type State = {
 	carryFrom: number,
 	carryFade: number,
 	airSince: number,
+	chained: boolean,
 }
 
 local BASE_SPEED = {
@@ -42,6 +43,7 @@ function MoveState.new(): State
 		carryFrom = -math.huge,
 		carryFade = MoveConfig.CarryFade,
 		airSince = -math.huge,
+		chained = false,
 	}
 end
 
@@ -58,6 +60,10 @@ function MoveState.speed(state: State, now: number): number
 		return lerp(state.carrySpeed, base, alpha)
 	end
 	return base
+end
+
+function MoveState.jumpHeight(state: State): number
+	return if state.chained then MoveConfig.ChainJumpHeight else MoveConfig.JumpHeight
 end
 
 -- Holding crouch while falling pulls the player down. A jump's rise is left
@@ -95,7 +101,10 @@ function MoveState.step(state: State, input: Input, now: number)
 
 	if not input.grounded or (previous == "Slide" and input.jump) then
 		if previous ~= "Air" then
-			local boost = if previous == "Slide" and input.jump then MoveConfig.SlideJumpBoost else 0
+			local slideJump = previous == "Slide" and input.jump
+			local jumpBoost = if state.chained then MoveConfig.ChainJumpBoost else MoveConfig.SlideJumpBoost
+			local boost = if slideJump then jumpBoost else 0
+			state.chained = slideJump and state.chained
 			state.carrySpeed = current + boost
 			state.airSince = now
 			state.mode = "Air"
@@ -107,6 +116,7 @@ function MoveState.step(state: State, input: Input, now: number)
 	if wantsSlide and input.sprint and input.moving and now >= state.nextSlide then
 		state.mode = "Slide"
 		state.slideStart = now
+		state.chained = previous == "Air"
 		return
 	end
 
@@ -115,6 +125,7 @@ function MoveState.step(state: State, input: Input, now: number)
 		state.carryFrom = now
 		state.carryFade = if previous == "Air" then MoveConfig.LandFade else MoveConfig.CarryFade
 	end
+	state.chained = false
 	if input.crouch then
 		state.mode = "Crouch"
 	elseif input.sprint and input.moving then

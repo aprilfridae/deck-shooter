@@ -5,7 +5,6 @@ local RunService = game:GetService("RunService")
 
 local Input = require(script.Parent.Input)
 local Movement = ReplicatedStorage:WaitForChild("Movement")
-local MoveConfig = require(Movement:WaitForChild("MoveConfig"))
 local MoveState = require(Movement:WaitForChild("MoveState"))
 local poseRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("Pose") :: RemoteEvent
 
@@ -15,6 +14,7 @@ local CAMERA_EASE = 15
 local SLIDE_FOV = 88
 local JUMP_FOV = 84
 local SLIDE_JUMP_FOV = 96
+local CHAIN_JUMP_FOV = 104
 local FOV_EASE = 7
 local LAND_CAMERA_DIP = Vector3.new(0, -0.9, 0)
 local MIN_AIR_FOR_DIP = 0.15
@@ -47,7 +47,10 @@ local function targetFieldOfView(): number
 	elseif state.mode ~= "Air" then
 		return FIELD_OF_VIEW
 	elseif airFromSlide then
-		return if jumped then SLIDE_JUMP_FOV else SLIDE_FOV
+		if not jumped then
+			return SLIDE_FOV
+		end
+		return if state.chained then CHAIN_JUMP_FOV else SLIDE_JUMP_FOV
 	end
 	return if jumped then JUMP_FOV else FIELD_OF_VIEW
 end
@@ -57,7 +60,6 @@ local function onCharacter(character: Model)
 	root = character:WaitForChild("HumanoidRootPart") :: BasePart
 	humanoid.AutoRotate = false
 	humanoid.UseJumpPower = false
-	humanoid.JumpHeight = MoveConfig.JumpHeight
 	state = MoveState.new()
 	slideDirection = Vector3.zero
 	airFromSlide = false
@@ -87,6 +89,7 @@ local function onFrame(dt: number)
 	}, now)
 
 	humanoid.WalkSpeed = MoveState.speed(state, now)
+	humanoid.JumpHeight = MoveState.jumpHeight(state)
 
 	local pose = poseFor(state.mode)
 	if pose ~= sentPose and now - poseSentAt >= POSE_SEND_GAP then
