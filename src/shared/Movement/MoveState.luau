@@ -17,6 +17,7 @@ export type State = {
 	carrySpeed: number,
 	carryFrom: number,
 	carryFade: number,
+	airSince: number,
 }
 
 local BASE_SPEED = {
@@ -40,6 +41,7 @@ function MoveState.new(): State
 		carrySpeed = 0,
 		carryFrom = -math.huge,
 		carryFade = MoveConfig.CarryFade,
+		airSince = -math.huge,
 	}
 end
 
@@ -64,6 +66,10 @@ function MoveState.step(state: State, input: Input, now: number)
 	local pressed = input.crouch and not state.crouchHeld
 	state.crouchHeld = input.crouch
 
+	if previous == "Air" and now - state.airSince < MoveConfig.MinAirTime then
+		return
+	end
+
 	if previous == "Slide" then
 		local slideEnd = state.slideStart + MoveConfig.SlideDuration
 		if now >= slideEnd then
@@ -79,6 +85,7 @@ function MoveState.step(state: State, input: Input, now: number)
 		if previous ~= "Air" then
 			local boost = if previous == "Slide" and input.jump then MoveConfig.SlideJumpBoost else 0
 			state.carrySpeed = current + boost
+			state.airSince = now
 			state.mode = "Air"
 		end
 		return

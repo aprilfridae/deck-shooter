@@ -12,7 +12,10 @@ local poseRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChil
 local FIELD_OF_VIEW = 80
 local SLIDE_CAMERA_DROP = Vector3.new(0, -2, 0)
 local CAMERA_EASE = 15
-local JUMP_FOV_KICK = 6
+local SLIDE_FOV = 88
+local JUMP_FOV = 84
+local SLIDE_JUMP_FOV = 96
+local FOV_EASE = 7
 local LAND_CAMERA_DIP = Vector3.new(0, -0.9, 0)
 local MIN_AIR_FOR_DIP = 0.15
 local EFFECT_EASE = 7
@@ -24,7 +27,8 @@ local root: BasePart? = nil
 local state = MoveState.new()
 local slideDirection = Vector3.zero
 local airFromSlide = false
-local jumpKick = 0
+local jumped = false
+local fieldOfView = FIELD_OF_VIEW
 local landDip = 0
 local airStartedAt = 0
 local sentPose = "Normal"
@@ -37,6 +41,17 @@ local function poseFor(mode: string): string
 	return "Normal"
 end
 
+local function targetFieldOfView(): number
+	if state.mode == "Slide" then
+		return SLIDE_FOV
+	elseif state.mode ~= "Air" then
+		return FIELD_OF_VIEW
+	elseif airFromSlide then
+		return if jumped then SLIDE_JUMP_FOV else SLIDE_FOV
+	end
+	return if jumped then JUMP_FOV else FIELD_OF_VIEW
+end
+
 local function onCharacter(character: Model)
 	humanoid = character:WaitForChild("Humanoid") :: Humanoid
 	root = character:WaitForChild("HumanoidRootPart") :: BasePart
@@ -46,7 +61,8 @@ local function onCharacter(character: Model)
 	state = MoveState.new()
 	slideDirection = Vector3.zero
 	airFromSlide = false
-	jumpKick = 0
+	jumped = false
+	fieldOfView = FIELD_OF_VIEW
 	landDip = 0
 	sentPose = "Normal"
 	workspace.CurrentCamera.FieldOfView = FIELD_OF_VIEW
@@ -97,20 +113,17 @@ local function onFrame(dt: number)
 		humanoid:Move(slideDirection, false)
 	end
 
-	-- Takeoff widens the view for a moment and landing dips the camera.
+	-- The view widens through slides and jumps, and landing dips the camera.
 	local airborne = state.mode == "Air"
 	if airborne and previousMode ~= "Air" then
 		airStartedAt = now
-		if keys.jump then
-			jumpKick = 1
-		end
+		jumped = keys.jump
 	elseif previousMode == "Air" and not airborne and now - airStartedAt >= MIN_AIR_FOR_DIP then
 		landDip = 1
 	end
-	local ease = math.exp(-dt * EFFECT_EASE)
-	jumpKick *= ease
-	landDip *= ease
-	workspace.CurrentCamera.FieldOfView = FIELD_OF_VIEW + JUMP_FOV_KICK * jumpKick
+	landDip *= math.exp(-dt * EFFECT_EASE)
+	fieldOfView += (targetFieldOfView() - fieldOfView) * (1 - math.exp(-dt * FOV_EASE))
+	workspace.CurrentCamera.FieldOfView = fieldOfView
 
 	local target = (if sliding then SLIDE_CAMERA_DROP else Vector3.zero) + LAND_CAMERA_DIP * landDip
 	humanoid.CameraOffset = humanoid.CameraOffset:Lerp(target, math.min(dt * CAMERA_EASE, 1))

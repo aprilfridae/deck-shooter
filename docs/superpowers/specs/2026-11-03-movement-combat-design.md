@@ -62,7 +62,7 @@ The player's client moves their character using a Humanoid-based controller. Rob
 | Sprint | 24 | Any direction, no stamina, small accuracy penalty |
 | Slide | Starts at 42, slows over 0.9s | Starts from a sprint, any direction, no cooldown |
 | Slide-cancel | Crouch keeps current speed; jump adds 8 | Jump or crouch to end a slide early. A jump holds its speed in the air and fades over 0.6s after landing |
-| Jump | 6 studs high, gravity 150 for a slower arc, camera kick on takeoff and landing | Small accuracy penalty in the air |
+| Jump | 6 studs high, gravity 150 for a slower arc, camera dip on landing. Field of view eases from 80 to 88 in a slide, 84 in a jump and 96 in a slide jump, and back to 80 on landing | Small accuracy penalty in the air |
 
 Players can aim and shoot in any direction during every move. The camera is first-person. Other players see the full character sliding and turning.
 

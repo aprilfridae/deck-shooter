@@ -9,6 +9,7 @@ return {
 	CarryFade = 0.25,
 	SlideJumpBoost = 8, -- added to current speed when a jump cancels a slide
 	JumpHeight = 6,
+	MinAirTime = 0.1, -- the ground check can lag a jump by a frame or two
 	LandFade = 0.6, -- how long landing keeps jump speed before it fades
 
 	-- Cheat checks. SpeedLimit is the fastest slide jump plus a margin.
