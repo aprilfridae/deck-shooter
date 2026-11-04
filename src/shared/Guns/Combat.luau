@@ -1,4 +1,4 @@
--- Health rules. All damage passes through here, so the Aegis Shell can join later.
+-- Health and shield rules. All damage passes through here.
 local Combat = {}
 
 function Combat.applyDamage(health: number, amount: number): (number, boolean)
@@ -6,6 +6,12 @@ function Combat.applyDamage(health: number, amount: number): (number, boolean)
 		return health, false
 	end
 	local remaining = math.max(health - amount, 0)
+	return remaining, remaining <= 0
+end
+
+-- A shield takes the whole hit. Damage beyond its HP is lost, and an instant kill just breaks it.
+function Combat.absorb(shield: number, amount: number): (number, boolean)
+	local remaining = math.max(shield - amount, 0)
 	return remaining, remaining <= 0
 end
 

@@ -13,6 +13,7 @@ export type Slot = {
 export type Loadout = {
 	slots: { primary: Slot, sidearm: Slot },
 	active: string,
+	fireRateBonus: number,
 }
 
 local Weapon = {}
@@ -38,6 +39,7 @@ function Weapon.newLoadout(class: string, rifle: string?): Loadout
 	return {
 		slots = { primary = newSlot(primary), sidearm = newSlot(guns.sidearm) },
 		active = "primary",
+		fireRateBonus = 0,
 	}
 end
 
@@ -71,13 +73,19 @@ function Weapon.update(loadout: Loadout, now: number)
 	finishReload(activeSlot(loadout), now)
 end
 
+-- Adds shots to the active gun, never past a full magazine.
+function Weapon.addAmmo(loadout: Loadout, shots: number)
+	local slot = activeSlot(loadout)
+	slot.ammo = math.min(slot.ammo + shots, slot.gun.mag)
+end
+
 function Weapon.tryFire(loadout: Loadout, now: number): boolean
 	Weapon.update(loadout, now)
 	local slot = activeSlot(loadout)
 	if slot.ammo <= 0 or (slot.reloadDoneAt and not slot.gun.perShell) then
 		return false
 	end
-	local interval = 60 / slot.gun.rpm
+	local interval = 60 / slot.gun.rpm / (1 + loadout.fireRateBonus)
 	if now - slot.lastShot < interval * (1 - FIRE_RATE_TOLERANCE) then
 		return false
 	end

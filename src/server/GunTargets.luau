@@ -14,6 +14,7 @@ export type Target = {
 	player: Player?,
 	history: History.History,
 	health: number,
+	shield: { hp: number, onBreak: () -> () }?,
 }
 
 local targets: { [Model]: Target } = {}
@@ -66,6 +67,17 @@ end
 -- Returns true if this damage killed the target.
 function GunTargets.damage(target: Target, amount: number): boolean
 	if not GunTargets.isAlive(target) then
+		return false
+	end
+	local shield = target.shield
+	if shield then
+		local left, broke = Combat.absorb(shield.hp, amount)
+		shield.hp = left
+		target.model:SetAttribute("ShieldHp", left)
+		if broke then
+			target.shield = nil
+			shield.onBreak()
+		end
 		return false
 	end
 	local health, killed = Combat.applyDamage(target.health, amount)

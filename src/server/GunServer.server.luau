@@ -12,6 +12,7 @@ local Spread = require(Guns:WaitForChild("Spread"))
 local Weapon = require(Guns:WaitForChild("Weapon"))
 local Requests = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Requests"))
 local GunTargets = require(script.Parent.GunTargets)
+local loadouts = require(script.Parent.Loadouts)
 local PlayerCards = require(script.Parent.PlayerCards)
 
 local RESPAWN_SECONDS = 3
@@ -39,7 +40,6 @@ local impactRemote = remote("Impacts")
 local loadoutRemote = remote("SetLoadout")
 remotes.Parent = ReplicatedStorage
 
-local loadouts: { [Player]: Weapon.Loadout } = {}
 local requestWindows: { [Player]: { startedAt: number, count: number } } = {}
 
 local random = Random.new()

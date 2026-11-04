@@ -71,7 +71,8 @@ local function canFire(pressed: boolean, held: boolean, now: number): boolean
 	if not (pressed or (held and gun.automatic)) then
 		return false
 	end
-	return now - lastFire >= 60 / gun.rpm
+	local bonus = player:GetAttribute("FireRateBonus") or 0
+	return now - lastFire >= 60 / gun.rpm / (1 + bonus)
 end
 
 -- Test room only: Phase 4 replaces this with the between-round screen.
