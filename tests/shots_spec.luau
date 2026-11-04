@@ -97,6 +97,11 @@ describe("ShotRequest", function()
 		expect(parsed.firedAt).toBe(9.9)
 	end)
 
+	it("reads aiming, and treats anything but true as not aiming", function()
+		expect(ShotRequest.parse(shot({ aiming = true }), 10).aiming).toBe(true)
+		expect(ShotRequest.parse(shot({ aiming = "yes" }), 10).aiming).toBe(false)
+	end)
+
 	it("rejects a zero direction", function()
 		expect(ShotRequest.parse(shot({ direction = { x = 0, y = 0, z = 0 } }), 10)).toBeNil()
 	end)

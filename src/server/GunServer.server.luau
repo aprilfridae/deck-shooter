@@ -17,7 +17,6 @@ local PlayerCards = require(script.Parent.PlayerCards)
 local RESPAWN_SECONDS = 3
 local RECORD_EVERY_SECONDS = 0.05
 local MAX_RANGE = 1000
-local SPRINTING_SPEED = 20
 local MAX_REQUESTS_PER_SECOND = 10
 local DEFAULT_CLASS = "Assault"
 local DEFAULT_RIFLE = "M4"
@@ -56,14 +55,6 @@ local function allowRequest(player: Player, now: number): boolean
 	end
 	window.count += 1
 	return window.count <= MAX_REQUESTS_PER_SECOND
-end
-
-local function stanceOf(target: GunTargets.Target)
-	local velocity = target.root.AssemblyLinearVelocity
-	return {
-		sprinting = Vector3.new(velocity.X, 0, velocity.Z).Magnitude > SPRINTING_SPEED,
-		airborne = target.humanoid.FloorMaterial == Enum.Material.Air,
-	}
 end
 
 local function firstWall(origin: Vector3, direction: Vector3): RaycastResult?
@@ -135,7 +126,7 @@ local function onFire(player: Player, raw: any)
 	end
 
 	local gun = Weapon.active(loadout).gun
-	local angle = Spread.angle(gun, stanceOf(shooter))
+	local angle = Spread.angle(gun, shot.aiming)
 	local viewAt = ShotRequest.viewTime(shot.firedAt, ping, now)
 	local totals: { [GunTargets.Target]: number } = {}
 	local headshot = false

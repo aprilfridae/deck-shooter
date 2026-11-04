@@ -1,21 +1,11 @@
 -- Shot accuracy. The server rolls spread, so a client cannot remove it.
-local SPRINT_PENALTY = 1.4
-local AIR_PENALTY = 1.7
-
 type Point = { x: number, y: number, z: number }
 
 local Spread = {}
 
--- Hip fire and aiming are equally accurate: aiming only zooms.
-function Spread.angle(gun: any, stance: { sprinting: boolean, airborne: boolean }): number
-	local angle = gun.spread
-	if stance.sprinting then
-		angle *= SPRINT_PENALTY
-	end
-	if stance.airborne then
-		angle *= AIR_PENALTY
-	end
-	return angle
+-- Movement never changes accuracy. Aiming only matters for a gun with a hipSpread.
+function Spread.angle(gun: any, aiming: boolean): number
+	return if gun.hipSpread and not aiming then gun.hipSpread else gun.spread
 end
 
 local function normalize(x: number, y: number, z: number): Point

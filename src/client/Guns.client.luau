@@ -50,7 +50,7 @@ local function point(vector: Vector3)
 	return { x = vector.X, y = vector.Y, z = vector.Z }
 end
 
-local function fire(camera: Camera, now: number)
+local function fire(camera: Camera, aiming: boolean, now: number)
 	lastFire = now
 	ammo -= 1
 	local pitch, yaw = Recoil.aimOffset(gun)
@@ -58,6 +58,7 @@ local function fire(camera: Camera, now: number)
 		origin = point(camera.CFrame.Position),
 		direction = point((camera.CFrame * CFrame.Angles(pitch, yaw, 0)).LookVector),
 		firedAt = workspace:GetServerTimeNow(),
+		aiming = aiming,
 	})
 	Recoil.kick()
 	GunView.kick()
@@ -127,7 +128,7 @@ local function onFrame(dt: number)
 	local pressed = keys.fire and not previous.fire
 	if not climbing then
 		if canFire(pressed, keys.fire, now) then
-			fire(camera, now)
+			fire(camera, aiming, now)
 		elseif pressed and gun and ammo <= 0 and not reloading then
 			reloadRemote:FireServer()
 		end

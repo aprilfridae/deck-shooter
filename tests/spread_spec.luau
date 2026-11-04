@@ -14,21 +14,21 @@ local function degreesBetween(a: any, b: any): number
 end
 
 describe("Spread", function()
-	it("uses the hip spread by default", function()
-		expect(Spread.angle(m4, { sprinting = false, airborne = false })).toBe(0.2)
+	it("gives hip fire the same accuracy as aiming", function()
+		expect(Spread.angle(m4, false)).toBe(0.2)
+		expect(Spread.angle(m4, true)).toBe(0.2)
 	end)
 
-	it("adds the sprint and air penalties to spread", function()
-		expect(Spread.angle(m4, { sprinting = true, airborne = false })).toBeCloseTo(0.28)
-		expect(Spread.angle(m4, { sprinting = false, airborne = true })).toBeCloseTo(0.34)
-		expect(Spread.angle(m4, { sprinting = true, airborne = true })).toBeCloseTo(0.476)
+	it("keeps the Sniper inaccurate unless scoped", function()
+		local sniper = GunConfig.guns.Sniper
+		expect(Spread.angle(sniper, false)).toBe(7)
+		expect(Spread.angle(sniper, true)).toBe(0)
 	end)
 
-	it("gives every gun one spread, with no separate hip value", function()
-		for _, gun in GunConfig.guns do
+	it("leaves the Sniper as the only gun with a hip penalty", function()
+		for id, gun in GunConfig.guns do
 			expect(type(gun.spread)).toBe("number")
-			expect(gun.hipSpread).toBeNil()
-			expect(gun.aimSpread).toBeNil()
+			expect(gun.hipSpread == nil).toBe(id ~= "Sniper")
 		end
 	end)
 

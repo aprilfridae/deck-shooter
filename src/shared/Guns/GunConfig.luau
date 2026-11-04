@@ -75,6 +75,7 @@ GunConfig.guns = {
 		lowTo = math.huge,
 		lowScale = 1,
 		spread = 0,
+		hipSpread = 7,
 		pattern = { { 1, 7, 0.5 }, { 2, 9, -0.4 } },
 		recovery = 1.6,
 		aimFov = 30,
