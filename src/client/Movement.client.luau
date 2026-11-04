@@ -13,6 +13,7 @@ local MoveState = require(Movement:WaitForChild("MoveState"))
 local poseRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("Pose") :: RemoteEvent
 local abilityRemotes = ReplicatedStorage:WaitForChild("AbilityRemotes")
 local dashRemote = abilityRemotes:WaitForChild("Dash") :: RemoteEvent
+local pushRemote = abilityRemotes:WaitForChild("Push") :: RemoteEvent
 
 local FIELD_OF_VIEW = 80
 local SLIDE_CAMERA_DROP = Vector3.new(0, -2, 0)
@@ -293,6 +294,12 @@ local function onFrame(dt: number)
 end
 
 dashRemote.OnClientEvent:Connect(startDash)
+pushRemote.OnClientEvent:Connect(function(velocity: Vector3)
+	if humanoid and root and not climb and not dash then
+		humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+		root.AssemblyLinearVelocity = velocity
+	end
+end)
 
 player.CharacterAdded:Connect(onCharacter)
 if player.Character then

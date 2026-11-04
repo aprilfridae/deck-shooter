@@ -15,6 +15,9 @@ local loadouts = require(script.Parent.Loadouts)
 local MoveGrace = require(script.Parent.MoveGrace)
 local PlayerCards = require(script.Parent.PlayerCards)
 
+local SHIELD_SIZE = 8
+local SHIELD_COLOR = Color3.fromRGB(90, 170, 255)
+
 -- Test room only: two decks cover all 5 cards. Phase 4 removes these.
 local TEST_DECKS = {
 	{ "phase_dash", "overclock", "recon_pulse" },
@@ -33,6 +36,7 @@ local useRemote = remote("Use")
 local testDeckRemote = remote("TestDeck")
 local revealRemote = remote("Reveal")
 local dashRemote = remote("Dash")
+local pushRemote = remote("Push")
 remotes.Parent = ReplicatedStorage
 
 local slotsOf: { [Player]: { Ability.Slot } } = {}
@@ -159,6 +163,63 @@ handlers.recon_pulse = function(player, target, slot)
 			end
 		end
 	end
+	return true
+end
+
+local function pushEnemies(owner: Player, center: Vector3, tier: string)
+	local speed = Ability.pushSpeed(tier)
+	for _, other in GunTargets.all() do
+		local away = other.root.Position - center
+		if away.Magnitude <= Config.PushRadius and isEnemy(owner, other) and GunTargets.isAlive(other) then
+			local flat = Vector3.new(away.X, 0, away.Z)
+			local direction = if flat.Magnitude > 0.01 then flat.Unit else Vector3.xAxis
+			local velocity = direction * speed + Vector3.yAxis * Config.PushRise
+			if other.player then
+				MoveGrace.give(other.player, Config.MoveGraceSeconds)
+				pushRemote:FireClient(other.player, velocity)
+			else
+				other.root.AssemblyLinearVelocity = velocity
+			end
+		end
+	end
+end
+
+local function shieldBubble(target: GunTargets.Target): Part
+	local bubble = Instance.new("Part")
+	bubble.Name = "AegisShell"
+	bubble.Shape = Enum.PartType.Ball
+	bubble.Size = Vector3.one * SHIELD_SIZE
+	bubble.Material = Enum.Material.ForceField
+	bubble.Color = SHIELD_COLOR
+	bubble.CanCollide = false
+	bubble.CanQuery = false
+	bubble.CanTouch = false
+	bubble.Massless = true
+	bubble.CFrame = target.root.CFrame
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = bubble
+	weld.Part1 = target.root
+	weld.Parent = bubble
+	bubble.Parent = workspace
+	return bubble
+end
+
+handlers.aegis_shell = function(player, target, slot)
+	local bubble = shieldBubble(target)
+	local shieldHp = Cards.stat(slot.cardId, slot.tier, "shieldHp")
+	target.model:SetAttribute("ShieldHp", shieldHp)
+	local stop = timed(player, Cards.stat(slot.cardId, slot.tier, "duration"), function()
+		bubble:Destroy()
+		target.shield = nil
+		target.model:SetAttribute("ShieldHp", nil)
+	end)
+	target.shield = {
+		hp = shieldHp,
+		onBreak = function()
+			stop(false)
+			pushEnemies(player, target.root.Position, slot.tier)
+		end,
+	}
 	return true
 end
 
