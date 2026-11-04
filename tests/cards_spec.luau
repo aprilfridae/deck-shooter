@@ -16,15 +16,13 @@ describe("Cards", function()
 		expect(#Cards.ids).toBe(5)
 	end)
 
-	it("stays inside the 20-25% ceiling on every non-exempt stat", function()
+	it("stays inside the 20-25% ceiling on every stat", function()
 		for _, id in Cards.ids do
 			local card = Cards.byId[id]
 			for stat, values in card.stats do
-				if not (card.ceilingExempt and card.ceilingExempt[stat]) then
-					local low = card.lowerIsBetter and card.lowerIsBetter[stat]
-					local ratio = if low then values[1] / values[3] else values[3] / values[1]
-					expect(ratio >= 1.20 - 1e-9 and ratio <= 1.25 + 1e-9).toBe(true)
-				end
+				local low = card.lowerIsBetter and card.lowerIsBetter[stat]
+				local ratio = if low then values[1] / values[3] else values[3] / values[1]
+				expect(ratio >= 1.20 - 1e-9 and ratio <= 1.25 + 1e-9).toBe(true)
 			end
 		end
 	end)
@@ -43,6 +41,33 @@ describe("Cards", function()
 				expect(better).toBe(true)
 			end
 		end
+	end)
+
+	it("applies the Prototype data changes", function()
+		expect(Cards.stat("aegis_shell", "Prototype", "duration")).toBe(3.75)
+		expect(Cards.stat("arc_mine", "Prototype", "slowSeconds")).toBe(1.875)
+		expect(Cards.byId.arc_mine.perk).toBe("hidden_until_triggered")
+	end)
+
+	it("has no ceiling exemptions left", function()
+		for _, id in Cards.ids do
+			expect(Cards.byId[id].ceilingExempt).toBeNil()
+		end
+	end)
+
+	it("gives each card its spec cooldown", function()
+		expect(Cards.cooldown("phase_dash", "Field")).toBe(12)
+		expect(Cards.cooldown("phase_dash", "Prototype")).toBe(10)
+		expect(Cards.cooldown("overclock", "BlackSite")).toBe(25)
+		expect(Cards.cooldown("recon_pulse", "Field")).toBe(20)
+		expect(Cards.cooldown("aegis_shell", "Prototype")).toBe(25)
+		expect(Cards.cooldown("arc_mine", "Field")).toBe(30)
+	end)
+
+	it("scales perks by tier", function()
+		expect(Cards.perkScale("Field")).toBe(0.8)
+		expect(Cards.perkScale("BlackSite")).toBe(0.9)
+		expect(Cards.perkScale("Prototype")).toBe(1)
 	end)
 
 	it("gives every card a perk", function()
