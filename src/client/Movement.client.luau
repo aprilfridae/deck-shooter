@@ -12,6 +12,10 @@ local poseRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChil
 local FIELD_OF_VIEW = 80
 local SLIDE_CAMERA_DROP = Vector3.new(0, -2, 0)
 local CAMERA_EASE = 15
+local JUMP_FOV_KICK = 6
+local LAND_CAMERA_DIP = Vector3.new(0, -0.9, 0)
+local MIN_AIR_FOR_DIP = 0.15
+local EFFECT_EASE = 7
 local POSE_SEND_GAP = 0.12 -- stays under the server's 10 per second limit
 
 local player = Players.LocalPlayer
@@ -20,6 +24,9 @@ local root: BasePart? = nil
 local state = MoveState.new()
 local slideDirection = Vector3.zero
 local airFromSlide = false
+local jumpKick = 0
+local landDip = 0
+local airStartedAt = 0
 local sentPose = "Normal"
 local poseSentAt = -math.huge
 
@@ -39,6 +46,8 @@ local function onCharacter(character: Model)
 	state = MoveState.new()
 	slideDirection = Vector3.zero
 	airFromSlide = false
+	jumpKick = 0
+	landDip = 0
 	sentPose = "Normal"
 	workspace.CurrentCamera.FieldOfView = FIELD_OF_VIEW
 end
@@ -49,7 +58,8 @@ local function onFrame(dt: number)
 	end
 
 	local keys = Input.read()
-	local wasSliding = state.mode == "Slide"
+	local previousMode = state.mode
+	local wasSliding = previousMode == "Slide"
 	local direction = humanoid.MoveDirection
 	local now = os.clock()
 	MoveState.step(state, {
@@ -87,7 +97,22 @@ local function onFrame(dt: number)
 		humanoid:Move(slideDirection, false)
 	end
 
-	local target = if sliding then SLIDE_CAMERA_DROP else Vector3.zero
+	-- Takeoff widens the view for a moment and landing dips the camera.
+	local airborne = state.mode == "Air"
+	if airborne and previousMode ~= "Air" then
+		airStartedAt = now
+		if keys.jump then
+			jumpKick = 1
+		end
+	elseif previousMode == "Air" and not airborne and now - airStartedAt >= MIN_AIR_FOR_DIP then
+		landDip = 1
+	end
+	local ease = math.exp(-dt * EFFECT_EASE)
+	jumpKick *= ease
+	landDip *= ease
+	workspace.CurrentCamera.FieldOfView = FIELD_OF_VIEW + JUMP_FOV_KICK * jumpKick
+
+	local target = (if sliding then SLIDE_CAMERA_DROP else Vector3.zero) + LAND_CAMERA_DIP * landDip
 	humanoid.CameraOffset = humanoid.CameraOffset:Lerp(target, math.min(dt * CAMERA_EASE, 1))
 
 	local yaw = math.atan2(-workspace.CurrentCamera.CFrame.LookVector.X, -workspace.CurrentCamera.CFrame.LookVector.Z)

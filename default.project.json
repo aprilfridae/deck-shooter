@@ -6,6 +6,9 @@
       "CardCore": { "$path": "src/shared/CardCore" },
       "Movement": { "$path": "src/shared/Movement" }
     },
+    "Workspace": {
+      "$properties": { "Gravity": 150 }
+    },
     "ServerScriptService": {
       "CardCoreServer": { "$path": "src/server" }
     },
