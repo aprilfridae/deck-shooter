@@ -2,6 +2,8 @@
 -- window, so one late network update cannot fail a legal player.
 local MoveConfig = require("./MoveConfig")
 
+local UNCHANGED_STUDS = 0.01
+
 export type Sample = { x: number, y: number, z: number, t: number }
 export type Position = { x: number, y: number, z: number }
 export type Track = {
@@ -34,8 +36,19 @@ function SpeedLimit.sample(track: Track, x: number, y: number, z: number, t: num
 		table.remove(samples, 1)
 	end
 
+	-- An unchanged position may be a network stall, so it stays out of the
+	-- window and the catch-up jump is measured from before the stall.
+	local newest = samples[#samples]
+	if
+		math.abs(x - newest.x) <= UNCHANGED_STUDS
+		and math.abs(y - newest.y) <= UNCHANGED_STUDS
+		and math.abs(z - newest.z) <= UNCHANGED_STUDS
+	then
+		return true
+	end
+
 	local oldest = samples[1]
-	local elapsed = t - oldest.t
+	local elapsed = math.min(t - oldest.t, MoveConfig.MaxLagSeconds)
 	local horizontal = math.sqrt((x - oldest.x) ^ 2 + (z - oldest.z) ^ 2)
 	local rise = y - oldest.y
 	local legal = horizontal <= MoveConfig.SpeedLimit * elapsed + MoveConfig.LagStuds

@@ -11,6 +11,7 @@ local poseRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChil
 local FIELD_OF_VIEW = 80
 local SLIDE_CAMERA_DROP = Vector3.new(0, -2, 0)
 local CAMERA_EASE = 15
+local POSE_SEND_GAP = 0.12 -- stays under the server's 10 per second limit
 
 local player = Players.LocalPlayer
 local humanoid: Humanoid? = nil
@@ -18,6 +19,7 @@ local root: BasePart? = nil
 local state = MoveState.new()
 local slideDirection = Vector3.zero
 local sentPose = "Normal"
+local poseSentAt = -math.huge
 
 local function poseFor(mode: string): string
 	if mode == "Slide" or mode == "Crouch" then
@@ -56,8 +58,9 @@ local function onFrame(dt: number)
 	humanoid.WalkSpeed = MoveState.speed(state, now)
 
 	local pose = poseFor(state.mode)
-	if pose ~= sentPose then
+	if pose ~= sentPose and now - poseSentAt >= POSE_SEND_GAP then
 		sentPose = pose
+		poseSentAt = now
 		poseRemote:FireServer(pose)
 	end
 

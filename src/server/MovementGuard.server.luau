@@ -8,6 +8,7 @@ local SpeedLimit = require(ReplicatedStorage:WaitForChild("Movement"):WaitForChi
 local SAMPLE_EVERY_SECONDS = 0.1
 local SPAWN_GRACE_SECONDS = 1 -- the root part may not be at the spawn yet
 local PULLBACK_GRACE_SECONDS = 0.25 -- old client positions may still arrive
+local PULLBACK_PING_MARGIN = 0.1
 local MAX_POSES_PER_SECOND = 10
 local POSES = { Normal = true, Crouch = true, Slide = true }
 
@@ -87,7 +88,9 @@ local function onFail(player: Player, guard: Guard, now: number)
 	end
 	guard.character:PivotTo(CFrame.new(valid.x, valid.y, valid.z) * guard.root.CFrame.Rotation)
 	SpeedLimit.reset(track, valid.x, valid.y, valid.z, now)
-	guard.pausedUntil = now + PULLBACK_GRACE_SECONDS
+	-- The client owns its character, so the pull-back needs a round trip to land.
+	local roundTrip = 2 * player:GetNetworkPing() + PULLBACK_PING_MARGIN
+	guard.pausedUntil = now + math.max(PULLBACK_GRACE_SECONDS, roundTrip)
 end
 
 local function check(player: Player, guard: Guard, now: number)

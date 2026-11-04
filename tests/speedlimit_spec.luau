@@ -96,6 +96,26 @@ describe("SpeedLimit", function()
 		expect(SpeedLimit.sample(track, 48, 0, 0, 2)).toBe(true)
 	end)
 
+	-- The guard keeps sampling through a stall, so the frozen position repeats.
+	it("passes legal travel after a stall the guard sampled through", function()
+		local track = SpeedLimit.new(0, 0, 0, 0)
+		for i = 1, 10 do
+			expect(SpeedLimit.sample(track, 3.4 * i, 0, 0, i / 10)).toBe(true)
+		end
+		for i = 11, 20 do
+			expect(SpeedLimit.sample(track, 34, 0, 0, i / 10)).toBe(true)
+		end
+		expect(SpeedLimit.sample(track, 68, 0, 0, 2)).toBe(true)
+	end)
+
+	it("caps the credit from standing still", function()
+		local track = SpeedLimit.new(0, 0, 0, 0)
+		for i = 1, 100 do
+			SpeedLimit.sample(track, 0, 0, 0, i / 10)
+		end
+		expect(SpeedLimit.sample(track, 100, 0, 0, 10.1)).toBe(false)
+	end)
+
 	-- Review Focus 3
 	it("never fails on falling", function()
 		local track = SpeedLimit.new(0, 0, 0, 0)
