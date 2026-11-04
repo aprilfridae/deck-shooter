@@ -12,14 +12,16 @@ local TEST_GUN = {
 
 -- Fires a spray and returns where each bullet went, relative to the original aim.
 local function spray(gun: any, shots: number, interval: number): { { number } }
-	local viewPitch = 0
+	local viewPitch, viewYaw = 0, 0
 	local bullets = {}
 	for _ = 1, shots do
 		local pitch, yaw = Recoil.aimOffset(gun)
-		table.insert(bullets, { viewPitch + pitch, yaw })
+		table.insert(bullets, { viewPitch + pitch, viewYaw + yaw })
 		Recoil.kick()
 		for _ = 1, math.floor(interval / STEP) do
-			viewPitch += Recoil.advance(STEP)
+			local stepPitch, stepYaw = Recoil.advance(STEP)
+			viewPitch += stepPitch
+			viewYaw += stepYaw
 		end
 	end
 	return bullets
@@ -73,18 +75,28 @@ describe("Spray pattern", function()
 		Recoil.kick()
 		local view = 0
 		for _ = 1, 28 do
-			view += Recoil.advance(STEP)
+			view += (Recoil.advance(STEP))
 		end
 		expect(view > math.rad(6) * Recoil.VIEW_SHARE * 0.9).toBe(true)
 		expect(view <= math.rad(6) * Recoil.VIEW_SHARE).toBe(true)
 	end)
 
-	it("never turns the camera sideways", function()
+	it("swings the camera sideways by the same share as it rises", function()
 		Recoil.reset()
-		Recoil.aimOffset(TEST_GUN)
+		Recoil.aimOffset({ pattern = { { 1, 4, 2 } }, recovery = 0 })
 		Recoil.kick()
-		local _, sideways = Recoil.advance(STEP)
-		expect(sideways).toBeNil()
+		local up, side = 0, 0
+		for _ = 1, 28 do
+			local stepUp, stepSide = Recoil.advance(STEP)
+			up += stepUp
+			side += stepSide
+		end
+		expect(side > 0).toBe(true)
+		expect(side).toBeCloseTo(up / 2, 1e-9)
+	end)
+
+	it("uses Counter-Strike's camera share", function()
+		expect(Recoil.VIEW_SHARE).toBe(0.45)
 	end)
 
 	it("only falls after firing stops", function()
@@ -94,23 +106,21 @@ describe("Spray pattern", function()
 			Recoil.advance(STEP)
 		end
 		for _ = 1, 240 do
-			expect(Recoil.advance(STEP) <= 0).toBe(true)
+			expect((Recoil.advance(STEP)) <= 0).toBe(true)
 		end
 	end)
 
-	it("falls the same whichever way the pattern went", function()
-		local gentle = { pattern = { { 4, 8, 0 } }, recovery = 10 }
-		local swinging = { pattern = { { 2, 4, 6 }, { 4, 8, -6 } }, recovery = 10 }
-		local function fall(gun: any): number
-			Recoil.reset()
-			spray(gun, 4, 0.05)
-			local view = 0
-			for _ = 1, 60 do
-				view += Recoil.advance(STEP)
-			end
-			return view
+	it("falls in a straight line, not back along the pattern", function()
+		Recoil.reset()
+		spray({ pattern = { { 2, 4, 6 }, { 4, 8, -6 } }, recovery = 10 }, 4, 0.05)
+		for _ = 1, 120 do
+			Recoil.advance(STEP)
 		end
-		expect(fall(swinging)).toBeCloseTo(fall(gentle), 1e-9)
+		local firstUp, firstSide = Recoil.advance(STEP)
+		for _ = 1, 240 do
+			local up, side = Recoil.advance(STEP)
+			expect(side * firstUp).toBeCloseTo(up * firstSide, 1e-9)
+		end
 	end)
 
 	it("rises from where the camera is when firing starts again mid-fall", function()
@@ -124,7 +134,7 @@ describe("Spray pattern", function()
 		Recoil.kick()
 		local rise = 0
 		for _ = 1, 28 do
-			rise += Recoil.advance(STEP)
+			rise += (Recoil.advance(STEP))
 		end
 		expect(rise <= math.rad(2) * Recoil.VIEW_SHARE).toBe(true)
 	end)
@@ -134,7 +144,7 @@ describe("Spray pattern", function()
 		spray(TEST_GUN, 4, 0.05)
 		local view = 0
 		for _ = 1, 240 * 3 do
-			view += Recoil.advance(STEP)
+			view += (Recoil.advance(STEP))
 		end
 		local pitch, yaw = Recoil.aimOffset(TEST_GUN)
 		expect(math.abs(pitch) < 1e-3).toBe(true)
