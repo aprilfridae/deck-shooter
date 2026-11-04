@@ -49,7 +49,10 @@ local function poseFor(mode: string): string
 end
 
 local function targetFieldOfView(): number
-	if state.mode == "Slide" then
+	local aimFov = player:GetAttribute("AimFov")
+	if aimFov then
+		return aimFov
+	elseif state.mode == "Slide" then
 		return SLIDE_FOV
 	elseif state.mode ~= "Air" then
 		return FIELD_OF_VIEW
@@ -174,6 +177,7 @@ local function onFrame(dt: number)
 	if climb then
 		advanceClimb(climb, now)
 	end
+	player:SetAttribute("Climbing", climb ~= nil)
 
 	MoveState.step(state, {
 		moving = direction.Magnitude > 0 or airFromSlide,
