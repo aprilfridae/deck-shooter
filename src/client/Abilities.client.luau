@@ -1,4 +1,4 @@
--- Client side of ability cards: sends key presses and shows what the server reveals.
+-- Client side of ability cards: sends key presses and shows reveals and mines.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -25,6 +25,23 @@ revealRemote.OnClientEvent:Connect(function(models: { Model }, seconds: number)
 		task.delay(seconds, highlight.Destroy, highlight)
 	end
 end)
+
+-- Roblox has no per-player visibility, so each enemy fades the mine on their own screen.
+local function showMine(mine: Instance)
+	local part = mine :: BasePart
+	local team = part:GetAttribute("Team")
+	local friendly = part:GetAttribute("OwnerId") == player.UserId
+		or (team ~= nil and player.Team ~= nil and player.Team.Name == team)
+	if not friendly then
+		part.LocalTransparencyModifier = 1 - (part:GetAttribute("Visibility") or 0)
+	end
+end
+
+local mines = workspace:WaitForChild("Mines")
+mines.ChildAdded:Connect(showMine)
+for _, mine in mines:GetChildren() do
+	showMine(mine)
+end
 
 RunService.Heartbeat:Connect(function()
 	local keys = Input.readAbility()

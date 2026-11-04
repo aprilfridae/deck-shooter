@@ -76,6 +76,8 @@ healthFill.Parent = healthBack
 local ammoText = label(UDim2.new(1, -24, 1, -24), Vector2.new(1, 1), 30)
 local gunText = label(UDim2.new(1, -24, 1, -62), Vector2.new(1, 1), 16)
 local classText = label(UDim2.new(0, 24, 1, -48), Vector2.new(0, 1), 16)
+local statusText = label(UDim2.new(0.5, 0, 1, -24), Vector2.new(0.5, 1), 16)
+statusText.TextXAlignment = Enum.TextXAlignment.Center
 
 local markerHideAt = 0
 
@@ -139,6 +141,9 @@ RunService.RenderStepped:Connect(function()
 		gunText.Text = gun.name
 	end
 	local now = workspace:GetServerTimeNow()
+	local shield = character and character:GetAttribute("ShieldHp")
+	local slowed = character and now < (character:GetAttribute("SlowUntil") or 0)
+	statusText.Text = (if shield then `Shield {math.ceil(shield)}  ` else "") .. (if slowed then "Slowed" else "")
 	for index = 1, SLOTS do
 		showBar(index, now)
 	end

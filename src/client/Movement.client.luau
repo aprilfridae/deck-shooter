@@ -5,7 +5,9 @@ local RunService = game:GetService("RunService")
 
 local Input = require(script.Parent.Input)
 local Ledge = require(script.Parent.Ledge)
-local Config = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Config"))
+local CardCore = ReplicatedStorage:WaitForChild("CardCore")
+local Ability = require(CardCore:WaitForChild("Ability"))
+local Config = require(CardCore:WaitForChild("Config"))
 local Movement = ReplicatedStorage:WaitForChild("Movement")
 local Climb = require(Movement:WaitForChild("Climb"))
 local MoveConfig = require(Movement:WaitForChild("MoveConfig"))
@@ -238,7 +240,13 @@ local function onFrame(dt: number)
 		grounded = humanoid.FloorMaterial ~= Enum.Material.Air,
 	}, now)
 
-	humanoid.WalkSpeed = MoveState.speed(state, now)
+	local character = humanoid.Parent :: Model
+	local slow = Ability.slowFactor(
+		character:GetAttribute("SlowPct") or 0,
+		character:GetAttribute("SlowUntil") or 0,
+		workspace:GetServerTimeNow()
+	)
+	humanoid.WalkSpeed = MoveState.speed(state, now) * slow
 	humanoid.JumpHeight = MoveState.jumpHeight(state)
 
 	local pose = poseFor(state.mode)
