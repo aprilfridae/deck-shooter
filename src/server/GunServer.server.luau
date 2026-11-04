@@ -58,10 +58,9 @@ local function allowRequest(player: Player, now: number): boolean
 	return window.count <= MAX_REQUESTS_PER_SECOND
 end
 
-local function stanceOf(target: GunTargets.Target, aiming: boolean)
+local function stanceOf(target: GunTargets.Target)
 	local velocity = target.root.AssemblyLinearVelocity
 	return {
-		aiming = aiming,
 		sprinting = Vector3.new(velocity.X, 0, velocity.Z).Magnitude > SPRINTING_SPEED,
 		airborne = target.humanoid.FloorMaterial == Enum.Material.Air,
 	}
@@ -136,7 +135,7 @@ local function onFire(player: Player, raw: any)
 	end
 
 	local gun = Weapon.active(loadout).gun
-	local angle = Spread.angle(gun, stanceOf(shooter, shot.aiming))
+	local angle = Spread.angle(gun, stanceOf(shooter))
 	local viewAt = ShotRequest.viewTime(shot.firedAt, ping, now)
 	local totals: { [GunTargets.Target]: number } = {}
 	local headshot = false

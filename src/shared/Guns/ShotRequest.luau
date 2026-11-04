@@ -41,7 +41,6 @@ function ShotRequest.parse(raw: any, serverNow: number): any
 		origin = origin,
 		direction = { x = direction.x / length, y = direction.y / length, z = direction.z / length },
 		firedAt = math.clamp(firedAt, serverNow - MAX_REWIND, serverNow),
-		aiming = raw.aiming == true,
 	}
 end
 

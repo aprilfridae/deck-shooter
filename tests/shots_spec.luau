@@ -16,7 +16,6 @@ local function shot(fields: { [string]: any }?)
 		origin = { x = 1, y = 2, z = 3 },
 		direction = { x = 0, y = 0, z = -2 },
 		firedAt = 9.9,
-		aiming = true,
 	}
 	for key, value in fields or {} do
 		raw[key] = value
@@ -96,11 +95,6 @@ describe("ShotRequest", function()
 		expect(parsed.direction).toEqual({ x = 0, y = 0, z = -1 })
 		expect(parsed.origin).toEqual({ x = 1, y = 2, z = 3 })
 		expect(parsed.firedAt).toBe(9.9)
-		expect(parsed.aiming).toBe(true)
-	end)
-
-	it("treats anything but true as not aiming", function()
-		expect(ShotRequest.parse(shot({ aiming = "yes" }), 10).aiming).toBe(false)
 	end)
 
 	it("rejects a zero direction", function()

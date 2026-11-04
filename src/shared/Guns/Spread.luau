@@ -6,8 +6,9 @@ type Point = { x: number, y: number, z: number }
 
 local Spread = {}
 
-function Spread.angle(gun: any, stance: { aiming: boolean, sprinting: boolean, airborne: boolean }): number
-	local angle = if stance.aiming then gun.aimSpread else gun.hipSpread
+-- Hip fire and aiming are equally accurate: aiming only zooms.
+function Spread.angle(gun: any, stance: { sprinting: boolean, airborne: boolean }): number
+	local angle = gun.spread
 	if stance.sprinting then
 		angle *= SPRINT_PENALTY
 	end

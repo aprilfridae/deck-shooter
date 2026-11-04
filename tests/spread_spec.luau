@@ -15,17 +15,21 @@ end
 
 describe("Spread", function()
 	it("uses the hip spread by default", function()
-		expect(Spread.angle(m4, { aiming = false, sprinting = false, airborne = false })).toBe(1.5)
-	end)
-
-	it("uses the aimed spread when aiming", function()
-		expect(Spread.angle(m4, { aiming = true, sprinting = false, airborne = false })).toBe(0.2)
+		expect(Spread.angle(m4, { sprinting = false, airborne = false })).toBe(0.2)
 	end)
 
 	it("adds the sprint and air penalties to spread", function()
-		expect(Spread.angle(m4, { aiming = false, sprinting = true, airborne = false })).toBeCloseTo(2.1)
-		expect(Spread.angle(m4, { aiming = false, sprinting = false, airborne = true })).toBeCloseTo(2.55)
-		expect(Spread.angle(m4, { aiming = false, sprinting = true, airborne = true })).toBeCloseTo(3.57)
+		expect(Spread.angle(m4, { sprinting = true, airborne = false })).toBeCloseTo(0.28)
+		expect(Spread.angle(m4, { sprinting = false, airborne = true })).toBeCloseTo(0.34)
+		expect(Spread.angle(m4, { sprinting = true, airborne = true })).toBeCloseTo(0.476)
+	end)
+
+	it("gives every gun one spread, with no separate hip value", function()
+		for _, gun in GunConfig.guns do
+			expect(type(gun.spread)).toBe("number")
+			expect(gun.hipSpread).toBeNil()
+			expect(gun.aimSpread).toBeNil()
+		end
 	end)
 
 	it("spreads a direction by no more than the angle", function()
