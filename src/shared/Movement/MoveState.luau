@@ -1,7 +1,7 @@
 -- The movement state machine. Pure: the caller supplies input and the time.
 local MoveConfig = require("./MoveConfig")
 
-export type Mode = "Walk" | "Sprint" | "Crouch" | "Slide" | "Air"
+export type Mode = "Walk" | "Sprint" | "Crouch" | "Slide" | "Air" | "Climb"
 export type Input = {
 	moving: boolean,
 	sprint: boolean,
@@ -53,6 +53,8 @@ function MoveState.speed(state: State, now: number): number
 		return lerp(MoveConfig.SlideStartSpeed, MoveConfig.SprintSpeed, alpha)
 	elseif state.mode == "Air" then
 		return state.carrySpeed
+	elseif state.mode == "Climb" then
+		return 0
 	end
 	local base = BASE_SPEED[state.mode]
 	local alpha = (now - state.carryFrom) / state.carryFade
@@ -64,6 +66,26 @@ end
 
 function MoveState.jumpHeight(state: State): number
 	return if state.chained then MoveConfig.ChainJumpHeight else MoveConfig.JumpHeight
+end
+
+-- Launches off an edge without losing speed.
+function MoveState.parry(state: State, now: number)
+	local current = math.max(MoveState.speed(state, now), MoveConfig.SprintSpeed)
+	state.carrySpeed = math.min(current + MoveConfig.ParryBoost, MoveConfig.ParryMaxSpeed)
+	state.mode = "Air"
+	state.airSince = now
+	state.chained = false
+end
+
+function MoveState.startClimb(state: State)
+	state.mode = "Climb"
+	state.chained = false
+end
+
+function MoveState.finishClimb(state: State, now: number)
+	state.mode = "Air"
+	state.carrySpeed = MoveConfig.SprintSpeed
+	state.airSince = now
 end
 
 -- Holding crouch while falling pulls the player down. A jump's rise is left
@@ -84,7 +106,7 @@ function MoveState.step(state: State, input: Input, now: number)
 	local pressed = input.crouch and not state.crouchHeld
 	state.crouchHeld = input.crouch
 
-	if previous == "Air" and now - state.airSince < MoveConfig.MinAirTime then
+	if previous == "Climb" or (previous == "Air" and now - state.airSince < MoveConfig.MinAirTime) then
 		return
 	end
 

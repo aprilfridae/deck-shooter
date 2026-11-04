@@ -4,7 +4,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Input = require(script.Parent.Input)
+local Ledge = require(script.Parent.Ledge)
 local Movement = ReplicatedStorage:WaitForChild("Movement")
+local Climb = require(Movement:WaitForChild("Climb"))
+local MoveConfig = require(Movement:WaitForChild("MoveConfig"))
 local MoveState = require(Movement:WaitForChild("MoveState"))
 local poseRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("Pose") :: RemoteEvent
 
@@ -33,6 +36,10 @@ local landDip = 0
 local airStartedAt = 0
 local sentPose = "Normal"
 local poseSentAt = -math.huge
+local jumpHeld = false
+
+type ClimbPath = { from: Vector3, top: Vector3, landing: Vector3, forward: Vector3, startedAt: number }
+local climb: ClimbPath? = nil
 
 local function poseFor(mode: string): string
 	if mode == "Slide" or mode == "Crouch" then
@@ -55,6 +62,82 @@ local function targetFieldOfView(): number
 	return if jumped then JUMP_FOV else FIELD_OF_VIEW
 end
 
+local function flatLook(): Vector3
+	local look = workspace.CurrentCamera.CFrame.LookVector
+	local flat = Vector3.new(look.X, 0, look.Z)
+	return if flat.Magnitude > 0.01 then flat.Unit else root.CFrame.LookVector
+end
+
+local function startParry(forward: Vector3, height: number, now: number)
+	MoveState.parry(state, now)
+	local speed = MoveState.speed(state, now)
+	local rise = Climb.riseSpeed(height, workspace.Gravity)
+	humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+	root.AssemblyLinearVelocity = forward * speed + Vector3.new(0, rise, 0)
+	slideDirection = forward
+	airFromSlide = true
+	jumped = true
+	airStartedAt = now
+end
+
+local function startClimb(forward: Vector3, landing: Vector3, now: number)
+	local from = root.Position
+	climb = {
+		from = from,
+		top = Vector3.new(from.X, landing.Y, from.Z),
+		landing = landing,
+		forward = forward,
+		startedAt = now,
+	}
+	MoveState.startClimb(state)
+	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+end
+
+-- Space near an edge: a press parries a low edge, holding it climbs a tall one.
+local function tryLedge(pressed: boolean, moveDirection: Vector3, now: number)
+	local rootHeight = humanoid.HipHeight + root.Size.Y / 2
+	local character = humanoid.Parent :: Model
+
+	if pressed then
+		local heading = if state.mode == "Slide"
+			then slideDirection
+			elseif moveDirection.Magnitude > 0 then moveDirection.Unit
+			else flatLook()
+		local edge = Ledge.find(character, root, heading, rootHeight)
+		if edge and edge.kind == "Parry" then
+			startParry(heading, edge.height, now)
+			return
+		end
+	end
+
+	local look = flatLook()
+	local wall = Ledge.find(character, root, look, rootHeight)
+	if wall and wall.kind == "Climb" then
+		startClimb(look, wall.landing, now)
+	end
+end
+
+local function advanceClimb(path: ClimbPath, now: number)
+	local progress = (now - path.startedAt) / MoveConfig.ClimbDuration
+	local share = MoveConfig.ClimbRiseShare
+	local position = if progress < share
+		then path.from:Lerp(path.top, progress / share)
+		else path.top:Lerp(path.landing, math.min((progress - share) / (1 - share), 1))
+	root.CFrame = CFrame.new(position) * root.CFrame.Rotation
+	root.AssemblyLinearVelocity = Vector3.zero
+
+	if progress >= 1 then
+		climb = nil
+		MoveState.finishClimb(state, now)
+		humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+		root.AssemblyLinearVelocity = path.forward * MoveConfig.SprintSpeed
+		slideDirection = path.forward
+		airFromSlide = true
+		jumped = false
+		airStartedAt = now
+	end
+end
+
 local function onCharacter(character: Model)
 	humanoid = character:WaitForChild("Humanoid") :: Humanoid
 	root = character:WaitForChild("HumanoidRootPart") :: BasePart
@@ -67,6 +150,8 @@ local function onCharacter(character: Model)
 	fieldOfView = FIELD_OF_VIEW
 	landDip = 0
 	sentPose = "Normal"
+	jumpHeld = false
+	climb = nil
 	workspace.CurrentCamera.FieldOfView = FIELD_OF_VIEW
 end
 
@@ -80,6 +165,16 @@ local function onFrame(dt: number)
 	local wasSliding = previousMode == "Slide"
 	local direction = humanoid.MoveDirection
 	local now = os.clock()
+	local jumpPressed = keys.jump and not jumpHeld
+	jumpHeld = keys.jump
+
+	if keys.jump and state.mode ~= "Climb" then
+		tryLedge(jumpPressed, direction, now)
+	end
+	if climb then
+		advanceClimb(climb, now)
+	end
+
 	MoveState.step(state, {
 		moving = direction.Magnitude > 0 or airFromSlide,
 		sprint = keys.sprint,

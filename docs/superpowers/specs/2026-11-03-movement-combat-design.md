@@ -64,6 +64,8 @@ The player's client moves their character using a Humanoid-based controller. Rob
 | Slide-cancel | Crouch keeps current speed; jump adds 8 | Jump or crouch to end a slide early. A jump holds its speed in the air and fades over 0.6s after landing |
 | Fast fall | Up to 110 falling | Hold crouch while falling. Landing with crouch and sprint held starts a slide |
 | Chain jump | Adds 16 | A jump from a slide reached by a fast fall goes 8 studs high. Field of view 104 |
+| Edge parry | Keeps speed, adds 6, up to 58 | Press jump at a fixed flat edge 1 to 4.5 studs above the feet, on the ground or in the air |
+| Climb | 0.35s to the top, then sprint speed | Hold jump facing a fixed flat edge up to 12 studs above the feet, with room to stand |
 | Jump | 6 studs high, gravity 150 for a slower arc, camera dip on landing. Field of view eases from 80 to 88 in a slide, 84 in a jump and 96 in a slide jump, and back to 80 on landing | Small accuracy penalty in the air |
 
 Players can aim and shoot in any direction during every move. The camera is first-person. Other players see the full character sliding and turning.

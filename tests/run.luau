@@ -16,6 +16,7 @@ local listed = {
 	requests_spec = true,
 	movestate_spec = true,
 	speedlimit_spec = true,
+	climb_spec = true,
 }
 
 require("./tier_spec")
@@ -30,6 +31,7 @@ require("./savedata_spec")
 require("./requests_spec")
 require("./movestate_spec")
 require("./speedlimit_spec")
+require("./climb_spec")
 
 local missing = 0
 for _, name in fs.readDir("tests") do
