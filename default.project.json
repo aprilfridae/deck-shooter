@@ -3,12 +3,14 @@
   "tree": {
     "$className": "DataModel",
     "ReplicatedStorage": {
-      "CardCore": { "$path": "src/shared/CardCore" }
+      "CardCore": { "$path": "src/shared/CardCore" },
+      "Movement": { "$path": "src/shared/Movement" }
     },
     "ServerScriptService": {
       "CardCoreServer": { "$path": "src/server" }
     },
     "StarterPlayer": {
+      "$properties": { "CameraMode": "LockFirstPerson" },
       "StarterPlayerScripts": {
         "CardCoreClient": { "$path": "src/client" }
       }
