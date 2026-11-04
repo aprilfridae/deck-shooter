@@ -1,9 +1,5 @@
--- A grey room for testing movement. Studio only.
-local RunService = game:GetService("RunService")
-
-if not RunService:IsStudio() then
-	return
-end
+-- A grey room for testing movement. It runs on every server, so Team Test and
+-- published playtests have a floor. Remove it when real arenas arrive.
 
 local GREY = Color3.fromRGB(150, 150, 155)
 local DARK = Color3.fromRGB(95, 95, 100)
