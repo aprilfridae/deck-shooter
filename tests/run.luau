@@ -14,6 +14,16 @@ local listed = {
 	income_spec = true,
 	savedata_spec = true,
 	requests_spec = true,
+	movestate_spec = true,
+	speedlimit_spec = true,
+	climb_spec = true,
+	damage_spec = true,
+	weapon_spec = true,
+	shots_spec = true,
+	spread_spec = true,
+	loadout_spec = true,
+	recoil_spec = true,
+	ability_spec = true,
 }
 
 require("./tier_spec")
@@ -26,6 +36,16 @@ require("./dpr_spec")
 require("./income_spec")
 require("./savedata_spec")
 require("./requests_spec")
+require("./movestate_spec")
+require("./speedlimit_spec")
+require("./climb_spec")
+require("./damage_spec")
+require("./weapon_spec")
+require("./shots_spec")
+require("./spread_spec")
+require("./loadout_spec")
+require("./recoil_spec")
+require("./ability_spec")
 
 local missing = 0
 for _, name in fs.readDir("tests") do

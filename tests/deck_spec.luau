@@ -12,18 +12,18 @@ end
 describe("Deck", function()
 	it("accepts 3 different owned cards", function()
 		local data = SaveData.new()
-		Inventory.add(data, "arc_mine", "Field", "Base", 1)
-		local slots = { slot("arc_mine"), slot("overclock"), slot("recon_pulse") }
+		Inventory.add(data, "aegis_shell", "Field", "Base", 1)
+		local slots = { slot("aegis_shell"), slot("overclock"), slot("recon_pulse") }
 		expect(Deck.set(data, slots)).toBe(true)
-		expect(data.deck[1].cardId).toBe("arc_mine")
+		expect(data.deck[1].cardId).toBe("aegis_shell")
 	end)
 
 	it("rejects 2 or 4 cards with WrongSize", function()
 		local data = SaveData.new()
 		local _, two = Deck.set(data, { slot("phase_dash"), slot("overclock") })
 		expect(two).toBe("WrongSize")
-		Inventory.add(data, "arc_mine", "Field", "Base", 1)
-		local _, four = Deck.set(data, { slot("phase_dash"), slot("overclock"), slot("recon_pulse"), slot("arc_mine") })
+		Inventory.add(data, "aegis_shell", "Field", "Base", 1)
+		local _, four = Deck.set(data, { slot("phase_dash"), slot("overclock"), slot("recon_pulse"), slot("aegis_shell") })
 		expect(four).toBe("WrongSize")
 	end)
 
@@ -51,8 +51,8 @@ describe("Deck", function()
 
 	it("counts a variant-only copy as owning that tier", function()
 		local data = SaveData.new()
-		Inventory.add(data, "arc_mine", "BlackSite", "Chromatic", 1)
-		expect(Deck.set(data, { slot("arc_mine", "BlackSite"), slot("overclock"), slot("recon_pulse") })).toBe(true)
+		Inventory.add(data, "aegis_shell", "BlackSite", "Chromatic", 1)
+		expect(Deck.set(data, { slot("aegis_shell", "BlackSite"), slot("overclock"), slot("recon_pulse") })).toBe(true)
 	end)
 
 	it("leaves the old deck in place on failure", function()

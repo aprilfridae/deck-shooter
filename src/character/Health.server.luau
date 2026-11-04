@@ -1,0 +1,1 @@
+-- Replaces Roblox's default Health script, so health does not regenerate.

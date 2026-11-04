@@ -1,5 +1,6 @@
 -- Turns untrusted client input into clean requests. Anything invalid becomes nil.
 local Cards = require("./Cards")
+local Config = require("./Config")
 local Deck = require("./Deck")
 local Tier = require("./Tier")
 
@@ -15,6 +16,16 @@ function Requests.parseFuse(raw: any): any
 		useCatalyst = raw.useCatalyst == true,
 		includeVariants = raw.includeVariants == true,
 	}
+end
+
+function Requests.parseLoadout(raw: any): any
+	if type(raw) ~= "table" or type(raw.class) ~= "string" or type(raw.rifle) ~= "string" then
+		return nil
+	end
+	if not Config.Classes[raw.class] or not Config.Rifles[raw.rifle] then
+		return nil
+	end
+	return { class = raw.class, rifle = raw.rifle }
 end
 
 function Requests.parseDeck(raw: any): { any }?

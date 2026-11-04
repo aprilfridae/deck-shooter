@@ -20,35 +20,35 @@ describe("Income.ratePerSecond", function()
 	it("pays the spec rate per tier", function()
 		for tier, rate in { Field = 0.1, BlackSite = 0.6, Prototype = 3.5 } do
 			local data = empty()
-			Inventory.add(data, "arc_mine", tier, "Base", 1)
+			Inventory.add(data, "aegis_shell", tier, "Base", 1)
 			expect(Income.ratePerSecond(data)).toBeCloseTo(rate)
 		end
 	end)
 
 	it("pays half from the 11th copy", function()
 		local data = empty()
-		Inventory.add(data, "arc_mine", "Field", "Base", 11)
+		Inventory.add(data, "aegis_shell", "Field", "Base", 11)
 		expect(Income.ratePerSecond(data)).toBeCloseTo(1.05)
 	end)
 
 	it("counts the soft cap per card and tier", function()
 		local data = empty()
-		Inventory.add(data, "arc_mine", "Field", "Base", 10)
-		Inventory.add(data, "arc_mine", "BlackSite", "Base", 1)
+		Inventory.add(data, "aegis_shell", "Field", "Base", 10)
+		Inventory.add(data, "aegis_shell", "BlackSite", "Base", 1)
 		Inventory.add(data, "overclock", "Field", "Base", 1)
 		expect(Income.ratePerSecond(data)).toBeCloseTo(1.7)
 	end)
 
 	it("multiplies by the variant", function()
 		local data = empty()
-		Inventory.add(data, "arc_mine", "Field", "Chromatic", 1)
+		Inventory.add(data, "aegis_shell", "Field", "Chromatic", 1)
 		expect(Income.ratePerSecond(data)).toBeCloseTo(0.15)
 	end)
 
 	it("puts the best-paying copies under the cap", function()
 		local data = empty()
-		Inventory.add(data, "arc_mine", "Field", "Base", 10)
-		Inventory.add(data, "arc_mine", "Field", "Chromatic", 1)
+		Inventory.add(data, "aegis_shell", "Field", "Base", 10)
+		Inventory.add(data, "aegis_shell", "Field", "Chromatic", 1)
 		expect(Income.ratePerSecond(data)).toBeCloseTo(1.1) -- .15 + 9(.1) + .05
 	end)
 
@@ -57,7 +57,7 @@ describe("Income.ratePerSecond", function()
 		for _, id in Cards.sets.set_01 do
 			Inventory.add(data, id, "Field", "Base", 1)
 		end
-		expect(Income.ratePerSecond(data)).toBeCloseTo(0.55)
+		expect(Income.ratePerSecond(data)).toBeCloseTo(0.44)
 	end)
 
 	it("gives no set bonus for a partial set", function()
@@ -111,7 +111,7 @@ describe("Income.accrue", function()
 	it("never writes a non-finite amount into Credits", function()
 		local data = SaveData.new()
 		data.credits = 40
-		data.stacks["arc_mine:Prototype:ZeroDay"] = 1.7e308
+		data.stacks["aegis_shell:Prototype:ZeroDay"] = 1.7e308
 		Income.accrue(data, 1)
 		Income.accrue(data, 1)
 		expect(data.credits).toBe(40)
