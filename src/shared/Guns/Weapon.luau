@@ -2,6 +2,7 @@
 local GunConfig = require("./GunConfig")
 
 local FIRE_RATE_TOLERANCE = 0.05 -- share of the interval, for network timing
+local SHOT_CATCH_UP_SECONDS = 0.05 -- later than this, a shot starts a new rhythm
 
 export type Slot = {
 	gunId: string,
@@ -71,6 +72,16 @@ end
 
 function Weapon.update(loadout: Loadout, now: number)
 	finishReload(activeSlot(loadout), now)
+end
+
+-- Frames rarely land on the exact moment a gun is ready. Counting from when the shot was due,
+-- not from the frame that fired it, keeps the rhythm even.
+function Weapon.nextShotTime(lastShot: number, interval: number, now: number): number?
+	local due = lastShot + interval
+	if now < due then
+		return nil
+	end
+	return if now - due > SHOT_CATCH_UP_SECONDS then now else due
 end
 
 function Weapon.tryFire(loadout: Loadout, now: number): boolean

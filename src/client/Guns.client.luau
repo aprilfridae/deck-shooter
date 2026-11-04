@@ -8,6 +8,7 @@ local GunAudio = require(script.Parent.GunAudio)
 local GunView = require(script.Parent.GunView)
 local Input = require(script.Parent.Input)
 local Recoil = require(script.Parent.Recoil)
+local Weapon = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Weapon"))
 
 local remotes = ReplicatedStorage:WaitForChild("GunRemotes")
 local fireRemote = remotes:WaitForChild("Fire") :: RemoteEvent
@@ -51,30 +52,36 @@ local function point(vector: Vector3)
 	return { x = vector.X, y = vector.Y, z = vector.Z }
 end
 
-local function fire(camera: Camera, aiming: boolean, now: number)
-	lastFire = now
+local function fire(camera: Camera, aiming: boolean, shotTime: number)
+	lastFire = shotTime
 	ammo -= 1
 	local pitch, yaw = Recoil.aimOffset(gun)
 	fireRemote:FireServer({
 		origin = point(camera.CFrame.Position),
 		direction = point((camera.CFrame * CFrame.Angles(pitch, yaw, 0)).LookVector),
-		firedAt = workspace:GetServerTimeNow(),
+		firedAt = shotTime,
 		aiming = aiming,
 	})
-	GunAudio.playShot(player:GetAttribute("GunId"))
+	local gunId = player:GetAttribute("GunId")
+	if gun.automatic then
+		GunAudio.holdShot(gunId, 1 + (player:GetAttribute("FireRateBonus") or 0))
+	else
+		GunAudio.playShot(gunId)
+	end
 	Recoil.kick()
 	GunView.kick()
 end
 
-local function canFire(pressed: boolean, held: boolean, now: number): boolean
-	if not gun or ammo <= 0 or (reloading and not gun.perShell) then
-		return false
-	end
-	if not (pressed or (held and gun.automatic)) then
-		return false
+local function canShoot(): boolean
+	return gun ~= nil and ammo > 0 and not (reloading and not gun.perShell)
+end
+
+local function nextShot(pressed: boolean, held: boolean, now: number): number?
+	if not canShoot() or not (pressed or (held and gun.automatic)) then
+		return nil
 	end
 	local bonus = player:GetAttribute("FireRateBonus") or 0
-	return now - lastFire >= 60 / gun.rpm / (1 + bonus)
+	return Weapon.nextShotTime(lastFire, 60 / gun.rpm / (1 + bonus), now)
 end
 
 -- Test room only: Phase 4 replaces this with the between-round screen.
@@ -102,12 +109,13 @@ local function onFrame(dt: number)
 
 	if not isAlive() then
 		GunView.hide()
+		GunAudio.releaseShot()
 		player:SetAttribute("AimFov", nil)
 		return
 	end
 
 	local keys = Input.readGun()
-	local now = os.clock()
+	local now = workspace:GetServerTimeNow()
 	syncGun(now)
 	local climbing = player:GetAttribute("Climbing") == true
 	local aiming = keys.aim and gun ~= nil and not climbing and not reloading
@@ -130,11 +138,16 @@ local function onFrame(dt: number)
 
 	local pressed = keys.fire and not previous.fire
 	if not climbing then
-		if canFire(pressed, keys.fire, now) then
-			fire(camera, aiming, now)
+		local shotTime = nextShot(pressed, keys.fire, now)
+		if shotTime then
+			fire(camera, aiming, shotTime)
 		elseif pressed and gun and ammo <= 0 and not reloading then
 			reloadRemote:FireServer()
 		end
+	end
+
+	if not keys.fire or climbing or not canShoot() or not gun.automatic then
+		GunAudio.releaseShot()
 	end
 
 	previous.fire = keys.fire
