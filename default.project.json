@@ -15,6 +15,9 @@
     },
     "StarterPlayer": {
       "$properties": { "CameraMode": "LockFirstPerson" },
+      "StarterCharacterScripts": {
+        "Health": { "$path": "src/character/Health.server.luau" }
+      },
       "StarterPlayerScripts": {
         "CardCoreClient": { "$path": "src/client" }
       }

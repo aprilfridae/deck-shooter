@@ -29,7 +29,6 @@ describe("Spread", function()
 	end)
 
 	it("spreads a direction by no more than the angle", function()
-		local random = Random and nil
 		local seed = 7
 		local function rng(): number
 			seed = (seed * 16807) % 2147483647
@@ -44,7 +43,6 @@ describe("Spread", function()
 		end
 		expect(widest <= 3.0001).toBe(true)
 		expect(widest > 2).toBe(true)
-		expect(random).toBeNil()
 	end)
 
 	it("works when the direction points straight up", function()

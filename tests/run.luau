@@ -20,6 +20,7 @@ local listed = {
 	damage_spec = true,
 	weapon_spec = true,
 	shots_spec = true,
+	spread_spec = true,
 }
 
 require("./tier_spec")
@@ -38,6 +39,7 @@ require("./climb_spec")
 require("./damage_spec")
 require("./weapon_spec")
 require("./shots_spec")
+require("./spread_spec")
 
 local missing = 0
 for _, name in fs.readDir("tests") do
