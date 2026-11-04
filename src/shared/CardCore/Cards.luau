@@ -9,7 +9,7 @@ local Cards = {
 			name = "Phase Dash",
 			category = "mobility",
 			set = "set_01",
-			stats = { distance = { 16, 18, 20 }, cooldown = { 12, 11, 10 } },
+			stats = { distance = { 13, 14.5, 16 }, cooldown = { 12, 11, 10 } },
 			perk = "camo_after_dash",
 			lowerIsBetter = { cooldown = true },
 		},

@@ -1,5 +1,9 @@
 local harness = require("./harness")
 local Ability = require("../src/shared/CardCore/Ability")
+local Cards = require("../src/shared/CardCore/Cards")
+local Config = require("../src/shared/CardCore/Config")
+local MoveConfig = require("../src/shared/Movement/MoveConfig")
+local MoveState = require("../src/shared/Movement/MoveState")
 
 local describe, it, expect = harness.describe, harness.it, harness.expect
 
@@ -58,6 +62,25 @@ describe("Ability", function()
 		expect(Ability.mineTriggered(10, 10.9, 1)).toBe(false)
 		expect(Ability.mineTriggered(10, 11, 6)).toBe(true)
 		expect(Ability.mineTriggered(10, 11, 6.1)).toBe(false)
+	end)
+
+	-- The server sees a client's position late, so the guard must wait past that too.
+	it("keeps the guard away until a dash is back under the speed limit", function()
+		local SERVER_VIEW_DELAY = 0.3
+		local fastest = Cards.stat("phase_dash", "Prototype", "distance") / Config.DashSeconds
+		local sprinting = { moving = true, sprint = true, crouch = false, jump = false, grounded = true }
+		local slowest = 0
+		for landAfter = 0.05, 0.4, 0.05 do
+			local s = MoveState.new()
+			MoveState.finishDash(s, 16, fastest, 0)
+			MoveState.step(s, sprinting, landAfter)
+			local t = landAfter
+			while MoveState.speed(s, t) > MoveConfig.SpeedLimit do
+				t += 0.01
+			end
+			slowest = math.max(slowest, t)
+		end
+		expect(Config.DashGraceSeconds >= Config.DashSeconds + slowest + SERVER_VIEW_DELAY).toBe(true)
 	end)
 
 	it("slows only until the slow ends", function()

@@ -6,7 +6,7 @@ local describe, it, expect = harness.describe, harness.it, harness.expect
 
 describe("Cards", function()
 	it("pins spec values", function()
-		expect(Cards.stat("phase_dash", "Prototype", "distance")).toBe(20)
+		expect(Cards.stat("phase_dash", "Prototype", "distance")).toBe(16)
 		expect(Cards.stat("phase_dash", "BlackSite", "cooldown")).toBe(11)
 		expect(Cards.stat("overclock", "BlackSite", "fireRateBonus")).toBe(0.17)
 		expect(Cards.stat("recon_pulse", "Field", "revealTime")).toBe(2)

@@ -127,7 +127,7 @@ local function resetCards(player: Player)
 end
 
 handlers.phase_dash = function(player, target, slot)
-	MoveGrace.give(player, Config.MoveGraceSeconds)
+	MoveGrace.give(player, Config.DashGraceSeconds)
 	dashRemote:FireClient(player, Cards.stat(slot.cardId, slot.tier, "distance"))
 
 	local original: { [Instance]: number } = {}
