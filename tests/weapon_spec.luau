@@ -154,3 +154,17 @@ describe("Weapon.isUntouched", function()
 		expect(Weapon.isUntouched(loadout)).toBe(true)
 	end)
 end)
+
+describe("Overclock hooks", function()
+	it("fires faster with a fire-rate bonus", function()
+		local loadout = Weapon.newLoadout("Assault", "M4") -- 0.1s between shots
+		loadout.fireRateBonus = 0.18
+		expect(Weapon.tryFire(loadout, 1)).toBe(true)
+		expect(Weapon.tryFire(loadout, 1.08)).toBe(false)
+		expect(Weapon.tryFire(loadout, 1.09)).toBe(true)
+	end)
+
+	it("starts each life with no fire-rate bonus", function()
+		expect(Weapon.newLoadout("Assault", "M4").fireRateBonus).toBe(0)
+	end)
+end)

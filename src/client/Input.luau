@@ -38,4 +38,17 @@ function Input.readGun(): { [string]: boolean }
 	}
 end
 
+function Input.readAbility(): { [string]: boolean }
+	if UserInputService:GetFocusedTextBox() then
+		return { slot1 = false, slot2 = false, slot3 = false, testDeck = false, testTier = false }
+	end
+	return {
+		slot1 = UserInputService:IsKeyDown(Enum.KeyCode.Three),
+		slot2 = UserInputService:IsKeyDown(Enum.KeyCode.Four),
+		slot3 = UserInputService:IsKeyDown(Enum.KeyCode.Five),
+		testDeck = UserInputService:IsKeyDown(Enum.KeyCode.T),
+		testTier = UserInputService:IsKeyDown(Enum.KeyCode.Y),
+	}
+end
+
 return Input

@@ -18,6 +18,8 @@ local function spawnDummy()
 		dummy:Destroy()
 		return
 	end
+	-- A nearby player would otherwise run its physics, and the server's push would be lost.
+	target.root:SetNetworkOwner(nil)
 	target.humanoid.Died:Connect(function()
 		task.wait(RESPAWN_SECONDS)
 		dummy:Destroy()
