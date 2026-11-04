@@ -194,9 +194,9 @@ GunConfig.guns = {
 
 GunConfig.classes = {
 	Assault = { primaries = { "M4", "AK47" }, sidearm = "Pistol" },
-	Rusher = { primaries = { "SMG" }, sidearm = "MachinePistol" },
-	Marksman = { primaries = { "Sniper" }, sidearm = "Revolver" },
-	Breacher = { primaries = { "Shotgun" }, sidearm = "AutoPistol" },
+	Rusher = { primaries = { "SMG" }, sidearm = "Pistol" },
+	Marksman = { primaries = { "Sniper" }, sidearm = "Pistol" },
+	Breacher = { primaries = { "Shotgun" }, sidearm = "Pistol" },
 }
 
 GunConfig.classOrder = { "Assault", "Rusher", "Marksman", "Breacher" }

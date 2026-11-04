@@ -1,7 +1,9 @@
+local fs = require("@lune/fs")
 local harness = require("./harness")
 local Combat = require("../src/shared/Guns/Combat")
 local Damage = require("../src/shared/Guns/Damage")
 local GunConfig = require("../src/shared/Guns/GunConfig")
+local GunSounds = require("../src/shared/Guns/GunSounds")
 
 local describe, it, expect = harness.describe, harness.it, harness.expect
 
@@ -44,9 +46,9 @@ describe("GunConfig", function()
 
 	it("gives the right guns to each class", function()
 		expect(GunConfig.classes.Assault).toEqual({ primaries = { "M4", "AK47" }, sidearm = "Pistol" })
-		expect(GunConfig.classes.Rusher).toEqual({ primaries = { "SMG" }, sidearm = "MachinePistol" })
-		expect(GunConfig.classes.Marksman).toEqual({ primaries = { "Sniper" }, sidearm = "Revolver" })
-		expect(GunConfig.classes.Breacher).toEqual({ primaries = { "Shotgun" }, sidearm = "AutoPistol" })
+		expect(GunConfig.classes.Rusher).toEqual({ primaries = { "SMG" }, sidearm = "Pistol" })
+		expect(GunConfig.classes.Marksman).toEqual({ primaries = { "Sniper" }, sidearm = "Pistol" })
+		expect(GunConfig.classes.Breacher).toEqual({ primaries = { "Shotgun" }, sidearm = "Pistol" })
 	end)
 
 	it("makes only the four automatic guns automatic", function()
@@ -119,5 +121,20 @@ describe("Shield", function()
 		left, broke = Combat.absorb(1, Damage.KILL)
 		expect(left).toBe(0)
 		expect(broke).toBe(true)
+	end)
+end)
+
+describe("GunSounds", function()
+	it("has a sound file for every gun a class can use", function()
+		for _, class in GunConfig.classes do
+			local guns = table.clone(class.primaries)
+			table.insert(guns, class.sidearm)
+			for _, gunId in guns do
+				local sound = GunSounds.shots[gunId]
+				expect(sound ~= nil).toBe(true)
+				local file = string.match(sound, "[^/]+$")
+				expect(fs.isFile(`assets/sounds/{file}`)).toBe(true)
+			end
+		end
 	end)
 end)
