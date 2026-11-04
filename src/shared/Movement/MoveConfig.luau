@@ -6,7 +6,7 @@ return {
 	SlideStartSpeed = 42,
 	SlideFadeTime = 0.9, -- slows to sprint speed over this long; lasts while crouch is held
 	SlideCooldown = 0,
-	DashExitSpeed = 42, -- the slowest a dash can end, so it flows into movement
+	DashFadeTime = 0.4, -- how long a dash takes to ramp down to normal speed
 	CarryFade = 0.25,
 	SlideJumpBoost = 8, -- added to current speed when a jump cancels a slide
 	ChainJumpBoost = 16, -- the same, from a slide reached by a fast fall

@@ -19,6 +19,8 @@ export type State = {
 	carryFade: number,
 	airSince: number,
 	chained: boolean,
+	dashFadeFrom: number,
+	dashFadeAt: number,
 }
 
 local BASE_SPEED = {
@@ -44,6 +46,8 @@ function MoveState.new(): State
 		carryFade = MoveConfig.CarryFade,
 		airSince = -math.huge,
 		chained = false,
+		dashFadeFrom = 0,
+		dashFadeAt = -math.huge,
 	}
 end
 
@@ -52,7 +56,8 @@ function MoveState.speed(state: State, now: number): number
 		local alpha = math.min((now - state.slideStart) / MoveConfig.SlideFadeTime, 1)
 		return lerp(MoveConfig.SlideStartSpeed, MoveConfig.SprintSpeed, alpha)
 	elseif state.mode == "Air" then
-		return state.carrySpeed
+		local alpha = (now - state.dashFadeAt) / MoveConfig.DashFadeTime
+		return if alpha < 1 then lerp(state.dashFadeFrom, state.carrySpeed, alpha) else state.carrySpeed
 	elseif state.mode == "Climb" then
 		return 0
 	end
@@ -75,6 +80,7 @@ function MoveState.parry(state: State, now: number)
 	state.mode = "Air"
 	state.airSince = now
 	state.chained = false
+	state.dashFadeAt = -math.huge
 end
 
 -- Thrown into the air at this speed, for shoves from abilities.
@@ -83,11 +89,15 @@ function MoveState.launch(state: State, speed: number, now: number)
 	state.mode = "Air"
 	state.airSince = now
 	state.chained = false
+	state.dashFadeAt = -math.huge
 end
 
--- A dash never ends slower than it started, so its momentum carries on.
-function MoveState.finishDash(state: State, entrySpeed: number, now: number)
-	MoveState.launch(state, math.max(entrySpeed, MoveConfig.DashExitSpeed), now)
+-- A dash leaves at its own speed, then ramps down. It never ends slower than it started.
+function MoveState.finishDash(state: State, entrySpeed: number, dashSpeed: number, now: number)
+	local settled = math.max(entrySpeed, MoveConfig.SprintSpeed)
+	MoveState.launch(state, settled, now)
+	state.dashFadeFrom = math.max(dashSpeed, settled)
+	state.dashFadeAt = now
 end
 
 function MoveState.startClimb(state: State)
@@ -99,6 +109,7 @@ function MoveState.finishClimb(state: State, now: number)
 	state.mode = "Air"
 	state.carrySpeed = MoveConfig.SprintSpeed
 	state.airSince = now
+	state.dashFadeAt = -math.huge
 end
 
 -- Holding crouch while falling pulls the player down. A jump's rise is left
@@ -139,6 +150,7 @@ function MoveState.step(state: State, input: Input, now: number)
 			state.carrySpeed = current + boost
 			state.airSince = now
 			state.mode = "Air"
+			state.dashFadeAt = -math.huge
 		end
 		return
 	end

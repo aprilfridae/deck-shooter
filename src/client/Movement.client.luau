@@ -203,11 +203,12 @@ local function advanceDash(path: DashPath, now: number)
 
 	if progress >= 1 then
 		dash = nil
-		MoveState.finishDash(state, path.entrySpeed, now)
+		local dashSpeed = (path.to - path.from).Magnitude / Config.DashSeconds
+		MoveState.finishDash(state, path.entrySpeed, dashSpeed, now)
 		humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
-		local speed = MoveState.speed(state, now)
-		root.AssemblyLinearVelocity = path.forward * speed + Vector3.yAxis * path.fallSpeed
 		slideDirection = Vector3.new(path.forward.X, 0, path.forward.Z).Unit
+		local speed = MoveState.speed(state, now)
+		root.AssemblyLinearVelocity = slideDirection * speed + Vector3.yAxis * path.fallSpeed
 		airFromSlide = true
 		jumped = false
 		airStartedAt = now
