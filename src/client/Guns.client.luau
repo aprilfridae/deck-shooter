@@ -13,13 +13,14 @@ local fireRemote = remotes:WaitForChild("Fire") :: RemoteEvent
 local reloadRemote = remotes:WaitForChild("Reload") :: RemoteEvent
 local swapRemote = remotes:WaitForChild("Swap") :: RemoteEvent
 local ammoRemote = remotes:WaitForChild("AmmoChanged") :: RemoteEvent
+local loadoutRemote = remotes:WaitForChild("SetLoadout") :: RemoteEvent
 
 local player = Players.LocalPlayer
 local gun: any = nil
 local ammo = 0
 local reloading = false
 local lastFire = -math.huge
-local previous = { fire = false, reload = false, primary = false, sidearm = false }
+local previous = { fire = false, reload = false, primary = false, sidearm = false, nextClass = false, nextRifle = false }
 
 local function isAlive(): boolean
 	local character = player.Character
@@ -54,6 +55,24 @@ local function canFire(pressed: boolean, held: boolean, now: number): boolean
 	return now - lastFire >= 60 / gun.rpm
 end
 
+-- Test room only: Phase 4 replaces this with the between-round screen.
+local function cycleLoadout(nextClass: boolean, nextRifle: boolean)
+	local class = player:GetAttribute("Class")
+	local rifle = player:GetAttribute("Rifle")
+	if not class or not rifle then
+		return
+	end
+	if nextClass then
+		local order = GunConfig.classOrder
+		class = order[(table.find(order, class) or 0) % #order + 1]
+	end
+	if nextRifle then
+		local rifles = GunConfig.classes.Assault.primaries
+		rifle = rifles[(table.find(rifles, rifle) or 0) % #rifles + 1]
+	end
+	loadoutRemote:FireServer({ class = class, rifle = rifle })
+end
+
 local function onFrame(dt: number)
 	local camera = workspace.CurrentCamera
 	Recoil.update(dt, camera)
@@ -79,6 +98,11 @@ local function onFrame(dt: number)
 	if keys.reload and not previous.reload then
 		reloadRemote:FireServer()
 	end
+	local nextClass = keys.nextClass and not previous.nextClass
+	local nextRifle = keys.nextRifle and not previous.nextRifle
+	if nextClass or nextRifle then
+		cycleLoadout(nextClass, nextRifle)
+	end
 
 	local pressed = keys.fire and not previous.fire
 	if not climbing then
@@ -93,6 +117,8 @@ local function onFrame(dt: number)
 	previous.reload = keys.reload
 	previous.primary = keys.primary
 	previous.sidearm = keys.sidearm
+	previous.nextClass = keys.nextClass
+	previous.nextRifle = keys.nextRifle
 	GunView.update(dt, camera, aiming, reloading)
 end
 

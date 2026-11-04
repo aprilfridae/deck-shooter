@@ -17,10 +17,12 @@ export type SaveData = {
 	deck: { DeckSlot },
 	gunLevels: { number },
 	catalysts: number,
+	class: string,
+	rifle: string,
 }
 
 local SaveData = {
-	CURRENT_VERSION = 1,
+	CURRENT_VERSION = 2,
 }
 
 function SaveData.new(): SaveData
@@ -32,6 +34,8 @@ function SaveData.new(): SaveData
 		deck = {},
 		gunLevels = { 0, 0 },
 		catalysts = 0,
+		class = Config.DefaultClass,
+		rifle = Config.DefaultRifle,
 	}
 	for _, cardId in Config.StarterDeck do
 		Inventory.add(data, cardId, "Field", "Base", 1)
@@ -142,6 +146,12 @@ function SaveData.load(raw: any): (SaveData?, string?)
 				data.gunLevels[i] = raw.gunLevels[i]
 			end
 		end
+	end
+	if type(raw.class) == "string" and Config.Classes[raw.class] then
+		data.class = raw.class
+	end
+	if type(raw.rifle) == "string" and Config.Rifles[raw.rifle] then
+		data.rifle = raw.rifle
 	end
 	data.deck = cleanDeck(data, raw.deck)
 	return data, nil

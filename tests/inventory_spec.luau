@@ -7,7 +7,7 @@ local describe, it, expect = harness.describe, harness.it, harness.expect
 describe("SaveData.new", function()
 	it("starts with no Credits or Catalysts", function()
 		local data = SaveData.new()
-		expect(data.version).toBe(1)
+		expect(data.version).toBe(2)
 		expect(data.credits).toBe(0)
 		expect(data.creditRemainder).toBe(0)
 		expect(data.catalysts).toBe(0)

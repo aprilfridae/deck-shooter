@@ -18,8 +18,11 @@ local snapshotEvent = Instance.new("RemoteEvent")
 snapshotEvent.Name = "Snapshot"
 snapshotEvent.Parent = remotes
 
+local profileLoaded = Instance.new("BindableEvent")
+
 local PlayerCards = {
 	remotes = remotes,
+	profileLoaded = profileLoaded.Event,
 }
 
 function PlayerCards.get(player: Player): any?
@@ -84,6 +87,7 @@ local function onPlayerAdded(player: Player)
 	profiles[player] = profile
 	print(`[CardCore] profile loaded for {player.UserId}`)
 	PlayerCards.changed(player)
+	profileLoaded:Fire(player)
 end
 
 local function onPlayerRemoving(player: Player)

@@ -10,7 +10,9 @@ local Hitbox = require(Guns:WaitForChild("Hitbox"))
 local ShotRequest = require(Guns:WaitForChild("ShotRequest"))
 local Spread = require(Guns:WaitForChild("Spread"))
 local Weapon = require(Guns:WaitForChild("Weapon"))
+local Requests = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Requests"))
 local GunTargets = require(script.Parent.GunTargets)
+local PlayerCards = require(script.Parent.PlayerCards)
 
 local RESPAWN_SECONDS = 3
 local RECORD_EVERY_SECONDS = 0.05
@@ -35,6 +37,7 @@ local reloadRemote = remote("Reload")
 local swapRemote = remote("Swap")
 local hitRemote = remote("HitConfirm")
 local ammoRemote = remote("AmmoChanged")
+local loadoutRemote = remote("SetLoadout")
 remotes.Parent = ReplicatedStorage
 
 local loadouts: { [Player]: Weapon.Loadout } = {}
@@ -172,10 +175,38 @@ local function sendAmmo(player: Player, loadout: Weapon.Loadout, now: number)
 	end
 end
 
+local function applyLoadout(player: Player)
+	local data = PlayerCards.get(player)
+	local class = if data then data.class else DEFAULT_CLASS
+	local rifle = if data then data.rifle else DEFAULT_RIFLE
+	loadouts[player] = Weapon.newLoadout(class, rifle)
+	sentAmmo[player] = nil
+	player:SetAttribute("Class", class)
+	player:SetAttribute("Rifle", rifle)
+end
+
+-- At full health a change can apply straight away. Otherwise it waits for respawn.
+local function applyIfUnhurt(player: Player)
+	local target = GunTargets.forPlayer(player)
+	if target and target.health >= target.humanoid.MaxHealth then
+		applyLoadout(player)
+	end
+end
+
+local function onSetLoadout(player: Player, raw: any)
+	local data = PlayerCards.get(player)
+	local request = Requests.parseLoadout(raw)
+	if not data or not request or not allowRequest(player, workspace:GetServerTimeNow()) then
+		return
+	end
+	data.class = request.class
+	data.rifle = request.rifle
+	applyIfUnhurt(player)
+end
+
 local function onPlayer(player: Player)
 	local function onCharacter(character: Model)
-		loadouts[player] = Weapon.newLoadout(DEFAULT_CLASS, DEFAULT_RIFLE)
-		sentAmmo[player] = nil
+		applyLoadout(player)
 		GunTargets.add(character, player)
 	end
 	player.CharacterAdded:Connect(onCharacter)
@@ -187,6 +218,9 @@ end
 fireRemote.OnServerEvent:Connect(onFire)
 reloadRemote.OnServerEvent:Connect(onReload)
 swapRemote.OnServerEvent:Connect(onSwap)
+loadoutRemote.OnServerEvent:Connect(onSetLoadout)
+-- The save can finish loading after the first spawn.
+PlayerCards.profileLoaded:Connect(applyIfUnhurt)
 
 Players.PlayerAdded:Connect(onPlayer)
 for _, player in Players:GetPlayers() do

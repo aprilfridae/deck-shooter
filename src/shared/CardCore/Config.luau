@@ -22,6 +22,10 @@ local Config = {
 	MaxStackCount = 1000000,
 	MaxCredits = 2 ^ 53,
 	MaxGunLevel = 100,
+	DefaultClass = "Assault",
+	DefaultRifle = "M4",
+	Classes = { Assault = true, Rusher = true, Marksman = true, Breacher = true },
+	Rifles = { M4 = true, AK47 = true },
 }
 
 return Config
