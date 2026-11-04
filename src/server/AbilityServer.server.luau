@@ -9,7 +9,6 @@ local Cards = require(CardCore:WaitForChild("Cards"))
 local Config = require(CardCore:WaitForChild("Config"))
 local Deck = require(CardCore:WaitForChild("Deck"))
 local Tier = require(CardCore:WaitForChild("Tier"))
-local Weapon = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Weapon"))
 local GunTargets = require(script.Parent.GunTargets)
 local loadouts = require(script.Parent.Loadouts)
 local MoveGrace = require(script.Parent.MoveGrace)
@@ -154,13 +153,9 @@ handlers.overclock = function(player, _, slot)
 	local bonus = Cards.stat(slot.cardId, slot.tier, "fireRateBonus")
 	loadout.fireRateBonus = bonus
 	player:SetAttribute("FireRateBonus", bonus)
-	timed(player, Cards.stat(slot.cardId, slot.tier, "duration"), function(expired)
+	timed(player, Cards.stat(slot.cardId, slot.tier, "duration"), function()
 		loadout.fireRateBonus = 0
 		player:SetAttribute("FireRateBonus", nil)
-		-- A respawn replaces the loadout, so only a current one gets the perk.
-		if expired and loadouts[player] == loadout then
-			Weapon.addAmmo(loadout, Ability.refillShots(Weapon.active(loadout).gun.mag, slot.tier))
-		end
 	end)
 	return true
 end

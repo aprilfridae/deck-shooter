@@ -73,12 +73,6 @@ function Weapon.update(loadout: Loadout, now: number)
 	finishReload(activeSlot(loadout), now)
 end
 
--- Adds shots to the active gun, never past a full magazine.
-function Weapon.addAmmo(loadout: Loadout, shots: number)
-	local slot = activeSlot(loadout)
-	slot.ammo = math.min(slot.ammo + shots, slot.gun.mag)
-end
-
 function Weapon.tryFire(loadout: Loadout, now: number): boolean
 	Weapon.update(loadout, now)
 	local slot = activeSlot(loadout)

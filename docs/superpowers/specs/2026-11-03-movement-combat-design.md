@@ -141,14 +141,13 @@ Those changes remove both ceiling exemptions, so every stat is back inside the 2
 
 - Keys 3, 4 and 5 use deck slots 1, 2 and 3.
 - A cooldown starts when the ability is used, even while its effect runs.
-- Every tier has its card's perk. Field perks are 80% as strong as Prototype and Black-Site perks are 90%. This replaces the Prototype-only reading of the Arc Mine perk above.
+- Overclock has no perk; it only raises fire rate. Every other card has its perk on every tier. Field perks are 80% as strong as Prototype and Black-Site perks are 90%. This replaces the Prototype-only reading of the Arc Mine perk above.
 - Arc Mines cannot hurt their owner or teammates, and cannot be shot or destroyed.
 - Until Phase 4, the target dummy stands in as an enemy, and a temporary test key swaps deck and tier.
 
 | Card | Perk | Field | Black-Site | Prototype |
 | --- | --- | --- | --- | --- |
 | Phase Dash | Nearly invisible to other players after dashing | 1.2s | 1.35s | 1.5s |
-| Overclock | Magazine refills when it ends | 80% of a magazine | 90% | 100% |
 | Recon Pulse | Teammates see the marks, for this share of the reveal time | 80% | 90% | 100% |
 | Aegis Shell | Pushes nearby enemies when it breaks | 80% strength | 90% | 100% |
 | Arc Mine | Hidden from enemies until triggered | 20% visible | 10% visible | Invisible |

@@ -54,12 +54,6 @@ describe("Ability", function()
 		expect(Ability.mineVisibility("Prototype")).toBeCloseTo(0)
 	end)
 
-	it("refills a share of a magazine, rounded down", function()
-		expect(Ability.refillShots(30, "Field")).toBe(24)
-		expect(Ability.refillShots(6, "Field")).toBe(4)
-		expect(Ability.refillShots(30, "Prototype")).toBe(30)
-	end)
-
 	it("arms a mine after 1 second and triggers it within 6 studs", function()
 		expect(Ability.mineTriggered(10, 10.9, 1)).toBe(false)
 		expect(Ability.mineTriggered(10, 11, 6)).toBe(true)

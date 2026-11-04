@@ -20,7 +20,6 @@ local Cards = {
 			set = "set_01",
 			cooldown = 25,
 			stats = { fireRateBonus = { 0.15, 0.17, 0.18 }, duration = { 5, 5.5, 6 } },
-			perk = "refill_on_end",
 		},
 		recon_pulse = {
 			id = "recon_pulse",

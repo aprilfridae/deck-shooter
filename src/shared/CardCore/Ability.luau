@@ -36,11 +36,6 @@ function Ability.camoSeconds(tier: string): number
 	return Config.DashCamoSeconds * Cards.perkScale(tier)
 end
 
-function Ability.refillShots(mag: number, tier: string): number
-	-- The small nudge stops a value like 0.9 * 30 rounding down to 26.
-	return math.floor(mag * Cards.perkScale(tier) + 1e-9)
-end
-
 function Ability.teamRevealSeconds(tier: string): number
 	return Cards.stat("recon_pulse", tier, "revealTime") * Cards.perkScale(tier)
 end

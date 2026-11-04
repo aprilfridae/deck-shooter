@@ -167,13 +167,4 @@ describe("Overclock hooks", function()
 	it("starts each life with no fire-rate bonus", function()
 		expect(Weapon.newLoadout("Assault", "M4").fireRateBonus).toBe(0)
 	end)
-
-	it("adds ammo to the active gun without passing a full magazine", function()
-		local loadout = Weapon.newLoadout("Assault", "M4")
-		loadout.slots.primary.ammo = 3
-		Weapon.addAmmo(loadout, 24)
-		expect(Weapon.ammo(loadout)).toBe(27)
-		Weapon.addAmmo(loadout, 24)
-		expect(Weapon.ammo(loadout)).toBe(30)
-	end)
 end)

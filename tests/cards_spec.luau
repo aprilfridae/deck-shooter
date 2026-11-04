@@ -70,10 +70,13 @@ describe("Cards", function()
 		expect(Cards.perkScale("Prototype")).toBe(1)
 	end)
 
-	it("gives every card a perk", function()
+	it("gives every card a perk except Overclock", function()
 		for _, id in Cards.ids do
-			expect(type(Cards.byId[id].perk)).toBe("string")
+			if id ~= "overclock" then
+				expect(type(Cards.byId[id].perk)).toBe("string")
+			end
 		end
+		expect(Cards.byId.overclock.perk).toBeNil()
 	end)
 
 	it("recognises only real card ids", function()
