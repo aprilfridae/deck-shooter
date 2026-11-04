@@ -4,9 +4,10 @@ return {
 	CrouchSpeed = 8,
 	SprintSpeed = 24,
 	SlideStartSpeed = 34,
-	SlideDuration = 0.7,
-	SlideCooldown = 1,
+	SlideDuration = 0.9,
+	SlideCooldown = 0,
 	CarryFade = 0.25,
+	LandFade = 0.6, -- how long landing keeps jump speed before it fades
 
 	-- Cheat checks. SpeedLimit is the slide start speed plus a margin.
 	SpeedLimit = 39,

@@ -16,6 +16,7 @@ export type State = {
 	nextSlide: number,
 	carrySpeed: number,
 	carryFrom: number,
+	carryFade: number,
 }
 
 local BASE_SPEED = {
@@ -38,6 +39,7 @@ function MoveState.new(): State
 		nextSlide = -math.huge,
 		carrySpeed = 0,
 		carryFrom = -math.huge,
+		carryFade = MoveConfig.CarryFade,
 	}
 end
 
@@ -49,7 +51,7 @@ function MoveState.speed(state: State, now: number): number
 		return state.carrySpeed
 	end
 	local base = BASE_SPEED[state.mode]
-	local alpha = (now - state.carryFrom) / MoveConfig.CarryFade
+	local alpha = (now - state.carryFrom) / state.carryFade
 	if alpha < 1 then
 		return lerp(state.carrySpeed, base, alpha)
 	end
@@ -81,7 +83,8 @@ function MoveState.step(state: State, input: Input, now: number)
 		return
 	end
 
-	if pressed and previous == "Sprint" and input.sprint and input.moving and now >= state.nextSlide then
+	local wantsSlide = (pressed and previous == "Sprint") or (input.crouch and previous == "Air")
+	if wantsSlide and input.sprint and input.moving and now >= state.nextSlide then
 		state.mode = "Slide"
 		state.slideStart = now
 		return
@@ -90,6 +93,7 @@ function MoveState.step(state: State, input: Input, now: number)
 	if previous == "Slide" or previous == "Air" then
 		state.carrySpeed = current
 		state.carryFrom = now
+		state.carryFade = if previous == "Air" then MoveConfig.LandFade else MoveConfig.CarryFade
 	end
 	if input.crouch then
 		state.mode = "Crouch"

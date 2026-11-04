@@ -18,6 +18,7 @@ local humanoid: Humanoid? = nil
 local root: BasePart? = nil
 local state = MoveState.new()
 local slideDirection = Vector3.zero
+local airFromSlide = false
 local sentPose = "Normal"
 local poseSentAt = -math.huge
 
@@ -34,6 +35,7 @@ local function onCharacter(character: Model)
 	humanoid.AutoRotate = false
 	state = MoveState.new()
 	slideDirection = Vector3.zero
+	airFromSlide = false
 	sentPose = "Normal"
 	workspace.CurrentCamera.FieldOfView = FIELD_OF_VIEW
 end
@@ -69,6 +71,16 @@ local function onFrame(dt: number)
 		if not wasSliding then
 			slideDirection = direction.Unit
 		end
+		humanoid:Move(slideDirection, false)
+	end
+
+	-- A jump off a slide keeps its momentum when no keys are held.
+	if state.mode ~= "Air" then
+		airFromSlide = false
+	elseif wasSliding then
+		airFromSlide = true
+	end
+	if airFromSlide and direction.Magnitude == 0 then
 		humanoid:Move(slideDirection, false)
 	end
 
