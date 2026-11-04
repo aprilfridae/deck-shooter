@@ -3,14 +3,15 @@ return {
 	WalkSpeed = 16,
 	CrouchSpeed = 8,
 	SprintSpeed = 24,
-	SlideStartSpeed = 34,
+	SlideStartSpeed = 42,
 	SlideDuration = 0.9,
 	SlideCooldown = 0,
 	CarryFade = 0.25,
+	JumpHeight = 6,
 	LandFade = 0.6, -- how long landing keeps jump speed before it fades
 
 	-- Cheat checks. SpeedLimit is the slide start speed plus a margin.
-	SpeedLimit = 39,
+	SpeedLimit = 47,
 	SpeedWindow = 0.5,
 	LagStuds = 4,
 	MaxLagSeconds = 2, -- most stall time one position jump can be credited

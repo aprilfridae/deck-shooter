@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 
 local Input = require(script.Parent.Input)
 local Movement = ReplicatedStorage:WaitForChild("Movement")
+local MoveConfig = require(Movement:WaitForChild("MoveConfig"))
 local MoveState = require(Movement:WaitForChild("MoveState"))
 local poseRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("Pose") :: RemoteEvent
 
@@ -33,6 +34,8 @@ local function onCharacter(character: Model)
 	humanoid = character:WaitForChild("Humanoid") :: Humanoid
 	root = character:WaitForChild("HumanoidRootPart") :: BasePart
 	humanoid.AutoRotate = false
+	humanoid.UseJumpPower = false
+	humanoid.JumpHeight = MoveConfig.JumpHeight
 	state = MoveState.new()
 	slideDirection = Vector3.zero
 	airFromSlide = false

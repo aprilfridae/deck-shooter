@@ -1,4 +1,5 @@
 local harness = require("./harness")
+local MoveConfig = require("../src/shared/Movement/MoveConfig")
 local SpeedLimit = require("../src/shared/Movement/SpeedLimit")
 
 local describe, it, expect = harness.describe, harness.it, harness.expect
@@ -18,7 +19,11 @@ end
 
 describe("SpeedLimit", function()
 	it("passes a slide-speed run", function()
-		expect(run(SpeedLimit.new(0, 0, 0, 0), 34, 3)).toBeNil()
+		expect(run(SpeedLimit.new(0, 0, 0, 0), MoveConfig.SlideStartSpeed, 3)).toBeNil()
+	end)
+
+	it("keeps the limit above the slide start speed", function()
+		expect(MoveConfig.SpeedLimit >= MoveConfig.SlideStartSpeed + 5).toBe(true)
 	end)
 
 	it("fails a speed hack and keeps the last valid position", function()
