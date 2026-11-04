@@ -1,9 +1,10 @@
 -- Spray recoil. Every spray follows the gun's fixed pattern, so it can be learned.
--- Bullets land on the pattern; the camera only moves part of the way there, so the
--- aim has to be pulled down further than the camera appears to rise.
+-- Bullets land on the pattern. The camera only rises part of the way with each shot and
+-- falls straight back after firing stops, so sideways swing shows in the bullets alone.
 -- The camera keeps whatever it is given, so only the change each frame is applied to it.
 local SETTLE_DELAY = 0.12
 local KICK_EASE = 30
+local FALL_EASE = 5
 
 local Recoil = {
 	VIEW_SHARE = 0.5,
@@ -11,7 +12,8 @@ local Recoil = {
 
 local active: any = nil -- the gun the current spray belongs to
 local spray = 0 -- shots into the pattern; falls back after firing stops
-local viewPitch, viewYaw = 0, 0
+local viewTarget = 0
+local viewPitch = 0
 local sinceKick = math.huge
 
 -- Where the pattern is after this many shots, in degrees up and sideways.
@@ -27,48 +29,41 @@ function Recoil.sample(pattern: { { number } }, shots: number): (number, number)
 	return fromUp, fromSide
 end
 
-local function patternNow(): (number, number)
-	if not active then
-		return 0, 0
-	end
-	local up, side = Recoil.sample(active.pattern, spray)
-	return math.rad(up), math.rad(side)
-end
-
 -- How far from the camera's aim the next bullet goes, in radians. Call before kick.
 function Recoil.aimOffset(gun: any): (number, number)
 	if gun ~= active then
 		active = gun
 		spray = 0
 	end
-	local pitch, yaw = patternNow()
-	return pitch - viewPitch, yaw - viewYaw
+	local up, side = Recoil.sample(active.pattern, spray)
+	return math.rad(up) - viewPitch, math.rad(side)
 end
 
 function Recoil.kick()
+	local before = Recoil.sample(active.pattern, spray)
 	spray += 1
+	local after = Recoil.sample(active.pattern, spray)
+	viewTarget += math.rad(after - before) * Recoil.VIEW_SHARE
 	sinceKick = 0
 end
 
--- Returns how far to turn the camera this frame, in radians.
-function Recoil.advance(dt: number): (number, number)
+-- Returns how far to tilt the camera up this frame, in radians.
+function Recoil.advance(dt: number): number
 	sinceKick += dt
 	if sinceKick > SETTLE_DELAY and active then
 		spray = math.max(spray - dt * active.recovery, 0)
+		viewTarget *= math.exp(-dt * FALL_EASE)
 	end
-	local pitch, yaw = patternNow()
-	local blend = 1 - math.exp(-dt * KICK_EASE)
-	local pitchStep = (pitch * Recoil.VIEW_SHARE - viewPitch) * blend
-	local yawStep = (yaw * Recoil.VIEW_SHARE - viewYaw) * blend
-	viewPitch += pitchStep
-	viewYaw += yawStep
-	return pitchStep, yawStep
+	local step = (viewTarget - viewPitch) * (1 - math.exp(-dt * KICK_EASE))
+	viewPitch += step
+	return step
 end
 
 function Recoil.reset()
 	active = nil
 	spray = 0
-	viewPitch, viewYaw = 0, 0
+	viewTarget = 0
+	viewPitch = 0
 	sinceKick = math.huge
 end
 

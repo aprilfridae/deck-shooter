@@ -94,8 +94,7 @@ end
 
 local function onFrame(dt: number)
 	local camera = workspace.CurrentCamera
-	local pitch, yaw = Recoil.advance(dt)
-	camera.CFrame *= CFrame.Angles(pitch, yaw, 0)
+	camera.CFrame *= CFrame.Angles(Recoil.advance(dt), 0, 0)
 
 	if not isAlive() then
 		GunView.hide()

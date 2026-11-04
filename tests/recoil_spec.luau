@@ -12,16 +12,14 @@ local TEST_GUN = {
 
 -- Fires a spray and returns where each bullet went, relative to the original aim.
 local function spray(gun: any, shots: number, interval: number): { { number } }
-	local viewPitch, viewYaw = 0, 0
+	local viewPitch = 0
 	local bullets = {}
 	for _ = 1, shots do
 		local pitch, yaw = Recoil.aimOffset(gun)
-		table.insert(bullets, { viewPitch + pitch, viewYaw + yaw })
+		table.insert(bullets, { viewPitch + pitch, yaw })
 		Recoil.kick()
 		for _ = 1, math.floor(interval / STEP) do
-			local stepPitch, stepYaw = Recoil.advance(STEP)
-			viewPitch += stepPitch
-			viewYaw += stepYaw
+			viewPitch += Recoil.advance(STEP)
 		end
 	end
 	return bullets
@@ -74,10 +72,61 @@ describe("Spray pattern", function()
 		Recoil.kick()
 		Recoil.kick()
 		local view = 0
-		for _ = 1, 60 do
-			view += (Recoil.advance(STEP))
+		for _ = 1, 28 do
+			view += Recoil.advance(STEP)
 		end
-		expect(view).toBeCloseTo(math.rad(6) * Recoil.VIEW_SHARE, 1e-3)
+		expect(view > math.rad(6) * Recoil.VIEW_SHARE * 0.9).toBe(true)
+		expect(view <= math.rad(6) * Recoil.VIEW_SHARE).toBe(true)
+	end)
+
+	it("never turns the camera sideways", function()
+		Recoil.reset()
+		Recoil.aimOffset(TEST_GUN)
+		Recoil.kick()
+		local _, sideways = Recoil.advance(STEP)
+		expect(sideways).toBeNil()
+	end)
+
+	it("only falls after firing stops", function()
+		Recoil.reset()
+		spray(TEST_GUN, 4, 0.05)
+		for _ = 1, 60 do
+			Recoil.advance(STEP)
+		end
+		for _ = 1, 240 do
+			expect(Recoil.advance(STEP) <= 0).toBe(true)
+		end
+	end)
+
+	it("falls the same whichever way the pattern went", function()
+		local gentle = { pattern = { { 4, 8, 0 } }, recovery = 10 }
+		local swinging = { pattern = { { 2, 4, 6 }, { 4, 8, -6 } }, recovery = 10 }
+		local function fall(gun: any): number
+			Recoil.reset()
+			spray(gun, 4, 0.05)
+			local view = 0
+			for _ = 1, 60 do
+				view += Recoil.advance(STEP)
+			end
+			return view
+		end
+		expect(fall(swinging)).toBeCloseTo(fall(gentle), 1e-9)
+	end)
+
+	it("rises from where the camera is when firing starts again mid-fall", function()
+		Recoil.reset()
+		local gun = { pattern = { { 4, 8, 0 }, { 8, 16, 0 } }, recovery = 1 }
+		spray(gun, 4, 0.05)
+		for _ = 1, 120 do
+			Recoil.advance(STEP)
+		end
+		Recoil.aimOffset(gun)
+		Recoil.kick()
+		local rise = 0
+		for _ = 1, 28 do
+			rise += Recoil.advance(STEP)
+		end
+		expect(rise <= math.rad(2) * Recoil.VIEW_SHARE).toBe(true)
 	end)
 
 	it("recovers after firing stops, so the next first bullet is accurate", function()
@@ -85,7 +134,7 @@ describe("Spray pattern", function()
 		spray(TEST_GUN, 4, 0.05)
 		local view = 0
 		for _ = 1, 240 * 3 do
-			view += (Recoil.advance(STEP))
+			view += Recoil.advance(STEP)
 		end
 		local pitch, yaw = Recoil.aimOffset(TEST_GUN)
 		expect(math.abs(pitch) < 1e-3).toBe(true)
