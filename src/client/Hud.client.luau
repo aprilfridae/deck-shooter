@@ -4,6 +4,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local GunConfig = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("GunConfig"))
+local GunSounds = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("GunSounds"))
+local GunAudio = require(script.Parent.GunAudio)
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local Cards = require(CardCore:WaitForChild("Cards"))
 local Config = require(CardCore:WaitForChild("Config"))
@@ -25,6 +27,7 @@ local BAR_SPACING = 34
 local BARS_ABOVE = -84
 
 local player = Players.LocalPlayer
+local lastHealth = 0
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "DeckHud"
@@ -127,11 +130,16 @@ hitRemote.OnClientEvent:Connect(function(info)
 	marker.Text = if info.killed then "X" else "+"
 	marker.Visible = true
 	markerHideAt = os.clock() + MARKER_SECONDS
+	GunAudio.playHit(info.headshot, info.killed)
 end)
 
 RunService.RenderStepped:Connect(function()
 	local character = player.Character
 	local health = character and character:GetAttribute("Health") or 0
+	if GunSounds.hurtPlays(lastHealth, health) then
+		GunAudio.playHurt()
+	end
+	lastHealth = health
 	healthFill.Size = UDim2.fromScale(math.clamp(health / MAX_HEALTH, 0, 1), 1)
 	classText.Text = player:GetAttribute("Class") or ""
 	local gun = GunConfig.guns[player:GetAttribute("GunId")]
