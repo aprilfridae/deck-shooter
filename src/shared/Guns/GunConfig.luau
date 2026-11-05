@@ -2,7 +2,6 @@
 -- pattern is the spray: { shots fired, degrees up, degrees sideways } for where bullets land
 -- relative to the aim, joined by straight lines. recovery is shots forgiven per second.
 -- Automatics climb nearly straight for a third of the magazine, then sweep side to side.
-local AIM_FOV = 60
 local SIDEARM_FULL_TO = 40
 local SIDEARM_LOW_TO = 90
 local SIDEARM_LOW_SCALE = 0.7
@@ -14,7 +13,6 @@ local function gun(fields: { [string]: any }): { [string]: any }
 	fields.perShell = fields.perShell == true
 	fields.automatic = fields.automatic == true
 	fields.headshot = fields.headshot or "Double"
-	fields.aimFov = fields.aimFov or AIM_FOV
 	fields.fullTo = fields.fullTo or SIDEARM_FULL_TO
 	fields.lowTo = fields.lowTo or SIDEARM_LOW_TO
 	fields.lowScale = fields.lowScale or SIDEARM_LOW_SCALE
@@ -23,11 +21,11 @@ end
 
 GunConfig.guns = {
 	M4 = gun({
-		name = "M4",
+		name = "M57",
 		body = 24,
 		rpm = 600,
 		mag = 30,
-		reload = 2.2,
+		reload = 0.964,
 		automatic = true,
 		fullTo = 90,
 		lowTo = 180,
@@ -52,12 +50,12 @@ GunConfig.guns = {
 		recovery = 12,
 	}),
 	AK47 = gun({
-		name = "AK-47",
+		name = "B33",
 		body = 24,
 		headshot = "Kill",
 		rpm = 540,
 		mag = 30,
-		reload = 2.4,
+		reload = 0.964,
 		automatic = true,
 		fullTo = 90,
 		lowTo = 180,
@@ -109,12 +107,12 @@ GunConfig.guns = {
 		recovery = 16,
 	}),
 	Sniper = gun({
-		name = "Sniper",
+		name = "Longscope",
 		body = 85,
 		headshot = "Kill",
 		rpm = 50,
 		mag = 5,
-		reload = 3.0,
+		reload = 1.714,
 		fullTo = math.huge,
 		lowTo = math.huge,
 		lowScale = 1,
@@ -122,7 +120,7 @@ GunConfig.guns = {
 		hipSpread = 7,
 		pattern = { { 1, 5, 0.4 }, { 2, 6.4, -0.3 } },
 		recovery = 1.6,
-		aimFov = 30,
+		aimFov = 30, -- only guns with this can aim down sights
 	}),
 	Shotgun = gun({
 		name = "Shotgun",
@@ -140,7 +138,7 @@ GunConfig.guns = {
 		recovery = 2.5,
 	}),
 	Pistol = gun({
-		name = "Pistol",
+		name = "Energy Pistol",
 		body = 20,
 		rpm = 400,
 		mag = 12,

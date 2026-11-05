@@ -6,29 +6,29 @@ local Spread = require("../src/shared/Guns/Spread")
 
 local describe, it, expect = harness.describe, harness.it, harness.expect
 
-local m4 = GunConfig.guns.M4
-
 local function degreesBetween(a: any, b: any): number
 	local dot = a.x * b.x + a.y * b.y + a.z * b.z
 	return math.deg(math.acos(math.clamp(dot, -1, 1)))
 end
 
 describe("Spread", function()
-	it("gives hip fire the same accuracy as aiming", function()
+	it("gives other guns the same accuracy whatever they send", function()
+		local m4 = GunConfig.guns.M4
 		expect(Spread.angle(m4, false)).toBe(0.2)
 		expect(Spread.angle(m4, true)).toBe(0.2)
 	end)
 
-	it("keeps the Sniper inaccurate unless scoped", function()
+	it("keeps the Longscope inaccurate unless scoped", function()
 		local sniper = GunConfig.guns.Sniper
 		expect(Spread.angle(sniper, false)).toBe(7)
 		expect(Spread.angle(sniper, true)).toBe(0)
 	end)
 
-	it("leaves the Sniper as the only gun with a hip penalty", function()
+	it("lets only the Longscope aim", function()
 		for id, gun in GunConfig.guns do
 			expect(type(gun.spread)).toBe("number")
 			expect(gun.hipSpread == nil).toBe(id ~= "Sniper")
+			expect(gun.aimFov == nil).toBe(id ~= "Sniper")
 		end
 	end)
 

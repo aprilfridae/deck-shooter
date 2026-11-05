@@ -1,30 +1,53 @@
--- A basic HUD: crosshair, health, ammo, class, cooldowns and hit marker. Art comes later.
+-- The HUD: crosshair, health, shield, ammo, class, cooldowns and hit marker.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local GunConfig = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("GunConfig"))
 local GunSounds = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("GunSounds"))
+local HitMarker = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("HitMarker"))
 local GunAudio = require(script.Parent.GunAudio)
+local GunView = require(script.Parent.GunView)
+local TypeLabel = require(script.Parent.TypeLabel)
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local Cards = require(CardCore:WaitForChild("Cards"))
 local Config = require(CardCore:WaitForChild("Config"))
+local HudText = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Hud"):WaitForChild("HudText"))
 
 local remotes = ReplicatedStorage:WaitForChild("GunRemotes")
 local hitRemote = remotes:WaitForChild("HitConfirm") :: RemoteEvent
 
 local WHITE = Color3.fromRGB(255, 255, 255)
-local DARK = Color3.fromRGB(25, 25, 30)
-local HEADSHOT = Color3.fromRGB(255, 80, 70)
-local MARKER_SECONDS = 0.15
-local MAX_HEALTH = 100
+local GREEN = Color3.fromRGB(57, 255, 90)
+local EMPTY = Color3.fromRGB(40, 40, 46)
+-- The hit marker: four purple dashes in an X around the crosshair.
+local MARKER_COLOR = Color3.fromRGB(170, 60, 255)
+local MARKER_SECONDS = 0.3
+local MARKER_GAP = 5 -- from the middle of the screen to the inner end of each dash
+local MARKER_LENGTH = 6
+local MARKER_WIDTH = 1
+local MARKER_POP = 1.6 -- how much bigger it starts
+local MARKER_KILL = 1.5 -- how much bigger a kill's marker is
 local SLOTS = 3
-local FIRST_KEY = 3
-local BAR_WIDTH = 260
+-- HUD layout, in pixels on a 720-tall screen. The whole HUD scales from there.
+local MARGIN = 32
+local BASELINE = -32 -- the big numbers, from the bottom
+local LABEL_LINE = BASELINE - 44
+local LABEL_INSET = 2 -- lines the thin labels up with the numbers' edge
+local CLASS_X = 108
+local SHIELD_GAP = 8
+local NUMBER_SIZE = 46
+local LABEL_SIZE = 12
+local TIER_SIZE = 10
+local LABEL_TRACKING = 3
+local ROW_TRACKING = 2
+local ROW_TOP = BASELINE - 130
+local ROW_SPACING = 25
+local ROW_WIDTH = 220
+local ROW_NAME_X = 18
+local BAR_DROP = 5
+local BAR_HEIGHT = 2
 local BAR_GAP = 2
-local BAR_HEIGHT = 6
-local BAR_SPACING = 34
-local BARS_ABOVE = -84
 
 local player = Players.LocalPlayer
 local lastHealth = 0
@@ -35,20 +58,6 @@ gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = player:WaitForChild("PlayerGui")
 
-local function label(position: UDim2, anchor: Vector2, size: number): TextLabel
-	local text = Instance.new("TextLabel")
-	text.BackgroundTransparency = 1
-	text.Position = position
-	text.AnchorPoint = anchor
-	text.Size = UDim2.fromOffset(320, size + 8)
-	text.TextSize = size
-	text.Font = Enum.Font.GothamBold
-	text.TextColor3 = WHITE
-	text.TextXAlignment = if anchor.X > 0.9 then Enum.TextXAlignment.Right else Enum.TextXAlignment.Left
-	text.Parent = gui
-	return text
-end
-
 local crosshair = Instance.new("Frame")
 crosshair.AnchorPoint = Vector2.new(0.5, 0.5)
 crosshair.Position = UDim2.fromScale(0.5, 0.5)
@@ -57,80 +66,146 @@ crosshair.BackgroundColor3 = WHITE
 crosshair.BorderSizePixel = 0
 crosshair.Parent = gui
 
-local marker = label(UDim2.fromScale(0.5, 0.5), Vector2.new(0.5, 0.5), 30)
-marker.TextXAlignment = Enum.TextXAlignment.Center
-marker.Text = "+"
+local marker = Instance.new("Frame")
+marker.AnchorPoint = Vector2.new(0.5, 0.5)
+marker.Position = UDim2.fromScale(0.5, 0.5)
+marker.BackgroundTransparency = 1
 marker.Visible = false
+marker.Parent = gui
 
-local healthBack = Instance.new("Frame")
-healthBack.AnchorPoint = Vector2.new(0, 1)
-healthBack.Position = UDim2.new(0, 24, 1, -24)
-healthBack.Size = UDim2.fromOffset(260, 16)
-healthBack.BackgroundColor3 = DARK
-healthBack.BorderSizePixel = 0
-healthBack.Parent = gui
+local markerScale = Instance.new("UIScale")
+markerScale.Parent = marker
 
-local healthFill = Instance.new("Frame")
-healthFill.Size = UDim2.fromScale(1, 1)
-healthFill.BackgroundColor3 = WHITE
-healthFill.BorderSizePixel = 0
-healthFill.Parent = healthBack
+local markerDashes = {}
+for _, corner in { Vector2.new(-1, -1), Vector2.new(1, -1), Vector2.new(-1, 1), Vector2.new(1, 1) } do
+	local reach = (MARKER_GAP + MARKER_LENGTH / 2) * math.sqrt(0.5)
+	local dash = Instance.new("Frame")
+	dash.AnchorPoint = Vector2.new(0.5, 0.5)
+	dash.Position = UDim2.fromOffset(corner.X * reach, corner.Y * reach)
+	dash.Size = UDim2.fromOffset(MARKER_LENGTH, MARKER_WIDTH)
+	dash.Rotation = if corner.X == corner.Y then 45 else -45
+	dash.BackgroundColor3 = MARKER_COLOR
+	dash.BorderSizePixel = 0
+	dash.Parent = marker
+	table.insert(markerDashes, dash)
+end
 
-local ammoText = label(UDim2.new(1, -24, 1, -24), Vector2.new(1, 1), 30)
-local gunText = label(UDim2.new(1, -24, 1, -62), Vector2.new(1, 1), 16)
-local classText = label(UDim2.new(0, 24, 1, -48), Vector2.new(0, 1), 16)
-local statusText = label(UDim2.new(0.5, 0, 1, -24), Vector2.new(0.5, 1), 16)
-statusText.TextXAlignment = Enum.TextXAlignment.Center
+local hud = Instance.new("Frame")
+hud.BackgroundTransparency = 1
+hud.Parent = gui
 
-local markerHideAt = 0
+local hudScale = Instance.new("UIScale")
+hudScale.Parent = hud
 
-local function cooldownBar(index: number)
-	local offset = BARS_ABOVE - (SLOTS - index) * BAR_SPACING
-	local name = label(UDim2.new(0, 24, 1, offset - BAR_HEIGHT - 2), Vector2.new(0, 1), 14)
+local function fitToScreen()
+	local scale = HudText.scale(gui.AbsoluteSize.Y)
+	hudScale.Scale = scale
+	hud.Size = UDim2.fromScale(1 / scale, 1 / scale)
+end
+
+gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitToScreen)
+fitToScreen()
+
+local function number(style: string, color: Color3, right: boolean?, position: UDim2): any
+	return TypeLabel.new(
+		hud,
+		{ style = style, size = NUMBER_SIZE, tracking = 0, color = color, right = right, position = position }
+	)
+end
+
+local function small(style: string, right: boolean?, position: UDim2): any
+	return TypeLabel.new(
+		hud,
+		{ style = style, size = LABEL_SIZE, tracking = LABEL_TRACKING, color = WHITE, right = right, position = position }
+	)
+end
+
+local healthText = number("Number", WHITE, false, UDim2.new(0, MARGIN, 1, BASELINE))
+local shieldText = number("NumberThin", GREEN, false, UDim2.new(0, MARGIN, 1, BASELINE))
+local ammoText = number("Number", WHITE, true, UDim2.new(1, -MARGIN, 1, BASELINE))
+local healthLabel = small("Label", false, UDim2.new(0, MARGIN + LABEL_INSET, 1, LABEL_LINE))
+local classText = small("Label", false, UDim2.new(0, CLASS_X, 1, LABEL_LINE))
+local gunText = small("Label", true, UDim2.new(1, -MARGIN - LABEL_INSET, 1, LABEL_LINE))
+local reloadText = small("LabelBold", true, UDim2.new(1, -MARGIN - LABEL_INSET, 1, LABEL_LINE))
+reloadText:setColor(GREEN)
+healthLabel:set("HEALTH")
+
+local markerAt = 0
+local markerSize = 1
+
+local function abilityRow(index: number)
+	local line = ROW_TOP + (index - 1) * ROW_SPACING
+	local left = MARGIN + LABEL_INSET
+	local function rowText(style: string, size: number, right: boolean?, x: number): any
+		return TypeLabel.new(hud, {
+			style = style,
+			size = size,
+			tracking = ROW_TRACKING,
+			color = WHITE,
+			right = right,
+			position = UDim2.new(0, x, 1, line),
+		})
+	end
+	local key = rowText("LabelBold", LABEL_SIZE, false, left)
+	local name = rowText("Label", LABEL_SIZE, false, left + ROW_NAME_X)
+	local tier = rowText("Label", TIER_SIZE, true, left + ROW_WIDTH)
+	key:set(HudText.key(index))
+
+	local bar = Instance.new("Frame")
+	bar.BackgroundTransparency = 1
+	bar.Position = UDim2.new(0, left, 1, line + BAR_DROP)
+	bar.Size = UDim2.fromOffset(ROW_WIDTH, BAR_HEIGHT)
+	bar.Parent = hud
+
 	local segments = {}
 	local count = Config.CooldownSegments
-	local width = (BAR_WIDTH - BAR_GAP * (count - 1)) / count
+	local gap = BAR_GAP / ROW_WIDTH
+	local width = (1 - gap * (count - 1)) / count
 	for i = 1, count do
 		local segment = Instance.new("Frame")
-		segment.AnchorPoint = Vector2.new(0, 1)
-		segment.Position = UDim2.new(0, 24 + (i - 1) * (width + BAR_GAP), 1, offset)
-		segment.Size = UDim2.fromOffset(width, BAR_HEIGHT)
+		segment.Position = UDim2.fromScale((i - 1) * (width + gap), 0)
+		segment.Size = UDim2.fromScale(width, 1)
 		segment.BorderSizePixel = 0
-		segment.Parent = gui
+		segment.Parent = bar
 		segments[i] = segment
 	end
-	return { name = name, segments = segments }
+	return { key = key, name = name, tier = tier, bar = bar, segments = segments }
 end
 
-local bars = {}
+local rows = {}
 for index = 1, SLOTS do
-	bars[index] = cooldownBar(index)
+	rows[index] = abilityRow(index)
 end
 
-local function showBar(index: number, now: number)
-	local bar = bars[index]
+local function showRow(index: number, now: number)
+	local row = rows[index]
 	local card = Cards.byId[player:GetAttribute(`Ability{index}Id`) or ""]
-	bar.name.Visible = card ~= nil
-	local filled = 0
-	if card then
-		local tier = player:GetAttribute(`Ability{index}Tier`)
-		bar.name.Text = `{index + FIRST_KEY - 1}  {card.name} ({tier})`
-		local left = player:GetAttribute(`Ability{index}ReadyAt`) - now
-		local share = 1 - math.clamp(left / player:GetAttribute(`Ability{index}Cooldown`), 0, 1)
-		filled = math.floor(share * #bar.segments)
+	local shown = card ~= nil
+	row.key:setVisible(shown)
+	row.name:setVisible(shown)
+	row.tier:setVisible(shown)
+	row.bar.Visible = shown
+	if not card then
+		return
 	end
-	for i, segment in bar.segments do
-		segment.Visible = card ~= nil
-		segment.BackgroundColor3 = if i <= filled then WHITE else DARK
+	row.name:set(card.name)
+	row.tier:set(tostring(player:GetAttribute(`Ability{index}Tier`)))
+	local left = player:GetAttribute(`Ability{index}ReadyAt`) - now
+	local filled = HudText.filled(left, player:GetAttribute(`Ability{index}Cooldown`), #row.segments)
+	row.key:setColor(if filled == #row.segments then GREEN else WHITE)
+	for i, segment in row.segments do
+		segment.BackgroundColor3 = if i <= filled then WHITE else EMPTY
 	end
 end
 
 hitRemote.OnClientEvent:Connect(function(info)
-	marker.TextColor3 = if info.headshot then HEADSHOT else WHITE
-	marker.Text = if info.killed then "X" else "+"
+	markerAt = os.clock()
+	markerSize = if info.killed then MARKER_KILL else 1
 	marker.Visible = true
-	markerHideAt = os.clock() + MARKER_SECONDS
 	GunAudio.playHit(info.headshot, info.killed)
+	if info.killed then
+		GunView.snap()
+	end
 end)
 
 RunService.RenderStepped:Connect(function()
@@ -140,21 +215,35 @@ RunService.RenderStepped:Connect(function()
 		GunAudio.playHurt()
 	end
 	lastHealth = health
-	healthFill.Size = UDim2.fromScale(math.clamp(health / MAX_HEALTH, 0, 1), 1)
-	classText.Text = player:GetAttribute("Class") or ""
+	healthText:set(HudText.health(health))
+	local shield = HudText.shield(character and character:GetAttribute("ShieldHp"))
+	shieldText:set(shield)
+	shieldText:setVisible(shield ~= "")
+	shieldText:setPosition(UDim2.new(0, MARGIN + healthText:width() + SHIELD_GAP, 1, BASELINE))
+	classText:set(player:GetAttribute("Class") or "")
 	local gun = GunConfig.guns[player:GetAttribute("GunId")]
+	local reloading = gun ~= nil and player:GetAttribute("Reloading") == true
+	ammoText:setVisible(gun ~= nil)
+	gunText:setVisible(gun ~= nil and not reloading)
+	reloadText:setVisible(reloading)
 	if gun then
-		local ammo = player:GetAttribute("Ammo")
-		ammoText.Text = if player:GetAttribute("Reloading") then `Reloading {ammo}` else `{ammo} / {gun.mag}`
-		gunText.Text = gun.name
+		ammoText:set(HudText.ammo(player:GetAttribute("Ammo")))
+		gunText:set(HudText.gunLabel(gun.name, gun.mag, false))
+		reloadText:set(HudText.gunLabel(gun.name, gun.mag, true))
 	end
 	local now = workspace:GetServerTimeNow()
-	local shield = character and character:GetAttribute("ShieldHp")
-	statusText.Text = if shield then `Shield {math.ceil(shield)}` else ""
 	for index = 1, SLOTS do
-		showBar(index, now)
+		showRow(index, now)
 	end
-	if marker.Visible and os.clock() >= markerHideAt then
-		marker.Visible = false
+	if marker.Visible then
+		local scale, transparency = HitMarker.look(os.clock() - markerAt, MARKER_SECONDS, MARKER_POP)
+		if scale then
+			markerScale.Scale = scale * markerSize
+			for _, dash in markerDashes do
+				dash.BackgroundTransparency = transparency
+			end
+		else
+			marker.Visible = false
+		end
 	end
 end)

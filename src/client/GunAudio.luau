@@ -31,6 +31,9 @@ local others: { [string]: Sound } = {}
 for _, soundId in { GunSounds.hits.body, GunSounds.hits.head, GunSounds.hits.kill, GunSounds.hurt } do
 	others[soundId] = newSound(soundId)
 end
+for _, soundId in GunSounds.reloads do
+	others[soundId] = others[soundId] or newSound(soundId)
+end
 
 -- Loading up front stops the first shot from being late or silent.
 task.spawn(function()
@@ -69,6 +72,13 @@ end
 
 function GunAudio.playHit(headshot: boolean, killed: boolean)
 	task.delay(GunSounds.hitDelaySeconds, playCopy, others[GunSounds.hitSound(headshot, killed)], 0)
+end
+
+function GunAudio.playReload(gunId: string)
+	local soundId = GunSounds.reloads[gunId]
+	if soundId then
+		playCopy(others[soundId], 0)
+	end
 end
 
 function GunAudio.playHurt()
