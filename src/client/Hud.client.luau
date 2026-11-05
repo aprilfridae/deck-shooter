@@ -1,4 +1,5 @@
 -- The HUD: crosshair, health, shield, ammo, class, cooldowns and hit marker.
+local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -6,6 +7,7 @@ local RunService = game:GetService("RunService")
 local GunConfig = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("GunConfig"))
 local GunSounds = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("GunSounds"))
 local HitMarker = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("HitMarker"))
+local MenuState = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("MenuState"))
 local GunAudio = require(script.Parent.GunAudio)
 local GunView = require(script.Parent.GunView)
 local TypeLabel = require(script.Parent.TypeLabel)
@@ -17,11 +19,11 @@ local HudText = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Hud
 local remotes = ReplicatedStorage:WaitForChild("GunRemotes")
 local hitRemote = remotes:WaitForChild("HitConfirm") :: RemoteEvent
 
-local WHITE = Color3.fromRGB(255, 255, 255)
-local GREEN = Color3.fromRGB(57, 255, 90)
-local EMPTY = Color3.fromRGB(40, 40, 46)
--- The hit marker: four purple dashes in an X around the crosshair.
-local MARKER_COLOR = Color3.fromRGB(170, 60, 255)
+local BONE = Palette.Bone
+local ACID = Palette.SignalAcid
+local EMPTY = Palette.DeepNavy
+-- The hit marker: four dashes in an X around the crosshair.
+local MARKER_COLOR = Palette.SignalAcid
 local MARKER_SECONDS = 0.3
 local MARKER_GAP = 5 -- from the middle of the screen to the inner end of each dash
 local MARKER_LENGTH = 6
@@ -62,7 +64,7 @@ local crosshair = Instance.new("Frame")
 crosshair.AnchorPoint = Vector2.new(0.5, 0.5)
 crosshair.Position = UDim2.fromScale(0.5, 0.5)
 crosshair.Size = UDim2.fromOffset(4, 4)
-crosshair.BackgroundColor3 = WHITE
+crosshair.BackgroundColor3 = BONE
 crosshair.BorderSizePixel = 0
 crosshair.Parent = gui
 
@@ -116,18 +118,18 @@ end
 local function small(style: string, right: boolean?, position: UDim2): any
 	return TypeLabel.new(
 		hud,
-		{ style = style, size = LABEL_SIZE, tracking = LABEL_TRACKING, color = WHITE, right = right, position = position }
+		{ style = style, size = LABEL_SIZE, tracking = LABEL_TRACKING, color = BONE, right = right, position = position }
 	)
 end
 
-local healthText = number("Number", WHITE, false, UDim2.new(0, MARGIN, 1, BASELINE))
-local shieldText = number("NumberThin", GREEN, false, UDim2.new(0, MARGIN, 1, BASELINE))
-local ammoText = number("Number", WHITE, true, UDim2.new(1, -MARGIN, 1, BASELINE))
+local healthText = number("Number", BONE, false, UDim2.new(0, MARGIN, 1, BASELINE))
+local shieldText = number("NumberThin", ACID, false, UDim2.new(0, MARGIN, 1, BASELINE))
+local ammoText = number("Number", BONE, true, UDim2.new(1, -MARGIN, 1, BASELINE))
 local healthLabel = small("Label", false, UDim2.new(0, MARGIN + LABEL_INSET, 1, LABEL_LINE))
 local classText = small("Label", false, UDim2.new(0, CLASS_X, 1, LABEL_LINE))
 local gunText = small("Label", true, UDim2.new(1, -MARGIN - LABEL_INSET, 1, LABEL_LINE))
 local reloadText = small("LabelBold", true, UDim2.new(1, -MARGIN - LABEL_INSET, 1, LABEL_LINE))
-reloadText:setColor(GREEN)
+reloadText:setColor(ACID)
 healthLabel:set("HEALTH")
 
 local markerAt = 0
@@ -141,7 +143,7 @@ local function abilityRow(index: number)
 			style = style,
 			size = size,
 			tracking = ROW_TRACKING,
-			color = WHITE,
+			color = BONE,
 			right = right,
 			position = UDim2.new(0, x, 1, line),
 		})
@@ -189,12 +191,14 @@ local function showRow(index: number, now: number)
 		return
 	end
 	row.name:set(card.name)
-	row.tier:set(tostring(player:GetAttribute(`Ability{index}Tier`)))
+	local tier = player:GetAttribute(`Ability{index}Tier`)
+	row.tier:set(tostring(tier))
+	row.tier:setColor(Palette.Tiers[tier] or BONE)
 	local left = player:GetAttribute(`Ability{index}ReadyAt`) - now
 	local filled = HudText.filled(left, player:GetAttribute(`Ability{index}Cooldown`), #row.segments)
-	row.key:setColor(if filled == #row.segments then GREEN else WHITE)
+	row.key:setColor(if filled == #row.segments then ACID else BONE)
 	for i, segment in row.segments do
-		segment.BackgroundColor3 = if i <= filled then WHITE else EMPTY
+		segment.BackgroundColor3 = if i <= filled then BONE else EMPTY
 	end
 end
 
@@ -209,6 +213,7 @@ hitRemote.OnClientEvent:Connect(function(info)
 end)
 
 RunService.RenderStepped:Connect(function()
+	gui.Enabled = not MenuState.isOpen(MenuState.shared)
 	local character = player.Character
 	local health = character and character:GetAttribute("Health") or 0
 	if GunSounds.hurtPlays(lastHealth, health) then

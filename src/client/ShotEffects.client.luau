@@ -1,4 +1,5 @@
 -- Bullet tracers and blood. The server sends where each bullet really went, spread included.
+local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -12,9 +13,9 @@ local shotsRemote = remotes:WaitForChild("Shots") :: RemoteEvent
 local TRACER_SPEED = 600
 local TRACER_LENGTH = 12
 local TRACER_WIDTH = 0.07
-local TRACER_COLOR = Color3.fromRGB(50, 130, 255)
+local TRACER_COLOR = Palette.DataCyan
 
-local BLOOD_COLOR = Color3.fromRGB(255, 230, 0)
+local BLOOD_COLOR = Palette.HazardRed
 local MIST_BURST = 30
 local DROPS = 18
 local HEADSHOT_SCALE = 2 -- headshots throw this much more blood

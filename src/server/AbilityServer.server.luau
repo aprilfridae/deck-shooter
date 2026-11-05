@@ -1,4 +1,5 @@
 -- Server side of ability cards: owns cooldowns and runs each card's effect.
+local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -15,7 +16,7 @@ local MoveGrace = require(script.Parent.MoveGrace)
 local PlayerCards = require(script.Parent.PlayerCards)
 
 local SHIELD_SIZE = 8
-local SHIELD_COLOR = Color3.fromRGB(90, 170, 255)
+local SHIELD_COLOR = Palette.DataCyan
 
 -- Test room only: two decks cover all 4 cards. Phase 4 removes these.
 local TEST_DECKS = {

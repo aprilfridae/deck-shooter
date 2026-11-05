@@ -124,6 +124,18 @@ function MoveState.fallVelocity(state: State, velocityY: number, dt: number): nu
 	return math.max(velocityY - MoveConfig.FastFallAcceleration * dt, -MoveConfig.FastFallMaxSpeed)
 end
 
+-- Adds the ground just covered and says whether a footstep lands.
+function MoveState.stepTravel(travel: number, distance: number, mode: Mode): (number, boolean)
+	if mode ~= "Walk" and mode ~= "Sprint" then
+		return travel, false
+	end
+	travel += distance
+	if travel >= MoveConfig.StrideStuds then
+		return travel - MoveConfig.StrideStuds, true
+	end
+	return travel, false
+end
+
 function MoveState.step(state: State, input: Input, now: number)
 	local previous = state.mode
 	local current = MoveState.speed(state, now)

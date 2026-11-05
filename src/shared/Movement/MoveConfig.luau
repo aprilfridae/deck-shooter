@@ -11,6 +11,7 @@ return {
 	SlideJumpBoost = 8, -- added to current speed when a jump cancels a slide
 	ChainJumpBoost = 16, -- the same, from a slide reached by a fast fall
 	JumpHeight = 6,
+	StrideStuds = 9, -- ground covered between footsteps
 	ChainJumpHeight = 8,
 	FastFallAcceleration = 350,
 	FastFallMaxSpeed = 110,

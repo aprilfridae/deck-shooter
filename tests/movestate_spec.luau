@@ -363,3 +363,21 @@ describe("MoveState", function()
 		expect(s.mode).toBe("Crouch")
 	end)
 end)
+
+describe("MoveState.stepTravel", function()
+	it("steps each time the feet cover a stride", function()
+		local travel, stepped = MoveState.stepTravel(0, 8, "Sprint")
+		expect(stepped).toBe(false)
+		travel, stepped = MoveState.stepTravel(travel, 2, "Sprint")
+		expect(stepped).toBe(true)
+		expect(travel).toBeCloseTo(1, 0.001)
+	end)
+
+	it("stays silent off the feet and while crouched", function()
+		for _, mode in { "Air", "Slide", "Crouch", "Climb" } do
+			local travel, stepped = MoveState.stepTravel(8.5, 5, mode)
+			expect(stepped).toBe(false)
+			expect(travel).toBe(8.5)
+		end
+	end)
+end)

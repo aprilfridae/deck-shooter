@@ -13,6 +13,14 @@ local function takes(name: string, count: number, skip: number?): { string }
 	return list
 end
 
+local function numbered(name: string, count: number): { string }
+	local list = {}
+	for take = 1, count do
+		table.insert(list, `{FOLDER}{name}-{take}.wav`)
+	end
+	return list
+end
+
 local GunSounds = {
 	-- tools/pad-sounds.py adds this much silence to the front of every take.
 	paddingSeconds = 0.02,
@@ -28,9 +36,10 @@ local GunSounds = {
 	},
 	-- Each gun's reload time in GunConfig matches the length of its sound here.
 	reloads = {
-		M4 = `{FOLDER}reload-assault.wav`,
-		AK47 = `{FOLDER}reload-assault.wav`,
+		M4 = `{FOLDER}reload-assault-v2.wav`,
+		AK47 = `{FOLDER}reload-assault-v2.wav`,
 		Sniper = `{FOLDER}reload-sniper.wav`,
+		Pistol = `{FOLDER}reload-pistol-v4.wav`,
 	},
 	hits = {
 		body = `{FOLDER}hit-body.wav`,
@@ -38,6 +47,12 @@ local GunSounds = {
 		kill = `{FOLDER}hit-kill.wav`,
 	},
 	hurt = `{FOLDER}hurt.wav`,
+	menuMusic = `{FOLDER}menu-music-v2.mp3`,
+	menuSelect = `{FOLDER}menu-select.wav`,
+	steps = numbered("step", 10),
+	jumps = numbered("jump", 14),
+	-- Every jump take opens with this much silence.
+	jumpLeadSeconds = 0.1,
 }
 
 -- Roblox can only start a sound on a frame. Starting a late shot this far into its padding

@@ -1,8 +1,9 @@
 -- A grey room for testing movement. It runs on every server, so Team Test and
+local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
 -- published playtests have a floor. Remove it when real arenas arrive.
 
 local GREY = Color3.fromRGB(150, 150, 155)
-local DARK = Color3.fromRGB(95, 95, 100)
+local DARK = Palette.DeepNavy
 
 local room = Instance.new("Folder")
 room.Name = "TestRoom"

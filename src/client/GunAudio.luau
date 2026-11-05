@@ -35,6 +35,15 @@ for _, soundId in GunSounds.reloads do
 	others[soundId] = others[soundId] or newSound(soundId)
 end
 
+local steps: { Sound } = {}
+for _, soundId in GunSounds.steps do
+	table.insert(steps, newSound(soundId))
+end
+local jumps: { Sound } = {}
+for _, soundId in GunSounds.jumps do
+	table.insert(jumps, newSound(soundId))
+end
+
 -- Loading up front stops the first shot from being late or silent.
 task.spawn(function()
 	ContentProvider:PreloadAsync(allSounds)
@@ -79,6 +88,14 @@ function GunAudio.playReload(gunId: string)
 	if soundId then
 		playCopy(others[soundId], 0)
 	end
+end
+
+function GunAudio.playStep()
+	playCopy(steps[pickTake("step", #steps)], 0)
+end
+
+function GunAudio.playJump()
+	playCopy(jumps[pickTake("jump", #jumps)], GunSounds.jumpLeadSeconds)
 end
 
 function GunAudio.playHurt()

@@ -1,4 +1,5 @@
 -- Marks where bullets hit walls. The server sends the real landing points, spread included.
+local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local remotes = ReplicatedStorage:WaitForChild("GunRemotes")
@@ -24,7 +25,7 @@ local function addHole(position: Vector3, normal: Vector3)
 	hole.CastShadow = false
 	hole.Size = SIZE
 	hole.Material = Enum.Material.SmoothPlastic
-	hole.Color = Color3.fromRGB(15, 15, 18)
+	hole.Color = Palette.DeepNavy
 	local front = position + normal * SURFACE_GAP
 	hole.CFrame = CFrame.lookAt(front, front + normal)
 	hole.Parent = folder

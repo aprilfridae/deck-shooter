@@ -11,6 +11,12 @@ function ArmClip.frameAt(clip: any, elapsed: number): any
 	return clip.frames[index + 1]
 end
 
+-- One of a gun's reload takes, with share from 0 up to 1 choosing which.
+function ArmClip.pickReload(clips: any, share: number): any
+	local takes = { clips.reload, clips.reload2, clips.reload3 }
+	return takes[math.floor(share * #takes) + 1]
+end
+
 -- A pose part of the way between two frames' bones. Each bone is { x, y, z, qx, qy, qz, qw }.
 function ArmClip.blendBones(from: any, to: any, share: number): any
 	local blended = {}
