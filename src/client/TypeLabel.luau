@@ -1,4 +1,5 @@
 -- A piece of text on screen, drawn from the font sheets. Roblox can't import font files.
+local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Hud = ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Hud")
@@ -6,7 +7,7 @@ local FontImages = require(Hud:WaitForChild("FontImages"))
 local GlyphData = require(Hud:WaitForChild("GlyphData"))
 local TypeLayout = require(Hud:WaitForChild("TypeLayout"))
 
-local SHADOW_COLOR = Color3.new(0, 0, 0)
+local SHADOW_COLOR = Palette.DeepNavy
 local SHADOW_OFFSET = Vector2.new(1, 2)
 
 export type Options = {

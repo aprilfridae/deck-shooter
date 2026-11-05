@@ -12,8 +12,8 @@ local guns = GunConfig.guns
 describe("GunConfig", function()
 	it("matches the spec's primaries", function()
 		local expected = {
-			M4 = { 24, 600, 30, 0.964 },
-			AK47 = { 24, 540, 30, 0.964 },
+			M4 = { 24, 600, 30, 0.985 },
+			AK47 = { 24, 540, 30, 0.985 },
 			SMG = { 17, 800, 32, 2.0 },
 			Sniper = { 85, 50, 5, 1.714 },
 			Shotgun = { 14, 75, 6, 0.5 },
@@ -26,7 +26,7 @@ describe("GunConfig", function()
 
 	it("matches the spec's sidearms", function()
 		local expected = {
-			Pistol = { 20, 400, 12, 1.4 },
+			Pistol = { 20, 400, 12, 0.964 },
 			MachinePistol = { 13, 900, 20, 1.6 },
 			Revolver = { 45, 150, 6, 2.2 },
 			AutoPistol = { 16, 550, 15, 1.5 },

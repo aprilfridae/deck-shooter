@@ -1,3 +1,4 @@
+local fs = require("@lune/fs")
 local harness = require("./harness")
 local ArmClip = require("../src/shared/Guns/ArmClip")
 
@@ -73,12 +74,37 @@ describe("ArmClip.overlay", function()
 	end)
 end)
 
+describe("ArmClip.pickReload", function()
+	it("reaches every take", function()
+		local clips = { reload = "a", reload2 = "b", reload3 = "c" }
+		expect(ArmClip.pickReload(clips, 0)).toBe("a")
+		expect(ArmClip.pickReload(clips, 0.5)).toBe("b")
+		expect(ArmClip.pickReload(clips, 0.99)).toBe("c")
+	end)
+end)
+
 describe("reload timing", function()
+	it("gives the M57 and pistol the same number of reload poses with its own length", function()
+		local function reload(name: string): (number, number)
+			local text = fs.readFile(`src/shared/Guns/ArmClips/{name}.luau`)
+			local clip = text:sub((text:find("reload = {", 1, true)))
+			clip = clip:sub(1, (clip:find(string.char(10, 9) .. "},", 1, true)))
+			local _, count = clip:gsub("gun = CFrame", "")
+			return count, tonumber(clip:match("fps = ([%d%.]+)")) :: number
+		end
+		local rifleCount, rifleFps = reload("M57")
+		local pistolCount, pistolFps = reload("EnergyPistol")
+		expect(rifleCount).toBe(24)
+		expect(pistolCount).toBe(24)
+		expect(pistolCount / pistolFps).toBeCloseTo(0.964, 0.001)
+		expect(rifleCount / rifleFps).toBeCloseTo(0.985, 0.001)
+	end)
+
 	local GunConfig = require("../src/shared/Guns/GunConfig")
 
 	it("lasts as long as the reload sound", function()
-		expect(GunConfig.guns.M4.reload).toBeCloseTo(0.964)
-		expect(GunConfig.guns.AK47.reload).toBeCloseTo(0.964)
+		expect(GunConfig.guns.M4.reload).toBeCloseTo(0.985)
+		expect(GunConfig.guns.AK47.reload).toBeCloseTo(0.985)
 		expect(GunConfig.guns.Sniper.reload).toBeCloseTo(1.714)
 	end)
 end)

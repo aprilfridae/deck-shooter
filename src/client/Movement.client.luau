@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local GunAudio = require(script.Parent.GunAudio)
 local Input = require(script.Parent.Input)
 local Ledge = require(script.Parent.Ledge)
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
@@ -45,6 +46,7 @@ local airStartedAt = 0
 local sentPose = "Normal"
 local poseSentAt = -math.huge
 local jumpHeld = false
+local stepTravel = 0
 
 type ClimbPath = { from: Vector3, top: Vector3, landing: Vector3, forward: Vector3, startedAt: number }
 local climb: ClimbPath? = nil
@@ -301,11 +303,21 @@ local function onFrame(dt: number)
 		root.AssemblyLinearVelocity = Vector3.new(velocity.X, fallY, velocity.Z)
 	end
 
+	local flatSpeed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
+	local stepped
+	stepTravel, stepped = MoveState.stepTravel(stepTravel, flatSpeed * dt, state.mode)
+	if stepped then
+		GunAudio.playStep()
+	end
+
 	-- The view widens through slides and jumps, and landing dips the camera.
 	local airborne = state.mode == "Air"
 	if airborne and previousMode ~= "Air" then
 		airStartedAt = now
 		jumped = keys.jump
+		if jumped then
+			GunAudio.playJump()
+		end
 	elseif previousMode == "Air" and not airborne and now - airStartedAt >= MIN_AIR_FOR_DIP then
 		landDip = 1
 	end
@@ -318,6 +330,33 @@ local function onFrame(dt: number)
 
 	local yaw = math.atan2(-workspace.CurrentCamera.CFrame.LookVector.X, -workspace.CurrentCamera.CFrame.LookVector.Z)
 	root.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, yaw, 0)
+end
+
+-- Roblox gives every character a looping "Running" sound. Ours are in GunAudio instead.
+local function muteRunning(sound: Instance)
+	if sound:IsA("Sound") and sound.Name == "Running" then
+		sound.Volume = 0
+	end
+end
+
+local function muteDefaultSteps(character: Model)
+	local body = character:WaitForChild("HumanoidRootPart")
+	body.ChildAdded:Connect(muteRunning)
+	for _, child in body:GetChildren() do
+		muteRunning(child)
+	end
+end
+
+local function watchPlayer(other: Player)
+	other.CharacterAdded:Connect(muteDefaultSteps)
+	if other.Character then
+		task.spawn(muteDefaultSteps, other.Character)
+	end
+end
+
+Players.PlayerAdded:Connect(watchPlayer)
+for _, other in Players:GetPlayers() do
+	watchPlayer(other)
 end
 
 dashRemote.OnClientEvent:Connect(startDash)

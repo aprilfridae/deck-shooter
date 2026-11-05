@@ -1,4 +1,5 @@
 -- Client side of ability cards: a card's key pulls it out, a click uses it, and this shows what the server reveals.
+local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -12,7 +13,7 @@ local useRemote = remotes:WaitForChild("Use") :: RemoteEvent
 local testDeckRemote = remotes:WaitForChild("TestDeck") :: RemoteEvent
 local revealRemote = remotes:WaitForChild("Reveal") :: RemoteEvent
 
-local REVEAL_COLOR = Color3.fromRGB(255, 70, 60)
+local REVEAL_COLOR = Palette.HazardRed
 
 local player = Players.LocalPlayer
 local previous: { [string]: boolean } = {}

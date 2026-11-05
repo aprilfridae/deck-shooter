@@ -52,3 +52,12 @@ describe("HudText", function()
 		expect(HudText.scale(2160)).toBe(2)
 	end)
 end)
+
+describe("Title style", function()
+	it("has every title letter", function()
+		local GlyphData = require("../src/shared/Guns/Hud/GlyphData") :: any
+		for _, letter in string.split("SPLITDECK", "") do
+			expect(GlyphData.Title.glyphs[letter] ~= nil).toBe(true)
+		end
+	end)
+end)

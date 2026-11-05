@@ -1,4 +1,5 @@
 -- The first-person arms. Bends the arm bones so each hand reaches its spot on the held gun.
+local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ArmPose = require(ReplicatedStorage.Guns.ArmPose)
@@ -12,8 +13,8 @@ local THUMB_CURL = math.rad(20)
 local FOREARM_TWIST = 0.7 -- share of the hand's turn the forearm takes, so the wrist doesn't pinch
 local FINGERS = { "Indice", "DedoMedio", "Anular", "Menique" }
 -- A faint glowing outline round the arms. It lights nothing else.
-local SKIN_COLOR = Color3.fromRGB(220, 0, 0)
-local GLOW_COLOR = Color3.fromRGB(255, 110, 80)
+local SKIN_COLOR = Palette.DeepNavy
+local GLOW_COLOR = Palette.DataCyan
 local GLOW_FILL = 0.82 -- how see-through the glow is over the arm itself
 local GLOW_EDGE = 0.3 -- and the outline
 local FINGER_JITTER = 1.2 -- degrees at every finger and thumb joint

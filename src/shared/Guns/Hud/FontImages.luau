@@ -2,6 +2,7 @@
 return {
 	Number = "rbxassetid://137270400730687",
 	NumberThin = "rbxassetid://94779996350856",
-	Label = "rbxassetid://115055732815212",
-	LabelBold = "rbxassetid://104721675619434",
+	Title = "rbxassetid://139812295713664",
+	Label = "rbxassetid://116796801027022",
+	LabelBold = "rbxassetid://129859622111182",
 }

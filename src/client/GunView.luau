@@ -1,4 +1,5 @@
 -- The gun held in view, with the arms holding it. Uses the model in ReplicatedStorage.GunModels named after the gun,
+local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
 -- or a grey block if that model hasn't been imported.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -63,6 +64,7 @@ local shown = HIP
 local clips: any = nil
 local firedAt: number? = nil
 local reloadAt: number? = nil
+local reloadClip: any = nil
 local equipAt: number? = nil
 local holsterAt: number? = nil
 local snapAt: number? = nil
@@ -82,7 +84,7 @@ local function makeBlock(): Part
 	part.CanQuery = false
 	part.CanTouch = false
 	part.CastShadow = false
-	part.Color = Color3.fromRGB(70, 70, 75)
+	part.Color = Palette.DeepNavy
 	part.Size = Vector3.new(BLOCK_SECTION.X, BLOCK_SECTION.Y, length)
 	return part
 end
@@ -267,9 +269,12 @@ local function clipFrame(reloading: boolean, sprinting: boolean): any
 		end
 		equipAt = nil
 	end
+	if reloading and not reloadAt then
+		reloadClip = ArmClip.pickReload(clips, math.random())
+	end
 	reloadAt = if reloading then reloadAt or os.clock() else nil
 	if reloadAt then
-		local frame = ArmClip.frameAt(clips.reload, os.clock() - reloadAt)
+		local frame = ArmClip.frameAt(reloadClip, os.clock() - reloadAt)
 		if frame then
 			return frame
 		end

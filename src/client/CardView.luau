@@ -1,11 +1,12 @@
 -- The bending card and the deck held in view. Uses the Card model in ReplicatedStorage.GunModels, or a plain block until it's imported.
+local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CARD_LENGTH = 0.32
 local BLOCK_SIZE = Vector3.new(0.3, 0.012, CARD_LENGTH)
-local BLOCK_COLOR = Color3.fromRGB(20, 60, 120)
+local BLOCK_COLOR = Palette.DeepNavy
 local DECK_SIZE = Vector3.new(0.22, 0.1, CARD_LENGTH)
-local DECK_COLOR = Color3.fromRGB(205, 210, 220)
+local DECK_COLOR = Palette.Bone
 local BEND_SIGN = -1 -- the imported bones turn the opposite way to the ones in Blender
 
 local card: BasePart? = nil

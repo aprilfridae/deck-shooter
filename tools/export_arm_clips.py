@@ -244,12 +244,20 @@ def frame(prefix=""):
 
 
 # The assault reload sound is 0.964s: a rattle until 0.3s, then the smack lands at 0.44s and rings to 0.64s.
-# 11 frames at 11.4 per second fills it, and frame 5 lands on the smack.
+# 24 frames at 24.9 per second fills it, and frame 11 lands on the smack.
 UP = dict(move=(-.08, -.15, .16), pitch=52)
 
 
 def raised(share, **extra):
     return dict(move=tuple(v * share for v in UP["move"]), pitch=UP["pitch"] * share, **extra)
+
+
+def knocked(share, side, drop, roll, yaw, **extra):
+    """A raised pose thrown sideways and down by the hit."""
+    pose = raised(share, roll=roll, yaw=yaw, **extra)
+    x, y, z = pose["move"]
+    pose["move"] = (x + side, y, z + drop)
+    return pose
 
 
 RUN = dict(move=(-.3, -.12, -.02), pitch=20, roll=-32, yaw=38)
@@ -310,22 +318,55 @@ CLIPS = {
         dict(move=(0, .015, .012), pitch=1.2),
         dict(move=(0, -.01, -.008), pitch=-.5),
     ]),
-    # Sinks before heaving up, overshoots the top, gets knocked down hard by the smack,
-    # then drops back under its own weight and sags a little past the firing position.
-    "reload": dict(fps=11.4, loop=False, poses=[
-        raised(-.08, roll=1.5),
-        raised(.45),
-        raised(1),
-        raised(1.12, hand=(.14, -.04, .02), hand_turn=-10, spread=.5),
-        raised(1.14, roll=3, hand=(.44, -.16, .18), hand_turn=-30, spread=1),
-        raised(.6, roll=-16, hand=(.07, .06, .22), hand_turn=-15, spread=1),  # the smack
-        raised(.8, roll=-8, hand=(.1, .04, .18), hand_turn=-15, spread=.9),
-        raised(.94, roll=-2, hand=(.12, -.02, .06), hand_turn=-8, spread=.5),
-        raised(.55),
-        raised(.12),
-        raised(-.06),
+    # Sinks under its weight, heaves up with the hand winding back, hangs at the top, then the smack lands
+    # in one frame and drives the gun down. It bounces back up, then drops and sags past the firing position.
+    "reload": dict(fps=24.37, loop=False, hit=11, poses=[
+        raised(-.1, roll=1.5),
+        raised(-.22, roll=3),
+        raised(-.28, roll=4),
+        raised(-.2, roll=3),
+        raised(.25),
+        raised(.65, hand=(.04, -.01, .02), hand_turn=-3, spread=.2),
+        raised(.95, hand=(.12, -.04, .04), hand_turn=-8, spread=.4),
+        raised(1.1, hand=(.25, -.1, .1), hand_turn=-18, spread=.7),
+        raised(1.16, roll=3, hand=(.42, -.15, .16), hand_turn=-28, spread=1),
+        raised(1.18, roll=4, hand=(.48, -.17, .2), hand_turn=-34, spread=1),
+        raised(1.18, roll=5, hand=(.48, -.17, .21), hand_turn=-34, spread=1),
+        knocked(.35, .1, -.06, -24, -5, hand=(.07, .06, .22), hand_turn=-15, spread=1),  # the smack
+        knocked(.12, .17, -.12, -34, -8, hand=(.07, .06, .22), hand_turn=-15, spread=1),
+        knocked(.02, .2, -.15, -38, -10, hand=(.07, .06, .22), hand_turn=-15, spread=1),
+        knocked(.04, .18, -.14, -35, -9, hand=(.08, .05, .2), hand_turn=-15, spread=.9),
+        knocked(.2, .13, -.08, -26, -6, hand=(.1, .04, .17), hand_turn=-13, spread=.8),
+        knocked(.42, .07, -.02, -15, -3, hand=(.11, .02, .12), hand_turn=-10, spread=.6),
+        knocked(.52, .02, .02, -6, -1, hand=(.1, 0, .07), hand_turn=-7, spread=.4),
+        knocked(.46, -.02, .03, 0, 1, hand=(.07, 0, .04), hand_turn=-4, spread=.25),
+        knocked(.3, -.03, .02, 3, 1.5, hand=(.03, 0, .02), hand_turn=-2, spread=.1),
+        knocked(.1, -.03, 0, 4, 1),
+        knocked(-.1, -.01, -.04, 2, .5),
+        knocked(-.16, 0, -.05, 1, 0),
+        knocked(-.08, 0, -.02, .4, 0),
     ]),
 }
+
+def varied(clip, size, roll, yaw, shift):
+    """The same reload with the same timing, but the gun and hand in slightly different places."""
+    peak = max(abs(p.get("pitch", 0)) for p in clip["poses"]) or 1
+    poses = []
+    for pose in clip["poses"]:
+        p = dict(pose)
+        lift = abs(p.get("pitch", 0)) / peak
+        p["move"] = tuple((v * size) + o * lift for v, o in zip(p.get("move", (0, 0, 0)), shift))
+        if "pitch" in p:
+            p["pitch"] *= size
+        if "hand" in p:
+            p["hand"] = tuple(v * size for v in p["hand"])
+        if "at" in p.get("slap", {}):
+            p["slap"] = dict(p["slap"], at=tuple(v * size + o * lift for v, o in zip(p["slap"]["at"], shift)))
+        p["roll"] = p.get("roll", 0) * size + roll * lift
+        p["yaw"] = p.get("yaw", 0) + yaw * lift
+        poses.append(p)
+    return dict(fps=clip["fps"], loop=False, poses=poses)
+
 
 def muzzle():
     """The middle of the gun's front end, in Roblox gun space."""
@@ -354,7 +395,7 @@ if GUN == "Energy Pistol":
         return dict(move=(x + .42 * out, y - .05 * out + .05 * math.sin(turn), z - .22 * out - .03 * abs(math.sin(turn))),
                     pitch=18 - 14 * out, roll=78 + 8 * out, yaw=18 - 20 * out)
 
-    CLIPS["run"] = dict(fps=12, loop=True, poses=[pumped(i) for i in range(8)])
+    CLIPS["run"] = dict(fps=13.33, loop=True, poses=[pumped(i) for i in range(8)])
 
     # The gun cocks up to meet it, the left hand winds up and hangs, then whips across in two frames. The hit
     # drives the gun down and right, it bounces past centre and settles while the hand drops back to snapping.
@@ -365,7 +406,7 @@ if GUN == "Energy Pistol":
         return dict(slap=dict(at=(x, y, z), flat=flat), spread=spread)
 
     ON_GUN = dict(slap=dict(on_gun=True), spread=1)
-    CLIPS["reload"] = dict(fps=15, loop=False, poses=[
+    CLIPS["reload"] = dict(fps=21.8, loop=False, hit=7, poses=[
         blow(-.03, .03, 3, 2, 0, **swing(-.03, 0, .06, -.02, .1)),
         blow(-.08, .08, 7, 5, 0, **swing(-.07, -.03, .15, -.05, .3)),
         blow(-.13, .12, 11, 8, 0, **swing(-.12, -.06, .25, -.09, .6)),
@@ -411,6 +452,9 @@ READY_MID = (75, 125, 165)
 a0 = M.inverted() @ (-T)
 off_p = K @ (MW @ a0)
 off_q = (K @ MW.to_3x3().normalized() @ M.inverted()).to_quaternion()
+# After every gun's own clips are set, so each varies its own reload.
+CLIPS["reload2"] = varied(CLIPS["reload"], 1.1, 3, -3, (.03, 0, .02))
+CLIPS["reload3"] = varied(CLIPS["reload"], .9, -3, 3, (-.03, 0, -.02))
 out = ["-- Made by the Blender export script from M57 Arms Posed.blend. Don't edit by hand.", "return {",
        "\tmeshOffset = CFrame.new(%s, %s)," % (nums(off_p), nums((off_q.x, off_q.y, off_q.z, off_q.w))),
        "\tmuzzle = Vector3.new(%s)," % nums(muzzle())]

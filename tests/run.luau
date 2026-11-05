@@ -32,6 +32,8 @@ local listed = {
 	cardhand_spec = true,
 	glyphdata_spec = true,
 	typelayout_spec = true,
+	menustate_spec = true,
+	musicbars_spec = true,
 	hudtext_spec = true,
 }
 
@@ -63,6 +65,8 @@ require("./ability_spec")
 require("./cardhand_spec")
 require("./glyphdata_spec")
 require("./typelayout_spec")
+require("./menustate_spec")
+require("./musicbars_spec")
 require("./hudtext_spec")
 
 local missing = 0

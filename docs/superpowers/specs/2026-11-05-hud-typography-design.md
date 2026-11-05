@@ -32,7 +32,7 @@ Each ability row is 220 wide, starting 34 from the left:
 - Under them, 5 below the baseline, a cooldown bar: 10 segments, 2 tall, 2 apart, filled white, empty dark grey (40, 40, 46).
 - An empty slot shows nothing.
 
-All text is capitals. Health and shield round up, so a player on 0.4 health shows 1. Green is (57, 255, 90).
+All text is capitals. Health and shield round up, so a player on 0.4 health shows 1. The green accent is Signal Acid, (194, 254, 11). Colours come from `src/shared/Guns/Palette.luau`.
 
 Every character gets a dark copy behind it, offset by (1, 2), so text reads on bright floors.
 
