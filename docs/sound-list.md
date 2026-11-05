@@ -78,11 +78,11 @@ One mono take each.
 
 | Name | When it plays | Length |
 | --- | --- | --- |
+| `gun-aim-in` | Starting to aim down sights (Longscope only) | 0.15s |
+| `gun-aim-out` | Stopping aiming (Longscope only) | 0.15s |
 | `gun-dry-fire` | Pulling the trigger on an empty gun | 0.1s |
 | `gun-equip-primary` | Switching to your primary | 0.3s |
 | `gun-equip-sidearm` | Switching to your sidearm | 0.2s |
-| `gun-aim-in` | Starting to aim down sights | 0.15s |
-| `gun-aim-out` | Stopping aiming | 0.15s |
 | `gun-sniper-bolt` | Working the bolt between sniper shots | Under 1.2s |
 | `gun-shotgun-pump` | Pumping between shotgun shots | Under 0.8s |
 

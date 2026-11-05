@@ -23,7 +23,16 @@ local listed = {
 	spread_spec = true,
 	loadout_spec = true,
 	recoil_spec = true,
+	armpose_spec = true,
+	armclip_spec = true,
+	tracer_spec = true,
+	hitmarker_spec = true,
+	gunview_calls_spec = true,
 	ability_spec = true,
+	cardhand_spec = true,
+	glyphdata_spec = true,
+	typelayout_spec = true,
+	hudtext_spec = true,
 }
 
 require("./tier_spec")
@@ -45,7 +54,16 @@ require("./shots_spec")
 require("./spread_spec")
 require("./loadout_spec")
 require("./recoil_spec")
+require("./armpose_spec")
+require("./armclip_spec")
+require("./tracer_spec")
+require("./hitmarker_spec")
+require("./gunview_calls_spec")
 require("./ability_spec")
+require("./cardhand_spec")
+require("./glyphdata_spec")
+require("./typelayout_spec")
+require("./hudtext_spec")
 
 local missing = 0
 for _, name in fs.readDir("tests") do

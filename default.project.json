@@ -5,7 +5,8 @@
     "ReplicatedStorage": {
       "CardCore": { "$path": "src/shared/CardCore" },
       "Movement": { "$path": "src/shared/Movement" },
-      "Guns": { "$path": "src/shared/Guns" }
+      "Guns": { "$path": "src/shared/Guns" },
+      "GunModels": { "$className": "Folder", "$ignoreUnknownInstances": true }
     },
     "Workspace": {
       "$properties": { "Gravity": 150 }

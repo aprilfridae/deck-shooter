@@ -37,6 +37,7 @@ local reloadRemote = remote("Reload")
 local swapRemote = remote("Swap")
 local hitRemote = remote("HitConfirm")
 local impactRemote = remote("Impacts")
+local shotsRemote = remote("Shots")
 local loadoutRemote = remote("SetLoadout")
 remotes.Parent = ReplicatedStorage
 
@@ -131,6 +132,8 @@ local function onFire(player: Player, raw: any)
 	local totals: { [GunTargets.Target]: number } = {}
 	local headshot = false
 	local impacts = {}
+	local shots = {}
+	local origin = Vector3.new(shot.origin.x, shot.origin.y, shot.origin.z)
 	for _ = 1, gun.pellets do
 		local direction = Spread.apply(shot.direction, angle, rng)
 		local target, zone, distance, wall = nearestHit(shooter, shot, direction, viewAt)
@@ -141,7 +144,15 @@ local function onFire(player: Player, raw: any)
 		elseif wall then
 			table.insert(impacts, { position = wall.Position, normal = wall.Normal })
 		end
+		local line = Vector3.new(direction.x, direction.y, direction.z)
+		table.insert(shots, {
+			to = origin + line * distance,
+			direction = line,
+			hit = if target then target.model else nil,
+			head = zone == "Head",
+		})
 	end
+	shotsRemote:FireAllClients(player, origin, shots)
 	if #impacts > 0 then
 		impactRemote:FireAllClients(impacts)
 	end

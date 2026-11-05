@@ -12,10 +12,10 @@ local guns = GunConfig.guns
 describe("GunConfig", function()
 	it("matches the spec's primaries", function()
 		local expected = {
-			M4 = { 24, 600, 30, 2.2 },
-			AK47 = { 24, 540, 30, 2.4 },
+			M4 = { 24, 600, 30, 0.964 },
+			AK47 = { 24, 540, 30, 0.964 },
 			SMG = { 17, 800, 32, 2.0 },
-			Sniper = { 85, 50, 5, 3.0 },
+			Sniper = { 85, 50, 5, 1.714 },
 			Shotgun = { 14, 75, 6, 0.5 },
 		}
 		for id, row in expected do

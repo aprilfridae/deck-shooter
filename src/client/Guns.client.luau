@@ -3,6 +3,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local CardHand = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("CardHand"))
+local CardInHand = require(script.Parent.CardInHand)
 local GunConfig = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("GunConfig"))
 local GunAudio = require(script.Parent.GunAudio)
 local GunView = require(script.Parent.GunView)
@@ -33,8 +35,12 @@ local function syncGun(now: number)
 		return
 	end
 	gun = GunConfig.guns[gunId]
+	local wasReloading = reloading
 	reloading = player:GetAttribute("Reloading") == true
-	GunView.setSlot(player:GetAttribute("GunSlot"))
+	if reloading and not wasReloading then
+		GunAudio.playReload(gunId)
+	end
+	GunView.setGun(gunId, player:GetAttribute("GunSlot"))
 	local latest = player:GetAttribute("Ammo")
 	if latest ~= serverAmmo or now - lastFire > AMMO_RESYNC_SECONDS then
 		ammo = latest
@@ -105,6 +111,7 @@ local function onFrame(dt: number)
 	if not isAlive() then
 		GunView.hide()
 		player:SetAttribute("AimFov", nil)
+		CardHand.putAway(CardInHand)
 		return
 	end
 
@@ -112,14 +119,18 @@ local function onFrame(dt: number)
 	local now = workspace:GetServerTimeNow()
 	syncGun(now)
 	local climbing = player:GetAttribute("Climbing") == true
-	local aiming = keys.aim and gun ~= nil and not climbing and not reloading
+	local cardOut = CardInHand.slot ~= nil
+	local aiming = keys.aim and gun ~= nil and gun.aimFov ~= nil and not climbing and not reloading and not cardOut
 	player:SetAttribute("AimFov", if aiming then gun.aimFov else nil)
 
-	if keys.primary and not previous.primary then
-		swapRemote:FireServer("primary")
-	end
-	if keys.sidearm and not previous.sidearm then
-		swapRemote:FireServer("sidearm")
+	for _, slot in { "primary", "sidearm" } do
+		if keys[slot] and not previous[slot] then
+			CardHand.putAway(CardInHand)
+			swapRemote:FireServer(slot)
+			if player:GetAttribute("GunSlot") ~= slot then
+				GunView.holster()
+			end
+		end
 	end
 	if keys.reload and not previous.reload then
 		reloadRemote:FireServer()
@@ -131,7 +142,7 @@ local function onFrame(dt: number)
 	end
 
 	local pressed = keys.fire and not previous.fire
-	if not climbing then
+	if not climbing and not CardHand.blocksFire(CardInHand, keys.fire) then
 		local shotTime = nextShot(pressed, keys.fire, now)
 		if shotTime then
 			fire(camera, aiming, shotTime)
@@ -146,7 +157,7 @@ local function onFrame(dt: number)
 	previous.sidearm = keys.sidearm
 	previous.nextClass = keys.nextClass
 	previous.nextRifle = keys.nextRifle
-	GunView.update(dt, camera, aiming, reloading)
+	GunView.update(dt, camera, aiming, reloading, player:GetAttribute("MoveMode") == "Sprint", CardInHand.slot ~= nil)
 end
 
 player.CharacterAdded:Connect(function()

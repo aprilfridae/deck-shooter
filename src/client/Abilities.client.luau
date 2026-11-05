@@ -1,8 +1,10 @@
--- Client side of ability cards: sends key presses and shows what the server reveals.
+-- Client side of ability cards: a card's key pulls it out, a click uses it, and this shows what the server reveals.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local CardHand = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("CardHand"))
+local CardInHand = require(script.Parent.CardInHand)
 local Input = require(script.Parent.Input)
 
 local remotes = ReplicatedStorage:WaitForChild("AbilityRemotes")
@@ -14,6 +16,13 @@ local REVEAL_COLOR = Color3.fromRGB(255, 70, 60)
 
 local player = Players.LocalPlayer
 local previous: { [string]: boolean } = {}
+
+local function isReady(index: number): boolean
+	local readyAt = player:GetAttribute(`Ability{index}ReadyAt`)
+	return player:GetAttribute(`Ability{index}Id`) ~= nil
+		and readyAt ~= nil
+		and readyAt <= workspace:GetServerTimeNow()
+end
 
 revealRemote.OnClientEvent:Connect(function(models: { Model }, seconds: number)
 	for _, model in models do
@@ -28,11 +37,19 @@ end)
 
 RunService.Heartbeat:Connect(function()
 	local keys = Input.readAbility()
-	if not player:GetAttribute("Climbing") then
+	if player:GetAttribute("Climbing") then
+		CardHand.putAway(CardInHand)
+	else
 		for index = 1, 3 do
 			local key = `slot{index}`
 			if keys[key] and not previous[key] then
-				useRemote:FireServer(index)
+				CardHand.press(CardInHand, index, isReady(index))
+			end
+		end
+		if keys.use and not previous.use then
+			local used = CardHand.click(CardInHand)
+			if used then
+				useRemote:FireServer(used)
 			end
 		end
 	end

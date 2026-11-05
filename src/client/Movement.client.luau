@@ -266,6 +266,7 @@ local function onFrame(dt: number)
 
 	humanoid.WalkSpeed = MoveState.speed(state, now)
 	humanoid.JumpHeight = MoveState.jumpHeight(state)
+	player:SetAttribute("MoveMode", state.mode)
 
 	local pose = poseFor(state.mode)
 	if pose ~= sentPose and now - poseSentAt >= POSE_SEND_GAP then

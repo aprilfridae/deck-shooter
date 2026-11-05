@@ -88,7 +88,7 @@ Classes are free, change guns only, and work with any cards. Each class has 1 pr
 | Assault | M4 | 24 | 2x (48) | 600 | 30 | 2.2s | Almost none | 100% to 90 studs, 70% by 180 |
 | Assault | AK-47 | 24 | Instant kill | 540 | 30 | 2.4s | High | 100% to 90 studs, 70% by 180 |
 | Rusher | SMG | 17 | 2x (34) | 800 | 32 | 2.0s | Low | 100% to 40 studs, 60% by 90 |
-| Marksman | Sniper | 85 | Instant kill | 50 | 5 | 3.0s | One large kick | No falloff; poor accuracy without aiming down sights |
+| Marksman | Sniper | 85 | Instant kill | 50 | 5 | 3.0s | One large kick | No falloff; poor accuracy without aiming down sights, the only gun that can |
 | Breacher | Shotgun | 8 pellets of 14 (112) | 2x per pellet | 75 | 6 | 0.5s per shell | One large kick | 100% to 15 studs, 0% by 45 |
 
 **Sidearms** (headshots do 2x on all of them)

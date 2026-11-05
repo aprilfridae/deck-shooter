@@ -26,6 +26,12 @@ local GunSounds = {
 		Shotgun = takes("shotgun", 30),
 		Pistol = takes("pistol", 30),
 	},
+	-- Each gun's reload time in GunConfig matches the length of its sound here.
+	reloads = {
+		M4 = `{FOLDER}reload-assault.wav`,
+		AK47 = `{FOLDER}reload-assault.wav`,
+		Sniper = `{FOLDER}reload-sniper.wav`,
+	},
 	hits = {
 		body = `{FOLDER}hit-body.wav`,
 		head = `{FOLDER}hit-head.wav`,
