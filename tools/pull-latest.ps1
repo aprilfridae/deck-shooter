@@ -14,8 +14,12 @@ git pull -q --ff-only origin main
 Write-Output "main is at $(git log --oneline -1)"
 
 $borrowed = $false
-gh auth status *> $null
-if ($LASTEXITCODE -ne 0 -and -not $env:GH_TOKEN) {
+# Windows PowerShell treats gh's "not logged in" message as an error, so check with errors allowed.
+$ErrorActionPreference = "Continue"
+gh auth status 2>&1 | Out-Null
+$loggedIn = $LASTEXITCODE -eq 0
+$ErrorActionPreference = "Stop"
+if (-not $loggedIn -and -not $env:GH_TOKEN) {
 	$saved = "protocol=https`nhost=github.com`n`n" | git credential fill 2>$null
 	$env:GH_TOKEN = ($saved | Where-Object { $_ -like "password=*" }) -replace "^password=", ""
 	$borrowed = $true
