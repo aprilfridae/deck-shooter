@@ -1,7 +1,7 @@
 # Uploads images and sounds to Roblox as Fridae Studios group assets through Open Cloud,
 # and records each file's asset id. PNGs upload as Image, sounds as Audio.
 #
-# The API key is read from the ROBLOX_API_KEY environment variable and never written anywhere.
+# The API key is read from the ROBLOX_GROUP_API_KEY environment variable and never written anywhere.
 # Use a key created in the group's settings with permission to write assets.
 #
 #   python tools/upload-group-assets.py results.json file1.wav file2.png ...
@@ -80,9 +80,9 @@ def upload(key, path):
 
 
 def main():
-    key = os.environ.get("ROBLOX_API_KEY")
+    key = os.environ.get("ROBLOX_GROUP_API_KEY")
     if not key or len(sys.argv) < 3:
-        sys.exit("Set ROBLOX_API_KEY, then run: python tools/upload-group-assets.py results.json <files...>")
+        sys.exit("Set ROBLOX_GROUP_API_KEY, then run: python tools/upload-group-assets.py results.json <files...>")
     results_path, paths = sys.argv[1], sys.argv[2:]
     results = {}
     if os.path.exists(results_path):
