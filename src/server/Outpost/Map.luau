@@ -601,10 +601,11 @@ local function hallInside(kit)
 	local market = g:prompt(counter, "MARKET", "Soon")
 
 	-- Daylight through the skylight, with drips falling through it.
+	-- The spotlight hangs under the roof, because the long slot above would cut its pool into a box.
 	local skylightZ = (SKY_SOUTH + SKY_NORTH) / 2
-	local sun = Kit.decor(g:block(v(1, 1, 1), CFrame.new(0, 50, skylightZ), SKYLIGHT, M.SmoothPlastic))
+	local sun = Kit.decor(g:block(v(1, 1, 1), CFrame.new(0, 43, skylightZ), SKYLIGHT, M.SmoothPlastic))
 	sun.Transparency = 1
-	g:light(sun, "SpotLight", { Face = Enum.NormalId.Bottom, Angle = 24, Range = 60, Brightness = 6, Shadows = true, Color = SKYLIGHT })
+	g:light(sun, "SpotLight", { Face = Enum.NormalId.Bottom, Angle = 27, Range = 60, Brightness = 6, Shadows = true, Color = SKYLIGHT })
 	g:shaft(v(0, 46.5, skylightZ), v(0, DECK + 0.2, skylightZ), 6.5, SKYLIGHT)
 	local drips = Kit.decor(g:block(v(12, 0.2, 12), CFrame.new(0, 46, skylightZ), RAIN, M.SmoothPlastic))
 	drips.Transparency = 1
