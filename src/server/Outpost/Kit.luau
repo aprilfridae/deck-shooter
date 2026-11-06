@@ -1,0 +1,437 @@
+-- Helpers for building the Outpost out of parts. Every position is local to the kit's origin.
+local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local OutpostAssets = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("OutpostAssets"))
+
+local M = Enum.Material
+
+local SIGN_TAG = "OutpostSign"
+local SCREEN_TAG = "OutpostScreen"
+local SIGN_DEPTH = 0.3
+local OUTLINE_WIDTH = 0.16
+local CABLE_WIDTH = 0.12
+local CABLE_COLOR = Color3.fromRGB(22, 24, 26)
+local CABLE_SEGMENTS = 12
+local BEZIER_DROP = 0.75 -- a beam's middle sags this share of its curve size
+local COLOR_SHIFT = 0.035
+local GRIME_COLOR = Color3.fromRGB(34, 30, 26)
+local GRIME_TILE = 28
+local STREAK_COLOR = Color3.fromRGB(40, 34, 28)
+local PUDDLE_COLOR = Color3.fromRGB(30, 40, 42)
+
+-- Looks to pick from for each kind of surface. Each part takes one, then a slight colour shift.
+-- Floors keep to one material, so neighbouring panels differ only in shade.
+local SURFACES: { [string]: { { any } } } = {
+	concrete = {
+		{ M.Concrete, Color3.fromRGB(118, 126, 123) },
+		{ M.Concrete, Color3.fromRGB(106, 113, 109) },
+		{ M.Concrete, Color3.fromRGB(127, 130, 123) },
+		{ M.Concrete, Color3.fromRGB(98, 108, 106) },
+		{ M.Plaster, Color3.fromRGB(114, 121, 117) },
+	},
+	darkConcrete = {
+		{ M.Concrete, Color3.fromRGB(86, 93, 92) },
+		{ M.Concrete, Color3.fromRGB(78, 84, 82) },
+		{ M.Concrete, Color3.fromRGB(93, 96, 90) },
+	},
+	floor = {
+		{ M.Concrete, Color3.fromRGB(98, 105, 103) },
+		{ M.Concrete, Color3.fromRGB(104, 107, 101) },
+		{ M.Concrete, Color3.fromRGB(93, 99, 97) },
+	},
+	steel = {
+		{ M.Metal, Color3.fromRGB(56, 60, 62) },
+		{ M.Metal, Color3.fromRGB(66, 68, 68) },
+		{ M.CorrodedMetal, Color3.fromRGB(74, 67, 60) },
+	},
+	plate = {
+		{ M.DiamondPlate, Color3.fromRGB(58, 62, 64) },
+		{ M.DiamondPlate, Color3.fromRGB(68, 70, 70) },
+		{ M.DiamondPlate, Color3.fromRGB(64, 63, 60) },
+	},
+	rust = {
+		{ M.CorrodedMetal, Color3.fromRGB(178, 86, 34) },
+		{ M.CorrodedMetal, Color3.fromRGB(150, 72, 34) },
+		{ M.CorrodedMetal, Color3.fromRGB(166, 98, 50) },
+		{ M.Metal, Color3.fromRGB(142, 70, 36) },
+	},
+	sheet = {
+		{ M.Metal, Color3.fromRGB(92, 96, 94) },
+		{ M.CorrodedMetal, Color3.fromRGB(98, 90, 80) },
+		{ M.Metal, Color3.fromRGB(80, 88, 86) },
+	},
+	tile = {
+		{ M.CeramicTiles, Color3.fromRGB(152, 168, 154) },
+		{ M.CeramicTiles, Color3.fromRGB(140, 156, 144) },
+		{ M.CeramicTiles, Color3.fromRGB(160, 166, 150) },
+	},
+	tileFloor = {
+		{ M.CeramicTiles, Color3.fromRGB(88, 99, 94) },
+		{ M.CeramicTiles, Color3.fromRGB(96, 102, 92) },
+		{ M.CeramicTiles, Color3.fromRGB(82, 92, 88) },
+	},
+	wood = {
+		{ M.WoodPlanks, Color3.fromRGB(78, 62, 48) },
+		{ M.Wood, Color3.fromRGB(70, 56, 44) },
+		{ M.WoodPlanks, Color3.fromRGB(92, 74, 56) },
+	},
+}
+
+export type SignOptions = {
+	text: string,
+	color: Color3, -- the text
+	style: string?, -- a font style from GlyphData
+	back: Color3?,
+	fill: Color3?, -- a lit background, for lightboxes
+	outline: Color3?, -- a neon edge
+	light: Color3?, -- a glow cast forward
+	vertical: boolean?, -- one letter per line
+	scale: number?, -- text height as a share of the sign's
+}
+
+local Kit = {}
+Kit.__index = Kit
+Kit.signTag = SIGN_TAG
+Kit.screenTag = SCREEN_TAG
+
+function Kit.new(parent: Instance, origin: CFrame, seed: number)
+	return setmetatable({ parent = parent, origin = origin, random = Random.new(seed) }, Kit)
+end
+
+-- The same kit, building into a new folder.
+function Kit:group(name: string)
+	local folder = Instance.new("Folder")
+	folder.Name = name
+	folder.Parent = self.parent
+	return setmetatable({ parent = folder, origin = self.origin, random = self.random }, Kit)
+end
+
+function Kit:point(position: Vector3): Vector3
+	return self.origin * position
+end
+
+function Kit:range(low: number, high: number): number
+	return low + self.random:NextNumber() * (high - low)
+end
+
+function Kit:chance(share: number): boolean
+	return self.random:NextNumber() < share
+end
+
+-- Weathers a colour a little, so long runs of the same part don't look flat.
+function Kit:vary(color: Color3, amount: number?): Color3
+	local shift = (self.random:NextNumber() - 0.5) * 2 * (amount or 0.04)
+	return Color3.new(
+		math.clamp(color.R + shift, 0, 1),
+		math.clamp(color.G + shift, 0, 1),
+		math.clamp(color.B + shift, 0, 1)
+	)
+end
+
+-- Looks only: nothing collides with it, raycasts pass through and it casts no shadow.
+function Kit.decor(part: BasePart): BasePart
+	part.CanCollide = false
+	part.CanQuery = false
+	part.CanTouch = false
+	part.CastShadow = false
+	return part
+end
+
+function Kit:place(part: BasePart, size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material?): BasePart
+	part.Anchored = true
+	part.Size = size
+	part.CFrame = self.origin * cframe
+	part.Color = color
+	part.Material = material or Enum.Material.Concrete
+	part.TopSurface = Enum.SurfaceType.Smooth
+	part.BottomSurface = Enum.SurfaceType.Smooth
+	part.Parent = self.parent
+	return part
+end
+
+function Kit:block(size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material?): BasePart
+	return self:place(Instance.new("Part"), size, cframe, color, material)
+end
+
+-- An axis-aligned block between two opposite corners.
+function Kit:box(a: Vector3, b: Vector3, color: Color3, material: Enum.Material?): BasePart
+	local size = Vector3.new(math.abs(b.X - a.X), math.abs(b.Y - a.Y), math.abs(b.Z - a.Z))
+	return self:block(size, CFrame.new((a + b) / 2), color, material)
+end
+
+-- One of a surface kind's looks, with a slight colour shift.
+function Kit:surface(kind: string): (Color3, Enum.Material)
+	local choices = SURFACES[kind]
+	local pick = choices[self.random:NextInteger(1, #choices)]
+	return self:vary(pick[2], COLOR_SHIFT), pick[1]
+end
+
+-- A block with one of a surface kind's looks.
+function Kit:solid(kind: string, size: Vector3, cframe: CFrame): BasePart
+	local color, material = self:surface(kind)
+	return self:block(size, cframe, color, material)
+end
+
+-- An axis-aligned box with one of a surface kind's looks.
+function Kit:boxOf(kind: string, a: Vector3, b: Vector3): BasePart
+	local color, material = self:surface(kind)
+	return self:box(a, b, color, material)
+end
+
+local function grimeTexture(kit: any, part: BasePart, face: Enum.NormalId, transparency: number?)
+	local texture = Instance.new("Texture")
+	texture.Name = "Grime"
+	texture.Texture = OutpostAssets.grime
+	texture.Face = face
+	texture.StudsPerTileU = GRIME_TILE
+	texture.StudsPerTileV = GRIME_TILE
+	texture.OffsetStudsU = kit:range(0, GRIME_TILE)
+	texture.OffsetStudsV = kit:range(0, GRIME_TILE)
+	texture.Color3 = GRIME_COLOR
+	texture.Transparency = transparency or kit:range(0.3, 0.55)
+	texture.Parent = part
+end
+
+local function streakTexture(kit: any, part: BasePart, face: Enum.NormalId)
+	local texture = Instance.new("Texture")
+	texture.Name = "Streaks"
+	texture.Texture = OutpostAssets.streaks
+	texture.Face = face
+	-- One tile covers the face's height, so every run starts at its top edge.
+	texture.StudsPerTileU = kit:range(14, 22)
+	texture.StudsPerTileV = part.Size.Y
+	texture.OffsetStudsU = kit:range(0, 22)
+	texture.Color3 = STREAK_COLOR
+	texture.Transparency = kit:range(0.2, 0.45)
+	texture.Parent = part
+end
+
+-- The two biggest upright faces of an upright part.
+local function wallFaces(part: BasePart): { Enum.NormalId }
+	if part.Size.X >= part.Size.Z then
+		return { Enum.NormalId.Front, Enum.NormalId.Back }
+	end
+	return { Enum.NormalId.Left, Enum.NormalId.Right }
+end
+
+local ALL_SIDES = { Enum.NormalId.Front, Enum.NormalId.Back, Enum.NormalId.Left, Enum.NormalId.Right }
+
+-- Weathers a part with grime, and water streaks on its walls.
+-- how: "floor" for the top face, "wet" for the top face with puddles too, "wall" for the two big
+-- upright faces, "block" for every upright face and the top, "shell" for the top and bottom.
+function Kit:dirty(part: BasePart, how: string, transparency: number?): BasePart
+	if how == "floor" or how == "wet" then
+		grimeTexture(self, part, Enum.NormalId.Top, transparency)
+		if how == "wet" then
+			self:wet(part)
+		end
+	elseif how == "wall" then
+		for _, face in wallFaces(part) do
+			grimeTexture(self, part, face, transparency)
+			streakTexture(self, part, face)
+		end
+	elseif how == "block" then
+		for _, face in ALL_SIDES do
+			grimeTexture(self, part, face, transparency)
+			streakTexture(self, part, face)
+		end
+		grimeTexture(self, part, Enum.NormalId.Top, transparency)
+	elseif how == "shell" then
+		grimeTexture(self, part, Enum.NormalId.Top, transparency)
+		grimeTexture(self, part, Enum.NormalId.Bottom, transparency)
+	end
+	return part
+end
+
+-- An axis-aligned box cut into panels of about cell studs across X and Z, each with its own look.
+function Kit:panels(kind: string, a: Vector3, b: Vector3, cell: number, how: string?): { BasePart }
+	local low = Vector3.new(math.min(a.X, b.X), math.min(a.Y, b.Y), math.min(a.Z, b.Z))
+	local high = Vector3.new(math.max(a.X, b.X), math.max(a.Y, b.Y), math.max(a.Z, b.Z))
+	local across = math.max(1, math.round((high.X - low.X) / cell))
+	local along = math.max(1, math.round((high.Z - low.Z) / cell))
+	local parts = {}
+	for i = 0, across - 1 do
+		for k = 0, along - 1 do
+			local x0 = low.X + (high.X - low.X) * i / across
+			local x1 = low.X + (high.X - low.X) * (i + 1) / across
+			local z0 = low.Z + (high.Z - low.Z) * k / along
+			local z1 = low.Z + (high.Z - low.Z) * (k + 1) / along
+			local part = self:boxOf(kind, Vector3.new(x0, low.Y, z0), Vector3.new(x1, high.Y, z1))
+			if how then
+				self:dirty(part, how)
+			end
+			table.insert(parts, part)
+		end
+	end
+	return parts
+end
+
+function Kit:wedge(size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material?): BasePart
+	return self:place(Instance.new("WedgePart"), size, cframe, color, material)
+end
+
+-- A cylinder along the cframe's X axis.
+function Kit:cylinder(cframe: CFrame, length: number, diameter: number, color: Color3, material: Enum.Material?): BasePart
+	local part = Instance.new("Part")
+	part.Shape = Enum.PartType.Cylinder
+	return self:place(part, Vector3.new(length, diameter, diameter), cframe, color, material)
+end
+
+-- An upright cylinder standing on base.
+function Kit:post(base: Vector3, height: number, diameter: number, color: Color3, material: Enum.Material?): BasePart
+	local cframe = CFrame.new(base + Vector3.new(0, height / 2, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+	return self:cylinder(cframe, height, diameter, color, material)
+end
+
+function Kit:ball(position: Vector3, diameter: number, color: Color3, material: Enum.Material?): BasePart
+	local part = Instance.new("Part")
+	part.Shape = Enum.PartType.Ball
+	return self:place(part, Vector3.one * diameter, CFrame.new(position), color, material)
+end
+
+function Kit:neon(size: Vector3, cframe: CFrame, color: Color3): BasePart
+	return Kit.decor(self:block(size, cframe, color, Enum.Material.Neon))
+end
+
+function Kit:light(part: BasePart, className: string, props: { [string]: any }): Instance
+	local light = Instance.new(className)
+	for key, value in props do
+		(light :: any)[key] = value
+	end
+	light.Parent = part
+	return light
+end
+
+-- A small glowing housing with a point light in it.
+function Kit:lamp(position: Vector3, color: Color3, range: number, brightness: number, shadows: boolean?, size: number?): BasePart
+	local width = size or 0.7
+	local bulb = self:neon(Vector3.new(width, width * 0.6, width), CFrame.new(position), color)
+	self:light(bulb, "PointLight", { Color = color, Range = range, Brightness = brightness, Shadows = shadows == true })
+	return bulb
+end
+
+-- Wet pools drawn on a part's top face. Being a texture, they can't flicker against the floor.
+function Kit:wet(part: BasePart, tile: number?): BasePart
+	local size = tile or 34
+	local texture = Instance.new("Texture")
+	texture.Name = "Puddles"
+	texture.Texture = OutpostAssets.puddles
+	texture.Face = Enum.NormalId.Top
+	texture.StudsPerTileU = size
+	texture.StudsPerTileV = size
+	texture.OffsetStudsU = self:range(0, size)
+	texture.OffsetStudsV = self:range(0, size)
+	texture.Color3 = PUDDLE_COLOR
+	texture.Transparency = self:range(0.15, 0.35)
+	texture.ZIndex = 2 -- over the grime
+	texture.Parent = part
+	return part
+end
+
+local function anchorPoint(kit: any, position: Vector3): Attachment
+	local attachment = Instance.new("Attachment")
+	-- Pointing down, so a positive curve size makes the beam sag.
+	attachment.CFrame = CFrame.fromMatrix(kit:point(position), Vector3.new(0, -1, 0), Vector3.new(1, 0, 0))
+	attachment.Parent = workspace.Terrain
+	return attachment
+end
+
+-- A slack cable between two points, drawn as a beam. It costs no parts.
+function Kit:cable(a: Vector3, b: Vector3, sag: number, width: number?, color: Color3?): Beam
+	local beam = Instance.new("Beam")
+	beam.Attachment0 = anchorPoint(self, a)
+	beam.Attachment1 = anchorPoint(self, b)
+	beam.CurveSize0 = sag / BEZIER_DROP
+	beam.CurveSize1 = -sag / BEZIER_DROP
+	beam.Width0 = width or CABLE_WIDTH
+	beam.Width1 = width or CABLE_WIDTH
+	beam.Segments = CABLE_SEGMENTS
+	beam.FaceCamera = true
+	beam.Color = ColorSequence.new(color or CABLE_COLOR)
+	beam.LightInfluence = 1
+	beam.Texture = ""
+	beam.Parent = beam.Attachment0
+	return beam
+end
+
+-- A soft column of light, like daylight through a hole in the roof.
+function Kit:shaft(top: Vector3, bottom: Vector3, width: number, color: Color3): Beam
+	local beam = self:cable(top, bottom, 0, width, color)
+	beam.Width1 = width * 1.35
+	beam.Segments = 1
+	beam.LightInfluence = 0
+	beam.LightEmission = 1
+	beam.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.82),
+		NumberSequenceKeypoint.new(0.7, 0.9),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	return beam
+end
+
+-- A sign whose front faces the cframe's look direction. The client draws its text.
+function Kit:sign(cframe: CFrame, width: number, height: number, options: SignOptions): BasePart
+	local back = Kit.decor(self:block(
+		Vector3.new(width, height, SIGN_DEPTH),
+		cframe,
+		options.back or Color3.fromRGB(18, 20, 24),
+		Enum.Material.SmoothPlastic
+	))
+	back:SetAttribute("SignText", options.text)
+	back:SetAttribute("SignStyle", options.style or "LabelBold")
+	back:SetAttribute("SignColor", options.color)
+	back:SetAttribute("SignFill", options.fill)
+	back:SetAttribute("SignVertical", options.vertical)
+	back:SetAttribute("SignScale", options.scale)
+	CollectionService:AddTag(back, SIGN_TAG)
+
+	if options.outline then
+		local front = -SIGN_DEPTH / 2 - 0.04
+		local edge = OUTLINE_WIDTH
+		for _, strip in {
+			{ 0, height / 2 - edge / 2, width, edge },
+			{ 0, -height / 2 + edge / 2, width, edge },
+			{ -width / 2 + edge / 2, 0, edge, height },
+			{ width / 2 - edge / 2, 0, edge, height },
+		} do
+			self:neon(Vector3.new(strip[3], strip[4], 0.08), cframe * CFrame.new(strip[1], strip[2], front), options.outline)
+		end
+	end
+	if options.light then
+		self:light(back, "SurfaceLight", {
+			Face = Enum.NormalId.Front,
+			Color = options.light,
+			Brightness = 1.2,
+			Range = 12,
+			Angle = 120,
+		})
+	end
+	return back
+end
+
+-- A screen the client fills with live numbers. kind says which.
+function Kit:screen(cframe: CFrame, width: number, height: number, kind: string): BasePart
+	local screen = Kit.decor(self:block(
+		Vector3.new(width, height, SIGN_DEPTH),
+		cframe,
+		Color3.fromRGB(18, 20, 24),
+		Enum.Material.SmoothPlastic
+	))
+	screen:SetAttribute("ScreenKind", kind)
+	CollectionService:AddTag(screen, SCREEN_TAG)
+	return screen
+end
+
+function Kit:prompt(part: BasePart, objectText: string, actionText: string, hold: number?): ProximityPrompt
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ObjectText = objectText
+	prompt.ActionText = actionText
+	prompt.HoldDuration = hold or 0
+	prompt.MaxActivationDistance = 9
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = part
+	return prompt
+end
+
+return Kit

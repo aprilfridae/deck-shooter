@@ -11,6 +11,7 @@ local GunView = require(script.Parent.GunView)
 local Input = require(script.Parent.Input)
 local Recoil = require(script.Parent.Recoil)
 local Weapon = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Weapon"))
+local Zones = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Zones"))
 
 local remotes = ReplicatedStorage:WaitForChild("GunRemotes")
 local fireRemote = remotes:WaitForChild("Fire") :: RemoteEvent
@@ -108,7 +109,8 @@ local function onFrame(dt: number)
 	local pitch, yaw = Recoil.advance(dt)
 	camera.CFrame *= CFrame.Angles(pitch, yaw, 0)
 
-	if not isAlive() then
+	-- Dead, or in the Outpost where guns are put away.
+	if not isAlive() or not Zones.allowsCombat(Zones.of(player)) then
 		GunView.hide()
 		player:SetAttribute("AimFov", nil)
 		CardHand.putAway(CardInHand)

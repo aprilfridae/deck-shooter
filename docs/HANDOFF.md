@@ -22,14 +22,15 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 
 ## Tools and setup
 
-- **Tests:** `export PATH="$HOME/.rokit/bin:$PATH"; lune run tests/run.luau` (345 passing). New specs must be listed in `tests/run.luau`.
+- **Tests:** `export PATH="$HOME/.rokit/bin:$PATH"; lune run tests/run.luau` (351 passing). New specs must be listed in `tests/run.luau`.
 - **Rojo:** `rojo serve`, port 34872. If Studio reopens, River reconnects the plugin. A running server misses new `default.project.json` mappings, so put new modules in folders already mapped, such as `src/shared/Guns/` and `src/client/`.
-- **Sounds:** live in `assets/sounds/` and load as `rbxasset://sounds/deckshooter/`. They are not uploaded to Roblox yet. Run `sh tools/install-sounds.sh` after adding one, and after any Studio update, because updates wipe them. Studio caches sounds, so give a changed sound a new filename (for example `-v2`). Strip extra WAV chunks when importing; they caused a click once. `GunSounds.luau` lists them all.
+- **Sounds:** live in `assets/sounds/` and load as `rbxasset://sounds/deckshooter/`. They are not uploaded to Roblox yet. Run `sh tools/install-sounds.sh` after adding one, and after any Studio update, because updates wipe them. The same script installs the Outpost's textures from `assets/textures/` as `rbxasset://textures/deckshooter/`. Studio caches sounds, so give a changed sound a new filename (for example `-v2`). Strip extra WAV chunks when importing; they caused a click once. `GunSounds.luau` lists them all.
 - **River's sound folders:** `E:\sound effects for game\`, with GUN RELOAD, MOVEMENT SOUNDS, MENU MUSIC and MENU SOUNDS.
 - **Font sheets:** Roblox can't import fonts, so `python tools/export_font_atlas.py <font folder>` makes image sheets in `assets/hud/` and writes `GlyphData.luau`. Changed sheets are uploaded to Roblox and their ids go in `src/shared/Guns/Hud/FontImages.luau`. Upload by serving `assets/hud` on a local `http.server` and using the Studio `upload_image` tool. Trial and free font zips are in River's Downloads: `KH-Interference-TRIAL.zip` and `PPFraktion-Free_for_personal_use_v1.1.zip`.
 - **Arm animation:** `tools/export_arm_clips.py` runs in background Blender (`H:/blener/blender.exe`) on `H:/player models/M57 Arms Posed.blend` and `H:/player models/Energy Pistol Arms Posed.blend`, and overwrites `src/shared/Guns/ArmClips/<Gun>.luau`. Run it through the wrapper: `blender.exe -b <file> --python tools/arm_bg.py -- "M57"` or `"Energy Pistol"`. After every pistol export, run `python tools/resample_clip.py src/shared/Guns/ArmClips/EnergyPistol.luau <clip> 24 24.9 7 14` for `reload`, `reload2` and `reload3`. The M57 fps is 24.37, set in the export script.
 - River's open Blender may hold unsaved work in `Marathon guns V3.blend`. Never touch it.
 - Node isn't installed, so the brainstorming browser companion doesn't work. Mockups go in `.superpowers/` as plain HTML.
+- **Kiro MCP:** Kiro can't write its own settings. The Blender and Roblox Studio MCP config is staged in `.superpowers/kiro-mcp.json`; River copies it to `~/.kiro/settings/mcp.json` and restarts Kiro. uv and the MCP for Blender addon are installed. Blender MCP drives whichever Blender window is open, so save `Marathon guns V3.blend` and open a blank file first.
 
 ## What's built
 
@@ -40,6 +41,7 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 - The doc's palette across the game: `src/shared/Guns/Palette.luau`.
 - Sounds: guns, hits, kills, low health, footsteps, jumps, menu music, selection. Roblox's default running sound is muted on every character.
 - Title screen: `src/client/TitleScreen.client.luau`, with `MenuState.luau` and `MusicBars.luau` in `src/shared/Guns/`.
+- The Outpost hub, step 1: the place itself. Spec: `docs/superpowers/specs/2026-11-05-outpost-design.md`. Built at server start by `src/server/Outpost/` (`Kit.luau` helpers, `Map.luau` layout, `Outpost.server.luau` zones and travel). `src/client/Outpost.client.luau` applies its fog and lighting and draws sign and screen text. PLAY lands on its dock. Lift doors in its east corridor go to the test room, and a terminal by the test room spawn comes back. `Zones.luau` makes the Outpost a safe zone: no guns, cards or combat HUD.
 
 ## Title screen details
 
@@ -53,7 +55,11 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 
 All the work above is merged to `main`. Nothing is half built.
 
+**Outpost decisions from River:** amber is for world lights only; signs and screens use the palette. The only booth is the Market kiosk. Loadout and Credits will be HUD or GUI features, not places. Outdoor rain around the camera was removed because it looked wrong.
+
 **Unconfirmed, ask River about these:**
+- Outpost floor z-fighting: the island rock was lowered to sea level and filled voxel by voxel. Not yet checked in Play.
+- Outpost grime, streak and puddle textures, and whether the lamp shadows work (they need Future lighting).
 - A copy of the menu showed in the top left at launch. The cause was never found. The screen now clears everything before each redraw, which was a guess. If it's still there, have River stay on the title screen in Play, then read `PlayerGui` through the Studio client.
 - None of the title screen's later additions have a confirmed check in Play: visualizer position, parallax, in-game music levels, selection sound and the PLAY `>`.
 - The selection sound plays on click. River might have meant hover.
@@ -67,4 +73,4 @@ All the work above is merged to `main`. Nothing is half built.
 - The parent doc still says Deck-Shooter, Michroma and Roboto Mono. The design doc's Pistol reload is out of date (actual: Pistol .964s, M4 and AK47 .985s).
 - A lag issue was noticed earlier and never diagnosed. The console also shows `CardCoreRemotes.Snapshot` events with no listener.
 
-**Next up:** Phase 4 Matches is parked until gameplay looks, sounds and feels good. River decides what's next.
+**Next up:** the 1v1 map, then the Outpost's Market (needs pack rolling), the Loadout button and the Credits HUD. Outpost ambient sounds wait on River's rain, sea and hum loops. Phase 4 Matches is parked until gameplay looks, sounds and feels good. River decides what's next.
