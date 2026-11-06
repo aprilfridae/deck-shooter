@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local OutpostAssets = require(Guns:WaitForChild("OutpostAssets"))
 local Palette = require(Guns:WaitForChild("Palette"))
+local Gable = require(script.Parent.Gable)
 local Kit = require(script.Parent.Kit)
 
 local M = Enum.Material
@@ -472,9 +473,9 @@ local function hallShell(kit)
 	end
 	-- Half-round gable walls, set back a little from the vault's ends. Each lift is its own pour.
 	for _, ends in { { HALL_SOUTH + 0.3, 16 }, { 116, HALL_NORTH - 0.3 } } do
-		for rise = 0, VAULT_OUT - 2, 2 do
-			local half = math.sqrt(VAULT_OUT ^ 2 - (rise + 1) ^ 2)
-			local part = g:box(v(-half, SPRING + rise, ends[1]), v(half, SPRING + rise + 2, ends[2]), g:vary(Color3.fromRGB(116, 123, 119), 0.03), M.Concrete)
+		for _, lift in Gable.lifts(VAULT_OUT, VAULT_IN) do
+			local low, high = v(-lift.half, SPRING + lift.bottom, ends[1]), v(lift.half, SPRING + lift.top, ends[2])
+			local part = g:box(low, high, g:vary(Color3.fromRGB(116, 123, 119), 0.03), M.Concrete)
 			g:dirty(part, "wall")
 		end
 	end
