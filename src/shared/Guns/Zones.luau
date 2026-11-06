@@ -34,4 +34,8 @@ function Zones.filter(zone: string, keys: { [string]: boolean }): { [string]: bo
 	return blocked
 end
 
+function Zones.autoRotates(zone: string): boolean
+	return zone == Zones.Outpost
+end
+
 return Zones

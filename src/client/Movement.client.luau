@@ -218,10 +218,17 @@ local function advanceDash(path: DashPath, now: number)
 	end
 end
 
+-- In the Outpost the body turns to face where it's walking. In first person this script turns it to the camera.
+local function updateAutoRotate()
+	if humanoid then
+		humanoid.AutoRotate = Zones.autoRotates(Zones.of(player))
+	end
+end
+
 local function onCharacter(character: Model)
 	humanoid = character:WaitForChild("Humanoid") :: Humanoid
 	root = character:WaitForChild("HumanoidRootPart") :: BasePart
-	humanoid.AutoRotate = false
+	updateAutoRotate()
 	humanoid.UseJumpPower = false
 	state = MoveState.new()
 	slideDirection = Vector3.zero
@@ -234,21 +241,6 @@ local function onCharacter(character: Model)
 	climb = nil
 	dash = nil
 	workspace.CurrentCamera.FieldOfView = FIELD_OF_VIEW
-end
-
--- Updates humanoid.AutoRotate based on camera mode.
--- First-person: disable AutoRotate (we control rotation from camera)
--- Third-person: enable AutoRotate (character faces move direction)
-local function updateAutoRotate()
-	if not humanoid then
-		return
-	end
-	local zone = Zones.of(player)
-	if zone == Zones.Outpost then
-		humanoid.AutoRotate = true
-	elseif zone == Zones.TestRoom then
-		humanoid.AutoRotate = false
-	end
 end
 
 local function onFrame(dt: number)
