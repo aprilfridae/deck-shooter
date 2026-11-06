@@ -1,6 +1,6 @@
 # Notes for coding agents
 
-Read `docs/HANDOFF.md` first. It explains the project, how River works, and where things stand.
+Read `docs/HANDOFF.md` first. It explains the project, how River works, and where things stand. The design specs are in `docs/specs/`, indexed in `docs/README.md`. When a change alters a behaviour or number a spec states, update the spec in the same pull request.
 
 **Every coding session ends with a pull request and a place build.**
 

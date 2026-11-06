@@ -1,5 +1,5 @@
 -- The Outpost: a concrete sea outpost on a rock, in fog.
--- See docs/superpowers/specs/2026-11-05-outpost-design.md for the layout.
+-- See docs/specs/outpost.md for the layout.
 -- Local axes: +Z points from the dock toward the hall, sea level is 0 and the deck is at 6.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
