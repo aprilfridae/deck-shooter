@@ -1,11 +1,10 @@
--- Textures the Outpost uses. The deckshooter files only exist on a computer that ran
--- tools/install-sounds.sh, which also installs assets/textures. Swap each for an
--- rbxassetid:// once it's uploaded to Roblox.
+-- Textures the Outpost uses, uploaded to Roblox by River. Their source files are in
+-- assets/textures; re-upload one after changing it and put its new id here.
 return {
-	rain = "rbxasset://textures/deckshooter/rain-streak.png",
-	grime = "rbxasset://textures/deckshooter/grime.png", -- soft dark blotches, tiles both ways
-	streaks = "rbxasset://textures/deckshooter/streaks.png", -- runs down from the top edge
-	puddles = "rbxasset://textures/deckshooter/puddles.png", -- a few wet pools, tiles both ways
-	cracks = "rbxasset://textures/deckshooter/cracks.png", -- hairline cracks, tiles both ways
+	rain = "rbxassetid://131917770631520", -- rain-streak.png
+	grime = "rbxassetid://105798436259025", -- grime.png: soft dark blotches, tiles both ways
+	streaks = "rbxassetid://130961192211095", -- streaks.png: runs down from the top edge
+	puddles = "rbxassetid://118788831331325", -- puddles.png: a few wet pools, tiles both ways
+	cracks = "rbxassetid://74389362756743", -- cracks.png: hairline cracks, tiles both ways
 	mist = "rbxasset://textures/particles/smoke_main.dds", -- ships with Roblox
 }

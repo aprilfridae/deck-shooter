@@ -6,11 +6,11 @@ Roblox PvP deck-building shooter. GitHub is the source of truth for code.
 
 1. Install [Rokit](https://github.com/rojo-rbx/rokit), then run `rokit install` in this folder. It installs the pinned Rojo and Lune.
 2. Install the Studio plugin: `rojo plugin install`.
-3. Copy the sounds and textures into Studio. On Windows:
+3. Copy the sounds into Studio. On Windows:
 
        powershell -ExecutionPolicy Bypass -File tools\install-assets.ps1
 
-   With a bash shell, `sh tools/install-sounds.sh` does the same. Run it again after every Studio update, because updates delete those files.
+   With a bash shell, `sh tools/install-sounds.sh` does the same. Run it again after every Studio update, because updates delete those files. The sounds aren't uploaded to Roblox yet, so without this the game is silent. Textures and models are already uploaded or in the repo.
 
 ## Live sync into Studio
 

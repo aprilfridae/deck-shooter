@@ -57,7 +57,7 @@ In the Outpost, guns and ability cards are off. The gun and cards are put away, 
 - **Cables and the skylight's light shaft:** `Beam`s, which cost no parts.
 - **Sign and screen text:** drawn on the client with the HUD's image fonts (`TypeLabel`), on parts tagged by the server.
 - **Lighting:** a client script applies the Outpost preset (fog, sky, colour grade, bloom) while you're in the Outpost, and restores the place's own lighting in the test room.
-- **Textures:** the drip streak, grime, water-streak, crack and puddle overlays are local `rbxasset` files in `assets/textures/`, installed into Studio like the sounds. Puddles and paint are drawn on the floor rather than built from parts, so they can't z-fight with it. Floor slabs are turned so their front face points up, which fixes where painted marks land.
+- **Textures:** the drip streak, grime, water-streak, crack and puddle overlays are uploaded to Roblox; their source files are in `assets/textures/` and their ids in `OutpostAssets.luau`. Puddles and paint are drawn on the floor rather than built from parts, so they can't z-fight with it. Floor slabs are turned so their front face points up, which fixes where painted marks land.
 - **Zones:** one small shared module says which zone allows combat. Input, the gun view, cards, the HUD and the servers all read it.
 
 ## Testing
