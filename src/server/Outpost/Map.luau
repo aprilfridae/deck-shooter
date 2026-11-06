@@ -455,6 +455,9 @@ local function hallShell(kit)
 	local step = math.pi / VAULT_SEGMENTS
 	local middle = (VAULT_IN + VAULT_OUT) / 2
 	local width = 2 * VAULT_OUT * math.sin(step / 2) + 0.1
+	-- One look per band along the hall. Segments overlap at their joints, so neighbours with
+	-- different looks would flicker on the end faces they share.
+	local bands = {}
 	for index = 1, VAULT_SEGMENTS do
 		local angle = (index - 0.5) * step
 		local x, y = middle * math.cos(angle), SPRING + middle * math.sin(angle)
@@ -466,7 +469,12 @@ local function hallShell(kit)
 			local cuts = ribCuts(span[1], span[2])
 			for piece = 1, #cuts - 1 do
 				local from, to = cuts[piece], cuts[piece + 1]
-				local part = g:solid("concrete", v(width, VAULT_OUT - VAULT_IN, to - from), CFrame.new(x, y, (from + to) / 2) * turn)
+				if not bands[from] then
+					local color, material = g:surface("concrete")
+					bands[from] = { color = color, material = material }
+				end
+				local band = bands[from]
+				local part = g:block(v(width, VAULT_OUT - VAULT_IN, to - from), CFrame.new(x, y, (from + to) / 2) * turn, band.color, band.material)
 				g:dirty(part, "shell")
 			end
 		end
