@@ -62,13 +62,7 @@ All the work above is merged to `main`. Nothing is half built.
 
 **Outpost decisions from River:** amber is for world lights only; signs and screens use the palette. The only booth is the Market kiosk. Loadout and Credits will be HUD or GUI features, not places. Outdoor rain around the camera was removed because it looked wrong.
 
-**Unconfirmed, ask River about these:**
-- Outpost floor z-fighting: the island rock was lowered to sea level and filled voxel by voxel. Not yet checked in Play.
-- Outpost grime, streak and puddle textures, and whether the lamp shadows work (they need Future lighting).
-- A copy of the menu showed in the top left at launch. The cause was never found. The screen now clears everything before each redraw, which was a guess. If it's still there, have River stay on the title screen in Play, then read `PlayerGui` through the Studio client.
-- None of the title screen's later additions have a confirmed check in Play: visualizer position, parallax, in-game music levels, selection sound and the PLAY `>`.
-- The selection sound plays on click. River might have meant hover.
-- Roblox's default jump and landing sounds are still on and may overlap the new jump sound.
+**Confirmed in Play by River (2026-11-05):** the Outpost floor, textures and lamp shadows, the title screen (no stray menu copy, visualizer, parallax, music levels, PLAY `>`), the selection sound on click, and the jump sounds. All work.
 
 **Known gaps:**
 - Other players' footsteps can't be heard, because the default is muted and ours are local only.
