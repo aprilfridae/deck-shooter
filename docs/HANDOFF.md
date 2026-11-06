@@ -14,7 +14,7 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 - River is not a coder. The assistant writes all code. Use they/them. Casual tone; River sometimes says "Goat".
 - River is token-conscious. Keep replies short and specific.
 - **River does all Play testing.** Never start Play through tools. Give a short list of what to check. Reading the Studio console or instances is fine, and is only possible while River is in Play.
-- **Commit, push or merge only when River asks.**
+- **Every coding session ends pushed to GitHub (River's rule).** When the work is finished and the tests pass, merge it into `main` and push before the session ends. `.kiro/steering/push-every-session.md` has the steps. The repo is code only: never commit `assets/`, place files or API keys.
 - Never edit scripts through Studio MCP. Rojo syncs from this repo.
 - Say what's unverified. River catches wrong assumptions fast, so find the real cause before claiming a fix.
 - All guns are hip fire only, except the Longscope, which can scope. The base and firing gun pose always points straight.
