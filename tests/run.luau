@@ -37,6 +37,8 @@ local listed = {
 	lightshaft_spec = true,
 	gable_spec = true,
 	bodypose_spec = true,
+	outpostscale_spec = true,
+	forcefield_spec = true,
 	hudtext_spec = true,
 	zones_spec = true,
 }
@@ -74,6 +76,8 @@ require("./musicbars_spec")
 require("./lightshaft_spec")
 require("./gable_spec")
 require("./bodypose_spec")
+require("./outpostscale_spec")
+require("./forcefield_spec")
 require("./hudtext_spec")
 require("./zones_spec")
 

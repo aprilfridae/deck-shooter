@@ -8,6 +8,8 @@ local GROUP = "BodyMesh"
 
 PhysicsService:RegisterCollisionGroup(GROUP)
 PhysicsService:CollisionGroupSetCollidable(GROUP, "Default", false)
+-- Your blur copies sit right on your body. Touching it, they threw the player into the air.
+PhysicsService:CollisionGroupSetCollidable(GROUP, GROUP, false)
 
 local function join(part: Instance)
 	if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
