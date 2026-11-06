@@ -1,6 +1,8 @@
-# Deck Shooter
+# Split Deck
 
-Roblox PvP deck-building shooter (Split Deck). This repo holds the code only, synced into Studio with Rojo.
+Roblox PvP deck-building shooter. This repo holds the code only, synced into Studio with Rojo.
+The design docs start at [`docs/README.md`](docs/README.md), and [`docs/HANDOFF.md`](docs/HANDOFF.md) says where things stand.
+The repo and the Rojo project still use the game's old name, Deck-Shooter.
 Everything else lives with the Fridae Studios group on Roblox:
 
 - **The place:** the group's SplitDeck experience. It holds the gun, arm and card models
@@ -37,7 +39,15 @@ The script reads the key from the `ROBLOX_GROUP_API_KEY` environment variable.
 
 ## Build a place file
 
-    mkdir build
-    rojo build -o build/DeckShooter.rbxl
+Build on top of the group's published place, so the models, lighting and settings come with it:
 
-A built place has the code only, not the models or assets, which live in the group's place.
+    python tools/download-place.py build/base.rbxl
+    lune run tools/build-place build/base.rbxl
+
+The download needs a user API key with the Legacy Asset permission in `ROBLOX_API_KEY`; Roblox refuses that permission on group keys.
+Without a key, `lune run tools/build-place` builds from local exports in `assets/models/` instead.
+Both write `build/SplitDeck.rbxl`. Place files go in GitHub releases, never in commits.
+
+To get the latest `main` and the latest release's place file:
+
+    powershell -ExecutionPolicy Bypass -File tools\pull-latest.ps1
