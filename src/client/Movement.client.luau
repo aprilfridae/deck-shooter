@@ -6,6 +6,8 @@ local RunService = game:GetService("RunService")
 local GunAudio = require(script.Parent.GunAudio)
 local Input = require(script.Parent.Input)
 local Ledge = require(script.Parent.Ledge)
+local Guns = ReplicatedStorage:WaitForChild("Guns")
+local Zones = require(Guns:WaitForChild("Zones"))
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local Config = require(CardCore:WaitForChild("Config"))
 local Movement = ReplicatedStorage:WaitForChild("Movement")
@@ -234,6 +236,21 @@ local function onCharacter(character: Model)
 	workspace.CurrentCamera.FieldOfView = FIELD_OF_VIEW
 end
 
+-- Updates humanoid.AutoRotate based on camera mode.
+-- First-person: disable AutoRotate (we control rotation from camera)
+-- Third-person: enable AutoRotate (character faces move direction)
+local function updateAutoRotate()
+	if not humanoid then
+		return
+	end
+	local zone = Zones.of(player)
+	if zone == Zones.Outpost then
+		humanoid.AutoRotate = true
+	elseif zone == Zones.TestRoom then
+		humanoid.AutoRotate = false
+	end
+end
+
 local function onFrame(dt: number)
 	if not humanoid or not root or humanoid.Health <= 0 then
 		return
@@ -328,8 +345,13 @@ local function onFrame(dt: number)
 	local target = (if sliding then SLIDE_CAMERA_DROP else Vector3.zero) + LAND_CAMERA_DIP * landDip
 	humanoid.CameraOffset = humanoid.CameraOffset:Lerp(target, math.min(dt * CAMERA_EASE, 1))
 
-	local yaw = math.atan2(-workspace.CurrentCamera.CFrame.LookVector.X, -workspace.CurrentCamera.CFrame.LookVector.Z)
-	root.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, yaw, 0)
+	-- In first-person (TestRoom), manually rotate character to face camera direction.
+	-- In third-person (Outpost), AutoRotate is enabled so character faces move direction.
+	local zone = Zones.of(player)
+	if zone == Zones.TestRoom then
+		local yaw = math.atan2(-workspace.CurrentCamera.CFrame.LookVector.X, -workspace.CurrentCamera.CFrame.LookVector.Z)
+		root.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, yaw, 0)
+	end
 end
 
 -- Roblox gives every character a looping "Running" sound. Ours are in GunAudio instead.
@@ -377,6 +399,9 @@ player.CharacterAdded:Connect(onCharacter)
 if player.Character then
 	task.spawn(onCharacter, player.Character)
 end
+
+player:GetAttributeChangedSignal("Zone"):Connect(updateAutoRotate)
+updateAutoRotate()
 
 -- Runs after the default controls, so the slide direction overrides the keys.
 RunService:BindToRenderStep("DeckMovement", Enum.RenderPriority.Character.Value, onFrame)

@@ -311,7 +311,6 @@ local function screenTower(kit)
 	end
 	g:dirty(g:boxOf("steel", v(-9, 24, -31), v(9, 38, -17)), "block", 0.4)
 	g:screen(CFrame.new(0, 31, -31.2), 14, 9, "Name")
-	g:screen(facing(v(-9.2, 31, -24), v(-1, 0, 0)), 10, 7, "Deck")
 
 	-- The lamp head on top.
 	g:dirty(g:boxOf("steel", v(-5, 38, -28), v(5, 42, -20)), "block", 0.45)

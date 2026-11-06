@@ -190,23 +190,10 @@ local function decorateSign(part: Instance)
 	end
 end
 
--- The latest numbers from the server.
+-- The latest numbers from the server (currently unused but may be needed for future screens).
 local snapshot: any = nil
--- Waits in its own thread, so signs don't wait on the card data.
-task.spawn(function()
-	local cardRemotes = ReplicatedStorage:WaitForChild("CardCoreRemotes")
-	local pushed = cardRemotes:WaitForChild("Snapshot") :: RemoteEvent
-	pushed.OnClientEvent:Connect(function(latest)
-		snapshot = latest
-	end)
-	local getSnapshot = cardRemotes:WaitForChild("GetSnapshot") :: RemoteFunction
-	local ok, reply = pcall(getSnapshot.InvokeServer, getSnapshot)
-	if ok and type(reply) == "table" and reply.ok and reply.result and not snapshot then
-		snapshot = reply.result
-	end
-end)
 
--- A readout whose label is rebuilt when its text changes length, so it always fits.
+-- A readout whose label is rebuilt when its text changes length, so it always fits (currently unused).
 local function readout(frame: Frame, style: string, color: Color3, size: number, x: number, y: number, fit: number)
 	local shown: string? = nil
 	local label: any = nil
@@ -233,15 +220,6 @@ local screens = {
 		centred(frame, "Title", "SPLIT", Palette.Bone, height * 0.32, width / 2, height * 0.32, width * FIT_SHARE)
 		centred(frame, "Title", "DECK", Palette.SignalAcid, height * 0.32, width / 2, height * 0.7, width * FIT_SHARE)
 	end,
-	Deck = function(frame: Frame, width: number, height: number)
-		local margin = width * 0.08
-		line(frame, "LabelBold", "DPR", Palette.Bone, height * 0.13, margin, height * 0.24)
-		local dpr = readout(frame, "Number", Palette.DataCyan, height * 0.34, width / 2, height * 0.56, width * FIT_SHARE)
-		centred(frame, "Label", "DECK POWER", Palette.Bone, height * 0.09, width / 2, height * 0.84, width * FIT_SHARE)
-		table.insert(updaters, function()
-			dpr(if snapshot and snapshot.dpr then tostring(math.floor(snapshot.dpr)) else "0")
-		end)
-	end,
 }
 
 local function decorateScreen(part: Instance)
@@ -263,12 +241,3 @@ CollectionService:GetInstanceAddedSignal(SCREEN_TAG):Connect(decorateScreen)
 for _, part in CollectionService:GetTagged(SCREEN_TAG) do
 	decorateScreen(part)
 end
-
-RunService.Heartbeat:Connect(function()
-	if shownZone ~= Zones.Outpost then
-		return
-	end
-	for _, update in updaters do
-		update()
-	end
-end)
