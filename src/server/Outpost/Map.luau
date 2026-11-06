@@ -664,15 +664,6 @@ local function rangeCorridor(kit)
 	end
 	local color, material = g:surface("tile")
 	g:post(v(26.5, DECK, 62.6), 9, 2.6, color, material)
-	g:sign(facing(v(33, 12.6, 66), v(-1, 0, 0)), 8, 1.4, {
-		text = "TEST RANGE >",
-		color = Palette.DeepNavy,
-		fill = Palette.SignalAcid,
-		light = Palette.SignalAcid,
-	})
-	for _, z in { 63.5, 68.5 } do
-		Kit.decor(g:box(v(32.95, 13.3, z - 0.05), v(33.05, 15, z + 0.05), STEEL, M.Metal))
-	end
 
 	-- Lift doors to the test room. The frame's head sits on its jambs rather than overlapping them.
 	g:boxOf("steel", v(49.6, DECK, 62.6), v(50, 14, 63.2))

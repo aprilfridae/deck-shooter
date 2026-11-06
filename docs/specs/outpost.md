@@ -39,7 +39,7 @@ The Outpost is built at (4000, 0, 0), far from the test room at the world's orig
 | Yard | Open deck with parapets low enough to vault, crates, oil drums and a power cable. The screen tower in the middle has a big screen head: the front shows SPLIT DECK, and the west side shows your Deck Power Rating (`DPR`, the number in Data Cyan, `DECK POWER`). |
 | Market Hall | Barrel-vaulted concrete hall with an `OUTPOST 07` sign over the entrance, a skylight, a catwalk along the east wall with stairs, and cables across. The gable walls stop just under the roof's outer face, so their stepped corners stay hidden in the shell. The vault's look changes band by band along the hall, not segment by segment, so overlapping segments can't flicker on the end faces. |
 | Market | Kiosk at the far end of the hall under a red `MARKET` sign, with shelves of tier-coloured cards. Its prompt says "Soon" and does nothing yet. |
-| Test Range corridor | Flooded tiled corridor off the hall's east side, with fluorescent ceiling lights, a `TEST RANGE >` sign and lift doors. The doors' prompt (hold 0.4s) takes you to the test room. |
+| Test Range corridor | Flooded tiled corridor off the hall's east side, with fluorescent ceiling lights and lift doors. The doors' prompt (hold 0.4s) takes you to the test room. |
 | Comms tower | Stacked block tower with lit windows, AC units, antenna masts and dishes. Backdrop only. |
 | Bunker | Concrete block standing in the water by the dock, with a glowing door, a `07` sign, a ladder and small lights. Backdrop only. |
 
