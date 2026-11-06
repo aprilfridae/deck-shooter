@@ -10,7 +10,7 @@ Roblox PvP deck-building shooter. GitHub is the source of truth for code.
 
        powershell -ExecutionPolicy Bypass -File tools\install-assets.ps1
 
-   With a bash shell, `sh tools/install-sounds.sh` does the same. Run it again after every Studio update, because updates delete those files. The sounds aren't uploaded to Roblox yet, so without this the game is silent. Textures and models are already uploaded or in the repo.
+   With a bash shell, `sh tools/install-sounds.sh` does the same. Run it again after every Studio update, because updates delete those files. The sounds are uploaded to River's Roblox account, but Roblox only lets uploaded audio play in experiences River owns. In River's experience the game uses the uploaded sounds; in any other place it falls back to these local copies, so without this step that place is silent. Textures and models are already uploaded or in the repo.
 
 ## Live sync into Studio
 

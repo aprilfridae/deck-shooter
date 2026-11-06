@@ -1,13 +1,35 @@
--- The takes each gun's shot picks from. rbxasset files only exist on a computer that ran
--- tools/install-sounds.sh. Swap each one for its rbxassetid:// once it's uploaded to Roblox.
+-- The takes each gun's shot picks from, and the game's other sounds.
+-- They're uploaded to River's Roblox account (ids in SoundIds.luau), but uploaded audio only plays in
+-- experiences River owns. Anywhere else, such as a collaborator's own place, they play from the
+-- local copies that tools/install-assets.ps1 (or install-sounds.sh) puts in Studio.
+local SoundIds = require("./SoundIds")
+
 local FOLDER = "rbxasset://sounds/deckshooter/"
+local OWNER_ID = 3542058083 -- River
 local HURT_HEALTH = 20
+
+local function ownedByRiver(): boolean
+	local ok, owned = pcall(function()
+		return game.CreatorType == Enum.CreatorType.User and game.CreatorId == OWNER_ID
+	end)
+	return ok and owned == true
+end
+
+local useUploaded = ownedByRiver()
+
+local function sound(file: string): string
+	local id = SoundIds[file]
+	if useUploaded and id then
+		return `rbxassetid://{id}`
+	end
+	return FOLDER .. file
+end
 
 local function takes(name: string, count: number, skip: number?): { string }
 	local list = {}
 	for take = 1, count do
 		if take ~= skip then
-			table.insert(list, `{FOLDER}gun-{name}-{take}.wav`)
+			table.insert(list, sound(`gun-{name}-{take}.wav`))
 		end
 	end
 	return list
@@ -16,7 +38,7 @@ end
 local function numbered(name: string, count: number): { string }
 	local list = {}
 	for take = 1, count do
-		table.insert(list, `{FOLDER}{name}-{take}.wav`)
+		table.insert(list, sound(`{name}-{take}.wav`))
 	end
 	return list
 end
@@ -36,19 +58,19 @@ local GunSounds = {
 	},
 	-- Each gun's reload time in GunConfig matches the length of its sound here.
 	reloads = {
-		M4 = `{FOLDER}reload-assault-v2.wav`,
-		AK47 = `{FOLDER}reload-assault-v2.wav`,
-		Sniper = `{FOLDER}reload-sniper.wav`,
-		Pistol = `{FOLDER}reload-pistol-v4.wav`,
+		M4 = sound("reload-assault-v2.wav"),
+		AK47 = sound("reload-assault-v2.wav"),
+		Sniper = sound("reload-sniper.wav"),
+		Pistol = sound("reload-pistol-v4.wav"),
 	},
 	hits = {
-		body = `{FOLDER}hit-body.wav`,
-		head = `{FOLDER}hit-head.wav`,
-		kill = `{FOLDER}hit-kill.wav`,
+		body = sound("hit-body.wav"),
+		head = sound("hit-head.wav"),
+		kill = sound("hit-kill.wav"),
 	},
-	hurt = `{FOLDER}hurt.wav`,
-	menuMusic = `{FOLDER}menu-music-v2.mp3`,
-	menuSelect = `{FOLDER}menu-select.wav`,
+	hurt = sound("hurt.wav"),
+	menuMusic = sound("menu-music-v2.mp3"),
+	menuSelect = sound("menu-select.wav"),
 	steps = numbered("step", 10),
 	jumps = numbered("jump", 14),
 	-- Every jump take opens with this much silence.
