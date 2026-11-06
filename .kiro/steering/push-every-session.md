@@ -12,7 +12,11 @@ River's rule: every coding session ends with its work merged through a pull requ
 
 ## Place build
 
-- After the merge, build the game from `main`: `lune run tools/build-place`. It writes `build/SplitDeck.rbxl`.
+- After the merge, build the game from `main` on top of the group's published place:
+  - `python tools/download-place.py build/base.rbxl` (needs a user API key with the Legacy Asset permission in `ROBLOX_API_KEY`; group keys are refused)
+  - `lune run tools/build-place build/base.rbxl`
+- Without a key, `lune run tools/build-place` builds from the local exports in `assets/models/` instead. Say so in the release notes.
+- Both write `build/SplitDeck.rbxl`.
 - Publish it as a GitHub release on `main`, tagged `build-YYYY-MM-DD-HHMM`, with the place file attached: `gh release create <tag> build/SplitDeck.rbxl --target main --title "<tag>" --notes "<what changed>"`.
 - The place file goes in the release, never in a commit.
 
