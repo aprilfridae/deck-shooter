@@ -10,6 +10,7 @@ local Hitbox = require(Guns:WaitForChild("Hitbox"))
 local ShotRequest = require(Guns:WaitForChild("ShotRequest"))
 local Spread = require(Guns:WaitForChild("Spread"))
 local Weapon = require(Guns:WaitForChild("Weapon"))
+local Zones = require(Guns:WaitForChild("Zones"))
 local Requests = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Requests"))
 local GunTargets = require(script.Parent.GunTargets)
 local loadouts = require(script.Parent.Loadouts)
@@ -108,7 +109,7 @@ end
 local function onFire(player: Player, raw: any)
 	local shooter = GunTargets.forPlayer(player)
 	local loadout = loadouts[player]
-	if not shooter or not loadout or not GunTargets.isAlive(shooter) then
+	if not shooter or not loadout or not GunTargets.isAlive(shooter) or not Zones.allowsCombat(Zones.of(player)) then
 		return
 	end
 	local now = workspace:GetServerTimeNow()
@@ -168,7 +169,7 @@ end
 local function onReload(player: Player)
 	local loadout = loadouts[player]
 	local now = workspace:GetServerTimeNow()
-	if loadout and allowRequest(player, now) then
+	if loadout and allowRequest(player, now) and Zones.allowsCombat(Zones.of(player)) then
 		Weapon.startReload(loadout, now)
 	end
 end

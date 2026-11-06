@@ -10,6 +10,7 @@ local Cards = require(CardCore:WaitForChild("Cards"))
 local Config = require(CardCore:WaitForChild("Config"))
 local Deck = require(CardCore:WaitForChild("Deck"))
 local Tier = require(CardCore:WaitForChild("Tier"))
+local Zones = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Zones"))
 local GunTargets = require(script.Parent.GunTargets)
 local loadouts = require(script.Parent.Loadouts)
 local MoveGrace = require(script.Parent.MoveGrace)
@@ -227,7 +228,7 @@ local function onUse(player: Player, raw: any)
 	local index = Ability.parseSlot(raw)
 	local target = GunTargets.forPlayer(player)
 	local slots = slotsOf[player]
-	if not index or not target or not slots or not GunTargets.isAlive(target) then
+	if not index or not target or not slots or not GunTargets.isAlive(target) or not Zones.allowsCombat(Zones.of(player)) then
 		return
 	end
 	local now = workspace:GetServerTimeNow()

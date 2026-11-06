@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local CardHand = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("CardHand"))
+local Zones = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Zones"))
 local CardInHand = require(script.Parent.CardInHand)
 local Input = require(script.Parent.Input)
 
@@ -38,7 +39,7 @@ end)
 
 RunService.Heartbeat:Connect(function()
 	local keys = Input.readAbility()
-	if player:GetAttribute("Climbing") then
+	if player:GetAttribute("Climbing") or not Zones.allowsCombat(Zones.of(player)) then
 		CardHand.putAway(CardInHand)
 	else
 		for index = 1, 3 do

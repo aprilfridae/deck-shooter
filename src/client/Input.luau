@@ -1,8 +1,13 @@
 -- The only module that reads keys, so touch and controller can be added later.
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
-local MenuState = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("MenuState"))
+local Guns = ReplicatedStorage:WaitForChild("Guns")
+local MenuState = require(Guns:WaitForChild("MenuState"))
+local Zones = require(Guns:WaitForChild("Zones"))
+
+local player = Players.LocalPlayer
 
 local Input = {}
 
@@ -30,7 +35,8 @@ function Input.readGun(): { [string]: boolean }
 			nextRifle = false,
 		}
 	end
-	return MenuState.filter(MenuState.shared, {
+	-- Guns and cards are off in the Outpost.
+	return Zones.filter(Zones.of(player), MenuState.filter(MenuState.shared, {
 		fire = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1),
 		aim = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2),
 		reload = UserInputService:IsKeyDown(Enum.KeyCode.R),
@@ -38,21 +44,21 @@ function Input.readGun(): { [string]: boolean }
 		sidearm = UserInputService:IsKeyDown(Enum.KeyCode.Two),
 		nextClass = UserInputService:IsKeyDown(Enum.KeyCode.B),
 		nextRifle = UserInputService:IsKeyDown(Enum.KeyCode.N),
-	})
+	}))
 end
 
 function Input.readAbility(): { [string]: boolean }
 	if UserInputService:GetFocusedTextBox() then
 		return { slot1 = false, slot2 = false, slot3 = false, use = false, testDeck = false, testTier = false }
 	end
-	return MenuState.filter(MenuState.shared, {
+	return Zones.filter(Zones.of(player), MenuState.filter(MenuState.shared, {
 		slot1 = UserInputService:IsKeyDown(Enum.KeyCode.Three),
 		slot2 = UserInputService:IsKeyDown(Enum.KeyCode.Four),
 		slot3 = UserInputService:IsKeyDown(Enum.KeyCode.Five),
 		use = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1),
 		testDeck = UserInputService:IsKeyDown(Enum.KeyCode.T),
 		testTier = UserInputService:IsKeyDown(Enum.KeyCode.Y),
-	})
+	}))
 end
 
 return Input

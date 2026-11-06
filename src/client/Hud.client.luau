@@ -8,6 +8,7 @@ local GunConfig = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("G
 local GunSounds = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("GunSounds"))
 local HitMarker = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("HitMarker"))
 local MenuState = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("MenuState"))
+local Zones = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Zones"))
 local GunAudio = require(script.Parent.GunAudio)
 local GunView = require(script.Parent.GunView)
 local TypeLabel = require(script.Parent.TypeLabel)
@@ -213,7 +214,8 @@ hitRemote.OnClientEvent:Connect(function(info)
 end)
 
 RunService.RenderStepped:Connect(function()
-	gui.Enabled = not MenuState.isOpen(MenuState.shared)
+	-- The combat HUD is hidden in the Outpost, where guns and cards are off.
+	gui.Enabled = not MenuState.isOpen(MenuState.shared) and Zones.allowsCombat(Zones.of(player))
 	local character = player.Character
 	local health = character and character:GetAttribute("Health") or 0
 	if GunSounds.hurtPlays(lastHealth, health) then
