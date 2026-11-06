@@ -10,6 +10,9 @@ local BodyStyle = require(Guns:WaitForChild("BodyStyle"))
 local Zones = require(Guns:WaitForChild("Zones"))
 
 local player = Players.LocalPlayer
+local BODY_GROUP = "BodyMesh" -- from CharacterBody.server.luau; it never touches the world
+local SETTLE = 0.5
+local STRIPPED = { Animator = true, Highlight = true, Sound = true }
 
 type Limb = { source: BasePart, copies: { BasePart }, from: CFrame?, to: CFrame?, poses: { CFrame } }
 
@@ -31,18 +34,36 @@ local function clear()
 	table.clear(limbs)
 end
 
-local function makeCopy(source: BasePart): BasePart
-	local copy = source:Clone()
-	copy:ClearAllChildren()
-	copy.Anchored = true
-	copy.CanCollide = false
-	copy.CanQuery = false
-	copy.CanTouch = false
-	copy.CastShadow = false
-	copy.Color = BodyStyle.skin
-	copy.Material = BodyStyle.material
-	copy.Transparency = 1
-	return copy
+-- A faded copy of the whole body. Its meshes are skinned to bones spread across the parts, so a
+-- part copied on its own falls back to the modelled pose, arms out.
+local function makeGhost(character: Model): Model
+	local archivable = character.Archivable
+	character.Archivable = true
+	local ghost = character:Clone()
+	character.Archivable = archivable
+	for _, descendant in ghost:GetDescendants() do
+		if STRIPPED[descendant.ClassName] or descendant:IsA("LuaSourceContainer") then
+			descendant:Destroy()
+		end
+	end
+	for _, part in ghost:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.Anchored = true
+			part.CanCollide = false
+			part.CanQuery = false
+			part.CanTouch = false
+			part.CastShadow = false
+			part.CollisionGroup = BODY_GROUP
+			part.Transparency = 1
+		end
+	end
+	-- The copy keeps its Humanoid: the skinned meshes fall back to the modelled pose without one.
+	-- That Humanoid switches CanCollide back on, so BODY_GROUP is what keeps the copy harmless.
+	local humanoid = ghost:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	end
+	return ghost
 end
 
 local function onCharacter(character: Model)
@@ -52,14 +73,22 @@ local function onCharacter(character: Model)
 	if not humanoid or not rootPart or not character:WaitForChild("LowerTorso", 5) then
 		return
 	end
+	task.wait(SETTLE) -- the rest of the body is still arriving
+	if character.Parent == nil then
+		return
+	end
 	local holder = Instance.new("Folder")
 	holder.Name = "BodySmear"
+	local ghosts = {}
+	for index = 1, BodyStyle.smearCopies do
+		ghosts[index] = makeGhost(character)
+		ghosts[index].Parent = holder
+	end
 	for _, part in character:GetChildren() do
 		if part:IsA("MeshPart") then
 			local copies = {}
-			for index = 1, BodyStyle.smearCopies do
-				copies[index] = makeCopy(part)
-				copies[index].Parent = holder
+			for index, ghost in ghosts do
+				copies[index] = ghost:FindFirstChild(part.Name) :: BasePart
 			end
 			table.insert(limbs, { source = part, copies = copies, poses = {} })
 		end

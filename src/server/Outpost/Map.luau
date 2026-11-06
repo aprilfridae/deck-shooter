@@ -1,6 +1,7 @@
 -- The Outpost: a concrete sea outpost on a rock, in fog.
 -- See docs/specs/outpost.md for the layout.
 -- Local axes: +Z points from the dock toward the hall, sea level is 0 and the deck is at 6.
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Guns = ReplicatedStorage:WaitForChild("Guns")
@@ -8,6 +9,7 @@ local OutpostAssets = require(Guns:WaitForChild("OutpostAssets"))
 local Palette = require(Guns:WaitForChild("Palette"))
 local Gable = require(script.Parent.Gable)
 local Kit = require(script.Parent.Kit)
+local OutpostScale = require(script.Parent.OutpostScale)
 
 local M = Enum.Material
 
@@ -58,7 +60,7 @@ local KEEP_CLEAR = {
 	{ 29.5, 88, 62.5, 112, UNDER_FLOOR }, -- the comms tower
 }
 -- Terrain smooths a voxel's surface, so a rock can show up to this far past its box.
-local ROCK_SLACK = 2
+local ROCK_SLACK = 2 / OutpostScale.factor
 
 local Map = {}
 
@@ -106,7 +108,7 @@ local function terrain(kit)
 	land.WaterWaveSpeed = 4
 
 	local function fill(cframe: CFrame, size: Vector3, material: Enum.Material)
-		land:FillBlock(kit.origin * cframe, size, material)
+		land:FillBlock(kit:frame(cframe), size * kit.scale, material)
 	end
 	-- A turned block of rock, sunk if it would come up through anything built.
 	local function boulder(position: Vector3, size: Vector3, tilt: number?)
@@ -272,7 +274,7 @@ local function dock(kit)
 	spawn.Name = "OutpostSpawn"
 	spawn.Anchored = true
 	spawn.Size = v(6, 1, 6)
-	spawn.CFrame = kit.origin * CFrame.new(0, DOCK - 0.5, -104) * CFrame.Angles(0, math.pi, 0)
+	spawn.CFrame = kit:frame(CFrame.new(0, DOCK, -104) * CFrame.Angles(0, math.pi, 0)) * CFrame.new(0, -spawn.Size.Y / 2, 0)
 	spawn.Transparency = 1
 	spawn.CanCollide = false
 	spawn.CanQuery = false
@@ -286,33 +288,24 @@ end
 local function gantry(kit)
 	local g = kit:group("Gantry")
 	local frames = { -78, -70, -62, -54 }
+	local beam = 24 -- the underside of the cross beams
 	for _, z in frames do
 		for _, x in { -8.5, 8.5 } do
-			g:dirty(g:boxOf("rust", v(x - 0.7, -6, z - 0.7), v(x + 0.7, 19, z + 0.7)), "block", 0.45)
+			g:dirty(g:boxOf("rust", v(x - 0.7, -6, z - 0.7), v(x + 0.7, beam + 1, z + 0.7)), "block", 0.45)
 			local side = if x < 0 then 1 else -1
 			-- A knee brace from the leg up to the beam.
-			g:solid("rust", v(0.6, 4.2, 0.6), CFrame.new(x + side * 1.6, 16.6, z) * CFrame.Angles(0, 0, -side * math.rad(45)))
+			g:solid("rust", v(0.6, 4.2, 0.6), CFrame.new(x + side * 1.6, beam - 1.4, z) * CFrame.Angles(0, 0, -side * math.rad(45)))
 		end
 		-- Reaches past the legs, so its ends don't share a face with them.
-		g:dirty(g:boxOf("rust", v(-9.4, 18, z - 0.9), v(9.4, 19.6, z + 0.9)), "wall", 0.45)
+		g:dirty(g:boxOf("rust", v(-9.4, beam, z - 0.9), v(9.4, beam + 1.6, z + 0.9)), "wall", 0.45)
 	end
 	for index = 1, #frames - 1 do
 		for _ = 1, 5 do
-			g:cable(v(g:range(-8, 8), 18, frames[index]), v(g:range(-8, 8), 18, frames[index + 1]), g:range(1, 3))
+			g:cable(v(g:range(-8, 8), beam, frames[index]), v(g:range(-8, 8), beam, frames[index + 1]), g:range(1, 3))
 		end
 	end
-	-- A lightbox hung from the middle frame, facing the dock.
-	g:sign(CFrame.new(0, 15.6, -62.9), 10, 2.2, {
-		text = "DOCK 3",
-		color = Palette.DeepNavy,
-		fill = Palette.SignalAcid,
-		light = Palette.SignalAcid,
-	})
-	for _, x in { -4, 4 } do
-		Kit.decor(g:box(v(x - 0.05, 16.7, -62.95), v(x + 0.05, 18, -62.85), STEEL, M.Metal))
-	end
-	g:lamp(v(-4, 17.2, -78), AMBER, 14, 1.2)
-	g:lamp(v(4, 17.2, -54), AMBER, 14, 1.2)
+	g:lamp(v(-4, beam - 0.8, -78), AMBER, 14, 1.2)
+	g:lamp(v(4, beam - 0.8, -54), AMBER, 14, 1.2)
 end
 
 local function screenTower(kit)
@@ -346,7 +339,7 @@ local function screenTower(kit)
 		{ v(8, 30, -17), v(15, 21, 12.6), 4 },
 		{ v(9, 34, -20), v(36, 36, 88), 12 },
 		{ v(-9, 28, -28), v(-19, 16, -50), 4 },
-		{ v(6, 36, -31), v(6, 18.6, -54), 3 },
+		{ v(6, 36, -31), v(6, 24.6, -54), 3 },
 	} do
 		g:cable(run[1], run[2], run[3], 0.16)
 	end
@@ -540,6 +533,11 @@ local function hallFront(kit)
 		local color, material = g:surface("steel")
 		g:post(v(x, DECK, 12.4), 29, 0.6, color, material)
 	end
+	-- The doorway's forcefield. This only marks the spot; the client draws it.
+	local field = Kit.decor(g:box(v(-9, DECK, 14.4), v(9, 22, 14.6), STEEL, M.SmoothPlastic))
+	field.Name = "Forcefield"
+	field.Transparency = 1
+	CollectionService:AddTag(field, "OutpostForcefield")
 	-- Lamps just inside the entrance.
 	for _, x in { -6, 6 } do
 		g:lamp(v(x, 18, 18), AMBER, 18, 1.4)
@@ -800,7 +798,7 @@ end
 function Map.build(origin: CFrame)
 	local folder = Instance.new("Folder")
 	folder.Name = "Outpost"
-	local kit = Kit.new(folder, origin, SEED)
+	local kit = Kit.new(folder, origin, SEED, OutpostScale.factor)
 
 	terrain(kit)
 	local spawn = dock(kit)
@@ -816,6 +814,7 @@ function Map.build(origin: CFrame)
 	mist(air, v(0, 0.5, -96), v(50, 1, 40))
 	mist(air, v(-46, 0.5, -70), v(50, 1, 50))
 	mist(air, v(72, 0.5, 0), v(60, 1, 80))
+	kit:finish(folder)
 
 	folder.Parent = workspace
 	return {

@@ -100,8 +100,10 @@ Kit.__index = Kit
 Kit.signTag = SIGN_TAG
 Kit.screenTag = SCREEN_TAG
 
-function Kit.new(parent: Instance, origin: CFrame, seed: number)
-	return setmetatable({ parent = parent, origin = origin, random = Random.new(seed) }, Kit)
+-- scale shrinks everything the kit builds, about the origin. Positions and sizes passed in stay
+-- at full size.
+function Kit.new(parent: Instance, origin: CFrame, seed: number, scale: number?)
+	return setmetatable({ parent = parent, origin = origin, random = Random.new(seed), scale = scale or 1 }, Kit)
 end
 
 -- The same kit, building into a new folder.
@@ -109,11 +111,16 @@ function Kit:group(name: string)
 	local folder = Instance.new("Folder")
 	folder.Name = name
 	folder.Parent = self.parent
-	return setmetatable({ parent = folder, origin = self.origin, random = self.random }, Kit)
+	return setmetatable({ parent = folder, origin = self.origin, random = self.random, scale = self.scale }, Kit)
 end
 
 function Kit:point(position: Vector3): Vector3
-	return self.origin * position
+	return self.origin * (position * self.scale)
+end
+
+-- Where a full-size cframe lands in the world.
+function Kit:frame(cframe: CFrame): CFrame
+	return self.origin * (cframe - cframe.Position + cframe.Position * self.scale)
 end
 
 function Kit:range(low: number, high: number): number
@@ -145,8 +152,8 @@ end
 
 function Kit:place(part: BasePart, size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material?): BasePart
 	part.Anchored = true
-	part.Size = size
-	part.CFrame = self.origin * cframe
+	part.Size = size * self.scale
+	part.CFrame = self:frame(cframe)
 	part.Color = color
 	part.Material = material or Enum.Material.Concrete
 	part.TopSurface = Enum.SurfaceType.Smooth
@@ -205,7 +212,7 @@ local function streakTexture(kit: any, part: BasePart, face: Enum.NormalId)
 	texture.Face = face
 	-- One tile covers the face's height, so every run starts at its top edge.
 	texture.StudsPerTileU = kit:range(14, 22)
-	texture.StudsPerTileV = part.Size.Y
+	texture.StudsPerTileV = part.Size.Y / kit.scale
 	texture.OffsetStudsU = kit:range(0, 22)
 	texture.Color3 = STREAK_COLOR
 	texture.Transparency = kit:range(0.2, 0.45)
@@ -493,10 +500,10 @@ function Kit:cable(a: Vector3, b: Vector3, sag: number, width: number?, color: C
 	local beam = Instance.new("Beam")
 	beam.Attachment0 = anchorPoint(self, a)
 	beam.Attachment1 = anchorPoint(self, b)
-	beam.CurveSize0 = sag / BEZIER_DROP
-	beam.CurveSize1 = -sag / BEZIER_DROP
-	beam.Width0 = width or CABLE_WIDTH
-	beam.Width1 = width or CABLE_WIDTH
+	beam.CurveSize0 = sag * self.scale / BEZIER_DROP
+	beam.CurveSize1 = -sag * self.scale / BEZIER_DROP
+	beam.Width0 = (width or CABLE_WIDTH) * self.scale
+	beam.Width1 = (width or CABLE_WIDTH) * self.scale
 	beam.Segments = CABLE_SEGMENTS
 	beam.FaceCamera = true
 	beam.Color = ColorSequence.new(color or CABLE_COLOR)
@@ -511,7 +518,7 @@ function Kit:shaft(top: Vector3, bottom: Vector3, radius: number, color: Color3)
 	for _, column in LightShaft.columns(radius) do
 		local offset = Vector3.new(column.x, 0, column.z)
 		local beam = self:cable(top + offset, bottom + offset * SHAFT_SPREAD, 0, column.width, color)
-		beam.Width1 = column.width * SHAFT_SPREAD
+		beam.Width1 = column.width * SHAFT_SPREAD * self.scale
 		beam.Segments = 1
 		beam.LightInfluence = 0
 		beam.LightEmission = 1
@@ -574,6 +581,36 @@ function Kit:screen(cframe: CFrame, width: number, height: number, kind: string)
 	screen:SetAttribute("ScreenKind", kind)
 	CollectionService:AddTag(screen, SCREEN_TAG)
 	return screen
+end
+
+local function scaledSequence(sequence: NumberSequence, scale: number): NumberSequence
+	local keys = {}
+	for index, key in sequence.Keypoints do
+		keys[index] = NumberSequenceKeypoint.new(key.Time, key.Value * scale, key.Envelope * scale)
+	end
+	return NumberSequence.new(keys)
+end
+
+-- Shrinks what can only be set once everything exists: tiles, light reach, particles and painted
+-- floors, whose marks are laid out in full-size studs.
+function Kit:finish(folder: Instance)
+	local scale = self.scale
+	for _, item in folder:GetDescendants() do
+		if item:IsA("Texture") then
+			item.StudsPerTileU *= scale
+			item.StudsPerTileV *= scale
+			item.OffsetStudsU *= scale
+			item.OffsetStudsV *= scale
+		elseif item:IsA("PointLight") or item:IsA("SpotLight") or item:IsA("SurfaceLight") then
+			item.Range *= scale
+		elseif item:IsA("SurfaceGui") then
+			item.PixelsPerStud /= scale
+		elseif item:IsA("ParticleEmitter") then
+			item.Size = scaledSequence(item.Size, scale)
+			item.Speed = NumberRange.new(item.Speed.Min * scale, item.Speed.Max * scale)
+			item.Acceleration *= scale
+		end
+	end
 end
 
 function Kit:prompt(part: BasePart, objectText: string, actionText: string, hold: number?): ProximityPrompt
