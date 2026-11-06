@@ -3,6 +3,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local OutpostAssets = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("OutpostAssets"))
+local LightShaft = require(script.Parent.LightShaft)
 
 local M = Enum.Material
 
@@ -13,6 +14,7 @@ local OUTLINE_WIDTH = 0.16
 local CABLE_WIDTH = 0.12
 local CABLE_COLOR = Color3.fromRGB(22, 24, 26)
 local CABLE_SEGMENTS = 12
+local SHAFT_SPREAD = 1.35 -- how much wider a light shaft is at the bottom
 local BEZIER_DROP = 0.75 -- a beam's middle sags this share of its curve size
 local COLOR_SHIFT = 0.035
 local GRIME_COLOR = Color3.fromRGB(34, 30, 26)
@@ -504,19 +506,21 @@ function Kit:cable(a: Vector3, b: Vector3, sag: number, width: number?, color: C
 	return beam
 end
 
--- A soft column of light, like daylight through a hole in the roof.
-function Kit:shaft(top: Vector3, bottom: Vector3, width: number, color: Color3): Beam
-	local beam = self:cable(top, bottom, 0, width, color)
-	beam.Width1 = width * 1.35
-	beam.Segments = 1
-	beam.LightInfluence = 0
-	beam.LightEmission = 1
-	beam.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.82),
-		NumberSequenceKeypoint.new(0.7, 0.9),
-		NumberSequenceKeypoint.new(1, 1),
-	})
-	return beam
+-- A round cone of light, like daylight through a hole in the roof. It widens toward the bottom.
+function Kit:shaft(top: Vector3, bottom: Vector3, radius: number, color: Color3)
+	for _, column in LightShaft.columns(radius) do
+		local offset = Vector3.new(column.x, 0, column.z)
+		local beam = self:cable(top + offset, bottom + offset * SHAFT_SPREAD, 0, column.width, color)
+		beam.Width1 = column.width * SHAFT_SPREAD
+		beam.Segments = 1
+		beam.LightInfluence = 0
+		beam.LightEmission = 1
+		beam.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, column.transparency),
+			NumberSequenceKeypoint.new(0.7, (column.transparency + 1) / 2),
+			NumberSequenceKeypoint.new(1, 1),
+		})
+	end
 end
 
 -- A sign whose front faces the cframe's look direction. The client draws its text.
