@@ -19,10 +19,12 @@ PLACE_ID = "70756985983915"  # SplitDeck's root place, owned by Fridae Studios
 
 def main():
     key = os.environ.get("ROBLOX_API_KEY")
-    if not key or len(sys.argv) != 2:
-        sys.exit("Set ROBLOX_API_KEY, then run: python tools/download-place.py <out.rbxl>")
+    if not key or len(sys.argv) not in (2, 3):
+        sys.exit("Set ROBLOX_API_KEY, then run: python tools/download-place.py <out.rbxl> [version]")
+    # Without a version Roblox can serve an old copy for a while after a publish.
+    version = f"/version/{sys.argv[2]}" if len(sys.argv) == 3 else ""
     request = urllib.request.Request(
-        f"https://apis.roblox.com/asset-delivery-api/v1/assetId/{PLACE_ID}",
+        f"https://apis.roblox.com/asset-delivery-api/v1/assetId/{PLACE_ID}{version}",
         headers={"x-api-key": key},
     )
     try:
