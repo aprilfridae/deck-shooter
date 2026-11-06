@@ -1,28 +1,16 @@
--- The takes each gun's shot picks from, and the game's other sounds.
--- They're uploaded to River's Roblox account (ids in SoundIds.luau), but uploaded audio only plays in
--- experiences River owns. Anywhere else, such as a collaborator's own place, they play from the
--- local copies that tools/install-assets.ps1 (or install-sounds.sh) puts in Studio.
+-- The takes each gun's shot picks from, and the game's other sounds. They're Fridae Studios group
+-- assets (ids in SoundIds.luau), so they play in the group's experiences. The source files live
+-- outside the repo; to add or change a sound, upload it to the group and add its id to SoundIds.
 local SoundIds = require("./SoundIds")
 
-local FOLDER = "rbxasset://sounds/deckshooter/"
-local OWNER_ID = 3542058083 -- River
 local HURT_HEALTH = 20
-
-local function ownedByRiver(): boolean
-	local ok, owned = pcall(function()
-		return game.CreatorType == Enum.CreatorType.User and game.CreatorId == OWNER_ID
-	end)
-	return ok and owned == true
-end
-
-local useUploaded = ownedByRiver()
 
 local function sound(file: string): string
 	local id = SoundIds[file]
-	if useUploaded and id then
-		return `rbxassetid://{id}`
+	if not id then
+		error(`{file} has no uploaded id in SoundIds`)
 	end
-	return FOLDER .. file
+	return `rbxassetid://{id}`
 end
 
 local function takes(name: string, count: number, skip: number?): { string }

@@ -1,4 +1,3 @@
-local fs = require("@lune/fs")
 local harness = require("./harness")
 local Combat = require("../src/shared/Guns/Combat")
 local Damage = require("../src/shared/Guns/Damage")
@@ -125,7 +124,7 @@ describe("Shield", function()
 end)
 
 describe("GunSounds", function()
-	it("has a sound file for every gun a class can use", function()
+	it("has uploaded takes for every gun a class can use", function()
 		for _, class in GunConfig.classes do
 			local guns = table.clone(class.primaries)
 			table.insert(guns, class.sidearm)
@@ -133,8 +132,7 @@ describe("GunSounds", function()
 				local takes = GunSounds.shots[gunId]
 				expect(#takes >= 2).toBe(true)
 				for _, sound in takes do
-					local file = string.match(sound, "[^/]+$")
-					expect(fs.isFile(`assets/sounds/{file}`)).toBe(true)
+					expect(string.match(sound, "^rbxassetid://%d+$") ~= nil).toBe(true)
 				end
 			end
 		end
@@ -164,10 +162,9 @@ describe("GunSounds.hitSound", function()
 		expect(GunSounds.hitSound(true, true)).toBe(GunSounds.hits.kill)
 	end)
 
-	it("has a file for every hit and the hurt sound", function()
+	it("has an uploaded sound for every hit and the hurt sound", function()
 		for _, sound in { GunSounds.hits.body, GunSounds.hits.head, GunSounds.hits.kill, GunSounds.hurt } do
-			local file = string.match(sound, "[^/]+$")
-			expect(fs.isFile(`assets/sounds/{file}`)).toBe(true)
+			expect(string.match(sound, "^rbxassetid://%d+$") ~= nil).toBe(true)
 		end
 	end)
 end)
