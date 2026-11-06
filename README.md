@@ -29,7 +29,7 @@ Upload it to the group with a group API key, then put its id in the matching fil
 
     python tools/upload-group-assets.py results.json path/to/new-sound.wav
 
-The script reads the key from the `ROBLOX_API_KEY` environment variable.
+The script reads the key from the `ROBLOX_GROUP_API_KEY` environment variable.
 
 ## Tests
 
