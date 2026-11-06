@@ -6,7 +6,11 @@
       "CardCore": { "$path": "src/shared/CardCore" },
       "Movement": { "$path": "src/shared/Movement" },
       "Guns": { "$path": "src/shared/Guns" },
-      "GunModels": { "$className": "Folder", "$ignoreUnknownInstances": true }
+      "GunModels": { "$path": "assets/models/GunModels.rbxm" }
+    },
+    "Lighting": {
+      "ColorGrading": { "$path": "assets/models/ColorGrading.rbxm" },
+      "Bloom": { "$path": "assets/models/Bloom.rbxm" }
     },
     "Workspace": {
       "$properties": { "Gravity": 150, "StreamingEnabled": false }
