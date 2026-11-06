@@ -604,15 +604,15 @@ local function hallInside(kit)
 	local skylightZ = (SKY_SOUTH + SKY_NORTH) / 2
 	local sun = Kit.decor(g:block(v(1, 1, 1), CFrame.new(0, 50, skylightZ), SKYLIGHT, M.SmoothPlastic))
 	sun.Transparency = 1
-	g:light(sun, "SpotLight", { Face = Enum.NormalId.Bottom, Angle = 50, Range = 60, Brightness = 3.5, Shadows = true, Color = SKYLIGHT })
-	g:shaft(v(0, 46.5, skylightZ), v(0, DECK + 0.2, skylightZ), 8, SKYLIGHT)
-	local drips = Kit.decor(g:block(v(7, 0.2, 14), CFrame.new(0, 46, skylightZ), RAIN, M.SmoothPlastic))
+	g:light(sun, "SpotLight", { Face = Enum.NormalId.Bottom, Angle = 24, Range = 60, Brightness = 6, Shadows = true, Color = SKYLIGHT })
+	g:shaft(v(0, 46.5, skylightZ), v(0, DECK + 0.2, skylightZ), 6.5, SKYLIGHT)
+	local drips = Kit.decor(g:block(v(12, 0.2, 12), CFrame.new(0, 46, skylightZ), RAIN, M.SmoothPlastic))
 	drips.Transparency = 1
 	local emitter = Instance.new("ParticleEmitter")
 	emitter.Texture = OutpostAssets.rain
 	emitter.Color = ColorSequence.new(RAIN)
 	emitter.EmissionDirection = Enum.NormalId.Bottom
-	emitter.Orientation = Enum.ParticleOrientation.VelocityParallel
+	emitter.Orientation = Enum.ParticleOrientation.FacingCameraWorldUp -- keeps the streak upright
 	emitter.Rate = 45
 	emitter.Lifetime = NumberRange.new(0.8, 1)
 	emitter.Speed = NumberRange.new(45, 55)
