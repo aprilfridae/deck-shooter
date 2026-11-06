@@ -18,6 +18,10 @@ Roblox PvP deck-building shooter. GitHub is the source of truth for code.
 
 In Studio, open the place and stay in edit mode, then Plugins > Rojo > Connect. Connecting during a Play test fails with "Http requests can only be executed by game server". Saved code changes then appear in Studio.
 
+Rojo also sets up everything else the game needs from the repo: the gun, arm and card models, the lighting and its effects, and the settings for Workspace, Players, StarterPlayer, StarterGui and SoundService. A blank place synced with Rojo matches the main one.
+
+Experience settings (Game Settings in Studio, such as avatar type and access to API services) aren't part of a place, so Rojo can't sync them. Without "Enable Studio Access to API Services", card saves use a temporary store that resets each session.
+
 ## Tests
 
     lune run tests/run.luau
