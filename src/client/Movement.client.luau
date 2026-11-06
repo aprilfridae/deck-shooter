@@ -21,6 +21,8 @@ local pushRemote = abilityRemotes:WaitForChild("Push") :: RemoteEvent
 
 local FIELD_OF_VIEW = 80
 local SLIDE_CAMERA_DROP = Vector3.new(0, -2, 0)
+-- The player rig has auto scaling off, so Roblox puts the camera 2 studs over the root, not 1.5.
+local BODY_CAMERA = Vector3.new(0, -0.5, 0)
 local CAMERA_EASE = 15
 local SLIDE_FOV = 88
 local JUMP_FOV = 84
@@ -334,7 +336,7 @@ local function onFrame(dt: number)
 	fieldOfView += (targetFieldOfView() - fieldOfView) * (1 - math.exp(-dt * FOV_EASE))
 	workspace.CurrentCamera.FieldOfView = fieldOfView
 
-	local target = (if sliding then SLIDE_CAMERA_DROP else Vector3.zero) + LAND_CAMERA_DIP * landDip
+	local target = BODY_CAMERA + (if sliding then SLIDE_CAMERA_DROP else Vector3.zero) + LAND_CAMERA_DIP * landDip
 	humanoid.CameraOffset = humanoid.CameraOffset:Lerp(target, math.min(dt * CAMERA_EASE, 1))
 
 	-- In first-person (TestRoom), manually rotate character to face camera direction.

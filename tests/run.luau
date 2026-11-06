@@ -36,6 +36,7 @@ local listed = {
 	musicbars_spec = true,
 	lightshaft_spec = true,
 	gable_spec = true,
+	bodypose_spec = true,
 	hudtext_spec = true,
 	zones_spec = true,
 }
@@ -72,6 +73,7 @@ require("./menustate_spec")
 require("./musicbars_spec")
 require("./lightshaft_spec")
 require("./gable_spec")
+require("./bodypose_spec")
 require("./hudtext_spec")
 require("./zones_spec")
 
