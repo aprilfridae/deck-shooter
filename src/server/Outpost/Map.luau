@@ -514,7 +514,7 @@ end
 local function hallFront(kit)
 	local g = kit:group("HallFront")
 	g:sign(CFrame.new(0, 27, 13.1), 16, 3, {
-		text = "OUTPOST 07",
+		text = "OUTPOST 01",
 		color = Palette.DeepNavy,
 		fill = Palette.SignalAcid,
 		light = Palette.SignalAcid,
