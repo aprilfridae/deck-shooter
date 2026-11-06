@@ -8,4 +8,8 @@ return {
 	glowFill = 0.82, -- how see-through the glow is over the body itself
 	glowEdge = 0.3, -- and the outline
 	depthMode = Enum.HighlightDepthMode.Occluded,
+	-- Motion blur: faded copies between two held poses.
+	smearCopies = 4,
+	smearTime = 0.09,
+	smearOpacity = 0.5,
 }
