@@ -43,7 +43,6 @@ local HALL_SOUTH = 13
 local HALL_NORTH = 119
 local SKY_SOUTH = 58 -- the skylight's ends
 local SKY_NORTH = 74
-local PANEL = 12 -- floor and wall panels are about this wide
 local SEED = 7
 
 -- Rocks stay clear of these, as x0, z0, x1, z1 and the height their tops must stay under.
@@ -214,7 +213,14 @@ end
 
 local function dock(kit)
 	local g = kit:group("Dock")
-	g:panels("floor", v(-7, DOCK - 1.2, -114), v(7, DOCK, -62), 10, "wet")
+	local _, paint = g:floor("floor", v(-7, DOCK - 1.2, -114), v(7, DOCK, -62), true)
+	for _, x in { -5.6, 5.6 } do
+		paint:mark(x - 0.11, -113.5, x + 0.11, -62.5, Palette.Bone, 0.74)
+	end
+	paint:mark(-6.2, -63.6, 6.2, -62.7, Palette.SignalAcid, 0.68)
+	for _ = 1, 3 do
+		paint:stain(g:range(-4, 4), g:range(-110, -66), g:range(1.5, 3.5), g:range(2, 4), g:range(0.35, 0.55))
+	end
 	for _, x in { -6.6, 6.6 } do
 		g:dirty(g:boxOf("darkConcrete", v(x - 0.4, DOCK, -114), v(x + 0.4, DOCK + 0.4, -62)), "floor")
 	end
@@ -339,42 +345,67 @@ local function screenTower(kit)
 	end
 	g:neon(v(0.4, 0.4, 0.1), CFrame.new(8.5, DECK + 2.4, -30.05), AMBER)
 	g:neon(v(0.4, 0.4, 0.1), CFrame.new(-9.2, DECK + 3.2, -22.05), Palette.DataCyan)
-
-	-- Benches facing the screen.
-	for _, x in { -10, 0, 10 } do
-		g:boxOf("wood", v(x - 3, DECK + 1.6, -44.8), v(x + 3, DECK + 2.1, -43.2))
-		for _, leg in { -2.4, 2.4 } do
-			g:boxOf("steel", v(x + leg - 0.25, DECK, -44.6), v(x + leg + 0.25, DECK + 1.6, -43.4))
-		end
-	end
 end
 
 local function yard(kit)
 	local g = kit:group("Yard")
-	g:panels("floor", v(-50, SLAB_BOTTOM, -56), v(50, DECK, HALL_SOUTH), PANEL, "wet")
+	local _, paint = g:floor("floor", v(-50, SLAB_BOTTOM, -56), v(50, DECK, HALL_SOUTH), true)
 	g:dirty(g:wedge(v(14, DECK - DOCK, 6), CFrame.new(0, (DOCK + DECK) / 2, -59), g:surface("floor")), "floor")
 	g:dirty(g:boxOf("darkConcrete", v(-50, -6, -57.5), v(50, DOCK, -56)), "wall")
 	-- Parapets, low enough to vault.
-	g:panels("darkConcrete", v(-50, DECK, -54.5), v(-48.5, DECK + 3.5, HALL_SOUTH), PANEL, "wall")
-	g:panels("darkConcrete", v(48.5, DECK, -54.5), v(50, DECK + 3.5, HALL_SOUTH), PANEL, "wall")
-	g:panels("darkConcrete", v(-50, DECK, -56), v(-9, DECK + 3.5, -54.5), PANEL, "wall")
-	g:panels("darkConcrete", v(9, DECK, -56), v(50, DECK + 3.5, -54.5), PANEL, "wall")
+	g:dirty(g:boxOf("darkConcrete", v(-50, DECK, -54.5), v(-48.5, DECK + 3.5, HALL_SOUTH)), "block")
+	g:dirty(g:boxOf("darkConcrete", v(48.5, DECK, -54.5), v(50, DECK + 3.5, HALL_SOUTH)), "block")
+	g:dirty(g:boxOf("darkConcrete", v(-50, DECK, -56), v(-9, DECK + 3.5, -54.5)), "block")
+	g:dirty(g:boxOf("darkConcrete", v(9, DECK, -56), v(50, DECK + 3.5, -54.5)), "block")
+
+	-- Old paint and fittings on the deck: a walkway from the dock to the hall, a hazard band at
+	-- the top of the ramp, a box around the screen tower, drains, covers and stains.
+	paint:dashes(-7.5, -54, 12, 0.3, 3, 2, Palette.Bone, 0.72)
+	paint:dashes(7.5, -54, 12, 0.3, 3, 2, Palette.Bone, 0.72)
+	paint:mark(-7, -55.6, 7, -54.8, Palette.SignalAcid, 0.66)
+	paint:outline(-7.5, -31.5, 7.5, -16.5, 0.3, Palette.SignalAcid, 0.7)
+	for _, drain in { { -47.6, -30, -46.6, -26 }, { 46.6, -12, 47.6, -8 }, { -3, 9.2, 3, 10.2 }, { 20, -53.8, 24, -53.2 } } do
+		local x, z = (drain[1] + drain[3]) / 2, (drain[2] + drain[4]) / 2
+		paint:disc(x, z, 5, Color3.fromRGB(38, 46, 48), 0.78)
+		paint:grate(drain[1], drain[2], drain[3], drain[4])
+	end
+	for _, cover in { { -24, -18 }, { 22, -42 } } do
+		paint:disc(cover[1], cover[2], 2.6, Color3.fromRGB(52, 56, 58), 0.05)
+		paint:disc(cover[1], cover[2], 2.1, Color3.fromRGB(64, 68, 68), 0.15)
+	end
+	for _ = 1, 7 do
+		local x, z = g:range(-44, 44), g:range(-52, 8)
+		if math.abs(x) > 9 or z < -33 or z > -15 then
+			paint:stain(x, z, g:range(2, 5), g:range(2, 5), g:range(0.3, 0.55))
+		end
+	end
 
 	lampPost(g, v(-44, DECK, -50), 1, true)
 	lampPost(g, v(44, DECK, -50), -1)
 	lampPost(g, v(-44, DECK, 6), 1)
 	lampPost(g, v(44, DECK, 6), -1)
 
-	-- Barriers and crates to move around.
-	for _, barrier in { { -30, -30, 0 }, { -34, -12, 30 }, { 30, -40, -20 }, { 36, -6, 10 }, { 24, -48, 80 } } do
-		local part = g:solid("concrete", v(1.8, 2.8, 6), CFrame.new(barrier[1], DECK + 1.4, barrier[2]) * CFrame.Angles(0, math.rad(barrier[3]), 0))
-		g:dirty(part, "block")
-	end
+	-- Crates to move around.
 	for _, crate in { { -42, -36, 4 }, { -38, -40, 3 }, { -42, -40, 3.4 }, { 40, 2, 4 }, { 36, 4, 3 } } do
 		local size = crate[3]
 		g:solid("wood", v(size, size, size), CFrame.new(crate[1], DECK + size / 2, crate[2]) * CFrame.Angles(0, g:range(-0.3, 0.3), 0))
 	end
 	g:solid("wood", v(3, 3, 3), CFrame.new(-40, DECK + 5.5, -38) * CFrame.Angles(0, 0.4, 0))
+	-- Oil drums by the west parapet, one knocked over.
+	for _, drum in { { -46.4, 4 }, { -46.6, 6.4 }, { -44.2, 5.2 } } do
+		local color, material = g:surface("rust")
+		g:post(v(drum[1], DECK, drum[2]), 2.9, 2, color, material)
+	end
+	local color, material = g:surface("steel")
+	g:cylinder(CFrame.new(-43, DECK + 1, 9) * CFrame.Angles(0, math.rad(30), 0), 2.9, 2, color, material)
+	-- A power cable lying across the deck from the screen tower to the parapet.
+	local run = { v(-6, -24, 0), v(-14, -21.5, 0), v(-25, -26, 0), v(-38, -25, 0), v(-48.5, -27, 0) }
+	for index = 1, #run - 1 do
+		local a = v(run[index].X, DECK + 0.15, run[index].Y)
+		local b = v(run[index + 1].X, DECK + 0.15, run[index + 1].Y)
+		local look = facing((a + b) / 2, (b - a).Unit) * CFrame.Angles(0, math.pi / 2, 0)
+		g:cylinder(look, (b - a).Magnitude + 0.3, 0.3, Color3.fromRGB(24, 26, 28), M.Rubber)
+	end
 	screenTower(kit)
 end
 
@@ -392,7 +423,23 @@ end
 
 local function hallShell(kit)
 	local g = kit:group("HallShell")
-	g:panels("floor", v(-23, SLAB_BOTTOM, HALL_SOUTH), v(23, DECK, HALL_NORTH), PANEL, "wet")
+	local _, paint = g:floor("floor", v(-23, SLAB_BOTTOM, HALL_SOUTH), v(23, DECK, HALL_NORTH), true)
+	-- Faded lines along the walls, a queue box in front of the Market, and the wet patch and drain
+	-- under the skylight.
+	for _, x in { -17.6, 17.6 } do
+		paint:mark(x - 0.12, 15, x + 0.12, 102, Palette.Bone, 0.78)
+	end
+	paint:outline(-8, 97.5, 8, 103.5, 0.25, Palette.HazardRed, 0.76)
+	local skylightZ = (SKY_SOUTH + SKY_NORTH) / 2
+	paint:disc(0, skylightZ, 11, Color3.fromRGB(34, 44, 46), 0.5)
+	paint:disc(0.8, skylightZ - 1.2, 6, Color3.fromRGB(28, 38, 40), 0.55)
+	paint:grate(-1.5, skylightZ - 1.5, 1.5, skylightZ + 1.5)
+	for _, drain in { { -19.4, 46, -18.6, 50 }, { 18.6, 86, 19.4, 90 } } do
+		paint:grate(drain[1], drain[2], drain[3], drain[4])
+	end
+	for _ = 1, 6 do
+		paint:stain(g:range(-14, 14), g:range(18, 96), g:range(2, 4.5), g:range(2, 4.5), g:range(0.35, 0.6))
+	end
 	-- Side walls. The east one has the door to the test range corridor.
 	g:panels("concrete", v(-23, DECK, HALL_SOUTH), v(-20, SPRING, HALL_NORTH), 18, "wall")
 	g:panels("concrete", v(20, DECK, HALL_SOUTH), v(23, SPRING, 63), 18, "wall")
@@ -481,7 +528,7 @@ end
 local function hallInside(kit)
 	local g = kit:group("HallInside")
 	-- The catwalk along the east wall.
-	g:panels("plate", v(12, 16.4, 18), v(20, 17, 108), PANEL, "floor")
+	g:dirty(g:boxOf("plate", v(12, 16.4, 18), v(20, 17, 108)), "floor")
 	for z = 18.3, 108, 15 do
 		g:boxOf("steel", v(12.6, 15.8, z - 0.3), v(20, 16.4, z + 0.3))
 	end
@@ -584,7 +631,7 @@ end
 
 local function rangeCorridor(kit)
 	local g = kit:group("RangeCorridor")
-	g:panels("tileFloor", v(23, SLAB_BOTTOM, 59), v(52, DECK, 73), 8, "floor")
+	g:floor("tileFloor", v(23, SLAB_BOTTOM, 59), v(52, DECK, 73), false)
 	g:panels("tile", v(23, DECK, 59), v(52, 17, 61), 8, "wall")
 	g:panels("tile", v(23, DECK, 71), v(52, 17, 73), 8, "wall")
 	g:dirty(g:boxOf("tile", v(50, DECK, 61), v(52, 17, 71)), "wall")

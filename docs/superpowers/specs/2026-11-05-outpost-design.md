@@ -14,7 +14,7 @@ A concrete sea outpost on a rock, in thick fog.
 
 - **Fog:** dense teal-grey `Atmosphere`. Distant shapes fade out within a few hundred studs.
 - **Light:** cold, washed-out daylight. Warm amber lamps, bulbs and doorways are the main warm light.
-- **Surfaces:** weathered concrete, rusted orange steel, cracked tile, wet ground with puddles. Floors and walls are cut into panels with grime and water-streak overlays. Floor panels keep one material and differ only in shade; walls also mix in plaster.
+- **Surfaces:** weathered concrete, rusted orange steel, cracked tile, wet ground with puddles. Each floor is one smooth slab, so it reads as a single pour, with grime, hairline cracks and puddles drawn over it at a large scale so nothing visibly repeats, plus worn paint: walkway lines from the dock to the hall, hazard bands, a box around the screen tower, a red queue box at the Market, drains, covers and oil stains. Walls are cut into panels with grime and water-streak overlays, and mix in plaster.
 - **Detail:** cables strung overhead, a catwalk, stairs, antennas and dishes.
 - **Weather:** drips under the hall's skylight and low mist over the water. Rain around the camera was tried and removed, because the drops passing the camera looked wrong.
 
@@ -30,7 +30,7 @@ All positions are local to the Outpost origin, which sits far from the test room
 |---|---|---|
 | Dock (spawn) | Image 4 | Concrete pier on pillars, amber lamp posts, railings. Players spawn at its far end facing the Outpost. |
 | Gantry | Image 3 | Rusted orange steel frames over the end of the dock, with cables and a lightbox sign. |
-| Yard | Image 6 | Open deck with the screen tower: a column with a big screen head, lamps and cables. The front screen shows SPLIT DECK and the west side shows your Deck Power Rating. Benches face it. |
+| Yard | Image 6 | Open deck with the screen tower: a column with a big screen head, lamps and cables. The front screen shows SPLIT DECK and the west side shows your Deck Power Rating. |
 | Market Hall | Image 2 | Barrel-vaulted concrete hall with a skylight, a catwalk with stairs and cables across. |
 | Market | Image 2 | Kiosk at the far end of the hall under a red MARKET sign, the only booth. Prompt: "Soon". |
 | Test Range corridor | Image 5 | Flooded tiled corridor off the east side, fluorescent ceiling lights, a TEST RANGE sign and lift doors. The doors' prompt takes you to the test room. |
@@ -57,7 +57,7 @@ In the Outpost, guns and ability cards are off. The gun and cards are put away, 
 - **Cables and the skylight's light shaft:** `Beam`s, which cost no parts.
 - **Sign and screen text:** drawn on the client with the HUD's image fonts (`TypeLabel`), on parts tagged by the server.
 - **Lighting:** a client script applies the Outpost preset (fog, sky, colour grade, bloom) while you're in the Outpost, and restores the place's own lighting in the test room.
-- **Textures:** the drip streak, grime, water-streak and puddle overlays are local `rbxasset` files in `assets/textures/`, installed into Studio like the sounds. Puddles are textures on the floor rather than parts, so they can't z-fight with it.
+- **Textures:** the drip streak, grime, water-streak, crack and puddle overlays are local `rbxasset` files in `assets/textures/`, installed into Studio like the sounds. Puddles and paint are drawn on the floor rather than built from parts, so they can't z-fight with it. Floor slabs are turned so their front face points up, which fixes where painted marks land.
 - **Zones:** one small shared module says which zone allows combat. Input, the gun view, cards, the HUD and the servers all read it.
 
 ## Testing

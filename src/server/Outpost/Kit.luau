@@ -19,6 +19,9 @@ local GRIME_COLOR = Color3.fromRGB(34, 30, 26)
 local GRIME_TILE = 28
 local STREAK_COLOR = Color3.fromRGB(40, 34, 28)
 local PUDDLE_COLOR = Color3.fromRGB(30, 40, 42)
+local CRACK_COLOR = Color3.fromRGB(28, 28, 26)
+local PAINT_PIXELS = 12 -- per stud, for marks painted on floors
+local WEAR_TILE = 7 -- studs
 
 -- Looks to pick from for each kind of surface. Each part takes one, then a slight colour shift.
 -- Floors keep to one material, so neighbouring panels differ only in shade.
@@ -35,10 +38,10 @@ local SURFACES: { [string]: { { any } } } = {
 		{ M.Concrete, Color3.fromRGB(78, 84, 82) },
 		{ M.Concrete, Color3.fromRGB(93, 96, 90) },
 	},
+	-- Smooth, so the floor reads as one pour. Its look comes from the overlays, not a tiling material.
 	floor = {
-		{ M.Concrete, Color3.fromRGB(98, 105, 103) },
-		{ M.Concrete, Color3.fromRGB(104, 107, 101) },
-		{ M.Concrete, Color3.fromRGB(93, 99, 97) },
+		{ M.SmoothPlastic, Color3.fromRGB(98, 105, 103) },
+		{ M.SmoothPlastic, Color3.fromRGB(102, 106, 101) },
 	},
 	steel = {
 		{ M.Metal, Color3.fromRGB(56, 60, 62) },
@@ -265,6 +268,152 @@ function Kit:panels(kind: string, a: Vector3, b: Vector3, cell: number, how: str
 		end
 	end
 	return parts
+end
+
+local function overlay(kit: any, part: BasePart, face: Enum.NormalId, image: string, tile: number, color: Color3, transparency: number, layer: number)
+	local texture = Instance.new("Texture")
+	texture.Texture = image
+	texture.Face = face
+	texture.StudsPerTileU = tile
+	texture.StudsPerTileV = tile
+	texture.OffsetStudsU = kit:range(0, tile)
+	texture.OffsetStudsV = kit:range(0, tile)
+	texture.Color3 = color
+	texture.Transparency = transparency
+	texture.ZIndex = layer
+	texture.Parent = part
+	return texture
+end
+
+-- Marks painted on a floor slab, placed in the kit's local studs.
+local Painter = {}
+Painter.__index = Painter
+
+-- A floor as one slab, so it reads as a single pour rather than a grid of squares.
+-- Its front faces up, so painted marks land where they're asked to.
+-- Returns the slab and a painter for it.
+function Kit:floor(kind: string, low: Vector3, high: Vector3, wet: boolean?): (BasePart, any)
+	local color, material = self:surface(kind)
+	local size = Vector3.new(high.X - low.X, high.Z - low.Z, high.Y - low.Y)
+	-- Right along X and up along Z, which leaves the front facing straight up.
+	local cframe = CFrame.fromMatrix((low + high) / 2, Vector3.xAxis, Vector3.zAxis)
+	local slab = self:block(size, cframe, color, material)
+	slab.Reflectance = 0.04 -- a faint damp sheen
+	-- Big tiles, so nothing visibly repeats across a floor.
+	local up = Enum.NormalId.Front
+	overlay(self, slab, up, OutpostAssets.grime, 96, GRIME_COLOR, 0.5, 1)
+	overlay(self, slab, up, OutpostAssets.cracks, 90, CRACK_COLOR, 0.5, 2)
+	if wet then
+		overlay(self, slab, up, OutpostAssets.puddles, 64, PUDDLE_COLOR, 0.25, 3)
+	end
+
+	local gui = Instance.new("SurfaceGui")
+	gui.Name = "Paint"
+	gui.Face = up
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = PAINT_PIXELS
+	gui.LightInfluence = 1
+	gui.ClipsDescendants = true
+	gui.Parent = slab
+	-- Looking down at the front, its left edge is the slab's high X and its top edge the high Z.
+	return slab, setmetatable({ gui = gui, maxX = high.X, maxZ = high.Z, floor = color, kit = self }, Painter)
+end
+
+function Painter:frame(x0: number, z0: number, x1: number, z1: number): Frame
+	local frame = Instance.new("Frame")
+	frame.BorderSizePixel = 0
+	frame.Position = UDim2.fromOffset((self.maxX - math.max(x0, x1)) * PAINT_PIXELS, (self.maxZ - math.max(z0, z1)) * PAINT_PIXELS)
+	frame.Size = UDim2.fromOffset(math.abs(x1 - x0) * PAINT_PIXELS, math.abs(z1 - z0) * PAINT_PIXELS)
+	frame.Parent = self.gui
+	return frame
+end
+
+-- Old paint: blotches of the floor's own colour show through.
+function Painter:wear(frame: Frame, amount: number?)
+	local tile = WEAR_TILE * PAINT_PIXELS
+	frame.ClipsDescendants = true
+	local wear = Instance.new("ImageLabel")
+	wear.BackgroundTransparency = 1
+	wear.Image = OutpostAssets.grime
+	wear.ImageColor3 = self.floor
+	wear.ImageTransparency = amount or 0
+	wear.ScaleType = Enum.ScaleType.Tile
+	wear.TileSize = UDim2.fromOffset(tile, tile)
+	wear.Position = UDim2.fromOffset(-self.kit:range(0, tile), -self.kit:range(0, tile))
+	wear.Size = UDim2.new(1, tile, 1, tile)
+	wear.Parent = frame
+end
+
+-- A painted strip between two corners.
+function Painter:mark(x0: number, z0: number, x1: number, z1: number, color: Color3, transparency: number): Frame
+	local frame = self:frame(x0, z0, x1, z1)
+	frame.BackgroundColor3 = color
+	frame.BackgroundTransparency = transparency
+	self:wear(frame)
+	return frame
+end
+
+-- A dashed line running along Z at x.
+function Painter:dashes(x: number, z0: number, z1: number, width: number, dash: number, gap: number, color: Color3, transparency: number)
+	local z = math.min(z0, z1)
+	while z < math.max(z0, z1) do
+		local finish = math.min(z + dash, math.max(z0, z1))
+		self:mark(x - width / 2, z, x + width / 2, finish, color, transparency)
+		z = finish + gap
+	end
+end
+
+-- A painted box outline.
+function Painter:outline(x0: number, z0: number, x1: number, z1: number, width: number, color: Color3, transparency: number)
+	self:mark(x0, z0, x1, z0 + width, color, transparency)
+	self:mark(x0, z1 - width, x1, z1, color, transparency)
+	self:mark(x0, z0 + width, x0 + width, z1 - width, color, transparency)
+	self:mark(x1 - width, z0 + width, x1, z1 - width, color, transparency)
+end
+
+-- A round patch, such as a manhole cover or a damp spot.
+function Painter:disc(x: number, z: number, diameter: number, color: Color3, transparency: number): Frame
+	local half = diameter / 2
+	local frame = self:frame(x - half, z - half, x + half, z + half)
+	frame.BackgroundColor3 = color
+	frame.BackgroundTransparency = transparency
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.5, 0)
+	corner.Parent = frame
+	return frame
+end
+
+-- A drain grate: a dark slot with bars across it.
+function Painter:grate(x0: number, z0: number, x1: number, z1: number)
+	local frame = self:frame(x0, z0, x1, z1)
+	frame.BackgroundColor3 = Color3.fromRGB(20, 22, 24)
+	frame.BackgroundTransparency = 0.1
+	local across = math.abs(x1 - x0) >= math.abs(z1 - z0)
+	local length = if across then math.abs(x1 - x0) else math.abs(z1 - z0)
+	local bars = math.floor(length / 0.4)
+	for index = 1, bars - 1 do
+		local bar = Instance.new("Frame")
+		bar.BorderSizePixel = 0
+		bar.BackgroundColor3 = Color3.fromRGB(78, 82, 82)
+		bar.Size = if across then UDim2.new(0, 2, 1, 0) else UDim2.new(1, 0, 0, 2)
+		bar.Position = if across then UDim2.fromScale(index / bars, 0) else UDim2.fromScale(0, index / bars)
+		bar.Parent = frame
+	end
+end
+
+-- A dark irregular stain, like oil or old water.
+function Painter:stain(x: number, z: number, width: number, length: number, transparency: number?)
+	local frame = self:frame(x - width / 2, z - length / 2, x + width / 2, z + length / 2)
+	frame.BackgroundTransparency = 1
+	local stain = Instance.new("ImageLabel")
+	stain.BackgroundTransparency = 1
+	stain.Image = OutpostAssets.grime
+	stain.ImageColor3 = Color3.fromRGB(18, 20, 20)
+	stain.ImageTransparency = transparency or 0.3
+	stain.ImageRectOffset = Vector2.new(self.kit:range(0, 256), self.kit:range(0, 256))
+	stain.ImageRectSize = Vector2.new(256, 256)
+	stain.Size = UDim2.fromScale(1, 1)
+	stain.Parent = frame
 end
 
 function Kit:wedge(size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material?): BasePart
