@@ -6,85 +6,16 @@
       "CardCore": { "$path": "src/shared/CardCore" },
       "Movement": { "$path": "src/shared/Movement" },
       "Guns": { "$path": "src/shared/Guns" },
-      "GunModels": { "$path": "assets/models/GunModels.rbxm" }
-    },
-    "Lighting": {
-      "$properties": {
-        "LightingStyle": "Soft",
-        "PrioritizeLightingQuality": false,
-        "Ambient": [0.50196, 0.50196, 0.50196],
-        "OutdoorAmbient": [0.50196, 0.50196, 0.50196],
-        "Brightness": 1.98125,
-        "ClockTime": 14,
-        "GeographicLatitude": 41.7333,
-        "ColorShift_Bottom": [0, 0, 0],
-        "ColorShift_Top": [0, 0, 0],
-        "EnvironmentDiffuseScale": 0,
-        "EnvironmentSpecularScale": 0,
-        "ExposureCompensation": 0,
-        "GlobalShadows": false,
-        "ShadowSoftness": 0.5,
-        "FogColor": [0.74902, 0.74902, 0.74902],
-        "FogEnd": 100000,
-        "FogStart": 0
-      },
-      "ColorGrading": { "$path": "assets/models/ColorGrading.rbxm" },
-      "Bloom": { "$path": "assets/models/Bloom.rbxm" }
+      "GunModels": { "$className": "Folder", "$ignoreUnknownInstances": true }
     },
     "Workspace": {
-      "$properties": {
-        "Gravity": 150,
-        "StreamingEnabled": false,
-        "FallenPartsDestroyHeight": -500,
-        "AirDensity": 0.0012,
-        "GlobalWind": [0, 0, 0]
-      }
-    },
-    "Players": {
-      "$properties": {
-        "CharacterAutoLoads": true,
-        "UseStrafingAnimations": false
-      }
-    },
-    "SoundService": {
-      "$properties": {
-        "AmbientReverb": "NoReverb",
-        "DistanceFactor": 3.33,
-        "DopplerScale": 1,
-        "RolloffScale": 1,
-        "RespectFilteringEnabled": false
-      }
-    },
-    "StarterGui": {
-      "$properties": {
-        "ResetPlayerGuiOnSpawn": true,
-        "ScreenOrientation": "LandscapeSensor",
-        "ShowDevelopmentGui": true
-      }
+      "$properties": { "Gravity": 150, "StreamingEnabled": false }
     },
     "ServerScriptService": {
       "CardCoreServer": { "$path": "src/server" }
     },
     "StarterPlayer": {
-      "$properties": {
-        "CameraMode": "LockFirstPerson",
-        "CameraMaxZoomDistance": 400,
-        "CameraMinZoomDistance": 0.5,
-        "CharacterWalkSpeed": 16,
-        "CharacterUseJumpPower": true,
-        "CharacterJumpPower": 50,
-        "CharacterJumpHeight": 7.2,
-        "CharacterMaxSlopeAngle": 89,
-        "AutoJumpEnabled": true,
-        "EnableMouseLockOption": true,
-        "LoadCharacterAppearance": true,
-        "CharacterBreakJointsOnDeath": true,
-        "HealthDisplayDistance": 100,
-        "NameDisplayDistance": 100,
-        "DevComputerMovementMode": "UserChoice",
-        "DevComputerCameraMovementMode": "UserChoice",
-        "DevTouchMovementMode": "UserChoice"
-      },
+      "$properties": { "CameraMode": "LockFirstPerson" },
       "StarterCharacterScripts": {
         "Health": { "$path": "src/character/Health.server.luau" }
       },

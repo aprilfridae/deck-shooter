@@ -1,8 +1,9 @@
--- The uploaded font sheets. Update these after re-running tools/export_font_atlas.py.
+-- The font sheets, uploaded as Fridae Studios group assets. After re-running
+-- tools/export_font_atlas.py, upload each changed sheet to the group and update its id here.
 return {
-	Number = "rbxassetid://137270400730687",
-	NumberThin = "rbxassetid://94779996350856",
-	Title = "rbxassetid://139812295713664",
-	Label = "rbxassetid://116796801027022",
-	LabelBold = "rbxassetid://129859622111182",
+	Number = "rbxassetid://107035546340709",
+	NumberThin = "rbxassetid://86698119749047",
+	Title = "rbxassetid://120133313550705",
+	Label = "rbxassetid://133731296446697",
+	LabelBold = "rbxassetid://116643251898529",
 }
