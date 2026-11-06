@@ -54,7 +54,7 @@ Movement matters here too: parapets to vault, a catwalk to climb, stairs and ram
 - Falling into the sea or going more than 320 studs out sends the player back to the dock. The server checks every 0.25s.
 
 ## Safe zone
-nThe camera is third person here, and the body turns to face the way it walks. That holds from the moment a character spawns.
+The camera is third person here, and the body turns to face the way it walks. That holds from the moment a character spawns.
 
 In the Outpost, guns and cards are off:
 
