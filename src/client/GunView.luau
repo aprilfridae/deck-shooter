@@ -1,5 +1,6 @@
 -- The gun held in view, with the arms holding it. Uses the model in ReplicatedStorage.GunModels named after the gun,
 local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
+local BodyStyle = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("BodyStyle"))
 -- or a grey block if that model hasn't been imported.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -28,9 +29,9 @@ local JITTER_TURN = math.rad(0.6)
 local JITTER_SEED = 100
 local IDLE_JITTER = 0.35 -- share of the jitter left while standing, walking or holding a card
 -- Motion blur: Roblox can't blur one object, so faded copies of the gun and arms fill the jump between two poses.
-local SMEAR_COPIES = 4
-local SMEAR_TIME = 0.09
-local SMEAR_OPACITY = 0.5
+local SMEAR_COPIES = BodyStyle.smearCopies
+local SMEAR_TIME = BodyStyle.smearTime
+local SMEAR_OPACITY = BodyStyle.smearOpacity
 local HOLSTER_WAIT = 0.3 -- how long the gun stays down waiting for the server to swap it
 
 -- Where the hands sit. Primary wrists sit along the gun as a share of its length.

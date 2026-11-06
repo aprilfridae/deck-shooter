@@ -1,5 +1,5 @@
 -- The first-person arms. Bends the arm bones so each hand reaches its spot on the held gun.
-local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
+local BodyStyle = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("BodyStyle"))
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ArmPose = require(ReplicatedStorage.Guns.ArmPose)
@@ -12,11 +12,6 @@ local FINGER_CURL = math.rad(40)
 local THUMB_CURL = math.rad(20)
 local FOREARM_TWIST = 0.7 -- share of the hand's turn the forearm takes, so the wrist doesn't pinch
 local FINGERS = { "Indice", "DedoMedio", "Anular", "Menique" }
--- A faint glowing outline round the arms. It lights nothing else.
-local SKIN_COLOR = Palette.DeepNavy
-local GLOW_COLOR = Palette.DataCyan
-local GLOW_FILL = 0.82 -- how see-through the glow is over the arm itself
-local GLOW_EDGE = 0.3 -- and the outline
 local FINGER_JITTER = 1.2 -- degrees at every finger and thumb joint
 -- Each bone twitches on its own, by up to this many degrees. They add up down the arm.
 local JITTER_BONES = {
@@ -114,8 +109,8 @@ local function makeRig(lit: boolean?): any
 		skin:Destroy()
 	end
 	mesh.TextureID = ""
-	mesh.Material = Enum.Material.SmoothPlastic
-	mesh.Color = SKIN_COLOR
+	mesh.Material = BodyStyle.material
+	mesh.Color = BodyStyle.skin
 	local bones = {}
 	for _, bone in mesh:GetDescendants() do
 		if bone:IsA("Bone") then
@@ -124,11 +119,11 @@ local function makeRig(lit: boolean?): any
 	end
 	if lit then
 		local outline = Instance.new("Highlight")
-		outline.OutlineColor = GLOW_COLOR
-		outline.FillColor = GLOW_COLOR
-		outline.FillTransparency = GLOW_FILL
-		outline.OutlineTransparency = GLOW_EDGE
-		outline.DepthMode = Enum.HighlightDepthMode.Occluded
+		outline.OutlineColor = BodyStyle.glow
+		outline.FillColor = BodyStyle.glow
+		outline.FillTransparency = BodyStyle.glowFill
+		outline.OutlineTransparency = BodyStyle.glowEdge
+		outline.DepthMode = BodyStyle.depthMode
 		outline.Parent = model
 	end
 	return {
