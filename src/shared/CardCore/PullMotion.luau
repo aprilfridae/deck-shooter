@@ -4,9 +4,10 @@ local Tier = require("./Tier")
 local Variant = require("./Variant")
 
 local PullMotion = {
-	ARRIVE_TIME = 0.7, -- seconds
+	MENU_FADE = 0.2, -- seconds
+	ARRIVE_TIME = 0.7,
 	RIP_TIME = 0.6,
-	RISE_TIME = 0.45,
+	SLIDE_TIME = 0.45,
 	SPREAD_TIME = 0.35,
 	TURN_TIME = 0.35,
 	FLIP_TIME = 0.28,
@@ -48,11 +49,11 @@ function PullMotion.phases(cards: { any }): any
 		wait = math.max(wait, PullMotion.buildTime(card))
 	end
 	local rip = PullMotion.ARRIVE_TIME
-	local rise = rip + PullMotion.RIP_TIME
-	local spread = rise + PullMotion.RISE_TIME
+	local slide = rip + PullMotion.RIP_TIME
+	local spread = slide + PullMotion.SLIDE_TIME
 	local build = spread + PullMotion.SPREAD_TIME
 	local flip = build + wait
-	return { rip = rip, rise = rise, spread = spread, build = build, flip = flip, rest = flip + PullMotion.TURN_TIME }
+	return { rip = rip, slide = slide, spread = spread, build = build, flip = flip, rest = flip + PullMotion.TURN_TIME }
 end
 
 -- How far one piece of the strip has peeled, from 0 to 1, when the rip is this far along.

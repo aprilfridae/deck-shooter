@@ -63,10 +63,11 @@ sheet.BorderSizePixel = 0
 sheet.Size = UDim2.fromScale(1, 1)
 sheet.Parent = gui
 
-local queue: { { run: (Frame, () -> ()) -> (), auto: boolean } } = {}
+local queue: { { run: (Frame, () -> (), boolean) -> (), auto: boolean } } = {}
 local stage: Frame? = nil
 local playing: { auto: boolean, settled: boolean?, done: () -> () }? = nil
 local watching: RBXScriptConnection? = nil
+local holdingMenu = false -- a pack opening has the nav faded out
 
 local PullReveal = {}
 
@@ -78,6 +79,7 @@ end
 
 local function stop()
 	playing = nil
+	holdingMenu = false
 	if stage then
 		stage:Destroy()
 		stage = nil
@@ -94,6 +96,8 @@ local function playNext()
 		stage:Destroy()
 		stage = nil
 	end
+	local menuGone = holdingMenu
+	holdingMenu = false
 	local entry = table.remove(queue, 1)
 	if not entry then
 		stop()
@@ -119,11 +123,11 @@ local function playNext()
 		end
 	end
 	playing = { auto = entry.auto, done = done }
-	entry.run(frame, done)
+	entry.run(frame, done, menuGone)
 end
 
 -- A player's own reveal goes ahead of Auto Open's, and cuts one short.
-local function enqueue(job: (Frame, () -> ()) -> (), auto: boolean?)
+local function enqueue(job: (Frame, () -> (), boolean) -> (), auto: boolean?)
 	local entry = { run = job, auto = auto == true }
 	if entry.auto then
 		table.insert(queue, entry)
@@ -235,19 +239,25 @@ end
 -- Plays by itself in the 3D world beside the menu, so the menu stays usable. Opening another
 -- pack once this one has finished moves straight on to it.
 function PullReveal.pack(pack: string, cards: { any })
-	enqueue(function(frame: Frame, done: () -> ())
+	enqueue(function(frame: Frame, done: () -> (), menuGone: boolean)
 		sheet.Visible = false
-		PullStage.play(frame, pack, cards, {
-			inspect = inspect,
-			rested = function(line: number)
-				if stage == frame and playing then
-					playing.settled = true
-				end
-				local close = button(frame, "DONE", 0, CardInspect.SCREEN_X)
-				close.Position = UDim2.new(CardInspect.SCREEN_X, 0, 0, line)
-				close.Activated:Once(done)
-			end,
-		})
+		holdingMenu = true
+		task.delay(if menuGone then 0 else PullMotion.MENU_FADE, function()
+			if not frame.Parent then
+				return
+			end
+			PullStage.play(frame, pack, cards, {
+				inspect = inspect,
+				rested = function(line: number)
+					if stage == frame and playing then
+						playing.settled = true
+					end
+					local close = button(frame, "DONE", 0, CardInspect.SCREEN_X)
+					close.Position = UDim2.new(CardInspect.SCREEN_X, 0, 0, line)
+					close.Activated:Once(done)
+				end,
+			})
+		end)
 	end)
 	if playing and playing.settled then
 		playing.done()
@@ -365,6 +375,11 @@ function PullReveal.summary(result: any)
 		end
 		advance()
 	end)
+end
+
+-- Whether the nav should be faded out, leaving the pack opening the left of the screen.
+function PullReveal.holdsMenu(): boolean
+	return holdingMenu
 end
 
 function PullReveal.close()

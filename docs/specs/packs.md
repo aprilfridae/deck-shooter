@@ -106,9 +106,10 @@ Each has a large `S1` reading up the wrapper, an outline and a strip of hazard s
 
 This hasn't been mocked up. River judges it in Play. A rare pull is a Prototype or any variant.
 
-- **One pack:** clicking a pack plays the whole opening by itself, held up in 3D beside the menu, where an inspected card sits. The pack spins in and shakes, its top strip peels off, light in the colour of the best card shows at the tear, and the cards rise out. They spread out face down on the pack's own back design, with the best card in the middle, and shake for as long as the best card needs. All 3 then turn over at once. The menu stays usable, and opening another pack once this one has finished moves straight on to it.
+- **One pack:** clicking a pack plays the whole opening by itself, held up in 3D beside the menu, where an inspected card sits. The nav and income line fade out first, and fade back after `DONE`. The pack spins in and shakes, the strip down its right side peels off, light in the colour of the best card shows at the tear, and the cards slide out of the side. They spread out face down on the pack's own back design, with the best card in the middle, and shake for as long as the best card needs. All 3 then turn over at once. The menu stays usable, and opening another pack once this one has finished moves straight on to it.
 - **Rare cards:** a Redline or better flashes the screen in the best card's colour when the cards turn, and rarity names show under those cards.
 - **Zero-Day:** the world dims further and the flash is brightest.
+- **Particles:** the best card picks them, with a small burst at the rip and the rest at the flip. Field gets drifting flecks, Redline red sparks, Prototype acid pixels that move in jumps, Chromatic confetti, Redacted sliding black bars, and Zero-Day cyan rain that keeps falling until `DONE`.
 - **Open All:** each rare stack shows until clicked, with `SKIP` to pass the rest, then a list of everything that arrived.
 - **Auto Open:** a rare pull plays by itself beside the middle of the screen and leaves after 4 seconds. The world stays usable, so an idle player's screen never blocks. Only 3 can wait at once and the rest aren't shown, except a Zero-Day, which always is. A pack the player opens goes first.
 

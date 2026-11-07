@@ -7,6 +7,7 @@ local SoundService = game:GetService("SoundService")
 local Workspace = game:GetService("Workspace")
 
 local Packs = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Packs"))
+local PullMotion = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("PullMotion"))
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local GunSounds = require(Guns:WaitForChild("GunSounds"))
 local MenuState = require(Guns:WaitForChild("MenuState"))
@@ -53,6 +54,15 @@ gui.DisplayOrder = 5 -- under the title screen
 gui.Enabled = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
+-- The nav and income line fade through this while a pack opens beside them. It only holds them
+-- during a fade, because a canvas group can soften small text.
+local fader = Instance.new("CanvasGroup")
+fader.BackgroundTransparency = 1
+fader.BorderSizePixel = 0
+fader.Size = UDim2.fromScale(1, 1)
+fader.Visible = false
+fader.Parent = gui
+
 local panel = MenuPanel.new(gui)
 MenuCamera.follow(panel)
 
@@ -73,6 +83,7 @@ local income: Frame? = nil
 local rows: { [string]: any } = {}
 local openPage: string? = nil
 local profileUser = player.UserId
+local faded = 0 -- 1 when the nav has gone
 
 local function paint()
 	for name, row in rows do
@@ -139,7 +150,7 @@ local function buildNav()
 	block.AnchorPoint = Vector2.new(0, 1)
 	block.Position = UDim2.new(0, NAV_LEFT * unit, 1, -NAV_BOTTOM * unit)
 	block.Size = UDim2.fromOffset(NAV_WIDTH * unit, NAV_ROW * unit * #BUTTONS)
-	block.Parent = gui
+	block.Parent = if faded > 0 then fader else gui
 	local outline = Instance.new("UIStroke")
 	outline.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	outline.Color = Palette.Bone
@@ -175,7 +186,7 @@ local function buildNav()
 	if income then
 		income:Destroy()
 	end
-	income = IncomeLine.new(gui)
+	income = IncomeLine.new(if faded > 0 then fader else gui)
 	paint()
 end
 
@@ -187,8 +198,25 @@ Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(functio
 	end
 end)
 
+local function fadeNav(dt: number)
+	local target = if PullReveal.holdsMenu() then 1 else 0
+	if faded == target then
+		return
+	end
+	local stepSize = dt / PullMotion.MENU_FADE
+	faded = if target > faded then math.min(faded + stepSize, 1) else math.max(faded - stepSize, 0)
+	if nav and income then
+		local home = if faded > 0 then fader else gui
+		nav.Parent = home
+		income.Parent = home
+	end
+	fader.GroupTransparency = faded
+	fader.Visible = faded > 0 and faded < 1
+end
+
 -- The menu belongs to the Outpost, and stays away while the title screen is up.
-RunService.RenderStepped:Connect(function()
+RunService.RenderStepped:Connect(function(dt: number)
+	fadeNav(dt)
 	local visible = Zones.of(player) == Zones.Outpost and not MenuState.isOpen(MenuState.shared)
 	if nav and income then
 		nav.Visible = not CardInspect.isOpen() -- it would sit on top of the card
