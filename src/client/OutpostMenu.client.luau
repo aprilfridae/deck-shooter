@@ -11,6 +11,7 @@ local MenuState = require(Guns:WaitForChild("MenuState"))
 local Palette = require(Guns:WaitForChild("Palette"))
 local Zones = require(Guns:WaitForChild("Zones"))
 local CardInspect = require(script.Parent.CardInspect)
+local IncomeLine = require(script.Parent.IncomeLine)
 local MenuCamera = require(script.Parent.MenuCamera)
 local LoadoutPanel = require(script.Parent.LoadoutPanel)
 local MenuPanel = require(script.Parent.MenuPanel)
@@ -63,6 +64,7 @@ hoverSound.Volume = HOVER_VOLUME
 hoverSound.Parent = SoundService
 
 local nav: Frame? = nil
+local income: Frame? = nil
 local rows: { [string]: any } = {}
 local openPage: string? = nil
 local profileUser = player.UserId
@@ -163,6 +165,10 @@ local function buildNav()
 		})
 	end
 	nav = block
+	if income then
+		income:Destroy()
+	end
+	income = IncomeLine.new(gui)
 	paint()
 end
 
@@ -177,8 +183,9 @@ end)
 -- The menu belongs to the Outpost, and stays away while the title screen is up.
 RunService.RenderStepped:Connect(function()
 	local visible = Zones.of(player) == Zones.Outpost and not MenuState.isOpen(MenuState.shared)
-	if nav then
+	if nav and income then
 		nav.Visible = not CardInspect.isOpen() -- it would sit on top of the card
+		income.Visible = nav.Visible
 	end
 	if visible == gui.Enabled then
 		return

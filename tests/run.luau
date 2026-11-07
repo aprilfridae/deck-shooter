@@ -51,6 +51,7 @@ local listed = {
 	cardart_spec = true,
 	packs_spec = true,
 	rebirth_spec = true,
+	packtext_spec = true,
 }
 
 require("./tier_spec")
@@ -62,6 +63,7 @@ require("./cardtext_spec")
 require("./cardart_spec")
 require("./packs_spec")
 require("./rebirth_spec")
+require("./packtext_spec")
 require("./inventory_spec")
 require("./variant_spec")
 require("./deck_spec")
