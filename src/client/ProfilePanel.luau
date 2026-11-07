@@ -28,8 +28,6 @@ local GRID_TOP = 0.176
 local GRID_GAP = 0.006
 local CELL_WIDTH = 0.0661 -- a card's shape, with CELL_HEIGHT
 local CELL_HEIGHT = 0.1057
-local PREVIEW_COLUMN = 5 -- in Studio, where the Zero-Day previews start, under the count
-local PREVIEW_ROW = 2
 local PAGE_TOP = 0.172
 
 local ProfilePanel = {}
@@ -58,21 +56,35 @@ local function header(content: Frame, profile: any)
 	PanelKit.line(content, `DPR {profile.dpr}`, INFO_LEFT + STATS_GAP, STATS_LINE)
 end
 
-local function cell(page: Frame, column: number, row: number, options: any)
+local function cell(grid: ScrollingFrame, column: number, row: number, options: any)
 	local unit = MenuPanel.unit()
 	local x = PanelKit.MARGIN + (column - 1) * (CELL_WIDTH + GRID_GAP)
-	local top = GRID_TOP + (row - 1) * (CELL_HEIGHT + GRID_GAP)
+	local top = (row - 1) * (CELL_HEIGHT + GRID_GAP)
 	options.width = CELL_WIDTH * unit
 	options.position = UDim2.fromOffset(x * unit, top * unit)
-	CardFace.new(page, options)
+	CardFace.new(grid, options)
 end
 
--- Nobody can own a Zero-Day yet, so Studio shows each card as one to judge the look.
-local function zeroDayPreviews(page: Frame, cards: { any })
-	for index, card in cards do
-		local column = PREVIEW_COLUMN + (index - 1) % 2
-		local row = PREVIEW_ROW + math.floor((index - 1) / 2)
-		cell(page, column, row, { cardId = card.cardId, tier = "Field", variant = Variant.ZeroDay, serial = 1 })
+-- Scrolls once there are more rows than fit on the page.
+local function scrollingGrid(page: Frame, rows: number): ScrollingFrame
+	local unit = MenuPanel.unit()
+	local grid = Instance.new("ScrollingFrame")
+	grid.BackgroundTransparency = 1
+	grid.BorderSizePixel = 0
+	grid.CanvasSize = UDim2.fromOffset(0, rows * (CELL_HEIGHT + GRID_GAP) * unit)
+	grid.Position = UDim2.fromOffset(0, GRID_TOP * unit)
+	grid.ScrollBarImageColor3 = PanelKit.INK
+	grid.ScrollBarThickness = 3
+	grid.ScrollingDirection = Enum.ScrollingDirection.Y
+	grid.Size = UDim2.new(1, 0, 1, -GRID_TOP * unit)
+	grid.Parent = page
+	return grid
+end
+
+-- Nobody can own a Zero-Day yet, so Studio shows each card as one in a row of its own.
+local function zeroDayPreviews(grid: ScrollingFrame, cards: { any }, row: number)
+	for column, card in cards do
+		cell(grid, column, row, { cardId = card.cardId, tier = "Field", variant = Variant.ZeroDay, serial = 1 })
 	end
 end
 
@@ -82,10 +94,13 @@ local function cardGrid(page: Frame, profile: any)
 	PanelKit.label(page, "Title", COUNT_SIZE, RIGHT, COUNT_LINE, true)
 		:set(string.format("%02d/%02d", index.owned, index.total))
 	PanelKit.label(page, "LabelBold", PanelKit.SMALL_SIZE, RIGHT, COUNT_LINE + 0.016, true):set("OWNED")
+	local tiers = #index.cards[1].tiers
+	local preview = RunService:IsStudio()
+	local grid = scrollingGrid(page, if preview then tiers + 1 else tiers)
 	for column, card in index.cards do
 		for row, entry in card.tiers do
 			local owned = entry.count > 0
-			cell(page, column, row, {
+			cell(grid, column, row, {
 				cardId = card.cardId,
 				tier = entry.tier,
 				variant = entry.variant,
@@ -94,8 +109,8 @@ local function cardGrid(page: Frame, profile: any)
 			})
 		end
 	end
-	if RunService:IsStudio() then
-		zeroDayPreviews(page, index.cards)
+	if preview then
+		zeroDayPreviews(grid, index.cards, tiers + 1)
 	end
 end
 
