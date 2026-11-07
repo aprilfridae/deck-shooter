@@ -38,17 +38,28 @@ local CROSSHAIR_FILL = 6.4 -- radius, inside the baked ring
 local RING_THICKNESS = 1.2
 local OUTLINE_THICKNESS = 2
 
-local BACK_NAME_LINE = 28
+local BLOCK_BOTTOM = 86 -- the back's coloured block
+local BACK_ICON = Vector2.new(24, 24)
+local BACK_ICON_ARM = 10
+local BACK_LINE_THICKNESS = 1.2
+local BACK_COPIES_LINE = 19
+local BACK_NAME_LINE = 64
 local BACK_NAME_SIZE = 13
-local BACK_RARITY_LINE = 44
-local BACK_TOP_RULE = 54
-local BACK_BOTTOM_RULE = 204
-local BACK_RULE_THICKNESS = 0.8
-local BLURB_LINE = 72
-local BLURB_STEP = 13
-local BLURB_WIDTH = 20 -- letters
-local STATS_LINE = 128
-local STATS_STEP = 16
+local BACK_RARITY_LINE = 78
+local MAIN_LABEL_LINE = 106
+local MAIN_VALUE_LINE = 140
+local MAIN_VALUE_SIZE = 34
+local SMALL_LABEL_LINE = 156
+local SMALL_VALUE_LINE = 178
+local SMALL_VALUE_SIZE = 22
+local SMALL_SECOND_LEFT = 80
+local UNIT_GAP = 3
+local BLURB_SIZE = 9
+local BLURB_BOTTOM = 208
+local BLURB_STEP = 11
+local BLURB_WIDTH = 22 -- letters
+local BACK_STRIPES_TOP = 214
+local BACK_STRIPES_HEIGHT = 12
 
 local SET_CODES = { set_01 = "S01" }
 local GHOST_TRANSPARENCY = 0.75
@@ -185,11 +196,11 @@ local function band(root: GuiObject, unit: number, halfWidth: number, color: Col
 	return gradient
 end
 
-local function stripes(root: GuiObject, unit: number, color: Color3): ImageLabel
+local function stripes(root: GuiObject, unit: number, color: Color3, area: Rect): ImageLabel
 	local block = Instance.new("Frame")
 	block.BackgroundTransparency = 1
-	block.Position = UDim2.fromOffset(BLOCK_LEFT * unit, BLOCK_TOP * unit)
-	block.Size = UDim2.fromOffset(BLOCK_WIDTH * unit, BLOCK_HEIGHT * unit)
+	block.Position = UDim2.fromOffset(area.Min.X * unit, area.Min.Y * unit)
+	block.Size = UDim2.fromOffset(area.Width * unit, area.Height * unit)
 	block.ClipsDescendants = true
 	block.Parent = root
 	local image = Instance.new("ImageLabel")
@@ -317,7 +328,8 @@ function CardFace.new(parent: Instance, options: Options): GuiObject
 		bigSerial = text(root, unit, "LabelBold", size, style.ink, BLOCK_LEFT, BIG_SERIAL_LINE)
 		bigSerial:set(serial)
 	else
-		stripesImage = stripes(root, unit, style.stripes)
+		local area = Rect.new(BLOCK_LEFT, BLOCK_TOP, BLOCK_LEFT + BLOCK_WIDTH, BLOCK_TOP + BLOCK_HEIGHT)
+		stripesImage = stripes(root, unit, style.stripes, area)
 	end
 
 	local corner = options.corner or if look == "ZeroDay" then nil else serial
@@ -372,6 +384,55 @@ function CardFace.new(parent: Instance, options: Options): GuiObject
 	return root
 end
 
+-- The back's top: a block of the rarity's colour, square along its bottom edge.
+local function backBlock(root: GuiObject, unit: number, color: Color3)
+	local top = Instance.new("Frame")
+	top.BackgroundColor3 = color
+	top.BorderSizePixel = 0
+	top.Size = UDim2.fromOffset(WIDTH * unit, (CORNER * 2) * unit)
+	top.Parent = root
+	rounded(top, UDim.new(0, CORNER * unit))
+	local square = Instance.new("Frame")
+	square.BackgroundColor3 = color
+	square.BorderSizePixel = 0
+	square.Position = UDim2.fromOffset(0, CORNER * unit)
+	square.Size = UDim2.fromOffset(WIDTH * unit, (BLOCK_BOTTOM - CORNER) * unit)
+	square.Parent = root
+end
+
+local function backIcon(root: GuiObject, unit: number, color: Color3)
+	local thickness = BACK_LINE_THICKNESS * unit
+	local function centred(size: Vector2): Frame
+		local frame = Instance.new("Frame")
+		frame.BackgroundColor3 = color
+		frame.BorderSizePixel = 0
+		frame.AnchorPoint = Vector2.new(0.5, 0.5)
+		frame.Position = UDim2.fromOffset(BACK_ICON.X * unit, BACK_ICON.Y * unit)
+		frame.Size = UDim2.fromOffset(size.X, size.Y)
+		frame.Parent = root
+		return frame
+	end
+	centred(Vector2.new(thickness, BACK_ICON_ARM * 2 * unit))
+	centred(Vector2.new(BACK_ICON_ARM * 2 * unit, thickness))
+	local ring = centred(Vector2.new(CROSSHAIR_FILL * 2 * unit, CROSSHAIR_FILL * 2 * unit))
+	ring.BackgroundTransparency = 1
+	rounded(ring, UDim.new(0.5, 0))
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = color
+	stroke.Thickness = thickness
+	stroke.Parent = ring
+end
+
+-- A stat's label with its value below, and the value's unit small beside it.
+local function backStat(root: GuiObject, unit: number, ink: Color3, stat: any, left: number, labelLine: number, valueLine: number, size: number)
+	text(root, unit, "Label", TEXT_SIZE, ink, left, labelLine):set(stat.label)
+	local parts = string.split(stat.value, " ")
+	local value = text(root, unit, "LabelBold", size, ink, left, valueLine)
+	value:set(parts[1])
+	local after = left + value:width() / unit + UNIT_GAP
+	text(root, unit, "Label", TEXT_SIZE, ink, after, valueLine):set(parts[2] or "")
+end
+
 -- The card's reverse, drawn the same size as its face.
 function CardFace.back(parent: Instance, options: Options, count: number): GuiObject
 	local card = Cards.byId[options.cardId]
@@ -383,34 +444,32 @@ function CardFace.back(parent: Instance, options: Options, count: number): GuiOb
 	root.BorderSizePixel = 0
 	root.Size = UDim2.fromOffset(options.width, HEIGHT * unit)
 	rounded(root, UDim.new(0, CORNER * unit))
+
+	backBlock(root, unit, style.rarity)
+	backIcon(root, unit, style.back)
+	text(root, unit, "Label", TEXT_SIZE, style.back, RIGHT, BACK_COPIES_LINE, true):set(CardText.copies(count))
+	text(root, unit, "LabelBold", BACK_NAME_SIZE, style.back, LEFT, BACK_NAME_LINE):set(string.upper(card.name))
+	text(root, unit, "Label", TEXT_SIZE, style.back, LEFT, BACK_RARITY_LINE)
+		:set(CardLook.rarityText(options.tier, options.variant))
+	if CardLook.showsSetCode(options.tier, options.variant) then
+		text(root, unit, "Label", TEXT_SIZE, style.back, RIGHT, BACK_RARITY_LINE, true):set(SET_CODES[card.set] or "")
+	end
+
+	local stats = CardText.stats(options.cardId, options.tier)
+	backStat(root, unit, style.ink, stats[1], LEFT, MAIN_LABEL_LINE, MAIN_VALUE_LINE, MAIN_VALUE_SIZE)
+	for index = 2, #stats do
+		local left = if index == 2 then LEFT else SMALL_SECOND_LEFT
+		backStat(root, unit, style.ink, stats[index], left, SMALL_LABEL_LINE, SMALL_VALUE_LINE, SMALL_VALUE_SIZE)
+	end
+
+	local lines = CardText.wrap(CardText.blurb(options.cardId), BLURB_WIDTH)
+	for index, line in lines do
+		text(root, unit, "Label", BLURB_SIZE, style.ink, LEFT, BLURB_BOTTOM - (#lines - index) * BLURB_STEP):set(line)
+	end
+	stripes(root, unit, style.ink, Rect.new(LEFT, BACK_STRIPES_TOP, RIGHT, BACK_STRIPES_TOP + BACK_STRIPES_HEIGHT))
 	if style.outline then
 		outline(root, unit, style.outline)
 	end
-
-	local function rule(y: number)
-		local line = Instance.new("Frame")
-		line.BackgroundColor3 = style.ink
-		line.BorderSizePixel = 0
-		line.Position = UDim2.fromOffset(LEFT * unit, y * unit)
-		line.Size = UDim2.fromOffset((RIGHT - LEFT) * unit, BACK_RULE_THICKNESS * unit)
-		line.Parent = root
-	end
-
-	text(root, unit, "LabelBold", BACK_NAME_SIZE, style.ink, LEFT, BACK_NAME_LINE):set(string.upper(card.name))
-	text(root, unit, "Label", TEXT_SIZE, style.rarity, LEFT, BACK_RARITY_LINE)
-		:set(CardLook.rarityText(options.tier, options.variant))
-	rule(BACK_TOP_RULE)
-	for index, line in CardText.wrap(CardText.blurb(options.cardId), BLURB_WIDTH) do
-		text(root, unit, "Label", TEXT_SIZE, style.ink, LEFT, BLURB_LINE + (index - 1) * BLURB_STEP):set(line)
-	end
-	for index, stat in CardText.stats(options.cardId, options.tier) do
-		local y = STATS_LINE + (index - 1) * STATS_STEP
-		text(root, unit, "LabelBold", TEXT_SIZE, style.ink, LEFT, y):set(stat.label)
-		text(root, unit, "Label", TEXT_SIZE, style.ink, RIGHT, y, true):set(stat.value)
-	end
-	rule(BACK_BOTTOM_RULE)
-	text(root, unit, "LabelBold", TEXT_SIZE, style.ink, LEFT, RARITY_LINE):set(CardText.copies(count))
-	text(root, unit, "Label", TEXT_SIZE, style.ink, RIGHT, RARITY_LINE, true):set(SET_CODES[card.set] or "")
 	root.Parent = parent
 	return root
 end

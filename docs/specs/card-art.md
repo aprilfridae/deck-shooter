@@ -71,7 +71,7 @@ Clicking a card in the Profile index holds it up in the 3D world. `CardInspect.l
 - **Arrival:** the card spins once into place in the space beside the panel, at 70% of the screen's height. The panel stays open, the nav hides and the world dims to Deep Navy.
 - **Spinning:** dragging turns the card freely, and tips it up to 0.6 radians. Let go and it eases to whichever side is nearest, then sways gently.
 - **Shine:** while the card is turned, the shine and foil follow its angle. At rest they go back to the timed sweep.
-- **The back:** a click without a drag flips the card. The back shows the name, rarity, a one-line description, the stats at that tier, the copies owned or `NOT OWNED`, and the set code. `CardText.luau` holds the words, which are limited to the menu font's characters, so percentages read `PCT`.
+- **The back:** a click without a drag flips the card. The top third is a solid block of the rarity's colour with a crosshair, the copies owned or `NOT OWNED`, the name, rarity and set code. Below it, the first stat is large and the rest smaller, then a one-line description and a strip of hazard stripes in the ink colour. `CardText.luau` holds the words, which are limited to the menu font's characters, so percentages read `PCT`.
 - **Unowned cards** open too, faded and still.
 - **Closing:** a click off the card closes it, as does anything that closes the menu. Esc can't be used, because Roblox keeps it for its own menu.
 - The part is clear with a `SurfaceGui` on each side, so the card keeps its rounded corners.
