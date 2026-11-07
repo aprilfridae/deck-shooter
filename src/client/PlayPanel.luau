@@ -67,7 +67,6 @@ local function buildRow(content: Frame, queue: any): any
 		grows = ABOUT_GAP + smallCap + (ABOUT_LINES - 1) * ABOUT_STEP,
 		opening = 0, -- seconds, up to PanelMotion.EXPAND_TIME
 		decoding = 0, -- seconds since the mouse came onto the row
-		hovered = false,
 	}
 end
 
@@ -83,16 +82,28 @@ function PlayPanel.fill(content: Frame)
 	PanelKit.title(content, "PLAY")
 	local unit = MenuPanel.unit()
 	local rows = {}
+	local hovered: any? = nil -- only one row is open, and Roblox can report entering before leaving
+	local function hover(row: any?)
+		if hovered then
+			showAbout(hovered, "") -- the first line would show through the edge of a closed row
+		end
+		hovered = row
+		if row then
+			row.decoding = 0
+		end
+	end
 	for index, queue in QUEUES do
 		local row = buildRow(content, queue)
 		rows[index] = row
 		row.box.MouseEnter:Connect(function()
-			row.hovered = true
-			row.decoding = 0
-			showAbout(row, "")
+			if hovered ~= row then
+				hover(row)
+			end
 		end)
 		row.box.MouseLeave:Connect(function()
-			row.hovered = false
+			if hovered == row then
+				hover(nil)
+			end
 		end)
 	end
 
@@ -121,13 +132,13 @@ function PlayPanel.fill(content: Frame)
 			return
 		end
 		for _, row in rows do
-			local goal = if row.hovered then PanelMotion.EXPAND_TIME else 0
+			local goal = if row == hovered then PanelMotion.EXPAND_TIME else 0
 			if row.opening < goal then
 				row.opening = math.min(row.opening + delta, goal)
 			elseif row.opening > goal then
 				row.opening = math.max(row.opening - delta, goal)
 			end
-			if row.hovered then
+			if row == hovered then
 				row.decoding += delta
 				showAbout(row, PanelMotion.decode(row.about, row.decoding))
 			end
