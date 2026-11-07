@@ -1,7 +1,7 @@
--- The Outpost: a concrete sea outpost on a rock, in fog.
+-- The Outpost: a concrete building at sea, all of it indoors, with windows onto the fog.
 -- See docs/specs/outpost.md for the layout.
--- Local axes: +Z points from the dock toward the hall, sea level is 0 and the deck is at 6.
-local CollectionService = game:GetService("CollectionService")
+-- Local axes: +Z runs along the main hall toward the Market, X along the side halls, and the
+-- floors are at 6.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Guns = ReplicatedStorage:WaitForChild("Guns")
@@ -14,53 +14,47 @@ local OutpostScale = require(script.Parent.OutpostScale)
 local M = Enum.Material
 
 -- Colours for one-off parts. Amber is only for lights; signs and screens use the palette.
-local STEEL = Color3.fromRGB(56, 60, 62)
 local RUST = Color3.fromRGB(178, 86, 34)
-local CARDBOARD = Color3.fromRGB(150, 122, 88)
-local DISH = Color3.fromRGB(188, 194, 194)
 local SEAM = Color3.fromRGB(26, 28, 30)
-local WINDOW_DARK = Color3.fromRGB(28, 34, 36)
 local AMBER = Color3.fromRGB(255, 168, 76)
-local WINDOW_LIT = Color3.fromRGB(214, 138, 64)
 local FLUORESCENT = Color3.fromRGB(198, 234, 214)
 local SKYLIGHT = Color3.fromRGB(208, 228, 232)
-local MIST = Color3.fromRGB(196, 210, 210)
 local RAIN = Color3.fromRGB(200, 214, 216)
+local GLASS = Color3.fromRGB(170, 190, 196)
+local WINDOW_LIGHT = Color3.fromRGB(150, 176, 186)
 local ROCKS = { M.Basalt, M.Basalt, M.Rock, M.Slate }
+local CARDBOARD = Color3.fromRGB(150, 122, 88)
 
-local DOCK = 4 -- top of the pier
-local DECK = 6 -- top of the yard, hall and corridor floors
--- The island's rock stops at sea level, well under the floors, and the floors are solid down to it.
--- Terrain blurs a filled block's edge by up to half a voxel, so with the rock just under the
--- floors it showed through them.
-local ROCK_TOP = 0
-local SLAB_BOTTOM = ROCK_TOP
-local UNDER_FLOOR = 3 -- rocks under a floor keep their tops below this
+local DECK = 6 -- top of the hall, arrival room and corridor floors
+local SLAB_BOTTOM = 0
 local SPRING = 24 -- where the hall's vault starts
 local VAULT_IN = 20
 local VAULT_OUT = 23
 local VAULT_SEGMENTS = 16
 local RIB_SEGMENTS = 8
 local RIBS = { 21, 39, 57, 75, 93, 111 }
-local YARD_HALF = VAULT_OUT -- the yard is as wide as the hall
-local YARD_WALL = 1.5 -- thickness of its edge walls and parapets
 local HALL_SOUTH = 13
 local HALL_NORTH = 119
-local SKY_SOUTH = 58 -- the skylight's ends
-local SKY_NORTH = 74
+local CROSS_Z = 66 -- the side halls' centre line, where they meet the main hall
+-- The skylight. The vault strips leave an eight-sided opening, and a round rim sits over its edge.
+local SKY_CORNER = 3.92 -- across and along, where the crown's strips meet the vault's diagonal creases
+local SKY_TIP = SKY_CORNER * math.sqrt(2) -- on the halls' centre lines, so all eight sides match
+local SKY_RADIUS = 4.8 -- the clear hole
+local SKY_RIM = 6 -- the rim's outside edge
+local CROSS_SOUTH = CROSS_Z - VAULT_IN
+local CROSS_NORTH = CROSS_Z + VAULT_IN
+local HALL_WEST = -123 -- the outside of the west hall's end wall
+local WEST_RIBS = { -109, -91, -73, -55, -37 }
+local WALL = VAULT_OUT - VAULT_IN
+local CORRIDOR_SHIFT = 100 -- the test range corridor starts at the East Hall's far end
+local WINDOW_SILL = 9
+local WINDOW_HEAD = 21
+local WINDOW_WIDTH = 10
+local SEA_HALF = 448 -- far past where the fog hides it
 local SEED = 7
 
--- Rocks stay clear of these, as x0, z0, x1, z1 and the height their tops must stay under.
-local KEEP_CLEAR = {
-	{ -10, -118, 10, -58, -1.5 }, -- the dock: only under the water
-	{ -58, -102, -34, -82, -0.6 }, -- the bunker's platform
-	{ -YARD_HALF, -57.5, YARD_HALF, HALL_SOUTH, UNDER_FLOOR }, -- the yard
-	{ -VAULT_OUT, HALL_SOUTH, VAULT_OUT, HALL_NORTH, UNDER_FLOOR }, -- the hall
-	{ 23, 59, 52, 73, UNDER_FLOOR }, -- the test range corridor
-	{ 29.5, 88, 62.5, 112, UNDER_FLOOR }, -- the comms tower
-}
--- Terrain smooths a voxel's surface, so a rock can show up to this far past its box.
-local ROCK_SLACK = 2 / OutpostScale.factor
+-- The East Hall is the West Hall turned halfway round the point where the halls cross.
+local EAST_TURN = CFrame.new(0, 0, CROSS_Z) * CFrame.Angles(0, math.pi, 0) * CFrame.new(0, 0, -CROSS_Z)
 
 local Map = {}
 
@@ -73,349 +67,108 @@ local function facing(position: Vector3, direction: Vector3): CFrame
 	return CFrame.lookAt(position, position + direction)
 end
 
--- How far a turned box reaches from its centre along each world axis.
-local function reach(cframe: CFrame, size: Vector3): Vector3
-	local half = size / 2
-	local right, up, back = cframe.RightVector, cframe.UpVector, cframe.LookVector
-	return Vector3.new(
-		math.abs(right.X) * half.X + math.abs(up.X) * half.Y + math.abs(back.X) * half.Z,
-		math.abs(right.Y) * half.X + math.abs(up.Y) * half.Y + math.abs(back.Y) * half.Z,
-		math.abs(right.Z) * half.X + math.abs(up.Z) * half.Y + math.abs(back.Z) * half.Z
-	)
-end
-
--- The highest a rock's top can be at position with this reach, so it never pokes through a floor.
-local function ceiling(position: Vector3, extent: Vector3): number
-	local limit = math.huge
-	for _, area in KEEP_CLEAR do
-		local overlaps = position.X + extent.X + ROCK_SLACK > area[1]
-			and position.X - extent.X - ROCK_SLACK < area[3]
-			and position.Z + extent.Z + ROCK_SLACK > area[2]
-			and position.Z - extent.Z - ROCK_SLACK < area[4]
-		if overlaps then
-			limit = math.min(limit, area[5] - ROCK_SLACK)
+-- Moves everything built in g. Sizes and positions go through the kit, so the cframe is full size.
+-- Cables hang off the terrain, so they have to be placed where they end up.
+local function moveGroup(kit, g, cframe: CFrame)
+	local move = kit:frame(cframe) * kit:frame(CFrame.identity):Inverse()
+	for _, part in g.parent:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.CFrame = move * part.CFrame
 		end
 	end
-	return limit
 end
 
-local function terrain(kit)
+-- The sea around the building, and rocks fading into the fog beyond the windows.
+local function outside(kit)
 	local land = workspace.Terrain
 	land.WaterColor = Color3.fromRGB(30, 50, 52)
 	land.WaterReflectance = 0.6
 	land.WaterTransparency = 0.2
 	land.WaterWaveSize = 0.08
 	land.WaterWaveSpeed = 4
-
-	local function fill(cframe: CFrame, size: Vector3, material: Enum.Material)
-		land:FillBlock(kit:frame(cframe), size * kit.scale, material)
-	end
-	-- A turned block of rock, sunk if it would come up through anything built.
-	local function boulder(position: Vector3, size: Vector3, tilt: number?)
-		local lean = tilt or 0.25
-		local turn = CFrame.Angles(kit:range(-lean, lean), kit:range(0, math.pi), kit:range(-lean, lean))
-		local extent = reach(turn, size)
-		local top = position.Y + extent.Y
-		local limit = ceiling(position, extent)
-		if top > limit then
-			position -= Vector3.new(0, top - limit, 0)
-		end
-		fill(CFrame.new(position) * turn, size, ROCKS[kit.random:NextInteger(1, #ROCKS)])
-	end
-
-	-- Fills whole voxels exactly, so these big flat surfaces land where they're asked to.
-	local function fillVoxels(low: Vector3, high: Vector3, material: Enum.Material)
-		local region = Region3.new(kit:point(low), kit:point(high)):ExpandToGrid(4)
-		land:FillRegion(region, 4, material)
-	end
-
-	-- The sea, with its surface at 0.
-	fillVoxels(v(-448, -24, -408), v(448, 0, 488), M.Water)
-	-- The rock under the hall and annexes, stopping at sea level.
-	fillVoxels(v(-60, -20, 12), v(64, ROCK_TOP, 128), M.Basalt)
-	-- The yard stands in the water on a narrow footing, kept inside its edge walls.
-	fillVoxels(v(-20, -20, -56), v(20, ROCK_TOP, 12), M.Basalt)
-
-	-- Broken edges, so the rock doesn't read as a box.
-	for _, x in { -34, -23, 21, 32 } do
-		boulder(v(x + kit:range(-3, 3), -2, -60 - kit:range(0, 4)), v(kit:range(8, 15), kit:range(6, 9), kit:range(8, 14)))
-	end
-	-- Along the yard's sides.
-	for z = -50, 2, 13 do
-		for _, side in { -1, 1 } do
-			boulder(v(side * (29 + kit:range(0, 3)), -2, z + kit:range(-3, 3)), v(kit:range(8, 13), kit:range(6, 9), kit:range(8, 14)))
-		end
-	end
-	-- The island's south shore, either side of the yard.
-	for _, x in { -56, -45, -34, 34, 45, 56 } do
-		boulder(v(x + kit:range(-3, 3), -2, 8 - kit:range(0, 4)), v(kit:range(8, 15), kit:range(6, 10), kit:range(8, 14)))
-	end
-	for z = 22, 124, 12 do
-		boulder(v(-64 - kit:range(0, 4), -2, z + kit:range(-3, 3)), v(kit:range(8, 15), kit:range(6, 10), kit:range(8, 14)))
-		if z < 30 or z > 120 then
-			boulder(v(68 + kit:range(0, 4), -2, z + kit:range(-3, 3)), v(kit:range(8, 15), kit:range(6, 10), kit:range(8, 14)))
-		end
-	end
-	for x = -50, 60, 12 do
-		boulder(v(x, -2, 134 + kit:range(0, 4)), v(kit:range(9, 16), kit:range(6, 10), kit:range(8, 14)))
-	end
-
-	-- The cliff beside the hall, kept off the corridor and comms tower.
+	-- Fills whole voxels exactly, so the surface lands at 0 as asked.
+	local region = Region3.new(kit:point(v(-SEA_HALF, -24, -SEA_HALF + 40)), kit:point(v(SEA_HALF, 0, SEA_HALF + 40))):ExpandToGrid(4)
+	land:FillRegion(region, 4, M.Water)
 	for _, rock in {
-		{ 82, 30, 40, 26 },
-		{ 96, 50, 62, 28 },
-		{ 92, 38, 90, 24 },
-		{ 100, 58, 110, 30 },
-		{ 90, 34, 130, 26 },
-		{ 106, 44, 80, 28 },
+		{ -70, -24, 28 },
+		{ -135, -6, 36 },
+		{ -20, -46, 22 },
+		{ -96, 142, 32 },
+		{ -44, 160, 26 },
+		{ 90, -2, 32 },
+		{ 104, 132, 38 },
+		{ 182, 40, 34 },
+		{ 176, 104, 30 },
+		{ 82, -34, 24 },
+		{ -176, 62, 42 },
+		{ 118, 178, 30 },
 	} do
-		local height = rock[2]
-		boulder(v(rock[1], height / 2 - 10, rock[3]), v(rock[4], height, rock[4] * kit:range(0.8, 1.3)), 0.08)
-	end
-
-	-- Low rocks around the bunker, just out of the water and clear of its platform.
-	for _, rock in { { -68, -92 }, { -46, -112 }, { -24, -90 }, { -66, -72 } } do
-		boulder(v(rock[1], -2, rock[2]), v(kit:range(6, 8), kit:range(5, 7), kit:range(6, 8)))
-	end
-
-	-- Outcrops fading into the fog.
-	local placed = 0
-	while placed < 14 do
-		local angle = kit:range(0, math.pi * 2)
-		local distance = kit:range(90, 300)
-		local x, z = math.cos(angle) * distance, math.sin(angle) * distance + 30
-		-- Keep the view down the dock and past the bunker clear.
-		if not (math.abs(x) < 24 and z < -60) and not (x < -24 and x > -80 and z < -64 and z > -120) then
-			local size = kit:range(6, 26)
-			boulder(v(x, kit:range(-4, 2), z), v(size, kit:range(6, 18), size * kit:range(0.7, 1.4)))
-			placed += 1
-		end
+		local height = rock[3] * kit:range(0.7, 1.2)
+		local turn = CFrame.Angles(kit:range(-0.15, 0.15), kit:range(0, math.pi), kit:range(-0.15, 0.15))
+		local size = v(rock[3], height, rock[3] * kit:range(0.7, 1.3))
+		land:FillBlock(kit:frame(CFrame.new(rock[1], height / 2 - 6, rock[2]) * turn), size * kit.scale, ROCKS[kit.random:NextInteger(1, #ROCKS)])
 	end
 end
 
-local function mist(kit, center: Vector3, size: Vector3)
-	local emitterPart = Kit.decor(kit:block(size, CFrame.new(center), MIST, M.SmoothPlastic))
-	emitterPart.Transparency = 1
-	local emitter = Instance.new("ParticleEmitter")
-	emitter.Texture = OutpostAssets.mist
-	emitter.Color = ColorSequence.new(MIST)
-	emitter.Rate = 2.5
-	emitter.Lifetime = NumberRange.new(14, 20)
-	emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 14), NumberSequenceKeypoint.new(1, 26) })
-	emitter.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 1),
-		NumberSequenceKeypoint.new(0.25, 0.86),
-		NumberSequenceKeypoint.new(0.75, 0.88),
-		NumberSequenceKeypoint.new(1, 1),
-	})
-	emitter.Speed = NumberRange.new(0.5, 1.5)
-	emitter.SpreadAngle = Vector2.new(60, 60)
-	emitter.Acceleration = Vector3.new(0.6, 0.05, 0.3)
-	emitter.Rotation = NumberRange.new(0, 360)
-	emitter.RotSpeed = NumberRange.new(-6, 6)
-	emitter.LightInfluence = 1
-	emitter.Parent = emitterPart
-end
-
-local function lampPost(kit, base: Vector3, armToward: number, shadows: boolean?)
-	local color, material = kit:surface("steel")
-	kit:post(base, 10, 0.5, color, material)
-	local top = base + v(0, 10, 0)
-	kit:box(top + v(0, -0.6, -0.15), top + v(armToward * 2.2, -0.2, 0.15), color, material)
-	kit:lamp(top + v(armToward * 2, -0.6, 0), AMBER, 22, 1.6, shadows)
-	return top
-end
-
-local function dock(kit)
-	local g = kit:group("Dock")
-	local _, paint = g:floor("floor", v(-7, DOCK - 1.2, -114), v(7, DOCK, -62), true)
-	for _, x in { -5.6, 5.6 } do
-		paint:mark(x - 0.11, -113.5, x + 0.11, -62.5, Palette.Bone, 0.74)
+-- A wall from low to high across its thickness, running along x or z from from to to, with a
+-- window at each centre. inward is the side the hall is on, +1 or -1.
+local function wallWithWindows(g, along: string, low: number, high: number, from: number, to: number, windows: { number }, inward: number)
+	local function at(run: number, across: number, y: number): Vector3
+		return if along == "z" then v(across, y, run) else v(run, y, across)
 	end
-	paint:mark(-6.2, -63.6, 6.2, -62.7, Palette.SignalAcid, 0.68)
-	for _ = 1, 3 do
-		paint:stain(g:range(-4, 4), g:range(-110, -66), g:range(1.5, 3.5), g:range(2, 4), g:range(0.35, 0.55))
-	end
-	for _, x in { -6.6, 6.6 } do
-		g:dirty(g:boxOf("darkConcrete", v(x - 0.4, DOCK, -114), v(x + 0.4, DOCK + 0.4, -62)), "floor")
-	end
-	-- Pillars and cross beams into the sea.
-	for z = -110, -66, 13 do
-		for _, x in { -5.5, 5.5 } do
-			local color, material = g:surface("darkConcrete")
-			g:post(v(x, -10, z), 12.8, 1.6, color, material)
+	local middle = (low + high) / 2
+	local cursor = from
+	for _, centre in windows do
+		local a, b = centre - WINDOW_WIDTH / 2, centre + WINDOW_WIDTH / 2
+		g:panels("concrete", at(cursor, low, DECK), at(a, high, SPRING), 18, "wall")
+		g:dirty(g:boxOf("concrete", at(a, low, DECK), at(b, high, WINDOW_SILL)), "wall")
+		g:dirty(g:boxOf("concrete", at(a, low, WINDOW_HEAD), at(b, high, SPRING)), "wall")
+		local glass = g:box(at(a, middle - 0.05, WINDOW_SILL), at(b, middle + 0.05, WINDOW_HEAD), GLASS, M.Glass)
+		glass.Transparency = 0.75
+		glass.CastShadow = false
+		for _, share in { 1 / 3, 2 / 3 } do
+			local run = a + WINDOW_WIDTH * share
+			g:boxOf("steel", at(run - 0.12, middle - 0.2, WINDOW_SILL), at(run + 0.12, middle + 0.2, WINDOW_HEAD))
 		end
-		g:boxOf("darkConcrete", v(-7, DOCK - 2.2, z - 0.6), v(7, DOCK - 1.2, z + 0.6))
+		local rail = (WINDOW_SILL + WINDOW_HEAD) / 2
+		g:boxOf("steel", at(a, middle - 0.25, rail - 0.12), at(b, middle + 0.25, rail + 0.12))
+		-- The grey daylight coming in.
+		local glow = Kit.decor(g:block(v(1, 1, 1), CFrame.new(at(centre, middle + inward * 3, rail)), GLASS, M.SmoothPlastic))
+		glow.Transparency = 1
+		g:light(glow, "PointLight", { Color = WINDOW_LIGHT, Range = 30, Brightness = 0.8 })
+		cursor = b
 	end
-	-- Railings.
-	for _, x in { -6.6, 6.6 } do
-		for z = -112, -64, 4 do
-			g:boxOf("steel", v(x - 0.1, DOCK + 0.4, z - 0.1), v(x + 0.1, DOCK + 3.4, z + 0.1))
-		end
-		g:boxOf("steel", v(x - 0.12, DOCK + 3.4, -114), v(x + 0.12, DOCK + 3.6, -62))
-		g:boxOf("steel", v(x - 0.08, DOCK + 1.9, -114), v(x + 0.08, DOCK + 2.05, -62))
-	end
-	-- Lamp posts, with wires slung between them.
-	local tops = {}
-	for index, z in { -108, -92, -76 } do
-		local side = if index % 2 == 1 then -1 else 1
-		table.insert(tops, lampPost(g, v(side * 6.6, DOCK + 0.4, z), -side, index == 2))
-	end
-	for index = 1, #tops - 1 do
-		g:cable(tops[index], tops[index + 1], 1.2)
-	end
-	for _, spot in { { -5.5, -112 }, { 5.5, -112 }, { -5.5, -98 }, { 5.5, -84 } } do
-		local color, material = g:surface("rust")
-		g:post(v(spot[1], DOCK, spot[2]), 1.4, 1, color, material)
-	end
-
-	-- Players arrive at the far end, facing the outpost.
-	local spawn = Instance.new("SpawnLocation")
-	spawn.Name = "OutpostSpawn"
-	spawn.Anchored = true
-	spawn.Size = v(6, 1, 6)
-	spawn.CFrame = kit:frame(CFrame.new(0, DOCK, -104) * CFrame.Angles(0, math.pi, 0)) * CFrame.new(0, -spawn.Size.Y / 2, 0)
-	spawn.Transparency = 1
-	spawn.CanCollide = false
-	spawn.CanQuery = false
-	spawn.CanTouch = false
-	spawn.Neutral = true
-	spawn.Duration = 0
-	spawn.Parent = g.parent
-	return spawn
-end
-
-local function gantry(kit)
-	local g = kit:group("Gantry")
-	local frames = { -78, -70, -62, -54 }
-	local beam = 24 -- the underside of the cross beams
-	for _, z in frames do
-		for _, x in { -8.5, 8.5 } do
-			g:dirty(g:boxOf("rust", v(x - 0.7, -6, z - 0.7), v(x + 0.7, beam + 1, z + 0.7)), "block", 0.45)
-			local side = if x < 0 then 1 else -1
-			-- A knee brace from the leg up to the beam.
-			g:solid("rust", v(0.6, 4.2, 0.6), CFrame.new(x + side * 1.6, beam - 1.4, z) * CFrame.Angles(0, 0, -side * math.rad(45)))
-		end
-		-- Reaches past the legs, so its ends don't share a face with them.
-		g:dirty(g:boxOf("rust", v(-9.4, beam, z - 0.9), v(9.4, beam + 1.6, z + 0.9)), "wall", 0.45)
-	end
-	for index = 1, #frames - 1 do
-		for _ = 1, 5 do
-			g:cable(v(g:range(-8, 8), beam, frames[index]), v(g:range(-8, 8), beam, frames[index + 1]), g:range(1, 3))
-		end
-	end
-	g:lamp(v(-4, beam - 0.8, -78), AMBER, 14, 1.2)
-	g:lamp(v(4, beam - 0.8, -54), AMBER, 14, 1.2)
-end
-
-local function screenTower(kit)
-	local g = kit:group("ScreenTower")
-	g:dirty(g:boxOf("darkConcrete", v(-6, DECK, -30), v(6, DECK + 2, -18)), "block")
-	g:dirty(g:boxOf("steel", v(-3, DECK + 2, -27), v(3, 24, -21)), "block", 0.45)
-	for _, spot in { { -2.4, -27.4 }, { 2.4, -27.4 }, { -2.4, -20.6 }, { 2.4, -20.6 } } do
-		g:post(v(spot[1], DECK + 2, spot[2]), 16, 0.5, SEAM, M.Metal)
-	end
-	g:dirty(g:boxOf("steel", v(-9, 24, -31), v(9, 38, -17)), "block", 0.4)
-	g:screen(CFrame.new(0, 31, -31.2), 14, 9, "Name")
-
-	-- The lamp head on top.
-	g:dirty(g:boxOf("steel", v(-5, 38, -28), v(5, 42, -20)), "block", 0.45)
-	for _, x in { -2.4, 2.4 } do
-		local lens = Kit.decor(g:cylinder(CFrame.new(x, 40, -28.2) * CFrame.Angles(0, math.pi / 2, 0), 0.6, 2.6, Palette.DataCyan, M.Neon))
-		g:light(lens, "PointLight", { Color = Palette.DataCyan, Range = 10, Brightness = 1 })
-	end
-	g:post(v(2, 42, -24), 16, 0.4, STEEL, M.Metal)
-	g:lamp(v(2, 58.4, -24), AMBER, 10, 1.2)
-	for _, spot in { { -8.6, 36, -31.1 }, { -7.6, 36, -31.1 }, { 8.6, 26, -31.1 }, { 6, 26.6, -16.9 } } do
-		g:neon(v(0.5, 0.5, 0.2), CFrame.new(spot[1], spot[2], spot[3]), Palette.DataCyan)
-	end
-
-	-- Cables off the head, down to the deck and across to the buildings.
-	for _, run in {
-		{ v(-7, 24, -30), v(-6, DECK + 2, -30), 1.5 },
-		{ v(7, 24, -18), v(6, DECK + 2, -18), 1.5 },
-		{ v(-8, 30, -17), v(-14, 20, 12.6), 4 },
-		{ v(0, 34, -17), v(2, 23, 12.6), 5 },
-		{ v(8, 30, -17), v(15, 21, 12.6), 4 },
-		{ v(9, 34, -20), v(36, 36, 88), 12 },
-		{ v(-9, 28, -28), v(-19, 16, -50), 4 },
-		{ v(6, 36, -31), v(6, 24.6, -54), 3 },
-	} do
-		g:cable(run[1], run[2], run[3], 0.16)
-	end
-
-	-- Equipment at the base.
-	for _, box in { { v(7, DECK, -30), v(10, DECK + 3, -27) }, { v(-10.5, DECK, -22), v(-8, DECK + 4, -19.6) }, { v(6, DECK, -17), v(8, DECK + 2, -15) } } do
-		g:dirty(g:boxOf("sheet", box[1], box[2]), "block", 0.45)
-	end
-	g:neon(v(0.4, 0.4, 0.1), CFrame.new(8.5, DECK + 2.4, -30.05), AMBER)
-	g:neon(v(0.4, 0.4, 0.1), CFrame.new(-9.2, DECK + 3.2, -22.05), Palette.DataCyan)
-end
-
-local function yard(kit)
-	local g = kit:group("Yard")
-	local inside = YARD_HALF - YARD_WALL
-	local _, paint = g:floor("floor", v(-inside, SLAB_BOTTOM, -56), v(inside, DECK, HALL_SOUTH), true)
-	g:dirty(g:wedge(v(14, DECK - DOCK, 6), CFrame.new(0, (DOCK + DECK) / 2, -59), g:surface("floor")), "floor")
-	g:dirty(g:boxOf("darkConcrete", v(-YARD_HALF, -6, -57.5), v(YARD_HALF, DOCK, -56)), "wall")
-	-- Edge walls rising out of the water into parapets, low enough to vault.
-	g:dirty(g:boxOf("darkConcrete", v(-YARD_HALF, -6, -56), v(-inside, DECK + 3.5, HALL_SOUTH)), "block")
-	g:dirty(g:boxOf("darkConcrete", v(inside, -6, -56), v(YARD_HALF, DECK + 3.5, HALL_SOUTH)), "block")
-	g:dirty(g:boxOf("darkConcrete", v(-inside, DECK, -56), v(-9, DECK + 3.5, -54.5)), "block")
-	g:dirty(g:boxOf("darkConcrete", v(9, DECK, -56), v(inside, DECK + 3.5, -54.5)), "block")
-
-	-- Old paint and fittings on the deck: a walkway from the dock to the hall, a hazard band at
-	-- the top of the ramp, a box around the screen tower, drains, covers and stains.
-	paint:dashes(-7.5, -54, 12, 0.3, 3, 2, Palette.Bone, 0.72)
-	paint:dashes(7.5, -54, 12, 0.3, 3, 2, Palette.Bone, 0.72)
-	paint:mark(-7, -55.6, 7, -54.8, Palette.SignalAcid, 0.66)
-	paint:outline(-7.5, -31.5, 7.5, -16.5, 0.3, Palette.SignalAcid, 0.7)
-	for _, drain in { { -20, -12, -19, -8 }, { 19, -30, 20, -26 }, { -3, 9.2, 3, 10.2 }, { 12, -53.8, 16, -53.2 } } do
-		local x, z = (drain[1] + drain[3]) / 2, (drain[2] + drain[4]) / 2
-		paint:disc(x, z, 5, Color3.fromRGB(38, 46, 48), 0.78)
-		paint:grate(drain[1], drain[2], drain[3], drain[4])
-	end
-	for _, cover in { { -14, -4 }, { 15, -42 } } do
-		paint:disc(cover[1], cover[2], 2.6, Color3.fromRGB(52, 56, 58), 0.05)
-		paint:disc(cover[1], cover[2], 2.1, Color3.fromRGB(64, 68, 68), 0.15)
-	end
-	for _ = 1, 7 do
-		local x, z = g:range(-17, 17), g:range(-52, 8)
-		if math.abs(x) > 9 or z < -33 or z > -15 then
-			paint:stain(x, z, g:range(2, 5), g:range(2, 5), g:range(0.3, 0.55))
-		end
-	end
-
-	lampPost(g, v(-19, DECK, -50), 1, true)
-	lampPost(g, v(19, DECK, -50), -1)
-	lampPost(g, v(-19, DECK, 6), 1)
-	lampPost(g, v(19, DECK, 6), -1)
-
-	-- Crates to move around.
-	for _, crate in { { -18, -36, 4 }, { -14, -40, 3 }, { -18, -40, 3.4 }, { 17, 2, 4 }, { 13, 4, 3 } } do
-		local size = crate[3]
-		g:solid("wood", v(size, size, size), CFrame.new(crate[1], DECK + size / 2, crate[2]) * CFrame.Angles(0, g:range(-0.3, 0.3), 0))
-	end
-	g:solid("wood", v(3, 3, 3), CFrame.new(-16, DECK + 5.5, -38) * CFrame.Angles(0, 0.4, 0))
-	-- Oil drums by the west parapet, one knocked over.
-	for _, drum in { { -19.4, -2 }, { -19.6, 0.4 }, { -17.2, -0.8 } } do
-		local color, material = g:surface("rust")
-		g:post(v(drum[1], DECK, drum[2]), 2.9, 2, color, material)
-	end
-	local color, material = g:surface("steel")
-	g:cylinder(CFrame.new(-16, DECK + 1, 3) * CFrame.Angles(0, math.rad(30), 0), 2.9, 2, color, material)
-	-- A power cable lying across the deck from the screen tower to the parapet.
-	local run = { v(-6, -24, 0), v(-12.5, -21.5, 0), v(-16, -26, 0), v(-19, -25, 0), v(-21.5, -27, 0) }
-	for index = 1, #run - 1 do
-		local a = v(run[index].X, DECK + 0.15, run[index].Y)
-		local b = v(run[index + 1].X, DECK + 0.15, run[index + 1].Y)
-		local look = facing((a + b) / 2, (b - a).Unit) * CFrame.Angles(0, math.pi / 2, 0)
-		g:cylinder(look, (b - a).Magnitude + 0.3, 0.3, Color3.fromRGB(24, 26, 28), M.Rubber)
-	end
-	screenTower(kit)
+	g:panels("concrete", at(cursor, low, DECK), at(to, high, SPRING), 18, "wall")
 end
 
 -- Cuts the run from first to last at the ribs, skipping cuts that would leave a sliver.
+-- Where two vaults cross, their inside faces meet on a diagonal crease. Each strip of vault stops
+-- on that crease with a slanted end. Returns how far from the crossing's centre the slant starts
+-- and finishes: a strip reaches closest on the edge nearer the crown.
+local function slantReach(angle: number, width: number): (number, number)
+	local offset = VAULT_IN * math.abs(math.cos(angle))
+	local rise = width / 2 * math.sin(angle)
+	return offset + rise, offset - rise
+end
+
+-- The same for the two strips along the crown, which stop on the skylight's opening instead. These
+-- reach closest on the edge further from the crown.
+local function skyReach(angle: number, width: number): (number, number)
+	local offset = VAULT_IN * math.abs(math.cos(angle))
+	local rise = width / 2 * math.sin(angle)
+	local slope = (SKY_TIP - SKY_CORNER) / SKY_CORNER
+	return SKY_TIP - slope * (offset - rise), SKY_TIP - slope * (offset + rise)
+end
+
+-- The slanted end itself. `frame` sits at the crossing's centre, with Y out of the vault and Z along
+-- the strip towards the crossing.
+local function vaultSlant(g, frame: CFrame, far: number, near: number, width: number, band, crown: boolean)
+	local crownward = if frame.XVector.Y > 0 then 1 else -1
+	local long = if crown then -crownward else crownward
+	local corner = CFrame.fromMatrix(v(0, 0, -(far + near) / 2), v(0, long, 0), v(0, 0, 1), v(long, 0, 0))
+	g:dirty(g:wedge(v(VAULT_OUT - VAULT_IN, far - near, width), frame * corner, band.color, band.material), "wedgeShell")
+end
+
 local function ribCuts(first: number, last: number): { number }
 	local cuts = { first }
 	for _, z in RIBS do
@@ -430,31 +183,25 @@ end
 local function hallShell(kit)
 	local g = kit:group("HallShell")
 	local _, paint = g:floor("floor", v(-23, SLAB_BOTTOM, HALL_SOUTH), v(23, DECK, HALL_NORTH), true)
-	-- Faded lines along the walls, a queue box in front of the Market, and the wet patch and drain
-	-- under the skylight.
+	-- Faded lines along the walls, and the drain under the skylight.
 	for _, x in { -17.6, 17.6 } do
-		paint:mark(x - 0.12, 15, x + 0.12, 102, Palette.Bone, 0.78)
+		paint:mark(x - 0.12, 15, x + 0.12, CROSS_SOUTH, Palette.Bone, 0.78)
+		paint:mark(x - 0.12, CROSS_NORTH, x + 0.12, 117, Palette.Bone, 0.78)
 	end
-	paint:outline(-8, 97.5, 8, 103.5, 0.25, Palette.HazardRed, 0.76)
-	local skylightZ = (SKY_SOUTH + SKY_NORTH) / 2
-	paint:disc(0, skylightZ, 11, Color3.fromRGB(34, 44, 46), 0.5)
-	paint:disc(0.8, skylightZ - 1.2, 6, Color3.fromRGB(28, 38, 40), 0.55)
-	paint:grate(-1.5, skylightZ - 1.5, 1.5, skylightZ + 1.5)
+	paint:grate(-1.5, CROSS_Z - 1.5, 1.5, CROSS_Z + 1.5)
 	for _, drain in { { -19.4, 46, -18.6, 50 }, { 18.6, 86, 19.4, 90 } } do
 		paint:grate(drain[1], drain[2], drain[3], drain[4])
 	end
 	for _ = 1, 6 do
 		paint:stain(g:range(-14, 14), g:range(18, 96), g:range(2, 4.5), g:range(2, 4.5), g:range(0.35, 0.6))
 	end
-	-- Side walls. The east one has the door to the test range corridor.
-	g:panels("concrete", v(-23, DECK, HALL_SOUTH), v(-20, SPRING, HALL_NORTH), 18, "wall")
-	g:panels("concrete", v(20, DECK, HALL_SOUTH), v(23, SPRING, 63), 18, "wall")
-	g:panels("concrete", v(20, DECK, 69), v(23, SPRING, HALL_NORTH), 18, "wall")
-	g:dirty(g:boxOf("concrete", v(20, 14, 63), v(23, SPRING, 69)), "wall")
-	-- End walls below the vault. The south one has the entrance.
-	g:dirty(g:boxOf("concrete", v(-20, DECK, HALL_SOUTH), v(-9, SPRING, 16)), "wall")
-	g:dirty(g:boxOf("concrete", v(9, DECK, HALL_SOUTH), v(20, SPRING, 16)), "wall")
-	g:dirty(g:boxOf("concrete", v(-9, 22, HALL_SOUTH), v(9, SPRING, 16)), "wall")
+	-- Side walls, opening into the West and East Halls.
+	wallWithWindows(g, "z", -23, -20, HALL_SOUTH, CROSS_SOUTH, { 30 }, 1)
+	wallWithWindows(g, "z", -23, -20, CROSS_NORTH, HALL_NORTH, { 102 }, 1)
+	wallWithWindows(g, "z", 20, 23, HALL_SOUTH, CROSS_SOUTH, { 30 }, -1)
+	wallWithWindows(g, "z", 20, 23, CROSS_NORTH, HALL_NORTH, { 102 }, -1)
+	-- End walls below the vault.
+	g:panels("concrete", v(-20, DECK, HALL_SOUTH), v(20, SPRING, 16), 14, "wall")
 	g:panels("concrete", v(-20, DECK, 116), v(20, SPRING, HALL_NORTH), 14, "wall")
 
 	-- The barrel vault, cut at the ribs and open at the top over the skylight.
@@ -468,9 +215,10 @@ local function hallShell(kit)
 		local angle = (index - 0.5) * step
 		local x, y = middle * math.cos(angle), SPRING + middle * math.sin(angle)
 		local turn = CFrame.Angles(0, 0, angle - math.pi / 2)
-		local spans = if index == VAULT_SEGMENTS / 2 or index == VAULT_SEGMENTS / 2 + 1
-			then { { HALL_SOUTH, SKY_SOUTH }, { SKY_NORTH, HALL_NORTH } }
-			else { { HALL_SOUTH, HALL_NORTH } }
+		-- Either side of the crown the vault opens where the side halls' roofs come through.
+		local crown = index == VAULT_SEGMENTS / 2 or index == VAULT_SEGMENTS / 2 + 1
+		local far, near = (if crown then skyReach else slantReach)(angle, width)
+		local spans = { { HALL_SOUTH, CROSS_Z - far }, { CROSS_Z + far, HALL_NORTH } }
 		for _, span in spans do
 			local cuts = ribCuts(span[1], span[2])
 			for piece = 1, #cuts - 1 do
@@ -482,6 +230,11 @@ local function hallShell(kit)
 				local band = bands[from]
 				local part = g:block(v(width, VAULT_OUT - VAULT_IN, to - from), CFrame.new(x, y, (from + to) / 2) * turn, band.color, band.material)
 				g:dirty(part, "shell")
+				if to == CROSS_Z - far then
+					vaultSlant(g, CFrame.new(x, y, CROSS_Z) * turn, far, near, width, band, crown)
+				elseif from == CROSS_Z + far then
+					vaultSlant(g, CFrame.new(x, y, CROSS_Z) * turn * CFrame.Angles(0, math.pi, 0), far, near, width, band, crown)
+				end
 			end
 		end
 	end
@@ -503,84 +256,233 @@ local function hallShell(kit)
 			local angle = (index - 0.5) * ribStep
 			local radius = VAULT_IN - 0.7
 			local turn = CFrame.Angles(0, 0, angle - math.pi / 2)
-			g:block(v(ribWidth, 1.4, 2.4), CFrame.new(radius * math.cos(angle), SPRING + radius * math.sin(angle), z) * turn, color, material)
+			local x = radius * math.cos(angle)
+			if z < CROSS_SOUTH or z > CROSS_NORTH then
+				g:block(v(ribWidth, 1.4, 2.4), CFrame.new(x, SPRING + radius * math.sin(angle), z) * turn, color, material)
+			end
 		end
 		for _, side in { -1, 1 } do
-			g:dirty(g:boxOf("darkConcrete", v(side * 18.6, DECK, z - 1.2), v(side * VAULT_IN, SPRING, z + 1.2)), "block")
+			if z < CROSS_SOUTH or z > CROSS_NORTH then
+				g:dirty(g:boxOf("darkConcrete", v(side * 18.6, DECK, z - 1.2), v(side * VAULT_IN, SPRING, z + 1.2)), "block")
+			end
 		end
 	end
 end
 
-local function hallFront(kit)
-	local g = kit:group("HallFront")
-	g:sign(CFrame.new(0, 27, 13.1), 16, 3, {
-		text = "OUTPOST 01",
+-- A side hall: the main hall's shape again, turned sideways, with its roof running into the main
+-- vault. The two vaults meet along diagonal ribs. It's laid out as the West Hall. Given a turn, it
+-- becomes the East Hall, with a door in its far wall to the test range corridor.
+local function sideHall(kit, name: string, turn: CFrame?)
+	local g = kit:group(name)
+	local wallEnd = HALL_WEST + WALL
+	local function place(position: Vector3): Vector3
+		return if turn then turn * position else position
+	end
+	local _, paint = g:floor("floor", v(HALL_WEST, SLAB_BOTTOM, CROSS_SOUTH - WALL), v(-VAULT_OUT, DECK, CROSS_NORTH + WALL), true)
+	for _, z in { CROSS_Z - 17.6, CROSS_Z + 17.6 } do
+		paint:mark(wallEnd + 2, z - 0.12, -VAULT_OUT, z + 0.12, Palette.Bone, 0.78)
+	end
+	for _, drain in { { -60, CROSS_SOUTH + 0.6, -56, CROSS_SOUTH + 1.4 }, { -96, CROSS_NORTH - 1.4, -92, CROSS_NORTH - 0.6 } } do
+		paint:grate(drain[1], drain[2], drain[3], drain[4])
+	end
+	for _ = 1, 6 do
+		paint:stain(g:range(-112, -30), g:range(CROSS_SOUTH + 4, CROSS_NORTH - 4), g:range(2, 4.5), g:range(2, 4.5), g:range(0.35, 0.6))
+	end
+
+	-- Walls.
+	wallWithWindows(g, "x", CROSS_SOUTH - WALL, CROSS_SOUTH, HALL_WEST, -VAULT_OUT, { -100, -64 }, 1)
+	wallWithWindows(g, "x", CROSS_NORTH, CROSS_NORTH + WALL, HALL_WEST, -VAULT_OUT, { -82, -46 }, -1)
+	if turn then
+		g:panels("concrete", v(HALL_WEST, DECK, CROSS_SOUTH), v(wallEnd, SPRING, CROSS_Z - 3), 14, "wall")
+		g:panels("concrete", v(HALL_WEST, DECK, CROSS_Z + 3), v(wallEnd, SPRING, CROSS_NORTH), 14, "wall")
+		g:dirty(g:boxOf("concrete", v(HALL_WEST, 14, CROSS_Z - 3), v(wallEnd, SPRING, CROSS_Z + 3)), "wall")
+	else
+		g:panels("concrete", v(HALL_WEST, DECK, CROSS_SOUTH), v(wallEnd, SPRING, CROSS_NORTH), 14, "wall")
+	end
+
+	-- The barrel vault, one look per band along the hall as in the main hall.
+	local yaw = CFrame.Angles(0, math.pi / 2, 0)
+	local step = math.pi / VAULT_SEGMENTS
+	local middle = (VAULT_IN + VAULT_OUT) / 2
+	local width = 2 * VAULT_OUT * math.sin(step / 2) + 0.1
+	local bands = {}
+	for index = 1, VAULT_SEGMENTS do
+		local angle = (index - 0.5) * step
+		local across, y = middle * math.cos(angle), SPRING + middle * math.sin(angle)
+		local turn = yaw * CFrame.Angles(0, 0, angle - math.pi / 2)
+		local crown = index == VAULT_SEGMENTS / 2 or index == VAULT_SEGMENTS / 2 + 1
+		local far, near = (if crown then skyReach else slantReach)(angle, width)
+		local stop = -far
+		local cuts = { HALL_WEST }
+		for _, x in WEST_RIBS do
+			if stop - x >= 3 then
+				table.insert(cuts, x)
+			end
+		end
+		table.insert(cuts, stop)
+		for piece = 1, #cuts - 1 do
+			local from, to = cuts[piece], cuts[piece + 1]
+			if not bands[piece] then
+				local color, material = g:surface("concrete")
+				bands[piece] = { color = color, material = material }
+			end
+			local band = bands[piece]
+			local part = g:block(v(width, VAULT_OUT - VAULT_IN, to - from), CFrame.new((from + to) / 2, y, CROSS_Z - across) * turn, band.color, band.material)
+			g:dirty(part, "shell")
+			if to == stop then
+				vaultSlant(g, CFrame.new(0, y, CROSS_Z - across) * turn, far, near, width, band, crown)
+			end
+		end
+	end
+	-- The half-round gable at the far end.
+	for _, lift in Gable.lifts(VAULT_OUT, VAULT_IN) do
+		local low = v(HALL_WEST + 0.3, SPRING + lift.bottom, CROSS_Z - lift.half)
+		local high = v(wallEnd, SPRING + lift.top, CROSS_Z + lift.half)
+		g:dirty(g:box(low, high, g:vary(Color3.fromRGB(116, 123, 119), 0.03), M.Concrete), "wall")
+	end
+
+	-- Ribs across the vault, with pilasters and wall lamps below them.
+	local ribStep = math.pi / RIB_SEGMENTS
+	local ribWidth = 2 * VAULT_IN * math.sin(ribStep / 2) + 0.1
+	local radius = VAULT_IN - 0.7
+	for _, x in WEST_RIBS do
+		local color, material = g:surface("darkConcrete")
+		for index = 1, RIB_SEGMENTS do
+			local angle = (index - 0.5) * ribStep
+			local turn = yaw * CFrame.Angles(0, 0, angle - math.pi / 2)
+			g:block(v(ribWidth, 1.4, 2.4), CFrame.new(x, SPRING + radius * math.sin(angle), CROSS_Z - radius * math.cos(angle)) * turn, color, material)
+		end
+		for _, side in { -1, 1 } do
+			local low, high = CROSS_Z + side * 18.6, CROSS_Z + side * VAULT_IN
+			g:dirty(g:boxOf("darkConcrete", v(x - 1.2, DECK, math.min(low, high)), v(x + 1.2, SPRING, math.max(low, high))), "block")
+			g:lamp(v(x, 18, CROSS_Z + side * 18.2), AMBER, 22, 1.4)
+		end
+	end
+	-- The big lamp halfway along.
+	local lamp = g:neon(v(6, 0.3, 10), CFrame.new(-73, 42.8, CROSS_Z), FLUORESCENT)
+	g:light(lamp, "SpotLight", { Face = Enum.NormalId.Bottom, Angle = 60, Range = 60, Brightness = 3, Color = FLUORESCENT })
+
+	if not turn then
+		g:sign(facing(v(wallEnd + 0.1, 27, CROSS_Z), v(1, 0, 0)), 16, 3, {
+			text = "OUTPOST 01",
+			color = Palette.DeepNavy,
+			fill = Palette.SignalAcid,
+			light = Palette.SignalAcid,
+		})
+	end
+
+	-- Low walls to vault, crates to move around and oil drums, one knocked over.
+	for _, z in { { CROSS_SOUTH, CROSS_Z - 7 }, { CROSS_Z + 7, CROSS_NORTH } } do
+		g:dirty(g:boxOf("darkConcrete", v(-64, DECK, z[1]), v(-62.5, DECK + 3.5, z[2])), "block")
+	end
+	for _, crate in { { -100, CROSS_SOUTH + 3, 4 }, { -104, CROSS_SOUTH + 2.5, 3 }, { -104, CROSS_SOUTH + 6.5, 3.4 }, { -46, CROSS_NORTH - 3, 4 }, { -42, CROSS_NORTH - 2.5, 3 } } do
+		local size = crate[3]
+		g:solid("wood", v(size, size, size), CFrame.new(crate[1], DECK + size / 2, crate[2]) * CFrame.Angles(0, g:range(-0.3, 0.3), 0))
+	end
+	g:solid("wood", v(3, 3, 3), CFrame.new(-102, DECK + 5.5, CROSS_SOUTH + 3.5) * CFrame.Angles(0, 0.4, 0))
+	for _, drum in { { -84, CROSS_NORTH - 2 }, { -81.6, CROSS_NORTH - 2.2 }, { -82.8, CROSS_NORTH - 4.4 } } do
+		local drumColor, drumMaterial = g:surface("rust")
+		g:post(v(drum[1], DECK, drum[2]), 2.9, 2, drumColor, drumMaterial)
+	end
+	local steelColor, steelMaterial = g:surface("steel")
+	g:cylinder(CFrame.new(-79, DECK + 1, CROSS_NORTH - 5) * CFrame.Angles(0, math.rad(30), 0), 2.9, 2, steelColor, steelMaterial)
+
+	-- Cables slung across the hall.
+	for x = -116, -30, 7 do
+		g:cable(place(v(x + g:range(-2, 2), g:range(19, 23), CROSS_Z - 19.6)), place(v(x + g:range(-4, 4), g:range(19, 23), CROSS_Z + 19.6)), g:range(3, 6))
+	end
+	if turn then
+		moveGroup(kit, g, turn)
+	end
+end
+
+-- The matchmaking booth against the main hall's south wall, opposite the Market.
+local function matchmakingBooth(kit)
+	local g = kit:group("MatchmakingBooth")
+	local x0, x1 = -10, 10
+	local centre = (x0 + x1) / 2
+	local front = 26
+	g:dirty(g:boxOf("darkConcrete", v(x0, DECK, 16), v(x1, DECK + 0.8, front)), "floor")
+	g:boxOf("steel", v(x0 + 2, DECK + 0.8, 16), v(x1 - 2, DECK + 10, 17.4))
+	local counter = g:dirty(g:boxOf("steel", v(centre - 7, DECK + 0.8, front - 1.8), v(centre + 7, DECK + 4.2, front - 0.4)), "wall", 0.5)
+	g:box(v(centre - 7.2, DECK + 4.2, front - 2), v(centre + 7.2, DECK + 4.4, front - 0.2), SEAM, M.Metal)
+	g:neon(v(14, 0.2, 0.08), CFrame.new(centre, DECK + 3.5, front - 0.34), Palette.DataCyan)
+
+	-- A canopy on two posts, with the sign across its front.
+	for _, x in { x0 + 0.4, x1 - 0.4 } do
+		g:boxOf("rust", v(x - 0.4, DECK + 0.8, front - 0.8), v(x + 0.4, DECK + 11, front))
+	end
+	g:dirty(g:boxOf("steel", v(x0, DECK + 11, 16), v(x1, DECK + 11.6, front + 0.4)), "block", 0.45)
+	g:dirty(g:boxOf("darkConcrete", v(x0, DECK + 11.6, front), v(x1, DECK + 15.4, front + 0.4)), "block")
+	g:sign(facing(v(centre, DECK + 13.5, front + 0.45), v(0, 0, 1)), 18, 3, {
+		text = "MATCHMAKING",
 		color = Palette.DeepNavy,
-		fill = Palette.SignalAcid,
-		light = Palette.SignalAcid,
+		fill = Palette.DataCyan,
+		light = Palette.DataCyan,
 	})
-	for _, x in { -11, 11 } do
-		g:lamp(v(x, 19, 12.4), AMBER, 16, 1.5)
+	for _, x in { centre - 4, centre + 4 } do
+		g:lamp(v(x, DECK + 10.6, 21), Palette.DataCyan, 14, 1.2, false, 0.5)
 	end
-	for _, spot in { v(-18, 23, 12.8), v(18, 23, 12.8), v(-2, 44, 13.1), v(2, 44, 13.1) } do
-		g:lamp(spot, AMBER, 6, 1, false, 0.35)
-	end
-	for _, x in { -15, 15 } do
-		g:box(v(x - 1.5, 19.2, 12.8), v(x + 1.5, 20.8, 13), SEAM, M.Metal)
-	end
-	-- Pipes up the facade, stopping below the roof's edge.
-	for _, x in { -19.4, 19.4 } do
-		local color, material = g:surface("steel")
-		g:post(v(x, DECK, 12.4), 29, 0.6, color, material)
-	end
-	-- The doorway's forcefield. This only marks the spot; the client draws it.
-	local field = Kit.decor(g:box(v(-9, DECK, 14.4), v(9, 22, 14.6), STEEL, M.SmoothPlastic))
-	field.Name = "Forcefield"
-	field.Transparency = 1
-	CollectionService:AddTag(field, "OutpostForcefield")
-	-- Lamps just inside the entrance.
-	for _, x in { -6, 6 } do
-		g:lamp(v(x, 18, 18), AMBER, 18, 1.4)
-	end
+	return g:prompt(counter, "MATCHMAKING", "Soon")
 end
 
 local function hallInside(kit)
 	local g = kit:group("HallInside")
-	-- The catwalk along the east wall.
-	g:dirty(g:boxOf("plate", v(12, 16.4, 18), v(20, 17, 108)), "floor")
-	for z = 18.3, 108, 15 do
-		g:boxOf("steel", v(12.6, 15.8, z - 0.3), v(20, 16.4, z + 0.3))
+	-- Lamps at the south end, where you spawn.
+	for _, x in { -14, 14 } do
+		g:lamp(v(x, 20, 16.6), AMBER, 18, 1.4)
 	end
-	for _, z in { 18.5, 33, 48, 63, 78, 93, 107.5 } do
+	for _, z in { 21, 39, 93, 111 } do
+		g:lamp(v(-18.2, 18, z), AMBER, 22, 1.4)
+	end
+	-- The catwalk along the east wall, in two runs with the East Hall's mouth open between them.
+	local runs = { { 18, CROSS_SOUTH }, { CROSS_NORTH, 108 } }
+	local function onRun(z: number): boolean
+		return z <= CROSS_SOUTH or z >= CROSS_NORTH
+	end
+	for _, run in runs do
+		g:dirty(g:boxOf("plate", v(12, 16.4, run[1]), v(20, 17, run[2])), "floor")
+		-- The rails are a touch thicker than the posts, so they don't share faces.
+		g:boxOf("steel", v(11.97, 20.2, math.max(run[1], 22)), v(12.23, 20.4, run[2]))
+		g:boxOf("steel", v(11.97, 18.6, math.max(run[1], 22)), v(12.23, 18.8, run[2]))
+	end
+	for z = 18.3, 108, 15 do
+		if onRun(z) then
+			g:boxOf("steel", v(12.6, 15.8, z - 0.3), v(20, 16.4, z + 0.3))
+		end
+	end
+	for _, z in { 18.5, 33, CROSS_SOUTH - 1, CROSS_NORTH + 1, 100, 107.5 } do
 		g:boxOf("steel", v(12, DECK, z - 0.3), v(12.6, 16.4, z + 0.3))
 	end
 	for z = 22, 108, 6 do
-		g:boxOf("steel", v(12, 17, z - 0.1), v(12.2, 20.2, z + 0.1))
+		if onRun(z) then
+			g:boxOf("steel", v(12, 17, z - 0.1), v(12.2, 20.2, z + 0.1))
+		end
 	end
-	-- The rails are a touch thicker than the posts, so they don't share faces.
-	g:boxOf("steel", v(11.97, 20.2, 22), v(12.23, 20.4, 108))
-	g:boxOf("steel", v(11.97, 18.6, 22), v(12.23, 18.8, 108))
 	g:boxOf("steel", v(12, 20.2, 107.8), v(20, 20.4, 108))
 
-	-- Stairs up to the catwalk.
-	local steps, rise, run = 15, 11, 18
-	for index = 1, steps do
-		local top = DECK + index * rise / steps
-		local far = 40 - index * run / steps
-		g:boxOf("plate", v(6, top - 0.3, far), v(11.5, top, far + run / steps))
+	-- Two plates hung from the roof carry the jump across the gap, so the floor stays open. Yellow
+	-- edges mark every take-off.
+	local function edge(z: number, x0: number, x1: number, top: number)
+		Kit.decor(g:box(v(x0, top, z - 0.35), v(x1, top + 0.05, z + 0.35), Palette.SignalAcid, M.SmoothPlastic))
 	end
-	local slope = math.atan2(rise, run)
-	local length = math.sqrt(rise ^ 2 + run ^ 2)
-	for _, x in { 5.8, 11.7 } do
-		g:solid("steel", v(0.3, 0.8, length), CFrame.new(x, DECK + rise / 2 - 0.4, 31) * CFrame.Angles(slope, 0, 0))
+	edge(CROSS_SOUTH - 0.4, 12, 20, 17)
+	edge(CROSS_NORTH + 0.4, 12, 20, 17)
+	for _, plate in { { 14, 20, 55.3, 18.5 }, { 12, 18, 70.7, 17 } } do
+		local x0, x1, z0, top = plate[1], plate[2], plate[3], plate[4]
+		local z1 = z0 + 6
+		g:dirty(g:boxOf("plate", v(x0, top - 0.6, z0), v(x1, top, z1)), "floor")
+		edge(z0 + 0.4, x0, x1, top)
+		edge(z1 - 0.4, x0, x1, top)
+		for _, corner in { { x0 + 0.6, z0 + 0.6 }, { x1 - 0.6, z0 + 0.6 }, { x0 + 0.6, z1 - 0.6 }, { x1 - 0.6, z1 - 0.6 } } do
+			-- Up to whichever vault is overhead here, and a little into it.
+			local under = math.min(corner[1], math.abs(corner[2] - CROSS_Z))
+			local roof = SPRING + math.sqrt(VAULT_IN ^ 2 - under ^ 2) + 0.5
+			local color, material = g:surface("steel")
+			g:post(v(corner[1], top, corner[2]), roof - top, 0.25, color, material)
+		end
 	end
-	g:solid("steel", v(0.2, 0.2, length), CFrame.new(5.9, DECK + rise / 2 + 3, 31) * CFrame.Angles(slope, 0, 0))
-	for _, index in { 1, 8, 15 } do
-		local top = DECK + index * rise / steps
-		local z = 40 - (index - 0.5) * run / steps
-		g:boxOf("steel", v(5.8, top, z - 0.1), v(6, top + 3, z + 0.1))
-	end
-	g:boxOf("plate", v(6, 16.4, 18), v(12, 17, 22))
+
 	for _, crate in { { 15, 28, 3 }, { 17.5, 32, 2.4 }, { 16, 34.5, 2 } } do
 		local size = crate[3]
 		g:solid("wood", v(size, size, size), CFrame.new(crate[1], DECK + size / 2, crate[2]) * CFrame.Angles(0, g:range(-0.3, 0.3), 0))
@@ -620,21 +522,32 @@ local function hallInside(kit)
 	end
 	local market = g:prompt(counter, "MARKET", "Soon")
 
-	-- Daylight through the skylight, with drips falling through it.
+	-- Daylight through the skylight, with rain falling through it.
 	-- The spotlight hangs under the roof, because the long slot above would cut its pool into a box.
-	local skylightZ = (SKY_SOUTH + SKY_NORTH) / 2
-	local sun = Kit.decor(g:block(v(1, 1, 1), CFrame.new(0, 43, skylightZ), SKYLIGHT, M.SmoothPlastic))
+	-- The pieces overlap at the back, so every other one stands a touch prouder to keep their faces apart.
+	local rimColor, rimMaterial = g:surface("darkConcrete")
+	local rimDepth = SKY_RIM - SKY_RADIUS
+	local rimPieces = 32
+	local rimWidth = 2 * SKY_RIM * math.tan(math.pi / rimPieces) + 0.05
+	for piece = 1, rimPieces do
+		local around = (piece - 0.5) / rimPieces * 2 * math.pi
+		local middle = v(SKY_RADIUS + rimDepth / 2, 0, 0)
+		local stagger = if piece % 2 == 0 then 0.03 else 0
+		local at = CFrame.new(0, SPRING + 21.3, CROSS_Z) * CFrame.Angles(0, around, 0)
+		g:block(v(rimDepth, 4 + stagger, rimWidth), at * CFrame.new(middle), rimColor, rimMaterial)
+	end
+	local sun = Kit.decor(g:block(v(1, 1, 1), CFrame.new(0, 43, CROSS_Z), SKYLIGHT, M.SmoothPlastic))
 	sun.Transparency = 1
 	g:light(sun, "SpotLight", { Face = Enum.NormalId.Bottom, Angle = 27, Range = 60, Brightness = 6, Shadows = true, Color = SKYLIGHT })
-	g:shaft(v(0, 46.5, skylightZ), v(0, DECK + 0.2, skylightZ), 6.5, SKYLIGHT)
-	local drips = Kit.decor(g:block(v(12, 0.2, 12), CFrame.new(0, 46, skylightZ), RAIN, M.SmoothPlastic))
+	g:shaft(v(0, 46.5, CROSS_Z), v(0, DECK + 0.2, CROSS_Z), 6.5, SKYLIGHT)
+	local drips = Kit.decor(g:block(v(6, 0.2, 6), CFrame.new(0, 46, CROSS_Z), RAIN, M.SmoothPlastic))
 	drips.Transparency = 1
 	local emitter = Instance.new("ParticleEmitter")
 	emitter.Texture = OutpostAssets.rain
 	emitter.Color = ColorSequence.new(RAIN)
 	emitter.EmissionDirection = Enum.NormalId.Bottom
 	emitter.Orientation = Enum.ParticleOrientation.FacingCameraWorldUp -- keeps the streak upright
-	emitter.Rate = 45
+	emitter.Rate = 25
 	emitter.Lifetime = NumberRange.new(0.8, 1)
 	emitter.Speed = NumberRange.new(45, 55)
 	emitter.Size = NumberSequence.new(1.6)
@@ -644,7 +557,9 @@ local function hallInside(kit)
 
 	-- Cables slung across the hall.
 	for z = 18, 112, 7 do
-		g:cable(v(-19.6, g:range(19, 23), z + g:range(-2, 2)), v(19.6, g:range(19, 23), z + g:range(-4, 4)), g:range(3, 6))
+		if z < CROSS_SOUTH - 4 or z > CROSS_NORTH + 4 then
+			g:cable(v(-19.6, g:range(19, 23), z + g:range(-2, 2)), v(19.6, g:range(19, 23), z + g:range(-4, 4)), g:range(3, 6))
+		end
 	end
 	return market
 end
@@ -685,113 +600,25 @@ local function rangeCorridor(kit)
 	Kit.decor(g:box(v(49.56, 9.4, 63.2), v(49.62, 9.9, 68.8), RUST, M.SmoothPlastic))
 	g:neon(v(0.08, 2.7, 0.4), CFrame.new(49.6, 11.85, 69.8), Palette.SignalAcid)
 	g:lamp(v(48.4, 14.4, 66), AMBER, 10, 1)
-	return g:prompt(door, "TEST RANGE", "Travel", 0.4)
+	local prompt = g:prompt(door, "TEST RANGE", "Travel", 0.4)
+	moveGroup(kit, g, CFrame.new(CORRIDOR_SHIFT, 0, 0))
+	return prompt
 end
 
-local function commsTower(kit)
-	local g = kit:group("CommsTower")
-	g:dirty(g:boxOf("concrete", v(34, ROCK_TOP, 88), v(58, 40, 112)), "block")
-	for _, x in { 34, 58 } do
-		local color, material = g:surface("concrete")
-		-- Stops just under the roof, so the two tops don't flicker.
-		g:post(v(x, 14, 100), 25.8, 9, color, material)
-	end
-	g:dirty(g:boxOf("concrete", v(36, 40, 90), v(56, 50, 110)), "block")
-	g:dirty(g:boxOf("darkConcrete", v(38, 50, 92), v(54, 57, 108)), "block")
-	g:boxOf("steel", v(37.5, 57, 91.5), v(54.5, 58, 108.5))
-	for _, edge in {
-		{ v(36, 50, 90), v(56, 51, 90.4) },
-		{ v(36, 50, 109.6), v(56, 51, 110) },
-		{ v(36, 50, 90.4), v(36.4, 51, 109.6) },
-		{ v(55.6, 50, 90.4), v(56, 51, 109.6) },
-	} do
-		g:boxOf("darkConcrete", edge[1], edge[2])
-	end
-
-	local function pane(cframe: CFrame)
-		if g:chance(0.35) then
-			g:neon(v(2.2, 2.6, 0.2), cframe, WINDOW_LIT)
-		else
-			g:block(v(2.2, 2.6, 0.2), cframe, WINDOW_DARK, M.SmoothPlastic)
-		end
-	end
-	for _, y in { 14, 22, 30 } do
-		for _, x in { 38, 43, 49, 54 } do
-			pane(CFrame.new(x, y, 87.95))
-		end
-		-- Either side of the round turret.
-		for _, z in { 90.5, 93, 107, 109.5 } do
-			pane(facing(v(33.95, y, z), v(-1, 0, 0)))
-		end
-	end
-	for _, x in { 40, 44, 48, 52 } do
-		pane(CFrame.new(x, 53.5, 91.95))
-	end
-	for _, z in { 96, 100, 104 } do
-		pane(facing(v(37.95, 53.5, z), v(-1, 0, 0)))
-	end
-	for _, unit in { { 40, 18, 87.3 }, { 52, 26, 87.3 }, { 46, 34, 87.3 }, { 44, 44, 89.3 } } do
-		g:dirty(g:boxOf("sheet", v(unit[1] - 1.3, unit[2] - 1, unit[3] - 0.7), v(unit[1] + 1.3, unit[2] + 1, unit[3] + 0.7)), "block", 0.45)
-		g:cylinder(CFrame.new(unit[1], unit[2], unit[3] - 0.8) * CFrame.Angles(0, math.pi / 2, 0), 0.1, 1.4, SEAM, M.Metal)
-	end
-
-	-- Antenna masts and dishes.
-	for _, corner in { { -1.2, -1.2 }, { 1.2, -1.2 }, { -1.2, 1.2 }, { 1.2, 1.2 } } do
-		g:post(v(46 + corner[1], 58, 100 + corner[2]), 34, 0.35, STEEL, M.Metal)
-	end
-	for y = 64, 90, 6.5 do
-		g:box(v(44.8, y, 98.7), v(47.2, y + 0.25, 98.9), STEEL, M.Metal)
-		g:box(v(44.8, y, 101.1), v(47.2, y + 0.25, 101.3), STEEL, M.Metal)
-		g:box(v(44.7, y, 98.9), v(44.9, y + 0.25, 101.1), STEEL, M.Metal)
-		g:box(v(47.1, y, 98.9), v(47.3, y + 0.25, 101.1), STEEL, M.Metal)
-	end
-	g:lamp(v(46, 92.5, 100), AMBER, 12, 1.5, false, 0.6)
-	g:post(v(40, 58, 94), 16, 0.4, STEEL, M.Metal)
-	g:box(v(38, 70, 93.9), v(42, 70.3, 94.1), STEEL, M.Metal)
-	g:box(v(38.5, 73, 93.9), v(41.5, 73.3, 94.1), STEEL, M.Metal)
-	for _, dish in {
-		{ v(46, 74, 97.6), v(0.3, 0.2, -1) },
-		{ v(51.5, 61.5, 104), v(0.7, 0.5, 0.3) },
-		{ v(41.5, 61, 105), v(-0.6, 0.6, 0.4) },
-	} do
-		local look = facing(dish[1], dish[2].Unit) * CFrame.Angles(0, math.pi / 2, 0)
-		g:cylinder(look, 0.8, 8, g:vary(DISH, 0.03), M.SmoothPlastic)
-		g:cylinder(look * CFrame.new(0.9, 0, 0), 1.6, 0.4, STEEL, M.Metal)
-	end
-end
-
-local function bunker(kit)
-	local g = kit:group("Bunker")
-	g:dirty(g:boxOf("darkConcrete", v(-58, -0.6, -102), v(-34, 1, -82)), "block")
-	g:dirty(g:boxOf("concrete", v(-54, 1, -98), v(-38, 25, -86)), "block")
-	-- The glowing door.
-	g:boxOf("steel", v(-37.8, 1, -94.2), v(-37.4, 9.4, -93.8))
-	g:boxOf("steel", v(-37.8, 1, -90.2), v(-37.4, 9.4, -89.8))
-	g:boxOf("steel", v(-37.8, 9.4, -94.2), v(-37.4, 10, -89.8))
-	g:neon(v(0.3, 7.8, 3.6), CFrame.new(-37.85, 5.1, -92), AMBER)
-	local glow = Kit.decor(g:block(v(1, 1, 1), CFrame.new(-35.5, 5, -92), AMBER, M.SmoothPlastic))
-	glow.Transparency = 1
-	g:light(glow, "PointLight", { Color = AMBER, Range = 18, Brightness = 2.2, Shadows = true })
-	g:dirty(g:boxOf("darkConcrete", v(-37.4, 1, -95), v(-35, 1.6, -89)), "floor")
-	g:sign(facing(v(-37.75, 11.2, -92), v(1, 0, 0)), 2.4, 1.2, {
-		text = "07",
-		color = Palette.SignalAcid,
-		style = "Label",
-	})
-	-- Ladder, lights and a floodlight.
-	for _, z in { -88.6, -87.4 } do
-		Kit.decor(g:box(v(-37.9, 1, z - 0.1), v(-37.6, 26, z + 0.1), STEEL, M.Metal))
-	end
-	for y = 2.5, 24.5, 1.5 do
-		Kit.decor(g:box(v(-37.85, y, -88.6), v(-37.65, y + 0.15, -87.4), STEEL, M.Metal))
-	end
-	for _, spot in { v(-37.7, 18, -97.6), v(-37.7, 16.8, -97.6), v(-37.7, 23, -96.4) } do
-		g:lamp(spot, AMBER, 6, 1, false, 0.35)
-	end
-	g:post(v(-39.4, 25, -87.4), 3, 0.3, STEEL, M.Metal)
-	local flood = g:boxOf("steel", v(-40.2, 27.6, -88.2), v(-38.6, 28.8, -86.6))
-	g:light(flood, "SpotLight", { Face = Enum.NormalId.Right, Angle = 70, Range = 30, Brightness = 1.2, Color = AMBER })
-	g:cable(v(-37.8, 24.5, -86.2), v(-37.8, 4, -86.8), 1.5, 0.18)
+local function makeSpawn(kit): SpawnLocation
+	local spawn = Instance.new("SpawnLocation")
+	spawn.Name = "OutpostSpawn"
+	spawn.Anchored = true
+	spawn.Size = v(6, 1, 6)
+	spawn.CFrame = kit:frame(CFrame.new(45, DECK, CROSS_Z) * CFrame.Angles(0, math.pi / 2, 0)) * CFrame.new(0, -spawn.Size.Y / 2, 0)
+	spawn.Transparency = 1
+	spawn.CanCollide = false
+	spawn.CanQuery = false
+	spawn.CanTouch = false
+	spawn.Neutral = true
+	spawn.Duration = 0
+	spawn.Parent = kit.parent
+	return spawn
 end
 
 -- Builds the Outpost at origin. Returns its spawn and the prompts the server answers.
@@ -800,20 +627,14 @@ function Map.build(origin: CFrame)
 	folder.Name = "Outpost"
 	local kit = Kit.new(folder, origin, SEED, OutpostScale.factor)
 
-	terrain(kit)
-	local spawn = dock(kit)
-	gantry(kit)
-	yard(kit)
+	outside(kit)
+	local spawn = makeSpawn(kit)
 	hallShell(kit)
-	hallFront(kit)
+	sideHall(kit, "WestHall")
+	sideHall(kit, "EastHall", EAST_TURN)
 	local market = hallInside(kit)
+	local matchmaking = matchmakingBooth(kit)
 	local testRoomDoor = rangeCorridor(kit)
-	commsTower(kit)
-	bunker(kit)
-	local air = kit:group("Mist")
-	mist(air, v(0, 0.5, -96), v(50, 1, 40))
-	mist(air, v(-46, 0.5, -70), v(50, 1, 50))
-	mist(air, v(72, 0.5, 0), v(60, 1, 80))
 	kit:finish(folder)
 
 	folder.Parent = workspace
@@ -822,6 +643,7 @@ function Map.build(origin: CFrame)
 		spawn = spawn,
 		testRoomDoor = testRoomDoor,
 		market = market,
+		matchmaking = matchmaking,
 	}
 end
 

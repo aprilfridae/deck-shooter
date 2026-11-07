@@ -12,9 +12,14 @@ local Zones = require(Guns:WaitForChild("Zones"))
 local player = Players.LocalPlayer
 local BODY_GROUP = "BodyMesh" -- from CharacterBody.server.luau; it never touches the world
 local SETTLE = 0.5
-local STRIPPED = { Animator = true, Highlight = true, Sound = true }
+-- A limb that moved less than this between held poses has no blur to show. Its copies would sit
+-- right on the body, and the two surfaces flicker against each other.
+local MIN_MOVE = 0.06 -- studs
+local MIN_TURN = 0.04 -- radians
+-- An avatar's face and accessories would stay solid on a see-through copy.
+local STRIPPED = { Accessory = true, Animator = true, Decal = true, Highlight = true, Sound = true }
 
-type Limb = { source: BasePart, copies: { BasePart }, from: CFrame?, to: CFrame?, poses: { CFrame } }
+type Limb = { source: BasePart, copies: { BasePart }, from: CFrame?, to: CFrame?, poses: { CFrame }, moved: boolean }
 
 local folder: Folder? = nil
 local root: BasePart? = nil
@@ -90,7 +95,7 @@ local function onCharacter(character: Model)
 			for index, ghost in ghosts do
 				copies[index] = ghost:FindFirstChild(part.Name) :: BasePart
 			end
-			table.insert(limbs, { source = part, copies = copies, poses = {} })
+			table.insert(limbs, { source = part, copies = copies, poses = {}, moved = false })
 		end
 	end
 	folder, root = holder, rootPart
@@ -116,6 +121,8 @@ RunService.PostSimulation:Connect(function()
 		limb.from = limb.to
 		limb.to = root.CFrame:ToObjectSpace(limb.source.CFrame)
 		if limb.from then
+			local _, turned = limb.from:ToObjectSpace(limb.to):ToAxisAngle()
+			limb.moved = (limb.to.Position - limb.from.Position).Magnitude > MIN_MOVE or turned > MIN_TURN
 			for index = 1, BodyStyle.smearCopies do
 				limb.poses[index] = limb.from:Lerp(limb.to, share(index))
 			end
@@ -140,7 +147,9 @@ RunService.RenderStepped:Connect(function()
 	for _, limb in limbs do
 		for index, copy in limb.copies do
 			local pose = limb.poses[index]
-			if pose then
+			if not limb.moved then
+				copy.Transparency = 1
+			elseif pose then
 				copy.CFrame = root.CFrame * pose
 				copy.Transparency = 1 - BodyStyle.smearOpacity * share(index) * fade
 			end

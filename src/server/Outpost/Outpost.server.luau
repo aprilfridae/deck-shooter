@@ -1,7 +1,10 @@
--- Builds the Outpost at startup and moves players between it and the test room.
+-- Builds the Outpost at startup, moves players between it and the test room, and loads each
+-- character, since the body depends on the zone: your Roblox avatar here, the game's own elsewhere.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local ServerStorage = game:GetService("ServerStorage")
+local StarterPlayer = game:GetService("StarterPlayer")
 
 local Zones = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Zones"))
 local Map = require(script.Parent.Map)
@@ -11,10 +14,17 @@ local ORIGIN = CFrame.new(4000, 0, 0) -- far from the test room, which sits at t
 local TRAVEL_GRACE_SECONDS = 1
 local TRAVEL_COOLDOWN_SECONDS = 1
 local STREAM_TIMEOUT_SECONDS = 2
-local SEA_ROOT_HEIGHT = 1.5 -- a root part this low is in the sea
-local MAX_RANGE = 320 -- past this the fog hides everything
+local LOST_HEIGHT = 1.5 -- a root part this low has fallen out of the building
+local MAX_RANGE = 320 -- nothing is built this far out
 local CHECK_EVERY_SECONDS = 0.25
 local SPAWN_DRIFT = 60 -- a new character this far from its zone's spawn gets moved there
+
+-- Before anyone can load: Roblox would otherwise give everyone StarterCharacter straight away.
+Players.CharacterAutoLoads = false
+local gameBody = StarterPlayer:FindFirstChild("StarterCharacter")
+if gameBody then
+	gameBody.Parent = ServerStorage
+end
 
 local outpost = Map.build(ORIGIN)
 local testRoom = workspace:WaitForChild("TestRoom")
@@ -27,6 +37,29 @@ local spawns: { [string]: SpawnLocation } = {
 }
 local lastTravel: { [Player]: number } = {}
 local moving: { [Player]: boolean } = {}
+
+-- StarterCharacter applies to whoever loads while it's in StarterPlayer, so loads go one at a time.
+local loading = false
+local function loadBody(player: Player)
+	while loading do
+		task.wait()
+	end
+	if player.Parent ~= Players then
+		return
+	end
+	loading = true
+	if gameBody then
+		gameBody.Parent = if Zones.usesAvatar(Zones.of(player)) then ServerStorage else StarterPlayer
+	end
+	local loaded, problem = pcall(player.LoadCharacter, player)
+	if gameBody then
+		gameBody.Parent = ServerStorage
+	end
+	loading = false
+	if not loaded then
+		warn("Could not load a character for", player.Name, problem)
+	end
+end
 
 local function standingOn(spawn: SpawnLocation): CFrame
 	return spawn.CFrame * CFrame.new(0, spawn.Size.Y / 2 + 3, 0)
@@ -62,7 +95,8 @@ local function travel(player: Player, zone: string)
 	end
 	lastTravel[player] = now
 	setZone(player, zone)
-	moveTo(player, zone)
+	MoveGrace.give(player, TRAVEL_GRACE_SECONDS)
+	loadBody(player)
 end
 
 outpost.testRoomDoor.Triggered:Connect(function(player)
@@ -74,6 +108,15 @@ end)
 
 -- A new character can land on the wrong spawn if it loaded before RespawnLocation was set.
 local function onCharacter(player: Player, character: Model)
+	local humanoid = character:WaitForChild("Humanoid", 10) :: Humanoid?
+	if humanoid then
+		humanoid.Died:Once(function()
+			task.wait(Players.RespawnTime)
+			if player.Character == character then
+				loadBody(player)
+			end
+		end)
+	end
 	local root = character:WaitForChild("HumanoidRootPart", 10) :: BasePart?
 	if not root or player.Character ~= character then
 		return
@@ -93,6 +136,7 @@ local function onPlayer(player: Player)
 	if player.Character then
 		task.spawn(onCharacter, player, player.Character)
 	end
+	loadBody(player)
 end
 
 Players.PlayerAdded:Connect(onPlayer)
@@ -104,7 +148,7 @@ Players.PlayerRemoving:Connect(function(player)
 	moving[player] = nil
 end)
 
--- The sea and the fog's edge send you back to the dock.
+-- Getting out of the building somehow sends you back to the spawn.
 local function isLost(player: Player): boolean
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
@@ -113,7 +157,7 @@ local function isLost(player: Player): boolean
 		return false
 	end
 	local offset = ORIGIN:PointToObjectSpace(root.Position)
-	return offset.Y < SEA_ROOT_HEIGHT or Vector2.new(offset.X, offset.Z).Magnitude > MAX_RANGE
+	return offset.Y < LOST_HEIGHT or Vector2.new(offset.X, offset.Z).Magnitude > MAX_RANGE
 end
 
 local waited = 0
