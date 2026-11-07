@@ -5,6 +5,8 @@ local PanelMotion = {
 	DURATION = 0.5, -- seconds
 	COPIES = 3,
 	SHAKE_TIME = 7 / 30, -- seconds, in whole frames
+	VIEW_SCALE = 0.75, -- the sheared camera is shrunk by this, which the picture doesn't show
+	MOST_SHIFT = 1.2, -- at that scale Roblox accepts up to 1.25 facing any way, measured in Play
 }
 
 local OVERSHOOT = 1.1 -- higher swings further past the mark
@@ -58,6 +60,12 @@ end
 -- How far the view's centre moves left, as a shear per unit of depth.
 function PanelMotion.viewShift(verticalFov: number, aspect: number): number
 	return math.tan(math.rad(verticalFov) / 2) * aspect * CHARACTER_PLACE
+end
+
+-- Past a limit that changes with the way the camera faces, Roblox straightens a sheared camera and
+-- the picture snaps back to the centre. Shrinking the camera raises the limit; this stays under it.
+function PanelMotion.safeShift(shift: number): number
+	return math.clamp(shift, -PanelMotion.MOST_SHIFT, PanelMotion.MOST_SHIFT)
 end
 
 -- How much the view blurs for this much travel in one frame of the panel.

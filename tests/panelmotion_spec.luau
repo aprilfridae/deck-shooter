@@ -54,6 +54,13 @@ describe("PanelMotion", function()
 		expect(near(PanelMotion.viewShift(90, 2), 1)).toBe(true)
 	end)
 
+	it("keeps the view's shift small enough for Roblox to accept", function()
+		expect(PanelMotion.safeShift(0.5)).toBe(0.5)
+		expect(PanelMotion.safeShift(-0.5)).toBe(-0.5)
+		expect(PanelMotion.safeShift(5)).toBe(PanelMotion.MOST_SHIFT)
+		expect(PanelMotion.safeShift(-5)).toBe(-PanelMotion.MOST_SHIFT)
+	end)
+
 	it("blurs the view only while it travels, up to a limit", function()
 		expect(PanelMotion.viewBlur(0)).toBe(0)
 		expect(PanelMotion.viewBlur(0.1) > 0).toBe(true)

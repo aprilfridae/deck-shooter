@@ -61,7 +61,10 @@ RunService:BindToRenderStep("OutpostMenuCamera", Enum.RenderPriority.Camera.Valu
 	real = camera.CFrame
 	-- The lean comes first, so the picture tips around the character rather than the screen's centre.
 	local lean = CFrame.Angles(0, 0, shake.lean - PanelMotion.viewLean(travel))
-	camera.CFrame = camera.CFrame * lean * CFrame.new(0, 0, 0, 1, 0, 0, 0, 1, 0, shift + shake.x, shake.y, 1)
+	local across = PanelMotion.safeShift(shift + shake.x)
+	local size = PanelMotion.VIEW_SCALE
+	local shear = CFrame.new(0, 0, 0, size, 0, 0, 0, size, 0, across * size, shake.y * size, size)
+	camera.CFrame = camera.CFrame * lean * shear
 end)
 
 return MenuCamera
