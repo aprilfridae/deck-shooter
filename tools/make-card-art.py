@@ -1,5 +1,5 @@
-# Bakes the card art into assets/cards/, which git ignores. Needs Jost's variable font in
-# assets/fonts/, from the google/fonts repo. Then upload the images with upload-group-assets.py
+# Bakes the card art into assets/cards/, which git ignores. Needs the KH Interference font in
+# assets/fonts/. Then upload the images with upload-group-assets.py
 # and put their ids in src/shared/CardCore/CardArt.luau.
 #
 #   python tools/make-card-art.py
@@ -10,8 +10,8 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 SCALE = 4  # pixels per card unit
 WIDTH, HEIGHT = 150, 240
 CORNER = 10
-FONT = "assets/fonts/Jost[wght].ttf"
-WEIGHT = 600
+FONT = "assets/fonts/KHInterferencePRO-Bold.otf"
+WEIGHT = None  # for a variable font
 FONT_SIZE = 600
 GAP = 0.0  # between the two letters, in font sizes
 BOX = (12, 12, 104, 158)  # where the monogram sits: left, top, right, bottom
@@ -42,7 +42,8 @@ def units(value):
 def letters(monogram):
     """The two letters as a white mask, cropped to their ink."""
     font = ImageFont.truetype(FONT, FONT_SIZE)
-    font.set_variation_by_axes([WEIGHT])
+    if WEIGHT:
+        font.set_variation_by_axes([WEIGHT])
     mask = Image.new("L", (FONT_SIZE * 3, FONT_SIZE * 2), 0)
     draw = ImageDraw.Draw(mask)
     x = FONT_SIZE // 4

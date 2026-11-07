@@ -5,36 +5,36 @@ end
 
 local BASE = {
 	phase_dash = {
-		Field = asset("78472403032292"),
-		Redline = asset("77584333850554"),
-		Prototype = asset("90103783436516"),
-		ZeroDay = asset("112487165085829"),
+		Field = asset("135799689929575"),
+		Redline = asset("115323146187126"),
+		Prototype = asset("112048701660746"),
+		ZeroDay = asset("79522833843252"),
 	},
 	overclock = {
-		Field = asset("71482834272469"),
-		Redline = asset("132890190104317"),
-		Prototype = asset("139588939360760"),
-		ZeroDay = asset("76955485545576"),
+		Field = asset("130884474614135"),
+		Redline = asset("138853290782969"),
+		Prototype = asset("112015614808231"),
+		ZeroDay = asset("111185498272979"),
 	},
 	recon_pulse = {
-		Field = asset("118876353214421"),
-		Redline = asset("76202261135666"),
-		Prototype = asset("107509345501040"),
-		ZeroDay = asset("133153687913739"),
+		Field = asset("129588910168237"),
+		Redline = asset("72137361297964"),
+		Prototype = asset("117730099136065"),
+		ZeroDay = asset("122239713548340"),
 	},
 	aegis_shell = {
-		Field = asset("97953290216118"),
-		Redline = asset("136015435171100"),
-		Prototype = asset("76108922628178"),
-		ZeroDay = asset("97625491389068"),
+		Field = asset("87678255133610"),
+		Redline = asset("90952423217373"),
+		Prototype = asset("98703814643550"),
+		ZeroDay = asset("124785000734405"),
 	},
 }
 
 local OUTLINE = {
-	phase_dash = asset("90685667021640"),
-	overclock = asset("89150489358147"),
-	recon_pulse = asset("77524852632325"),
-	aegis_shell = asset("124056295303994"),
+	phase_dash = asset("106694986813790"),
+	overclock = asset("85588231199300"),
+	recon_pulse = asset("115303810288633"),
+	aegis_shell = asset("102822154802573"),
 }
 
 local CardArt = {

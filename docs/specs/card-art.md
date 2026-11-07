@@ -92,7 +92,7 @@ Clicking a card in the Profile index holds it up in the 3D world. `CardInspect.l
 
 ## How it's built
 
-- **Art:** the background, monogram, glow and fixed details are one image per card and rarity, because Roblox UI can't blur text. Images are group assets, ids kept with the others. The monogram uses Jost at weight 600, which is free for commercial use, since the game's fonts lack the shape. `tools/make-card-art.py` makes the images.
+- **Art:** the background, monogram, glow and fixed details are one image per card and rarity, because Roblox UI can't blur text. Images are group assets, ids kept with the others. The monogram uses KH Interference Bold, the same as the menu titles. `tools/make-card-art.py` makes the images.
 - **Live parts** are drawn over the image: the serial and name through `TypeLabel`, the shine and foil as moving frames with `UIGradient`, the stripes as a scrolling image.
 - **Foil:** Roblox UI can't blend colours into what's beneath, so the band sits on top at partial transparency. River judges it in Play.
 - **Where cards show:** a new `CardFace.luau` draws a card in the Loadout slots and Profile index. `CardView.luau` is the 3D card held in a match.
