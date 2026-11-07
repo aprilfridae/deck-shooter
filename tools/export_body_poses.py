@@ -58,8 +58,9 @@ def export(gun, path):
     poses = {}
     for act in sorted(bpy.data.actions, key=lambda a: a.name):
         rig.animation_data.action = act
-        if act.slots and rig.animation_data.action_slot is None:
+        if act.slots:
             rig.animation_data.action_slot = act.slots[0]
+        bpy.context.scene.frame_set(2)  # step off and back so the new action is evaluated
         bpy.context.scene.frame_set(1)
         bpy.context.view_layer.update()
         frames = {}
@@ -68,6 +69,10 @@ def export(gun, path):
             if pb.name in mot:
                 f = f @ mot[pb.name][2].inverted()  # bone frame -> Roblox part frame
             frames[pb.name] = flat(f)
+        cam = bpy.data.objects.get("FP_GameCamera")
+        if cam:  # the first-person camera at the centre of the red eye bar, looking down its -Z like a Roblox camera
+            m = cam.matrix_world.normalized()
+            frames["FPView"] = flat(B2R @ m)
         poses[act.name] = frames
     gun_name = "GUN_" + gun
     data = {

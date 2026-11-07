@@ -24,12 +24,13 @@ describe("Spread", function()
 		expect(Spread.angle(sniper, true)).toBe(0)
 	end)
 
-	it("lets only the Longscope aim", function()
+	it("lets every gun aim, with only the Longscope more accurate for it", function()
 		for id, gun in GunConfig.guns do
 			expect(type(gun.spread)).toBe("number")
 			expect(gun.hipSpread == nil).toBe(id ~= "Sniper")
-			expect(gun.aimFov == nil).toBe(id ~= "Sniper")
+			expect(type(gun.aimFov)).toBe("number")
 		end
+		expect(GunConfig.guns.Sniper.aimFov).toBe(30)
 	end)
 
 	it("spreads a direction by no more than the angle", function()

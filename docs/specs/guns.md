@@ -21,7 +21,7 @@ The code and saves use internal ids, and players see display names: `M4` is the 
 
 ## Decided by River
 
-- All guns are hip fire only, except the Longscope, which can aim down sights. The base and firing gun pose always points straight.
+- Every gun can aim down sights. Aiming zooms the camera to the gun's `aimFov` (M57, B33 and Revolver 55; SMG, Shotgun, Energy Pistol, Machine pistol and Auto-pistol 60; Longscope 30) and, through a scope (an `aimFov` of 40 or less, so only the Longscope), applies the scope sensitivity setting (`MouseFeel.client.luau`). Aiming changes spread only for guns with a hip spread (the Longscope). The base and firing gun pose always points straight.
 - The M57 has almost no recoil and does 2x headshot damage. The B33 has high recoil and kills on any headshot. The Longscope kills on any headshot. These replace the parent spec's single headshot multiplier.
 - Every class uses the Energy Pistol as its sidearm for now. The machine pistol, revolver and auto-pistol stay in the gun data, unused, until River brings them back.
 - Guns add 0 to Deck Power Rating. Gun upgrades wait until after launch.
@@ -58,7 +58,7 @@ These are the defaults. Players can rebind all but the test keys in Settings (`o
 | Key | Action |
 | --- | --- |
 | Left mouse | Fire. Also uses a held card. |
-| Right mouse | Aim down sights (Longscope only) |
+| Right mouse | Aim down sights |
 | R | Reload |
 | 1, 2 | Primary, sidearm |
 | B, N | Next class, next Assault rifle. Test keys, until matches add a between-round screen. |
@@ -100,5 +100,6 @@ Shots are instant. The server alone decides damage, health and ammo (`src/server
 
 - Gun models come from `ReplicatedStorage.GunModels` in the group's place, found by display name. A gun with no model shows a grey block. A local export in `assets/models/GunModels.rbxm` had the M57, B33, SMG, Longscope, Energy Pistol, `Arms` and `Card`, with no Shotgun model. That hasn't been checked against the group's place.
 - Arm animations exported from Blender exist for the M57, the Energy Pistol and the card (`src/shared/Guns/ArmClips/`). The M57 and Energy Pistol each have 3 reload takes (`reload`, `reload2`, `reload3`) that differ only in position, and one is picked at random. Other guns use arms posed in code. `docs/HANDOFF.md` has the export steps.
+- **The soldier's own arms (first person).** Once `GunModels.SoldierArms` is imported (the pieces of `SoldierArms.fbx`, each MeshPart named `<Part>_<material>`), all six guns are held in the soldier's own arms, hands and fingers instead (`SoldierArms.luau`, `PoseGun.luau`, clips in `src/shared/Guns/SoldierClips/`, expanded by `SoldierClip.luau`). Every pose sits relative to the camera at the centre of the red eye bar. Clips: idle, aim, a one-frame blend into and out of aiming, fire and aimed fire (12 fps; the Shotgun pumps and the Longscope works its bolt after a hip shot), run, equip, holster and reload. Reloads are stretched to the gun's reload time: rifles grab the magazine, pull it out, bring a new one up, push it in and seat it; the Longscope then works its bolt; the Energy Pistol reloads with the left hand while the right keeps its one-handed grip; the Shotgun loops one shell per 0.5s. The poses come from the soldier pose files through `tools/export_body_poses.py` and `tools/build_view_clips.py`. Until the model is imported, the guns keep the views above. The Energy Pistol's snap and the card still use the `Arms` model.
 - Tracers, impacts and bullet holes: `ShotEffects.client.luau` and `BulletHoles.client.luau`.
 - Sounds: `GunAudio.luau`, with ids in `GunSounds.luau` and `SoundIds.luau`.
