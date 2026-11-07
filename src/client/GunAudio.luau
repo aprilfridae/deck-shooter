@@ -31,7 +31,15 @@ for gunId, soundIds in GunSounds.shots do
 end
 
 local others: { [string]: Sound } = {}
-for _, soundId in { GunSounds.hits.body, GunSounds.hits.head, GunSounds.hits.kill, GunSounds.hurt } do
+for _, soundId in {
+	GunSounds.hits.body,
+	GunSounds.hits.head,
+	GunSounds.hits.kill,
+	GunSounds.hurt,
+	GunSounds.lands.soft,
+	GunSounds.lands.hard,
+	GunSounds.slideStart,
+} do
 	others[soundId] = newSound(soundId)
 end
 for _, soundId in GunSounds.reloads do
@@ -99,6 +107,14 @@ end
 
 function GunAudio.playJump()
 	playCopy(jumps[pickTake("jump", #jumps)], GunSounds.jumpLeadSeconds)
+end
+
+function GunAudio.playLand(hard: boolean)
+	playCopy(others[if hard then GunSounds.lands.hard else GunSounds.lands.soft], 0)
+end
+
+function GunAudio.playSlideStart()
+	playCopy(others[GunSounds.slideStart], 0)
 end
 
 function GunAudio.playHurt()

@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
@@ -11,6 +12,7 @@ local Cards = require(CardCore:WaitForChild("Cards"))
 local Inventory = require(CardCore:WaitForChild("Inventory"))
 local Packs = require(CardCore:WaitForChild("Packs"))
 local PullMotion = require(CardCore:WaitForChild("PullMotion"))
+local GunSounds = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("GunSounds"))
 local Palette = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Palette"))
 local CardData = require(script.Parent.CardData)
 local CardFace = require(script.Parent.CardFace)
@@ -19,6 +21,7 @@ local MenuPanel = require(script.Parent.MenuPanel)
 local PackCardBack = require(script.Parent.PackCardBack)
 local PanelKit = require(script.Parent.PanelKit)
 local PullStage = require(script.Parent.PullStage)
+local SoundGroups = require(script.Parent.SoundGroups)
 
 -- Shares of the unit.
 local CARD_WIDTH = 0.135
@@ -62,6 +65,12 @@ sheet.BackgroundColor3 = Palette.DeepNavy
 sheet.BorderSizePixel = 0
 sheet.Size = UDim2.fromScale(1, 1)
 sheet.Parent = gui
+
+local openSound = Instance.new("Sound")
+openSound.Name = "PackOpen"
+openSound.SoundId = GunSounds.packOpen
+openSound.SoundGroup = SoundGroups.menu
+openSound.Parent = SoundService
 
 local queue: { { run: (Frame, () -> (), boolean) -> (), auto: boolean } } = {}
 local stage: Frame? = nil
@@ -246,6 +255,7 @@ function PullReveal.pack(pack: string, cards: { any })
 			if not frame.Parent then
 				return
 			end
+			openSound:Play()
 			PullStage.play(frame, pack, cards, {
 				inspect = inspect,
 				rested = function(line: number)

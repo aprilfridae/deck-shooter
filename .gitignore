@@ -7,3 +7,8 @@ sourcemap.json
 # Local working copies (exports, sounds before upload) can sit here without being committed.
 assets/
 __pycache__/
+
+# River's local sound takes and macOS clutter.
+local sound effects/
+.DS_Store
+*.rbxl.lock

@@ -52,7 +52,10 @@ A **fixed flat edge** is an anchored part that isn't part of a character, with a
 
 ## Sounds
 
-- A footstep plays every 9 studs while walking or sprinting, and a jump sound plays when a jump starts. `docs/sound-list.md` lists what's missing (landing, slide, parry).
+- A footstep plays every 9 studs while walking or sprinting, and a jump sound plays when a jump starts.
+- Landing after at least 0.15s in the air plays a landing sound: the hard one if the fall reached 60 studs per second (a fast fall or a long drop; a chain jump lands at about 49), else the soft one. `HardLandSpeed` in `MoveConfig.luau`.
+- Every slide plays the slide start sound as it begins, including one started by landing, so a fast fall into a slide plays both.
+- `docs/sound-list.md` lists what's still missing, such as the slide loop and the parry.
 - Roblox's default running sound is muted on every character.
 
 ## Cheat checks

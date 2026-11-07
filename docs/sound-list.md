@@ -30,6 +30,9 @@ What the game already plays and what it still needs. Checked against the code on
 | Jumps | `jump-1` to `14` | A jump with Space (walking off an edge plays nothing). Each take opens with 0.1s of silence, which the game skips. |
 | Menu music | `menu-music-v2.mp3` | Loops from joining. Quieter and thinner after PLAY. |
 | Menu selection | `menu-select` | Clicking PLAY, and clicks in the Outpost menu. Hovering a nav row plays it quieter and higher. |
+| Landings | `move-land-soft`, `move-land-hard` | Landing after at least 0.15s in the air. Hard if the fall reached 60 studs per second (a fast fall or long drop), else soft. |
+| Slide start | `move-slide-start` | Every slide as it begins, including one started by landing |
+| Pack open | `pack-open` | Once as a pack spins in, in the Menu volume group |
 
 ## Still needed
 
@@ -39,9 +42,6 @@ In order of how much each group changes the feel. Every sound below needs a litt
 
 | Name | When it plays | Channels | Takes | Length | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `move-land-soft` | A normal landing | Mono | 1 | 0.2s | |
-| `move-land-hard` | A landing from a fast fall | Mono | 1 | 0.4s | |
-| `move-slide-start` | The burst at the start of a slide | Mono | 1 | 0.3s | |
 | `move-slide-loop` | Scraping for as long as a slide lasts. Must loop with no click | Mono | 1 | 1–2s | |
 | `move-sprint` | Footsteps while sprinting, heavier than walking | Mono | 4 or more | 0.2s | Sprinting uses the walking steps today |
 | `gun-<gun>-enemy` | Other players' shots, one per gun | Mono | 1 | Like the gun's own shot | Can be your shot summed to mono with less low end. Other players' shots are silent today, so playing them is new code. |
@@ -107,7 +107,7 @@ The SMG and Shotgun are playable. The machine pistol, revolver and auto-pistol a
 
 ## Packs
 
-The packs menu and pull reveal have no sounds of their own yet: rolling, the pack tearing down its side, the cards shaking, the three cards flipping, the burst and a Zero-Day pull.
+`pack-open` plays as a pack spins in. Still without sounds: rolling, the pack tearing down its side, the cards shaking, the three cards flipping, the burst and a Zero-Day pull.
 
 ## Later, with matches
 

@@ -63,6 +63,12 @@ local GunSounds = {
 	jumps = numbered("jump", 14),
 	-- Every jump take opens with this much silence.
 	jumpLeadSeconds = 0.1,
+	lands = {
+		soft = sound("move-land-soft.wav"),
+		hard = sound("move-land-hard.wav"),
+	},
+	slideStart = sound("move-slide-start.wav"),
+	packOpen = sound("pack-open.wav"),
 }
 
 -- Roblox can only start a sound on a frame. Starting a late shot this far into its padding

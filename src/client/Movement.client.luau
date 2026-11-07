@@ -48,6 +48,7 @@ local jumped = false
 local fieldOfView = FIELD_OF_VIEW
 local landDip = 0
 local airStartedAt = 0
+local peakFall = 0 -- the fastest fall since leaving the ground
 local sentPose = "Normal"
 local poseSentAt = -math.huge
 local jumpHeld = false
@@ -115,6 +116,7 @@ local function startParry(forward: Vector3, height: number, now: number)
 	airFromSlide = true
 	jumped = true
 	airStartedAt = now
+	peakFall = 0
 end
 
 -- A jump press near a low edge parries off it.
@@ -182,6 +184,7 @@ local function advanceDash(path: DashPath, now: number)
 		airFromSlide = true
 		jumped = false
 		airStartedAt = now
+		peakFall = 0
 	end
 end
 
@@ -254,6 +257,7 @@ local function onFrame(dt: number)
 	local sliding = state.mode == "Slide"
 	if sliding then
 		if not wasSliding then
+			GunAudio.playSlideStart()
 			if direction.Magnitude > 0 then
 				slideDirection = direction.Unit
 			end
@@ -288,12 +292,17 @@ local function onFrame(dt: number)
 	local airborne = state.mode == "Air"
 	if airborne and previousMode ~= "Air" then
 		airStartedAt = now
+		peakFall = 0
 		jumped = keys.jump
 		if jumped then
 			GunAudio.playJump()
 		end
 	elseif previousMode == "Air" and not airborne and now - airStartedAt >= MIN_AIR_FOR_DIP then
 		landDip = 1
+		GunAudio.playLand(MoveState.hardLanding(peakFall))
+	end
+	if airborne then
+		peakFall = math.max(peakFall, -fallY)
 	end
 	landDip *= math.exp(-dt * EFFECT_EASE)
 	fieldOfView += (targetFieldOfView() - fieldOfView) * (1 - math.exp(-dt * FOV_EASE))
