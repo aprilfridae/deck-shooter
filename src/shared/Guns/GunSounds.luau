@@ -68,7 +68,13 @@ local GunSounds = {
 		hard = sound("move-land-hard.wav"),
 	},
 	slideStart = sound("move-slide-start.wav"),
-	packOpen = sound("pack-open.wav"),
+	-- Each pack rarity's opening sound.
+	packOpens = {
+		Field = sound("pack-open-common.wav"),
+		BlackSite = sound("pack-open-rarer.wav"),
+		Prototype = sound("pack-open-rarer.wav"),
+		ZeroDay = sound("pack-open-rarest.wav"),
+	},
 }
 
 -- Roblox can only start a sound on a frame. Starting a late shot this far into its padding
