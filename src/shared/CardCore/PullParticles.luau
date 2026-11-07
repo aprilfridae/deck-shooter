@@ -1,118 +1,69 @@
--- The particles for each rarity of pack opening. Distances are shares of the screen's height.
+-- The burst when a pack's cards turn over: two rings and a spray of wrapper shards.
+-- Rarer cards burst harder. Distances are shares of the screen's height.
 local Variant = require("./Variant")
 
 local FULL_TURN = 2 * math.pi
-local STEP_RATE = 12 -- frames a second for the styles that move in jumps
+local SHARDS = 120 -- at a power of 1
+local REACH = 0.9 -- how far the fastest shard gets at a power of 1
+local DRAG = 3.2 -- higher stops a shard sooner
+local SLOWEST = 0.3 -- of a shard's top speed
+local GRAVITY = 0.12
+local LIFE = { 0.8, 1.4 } -- seconds
+local SLIVER_SHARE = 0.4
+local CHIP_SIZE = { 0.008, 0.016 }
+local SLIVER_WIDTH = { 0.004, 0.006 }
+local SLIVER_LENGTH = { 0.02, 0.036 }
+local SPIN = 9 -- radians a second
+local RING_REACH = 0.95 -- at a power of 1
+local SMALLEST_RING = 0.5
 
-local PullParticles = {}
+local TIER_POWER = { Field = 0.45, BlackSite = 0.7, Prototype = 0.85 }
+local VARIANT_POWER = { Base = 0, Chromatic = 0.1, Redacted = 0.15 }
+local ZERO_DAY_POWER = 1.25
 
-local STYLES = {
-	Field = {
-		count = 40,
-		colours = { "Bone" },
-		speed = { 0.03, 0.12 },
-		gravity = -0.05,
-		life = { 0.8, 1.3 },
-		width = 0.005,
-		length = 0.005,
-		spread = { 0.12, 0.2 },
-	},
-	BlackSite = {
-		count = 90,
-		colours = { "HazardRed", "HazardRed", "Bone" },
-		speed = { 0.5, 1.3 },
-		gravity = 1.1,
-		life = { 0.5, 0.9 },
-		width = 0.003,
-		length = 0.024,
-		alongTravel = true,
-	},
-	Prototype = {
-		count = 80,
-		colours = { "SignalAcid", "SignalAcid", "Bone" },
-		speed = { 0.15, 0.5 },
-		gravity = 0,
-		life = { 0.6, 1.1 },
-		width = 0.01,
-		length = 0.01,
-		spread = { 0.1, 0.16 },
-		stepped = true,
-	},
-	Chromatic = {
-		count = 110,
-		colours = { "HazardRed", "SignalAcid", "DataCyan", "Bone" },
-		speed = { 0.35, 0.9 },
-		gravity = 0.7,
-		life = { 1, 1.6 },
-		width = 0.007,
-		length = 0.014,
-		spin = 9,
-	},
-	Redacted = {
-		count = 36,
-		colours = { "DeepNavy", "DeepNavy", "Bone" },
-		speed = { 0.4, 1 },
-		gravity = 0,
-		life = { 0.5, 0.9 },
-		width = 0.09,
-		length = 0.014,
-		spread = { 0.05, 0.3 },
-		angles = { 0, math.pi },
-		stepped = true,
-	},
-	ZeroDay = {
-		count = 140,
-		colours = { "DataCyan", "DataCyan", "Bone" },
-		speed = { 0.4, 0.9 },
-		gravity = 0.2,
-		life = { 0.9, 1.5 },
-		width = 0.004,
-		length = 0.03,
-		spread = { 0.45, 0.1 },
-		start = -0.45, -- above the middle of the screen, so it rains down past the cards
-		angles = { math.pi / 2 },
-		stepped = true,
-	},
+local PullParticles = {
+	RING_TIME = 0.6, -- seconds
+	RING_GAP = 0.12, -- seconds between the two rings
 }
 
-function PullParticles.style(card: any): any
+function PullParticles.power(card: any): number
 	if card.variant == Variant.ZeroDay then
-		return STYLES.ZeroDay
-	elseif card.variant == Variant.Chromatic then
-		return STYLES.Chromatic
-	elseif card.variant == Variant.Redacted then
-		return STYLES.Redacted
+		return ZERO_DAY_POWER
 	end
-	return STYLES[card.tier]
+	return TIER_POWER[card.tier] + VARIANT_POWER[card.variant]
 end
 
-local function pick(list: { any }, number: (number, number) -> number): any
-	return list[math.clamp(math.floor(number(1, #list + 1)), 1, #list)]
+function PullParticles.ringReach(power: number): number
+	return math.max(RING_REACH * power, SMALLEST_RING)
 end
 
--- share is how much of the style's full burst to make. number(low, high) gives a random number.
-function PullParticles.spawn(style: any, share: number, number: (number, number) -> number): { any }
-	local spread = style.spread or { 0, 0 }
+-- number(low, high) gives a random number.
+function PullParticles.spawn(power: number, number: (number, number) -> number): { any }
+	local topSpeed = REACH * power * DRAG
 	local particles = {}
-	for _ = 1, math.max(math.round(style.count * share), 1) do
-		local angle = if style.angles then pick(style.angles, number) else number(0, FULL_TURN)
-		local speed = number(style.speed[1], style.speed[2])
+	for _ = 1, math.round(SHARDS * power) do
+		local angle = number(0, FULL_TURN)
+		local speed = number(SLOWEST, 1) * topSpeed
+		local sliver = number(0, 1) < SLIVER_SHARE
+		local chip = number(CHIP_SIZE[1], CHIP_SIZE[2])
 		table.insert(particles, {
-			x = number(-spread[1], spread[1]),
-			y = number(-spread[2], spread[2]) + (style.start or 0),
 			vx = math.cos(angle) * speed,
 			vy = math.sin(angle) * speed,
-			life = number(style.life[1], style.life[2]),
-			colour = pick(style.colours, number),
-			turn = number(-1, 1),
+			life = number(LIFE[1], LIFE[2]),
+			width = if sliver then number(SLIVER_WIDTH[1], SLIVER_WIDTH[2]) else chip,
+			length = if sliver then number(SLIVER_LENGTH[1], SLIVER_LENGTH[2]) else chip,
+			angle = number(0, FULL_TURN),
+			spin = number(-SPIN, SPIN),
+			first = number(0, 1) < 0.5, -- which of the pack's two colours it takes
 		})
 	end
 	return particles
 end
 
-function PullParticles.position(style: any, particle: any, elapsed: number): (number, number)
-	local time = if style.stepped then math.floor(elapsed * STEP_RATE) / STEP_RATE else elapsed
-	return particle.x + particle.vx * time, particle.y + particle.vy * time + style.gravity * time * time / 2
+-- Where a shard is relative to the burst's centre. It slows to a stop as it flies.
+function PullParticles.position(particle: any, elapsed: number): (number, number)
+	local travelled = (1 - math.exp(-DRAG * elapsed)) / DRAG
+	return particle.vx * travelled, particle.vy * travelled + GRAVITY * elapsed * elapsed / 2
 end
 
 -- 0 is solid and 1 is gone.

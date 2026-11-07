@@ -8,60 +8,53 @@ local function lowest(low: number, _high: number): number
 end
 
 describe("PullParticles", function()
-	it("gives every rarity its own style", function()
-		local seen = {}
-		for _, card in {
-			{ tier = "Field", variant = "Base" },
-			{ tier = "BlackSite", variant = "Base" },
-			{ tier = "Prototype", variant = "Base" },
-			{ tier = "Field", variant = "Chromatic" },
-			{ tier = "Field", variant = "Redacted" },
-			{ tier = "Field", variant = "ZeroDay" },
-		} do
-			local style = PullParticles.style(card)
-			expect(seen[style]).toBe(nil)
-			seen[style] = true
-		end
+	it("bursts harder for rarer cards", function()
+		local field = PullParticles.power({ tier = "Field", variant = "Base" })
+		local redline = PullParticles.power({ tier = "BlackSite", variant = "Base" })
+		local prototype = PullParticles.power({ tier = "Prototype", variant = "Base" })
+		local zero = PullParticles.power({ tier = "Field", variant = "ZeroDay" })
+		expect(field < redline).toBe(true)
+		expect(redline < prototype).toBe(true)
+		expect(prototype < zero).toBe(true)
 	end)
 
-	it("picks the variant's style over the tier's", function()
-		local plain = PullParticles.style({ tier = "Prototype", variant = "Base" })
-		expect(PullParticles.style({ tier = "Prototype", variant = "Chromatic" }) == plain).toBe(false)
+	it("adds to the burst for a rare variant", function()
+		local plain = PullParticles.power({ tier = "BlackSite", variant = "Base" })
+		expect(PullParticles.power({ tier = "BlackSite", variant = "Redacted" }) > plain).toBe(true)
 	end)
 
-	it("shows the same style for a Zero-Day at any tier", function()
-		local field = PullParticles.style({ tier = "Field", variant = "ZeroDay" })
-		expect(PullParticles.style({ tier = "Prototype", variant = "ZeroDay" })).toBe(field)
+	it("makes more shards for a stronger burst", function()
+		expect(#PullParticles.spawn(1, lowest) > #PullParticles.spawn(0.5, lowest)).toBe(true)
 	end)
 
-	it("makes as many particles as the share asks for", function()
-		local style = PullParticles.style({ tier = "BlackSite", variant = "Base" })
-		expect(#PullParticles.spawn(style, 1, lowest)).toBe(style.count)
-		expect(#PullParticles.spawn(style, 0.5, lowest)).toBe(math.round(style.count / 2))
+	it("sends a stronger burst further", function()
+		local weak = PullParticles.spawn(0.5, function(_low, high)
+			return high
+		end)[1]
+		local strong = PullParticles.spawn(1, function(_low, high)
+			return high
+		end)[1]
+		local weakX, weakY = PullParticles.position(weak, 5)
+		local strongX, strongY = PullParticles.position(strong, 5)
+		expect(strongX * strongX + strongY * strongY > weakX * weakX + weakY * weakY).toBe(true)
 	end)
 
-	it("always makes at least one", function()
-		local style = PullParticles.style({ tier = "Field", variant = "Base" })
-		expect(#PullParticles.spawn(style, 0, lowest)).toBe(1)
+	it("slows shards down as they fly", function()
+		local particle = { vx = 1, vy = 0 }
+		local first = PullParticles.position(particle, 0.2)
+		local second = PullParticles.position(particle, 0.4)
+		expect(second - first < first).toBe(true)
 	end)
 
-	it("pulls particles down over time when the style has gravity", function()
-		local style = { gravity = 2 }
-		local particle = { x = 0, y = 0, vx = 1, vy = 0 }
-		local x, y = PullParticles.position(style, particle, 1)
-		expect(x).toBe(1)
-		expect(y).toBe(1)
+	it("reaches further with the rings than a weak burst would", function()
+		expect(PullParticles.ringReach(1) > PullParticles.ringReach(0.5)).toBe(true)
 	end)
 
-	it("moves a stepped style in jumps", function()
-		local style = { gravity = 0, stepped = true }
-		local particle = { x = 0, y = 0, vx = 1, vy = 0 }
-		local first = PullParticles.position(style, particle, 0.01)
-		local second = PullParticles.position(style, particle, 0.02)
-		expect(first).toBe(second)
+	it("keeps a weak pull's rings big enough to see", function()
+		expect(PullParticles.ringReach(0.1) >= 0.5).toBe(true)
 	end)
 
-	it("fades out by the end of a particle's life", function()
+	it("fades out by the end of a shard's life", function()
 		local particle = { life = 2 }
 		expect(PullParticles.fade(particle, 0)).toBe(0)
 		expect(PullParticles.fade(particle, 2)).toBe(1)

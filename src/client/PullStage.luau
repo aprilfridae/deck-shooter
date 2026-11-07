@@ -61,11 +61,6 @@ local ZERO_DAY_CLEAR = 0.12
 local FLASH_TIME = 0.45
 local POP_TIME = 0.25
 local POP_SIZE = 0.1
--- Shares of the rarity's full burst.
-local RIP_BURST = 0.5
-local FLIP_BURST = 0.6 -- from each card
-local LINGER_BURST = 0.2
-local LINGER_EVERY = 0.3 -- seconds
 
 local LIGHTS = {
 	Field = Palette.Bone,
@@ -194,10 +189,6 @@ local function buildDim(run: any)
 	run.dimFrame.Parent = gui
 end
 
-local function burst(run: any, share: number, x: number, y: number)
-	PullFx.burst(run.frame, run.style, share, x, y)
-end
-
 local function flash(run: any, strength: number)
 	if strength <= 0 then
 		return
@@ -310,10 +301,6 @@ local function step(run: any, dt: number)
 		run.stack.Visible = time >= times.slide and time < times.spread
 		run.stack.Position = UDim2.new(0, (STACK_LEFT + sliding * STACK_SLIDE) * scale, 0.5, 0)
 		run.glow.Size = UDim2.fromOffset(GLOW_WIDTH * scale * ease(ripped), PACK_HEIGHT * scale)
-		if ripped > 0 and not run.ripBurst then
-			run.ripBurst = true
-			burst(run, RIP_BURST, centreX + (PACK_WIDTH / 2 - TEAR) * unitPixels, centreY)
-		end
 		run.glow.BackgroundTransparency = if time < times.spread then 1 - ripped else 1
 	else
 		run.openerFront.Enabled = false
@@ -342,9 +329,8 @@ local function step(run: any, dt: number)
 		run.flashed = true
 		run.deepDim = run.best.variant == Variant.ZeroDay
 		flash(run, PullMotion.flash(run.best))
-		for index = 1, #run.slots do
-			burst(run, FLIP_BURST, centreX + (PullMotion.fan(index)) * fullWidth, centreY)
-		end
+		local look = PackFace.look(run.pack)
+		PullFx.burst(run.frame, PullParticles.power(run.best), { look.back, look.art }, centreX, centreY)
 	end
 	for _, slot in run.slots do
 		local steps, tilt = PullMotion.fan(slot.index)
@@ -366,11 +352,6 @@ local function step(run: any, dt: number)
 	if time >= times.rest and not run.settled then
 		run.settled = true
 		settle(run, cardX, cardY, fullWidth, view)
-		run.nextLinger = time
-	end
-	if run.nextLinger and time >= run.nextLinger then
-		run.nextLinger = time + LINGER_EVERY
-		burst(run, LINGER_BURST, cardX[run.random:NextInteger(1, #run.slots)], centreY)
 	end
 end
 
@@ -396,7 +377,6 @@ function PullStage.play(frame: Frame, pack: string, cards: { any }, callbacks: a
 		cards = PullMotion.fanOrder(cards),
 		best = best,
 		light = LIGHTS[CardLook.look(best.tier, best.variant)],
-		style = PullParticles.style(best),
 		times = PullMotion.phases(cards),
 		callbacks = callbacks,
 		random = Random.new(),
