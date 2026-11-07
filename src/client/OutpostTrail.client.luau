@@ -167,7 +167,7 @@ end
 
 local function dressAge(copy: Copy, age: number)
 	local transparency = START_FADE + (1 - START_FADE) * math.sqrt(age) -- drops off early
-	local color = Palette.SignalAcid:Lerp(Palette.DataCyan, age)
+	local color = Palette.DeepNavy:Lerp(Palette.Bone, age)
 	for _, part in copy.shown do
 		part.Transparency = transparency
 		part.Color = color
