@@ -6,6 +6,7 @@ local MenuPanel = require(script.Parent.MenuPanel)
 local TypeLabel = require(script.Parent.TypeLabel)
 
 local TRACKING = 0.002
+local CARD_TRACKING = 0.0014 -- long names have to fit on a card
 local TITLE_SIZE = 0.085
 local TITLE_LINE = 0.095
 local RULE_FADE = 0.5
@@ -36,6 +37,20 @@ function PanelKit.label(parent: Instance, style: string, size: number, x: number
 		right = right,
 		shadow = false,
 		position = UDim2.fromOffset(x * unit, y * unit),
+	})
+end
+
+-- Text on a card. Pass where the ink starts: it makes up for the blank side of a Title letter.
+function PanelKit.cardLabel(parent: Instance, style: string, size: number, x: number, y: number, color: Color3?): any
+	local unit = MenuPanel.unit()
+	local inset = if style == "Title" then size * PanelKit.TITLE_INSET else 0
+	return TypeLabel.new(parent, {
+		style = style,
+		size = size * unit,
+		tracking = CARD_TRACKING * unit,
+		color = color or NAVY,
+		shadow = false,
+		position = UDim2.fromOffset((x - inset) * unit, y * unit),
 	})
 end
 

@@ -20,6 +20,8 @@ local SLOT_TOP = 0.14
 local SLOT_WIDTH = 0.107 -- a playing card's shape, with SLOT_HEIGHT
 local SLOT_HEIGHT = 0.15
 local SLOT_GAP = 0.01
+local SLOT_MARGIN = 0.01 -- inside a card, on all four sides
+local SLOT_NUMBER = 0.02
 local POWER_SIZE = 0.034
 local LOWER_LINE = 0.31
 local LOWER_TOP = 0.322
@@ -44,11 +46,12 @@ local function slotCell(content: Frame, snapshot: any, index: number, chosen: nu
 	local width = SLOT_WIDTH
 	local x = PanelKit.MARGIN + (index - 1) * (width + SLOT_GAP)
 	local cell = PanelKit.button(content, "", x, SLOT_TOP, width, SLOT_HEIGHT, { active = index == chosen, quiet = true })
-	local padding = 0.008
-	PanelKit.label(cell, "Title", 0.02, padding, 0.034):set(tostring(index))
-	PanelKit.label(cell, "LabelBold", PanelKit.SMALL_SIZE, padding, 0.124)
+	local numberLine = SLOT_MARGIN + SLOT_NUMBER * PanelKit.CAP_HEIGHT
+	local tierLine = SLOT_HEIGHT - SLOT_MARGIN
+	PanelKit.cardLabel(cell, "Title", SLOT_NUMBER, SLOT_MARGIN, numberLine):set(tostring(index))
+	PanelKit.cardLabel(cell, "LabelBold", PanelKit.SMALL_SIZE, SLOT_MARGIN, tierLine - 0.015)
 		:set(string.upper(Cards.byId[entry.cardId].name))
-	PanelKit.label(cell, "Label", PanelKit.SMALL_SIZE, padding, 0.139):set(TIER_NAMES[entry.tier])
+	PanelKit.cardLabel(cell, "Label", PanelKit.SMALL_SIZE, SLOT_MARGIN, tierLine):set(TIER_NAMES[entry.tier])
 	cell.Activated:Connect(function()
 		draw(content, if index == chosen then nil else index)
 	end)

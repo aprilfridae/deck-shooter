@@ -27,9 +27,11 @@ local COUNT_SIZE = 0.04
 local COUNT_LINE = 0.215
 local GRID_TOP = 0.176
 local GRID_GAP = 0.006
-local CELL_WIDTH = 0.0714 -- a playing card's shape, with CELL_HEIGHT
-local CELL_HEIGHT = 0.1
-local NAME_SIZE_SMALL = 0.0088
+local CELL_WIDTH = 0.0755 -- a playing card's shape, with CELL_HEIGHT
+local CELL_HEIGHT = 0.1057
+local CELL_MARGIN = 0.008 -- inside a card, on all four sides
+local COPIES_SIZE = 0.02
+local NAME_SIZE_SMALL = 0.0082
 local NAME_STEP = 0.012
 local TIER_SIZE = 0.0068
 local GHOST_INK = Palette.DeepNavy:Lerp(Palette.Bone, 0.6)
@@ -80,14 +82,16 @@ local function cardGrid(page: Frame, profile: any)
 			stroke.Color = if owned then PanelKit.NAVY else GHOST_INK
 			stroke.Parent = cell
 			local ink = if owned then PanelKit.NAVY else GHOST_INK
-			local padding = 0.006
+			local firstLine = CELL_MARGIN + NAME_SIZE_SMALL * PanelKit.CAP_HEIGHT
 			local words = string.split(string.upper(card.name), " ")
 			for line, word in words do
-				PanelKit.label(cell, "LabelBold", NAME_SIZE_SMALL, padding, 0.004 + line * NAME_STEP, nil, ink):set(word)
+				local y = firstLine + (line - 1) * NAME_STEP
+				PanelKit.cardLabel(cell, "LabelBold", NAME_SIZE_SMALL, CELL_MARGIN, y, ink):set(word)
 			end
-			PanelKit.label(cell, "Label", TIER_SIZE, padding, 0.042, nil, ink):set(TIER_NAMES[entry.tier])
+			local tierLine = firstLine + #words * NAME_STEP + 0.002
+			PanelKit.cardLabel(cell, "Label", TIER_SIZE, CELL_MARGIN, tierLine, ink):set(TIER_NAMES[entry.tier])
 			if owned then
-				PanelKit.label(cell, "Title", 0.02, padding, CELL_HEIGHT - padding):set(`X{entry.count}`)
+				PanelKit.cardLabel(cell, "Title", COPIES_SIZE, CELL_MARGIN, CELL_HEIGHT - CELL_MARGIN):set(`X{entry.count}`)
 			end
 		end
 	end
