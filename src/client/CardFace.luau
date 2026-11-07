@@ -1,6 +1,5 @@
 -- A card in the menus: its baked image with live text, stripes, shine and motion on top.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local CardArt = require(CardCore:WaitForChild("CardArt"))
@@ -10,6 +9,7 @@ local CardText = require(CardCore:WaitForChild("CardText"))
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local CardMotion = require(Guns:WaitForChild("Hud"):WaitForChild("CardMotion"))
 local Palette = require(Guns:WaitForChild("Palette"))
+local CardEffects = require(script.Parent.CardEffects)
 local TypeLabel = require(script.Parent.TypeLabel)
 
 -- Everything below is in card units: a card is 150 wide and 240 tall.
@@ -28,14 +28,11 @@ local BLOCK_LEFT = 12
 local BLOCK_TOP = 160
 local BLOCK_WIDTH = 92
 local BLOCK_HEIGHT = 38
-local STRIPE_TILE = 28
-local STRIPE_TIME = 1.4 -- seconds for Prototype's stripes to move one tile
 local BIG_SERIAL_LINE = 198
 local BIG_SERIAL_SIZE = 58
 local MONOGRAM_CENTRE = Vector2.new(58, 85)
 local CROSSHAIR = Vector2.new(130, 42)
 local CROSSHAIR_FILL = 6.4 -- radius, inside the baked ring
-local RING_THICKNESS = 1.2
 local OUTLINE_THICKNESS = 2
 
 local BLOCK_BOTTOM = 86 -- the back's coloured block
@@ -63,12 +60,10 @@ local BACK_STRIPES_HEIGHT = 12
 
 local SET_CODES = { set_01 = "S01" }
 local GHOST_TRANSPARENCY = 0.75
-local SHINE_ROTATION = 20 -- degrees, so the band leans as it crosses the card
 local SHINE_HALF_WIDTH = 0.07 -- of the gradient
 local FOIL_HALF_WIDTH = 0.25
 local FOIL_STRENGTH = 0.55
 local FOIL_BLUE = Color3.fromRGB(10, 34, 245)
-local SHINE_LAYER = 5
 
 local LOOKS = {
 	Field = { back = Palette.DeepNavy, ink = Palette.Bone, rarity = Palette.Bone, stripes = Palette.Bone, shine = 0.28 },
@@ -109,57 +104,6 @@ export type Options = {
 	shineAt: (() -> number?)?, -- where to hold the shine, or nil for its timed sweep
 }
 
--- Every moving face, walked by one connection that only exists while there are any.
-local live: { any } = {}
-local stepping: RBXScriptConnection? = nil
-
-local function isShown(gui: Instance): boolean
-	local current: Instance? = gui
-	while current do
-		if current:IsA("GuiObject") and not current.Visible then
-			return false
-		elseif current:IsA("LayerCollector") then
-			return current.Enabled
-		end
-		current = current.Parent
-	end
-	return false
-end
-
-local function step()
-	local now = os.clock()
-	for _, face in live do
-		if isShown(face.root) then
-			face.update(now - face.started)
-		end
-	end
-end
-
-local function stopAnimating(face: any)
-	table.remove(live, table.find(live, face))
-	if #live == 0 and stepping then
-		stepping:Disconnect()
-		stepping = nil
-	end
-end
-
-local function animate(root: GuiObject, update: (number) -> ())
-	local face = { root = root, started = os.clock(), update = update }
-	table.insert(live, face)
-	root.Destroying:Once(function()
-		stopAnimating(face)
-	end)
-	if not stepping then
-		stepping = RunService.RenderStepped:Connect(step)
-	end
-end
-
-local function rounded(gui: GuiObject, radius: UDim)
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = radius
-	corner.Parent = gui
-end
-
 local function text(root: GuiObject, unit: number, style: string, size: number, color: Color3, x: number, y: number, right: boolean?): any
 	return TypeLabel.new(root, {
 		style = style,
@@ -172,48 +116,6 @@ local function text(root: GuiObject, unit: number, style: string, size: number, 
 	})
 end
 
--- A card-sized frame showing only a slanted band. Moving the gradient's offset moves the band.
-local function band(root: GuiObject, unit: number, halfWidth: number, color: ColorSequence, strength: number): UIGradient
-	local frame = Instance.new("Frame")
-	frame.BackgroundColor3 = Color3.new(1, 1, 1)
-	frame.BorderSizePixel = 0
-	frame.Size = UDim2.fromScale(1, 1)
-	frame.ZIndex = SHINE_LAYER
-	frame.Parent = root
-	rounded(frame, UDim.new(0, CORNER * unit))
-	local gradient = Instance.new("UIGradient")
-	gradient.Rotation = SHINE_ROTATION
-	gradient.Color = color
-	gradient.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 1),
-		NumberSequenceKeypoint.new(0.5 - halfWidth, 1),
-		NumberSequenceKeypoint.new(0.5, 1 - strength),
-		NumberSequenceKeypoint.new(0.5 + halfWidth, 1),
-		NumberSequenceKeypoint.new(1, 1),
-	})
-	gradient.Offset = Vector2.new(-1, 0)
-	gradient.Parent = frame
-	return gradient
-end
-
-local function stripes(root: GuiObject, unit: number, color: Color3, area: Rect): ImageLabel
-	local block = Instance.new("Frame")
-	block.BackgroundTransparency = 1
-	block.Position = UDim2.fromOffset(area.Min.X * unit, area.Min.Y * unit)
-	block.Size = UDim2.fromOffset(area.Width * unit, area.Height * unit)
-	block.ClipsDescendants = true
-	block.Parent = root
-	local image = Instance.new("ImageLabel")
-	image.BackgroundTransparency = 1
-	image.Image = CardArt.STRIPES
-	image.ImageColor3 = color
-	image.ScaleType = Enum.ScaleType.Tile
-	image.TileSize = UDim2.fromOffset(STRIPE_TILE * unit, STRIPE_TILE * unit)
-	image.Size = UDim2.new(1, STRIPE_TILE * unit, 1, 0)
-	image.Parent = block
-	return image
-end
-
 -- Drawn just inside the card's edge, because a ghosted card clips whatever falls outside it.
 local function outline(root: GuiObject, unit: number, color: Color3)
 	local thickness = OUTLINE_THICKNESS * unit
@@ -222,7 +124,7 @@ local function outline(root: GuiObject, unit: number, color: Color3)
 	frame.Position = UDim2.fromOffset(thickness, thickness)
 	frame.Size = UDim2.new(1, -thickness * 2, 1, -thickness * 2)
 	frame.Parent = root
-	rounded(frame, UDim.new(0, (CORNER - OUTLINE_THICKNESS) * unit))
+	CardEffects.rounded(frame, UDim.new(0, (CORNER - OUTLINE_THICKNESS) * unit))
 	local stroke = Instance.new("UIStroke")
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	stroke.Color = color
@@ -238,7 +140,7 @@ local function crosshairFill(root: GuiObject, unit: number)
 	fill.Position = UDim2.fromOffset(CROSSHAIR.X * unit, CROSSHAIR.Y * unit)
 	fill.Size = UDim2.fromOffset(CROSSHAIR_FILL * 2 * unit, CROSSHAIR_FILL * 2 * unit)
 	fill.Parent = root
-	rounded(fill, UDim.new(0.5, 0))
+	CardEffects.rounded(fill, UDim.new(0.5, 0))
 end
 
 -- The monogram's outline swelling out of it and fading. Prototype only.
@@ -254,31 +156,6 @@ local function pulse(root: GuiObject, unit: number, cardId: string, color: Color
 		local scale, transparency = CardMotion.pulse(elapsed)
 		outline.Size = UDim2.fromOffset(WIDTH * unit * scale, HEIGHT * unit * scale)
 		outline.ImageTransparency = transparency
-	end
-end
-
--- A ring spreading from the crosshair. Zero-Day only.
-local function ping(root: GuiObject, unit: number): (number) -> ()
-	local ring = Instance.new("Frame")
-	ring.BackgroundTransparency = 1
-	ring.AnchorPoint = Vector2.new(0.5, 0.5)
-	ring.Position = UDim2.fromOffset(CROSSHAIR.X * unit, CROSSHAIR.Y * unit)
-	ring.Parent = root
-	rounded(ring, UDim.new(0.5, 0))
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = Palette.DataCyan
-	stroke.Thickness = RING_THICKNESS * unit
-	stroke.Parent = ring
-	return function(elapsed: number)
-		local radius, transparency = CardMotion.ping(elapsed)
-		ring.Size = UDim2.fromOffset(radius * 2 * unit, radius * 2 * unit)
-		stroke.Transparency = transparency
-	end
-end
-
-local function scrolling(image: ImageLabel, unit: number): (number) -> ()
-	return function(elapsed: number)
-		image.Position = UDim2.fromOffset(-STRIPE_TILE * unit * ((elapsed % STRIPE_TIME) / STRIPE_TIME), 0)
 	end
 end
 
@@ -309,7 +186,7 @@ function CardFace.new(parent: Instance, options: Options): GuiObject
 	root.BorderSizePixel = 0
 	root.Size = UDim2.fromOffset(options.width, HEIGHT * unit)
 	root.Position = options.position or UDim2.new()
-	rounded(root, UDim.new(0, CORNER * unit))
+	CardEffects.rounded(root, UDim.new(0, CORNER * unit))
 
 	local art = Instance.new("ImageLabel")
 	art.BackgroundTransparency = 1
@@ -329,7 +206,7 @@ function CardFace.new(parent: Instance, options: Options): GuiObject
 		bigSerial:set(serial)
 	else
 		local area = Rect.new(BLOCK_LEFT, BLOCK_TOP, BLOCK_LEFT + BLOCK_WIDTH, BLOCK_TOP + BLOCK_HEIGHT)
-		stripesImage = stripes(root, unit, style.stripes, area)
+		stripesImage = CardEffects.stripes(root, unit, style.stripes, area)
 	end
 
 	local corner = options.corner or if look == "ZeroDay" then nil else serial
@@ -348,16 +225,16 @@ function CardFace.new(parent: Instance, options: Options): GuiObject
 		return root
 	end
 
-	local shine = band(root, unit, SHINE_HALF_WIDTH, ColorSequence.new(Color3.new(1, 1, 1)), style.shine)
+	local shine = CardEffects.band(root, CORNER * unit, SHINE_HALF_WIDTH, ColorSequence.new(Color3.new(1, 1, 1)), style.shine)
 	local foil: UIGradient? = nil
 	local parts: { (number) -> () } = {}
 	if look == "Prototype" then
 		table.insert(parts, pulse(root, unit, options.cardId, style.ink))
-		table.insert(parts, scrolling(stripesImage :: ImageLabel, unit))
+		table.insert(parts, CardEffects.scrolling(stripesImage :: ImageLabel, unit))
 	elseif look == "ZeroDay" then
-		foil = band(
+		foil = CardEffects.band(
 			root,
-			unit,
+			CORNER * unit,
 			FOIL_HALF_WIDTH,
 			ColorSequence.new({
 				ColorSequenceKeypoint.new(0, Palette.DataCyan),
@@ -366,11 +243,11 @@ function CardFace.new(parent: Instance, options: Options): GuiObject
 			}),
 			FOIL_STRENGTH
 		)
-		table.insert(parts, ping(root, unit))
+		table.insert(parts, CardEffects.ping(root, unit, CROSSHAIR))
 		table.insert(parts, scrambling(bigSerial, serial))
 	end
 
-	animate(root, function(elapsed: number)
+	CardEffects.animate(root, function(elapsed: number)
 		local held = options.shineAt and options.shineAt()
 		local offset = Vector2.new(held or CardMotion.shineOffset(elapsed), 0)
 		shine.Offset = offset
@@ -391,7 +268,7 @@ local function backBlock(root: GuiObject, unit: number, color: Color3)
 	top.BorderSizePixel = 0
 	top.Size = UDim2.fromOffset(WIDTH * unit, (CORNER * 2) * unit)
 	top.Parent = root
-	rounded(top, UDim.new(0, CORNER * unit))
+	CardEffects.rounded(top, UDim.new(0, CORNER * unit))
 	local square = Instance.new("Frame")
 	square.BackgroundColor3 = color
 	square.BorderSizePixel = 0
@@ -416,7 +293,7 @@ local function backIcon(root: GuiObject, unit: number, color: Color3)
 	centred(Vector2.new(BACK_ICON_ARM * 2 * unit, thickness))
 	local ring = centred(Vector2.new(CROSSHAIR_FILL * 2 * unit, CROSSHAIR_FILL * 2 * unit))
 	ring.BackgroundTransparency = 1
-	rounded(ring, UDim.new(0.5, 0))
+	CardEffects.rounded(ring, UDim.new(0.5, 0))
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = color
 	stroke.Thickness = thickness
@@ -443,7 +320,7 @@ function CardFace.back(parent: Instance, options: Options, count: number): GuiOb
 	root.BackgroundColor3 = style.back
 	root.BorderSizePixel = 0
 	root.Size = UDim2.fromOffset(options.width, HEIGHT * unit)
-	rounded(root, UDim.new(0, CORNER * unit))
+	CardEffects.rounded(root, UDim.new(0, CORNER * unit))
 
 	backBlock(root, unit, style.rarity)
 	backIcon(root, unit, style.back)
@@ -468,7 +345,7 @@ function CardFace.back(parent: Instance, options: Options, count: number): GuiOb
 	for index, line in lines do
 		text(root, unit, "Label", BLURB_SIZE, style.ink, LEFT, BLURB_BOTTOM - (#lines - index) * BLURB_STEP):set(line)
 	end
-	stripes(root, unit, style.ink, Rect.new(LEFT, BACK_STRIPES_TOP, RIGHT, BACK_STRIPES_TOP + BACK_STRIPES_HEIGHT))
+	CardEffects.stripes(root, unit, style.ink, Rect.new(LEFT, BACK_STRIPES_TOP, RIGHT, BACK_STRIPES_TOP + BACK_STRIPES_HEIGHT))
 	if style.outline then
 		outline(root, unit, style.outline)
 	end

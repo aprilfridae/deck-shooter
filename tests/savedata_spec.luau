@@ -47,8 +47,36 @@ describe("SaveData.load", function()
 		expect(#loaded.deck).toBe(3)
 	end)
 
-	it("is on version 3", function()
-		expect(SaveData.CURRENT_VERSION).toBe(3)
+	it("gives a version 3 save empty packs and no rebirths", function()
+		local old = SaveData.load({ version = 3, credits = 5 })
+		expect(old.credits).toBe(5)
+		expect(old.packs.Field).toBe(0)
+		expect(old.rebirths).toBe(0)
+		expect(old.openAllCredits).toBe(0)
+		expect(#old.receipts).toBe(0)
+	end)
+
+	it("keeps good pack data and drops bad values", function()
+		local loaded = SaveData.load({
+			version = 4,
+			rebirths = 2,
+			openAllCredits = 1,
+			receipts = { "a", 5 },
+			packs = { Field = 3, BlackSite = -1, Prototype = 1.5, ZeroDay = "x", Nonsense = 9 },
+		})
+		expect(loaded.packs.Field).toBe(3)
+		expect(loaded.packs.BlackSite).toBe(0)
+		expect(loaded.packs.Prototype).toBe(0)
+		expect(loaded.packs.ZeroDay).toBe(0)
+		expect(loaded.packs.Nonsense).toBe(nil)
+		expect(loaded.rebirths).toBe(2)
+		expect(loaded.openAllCredits).toBe(1)
+		expect(#loaded.receipts).toBe(1)
+		expect(SaveData.load({ version = 4, rebirths = 1.5 }).rebirths).toBe(0)
+	end)
+
+	it("is on version 4", function()
+		expect(SaveData.CURRENT_VERSION).toBe(4)
 	end)
 
 	it("gives a version 2 save default settings", function()

@@ -598,7 +598,8 @@ local function hallInside(kit)
 			)
 		end
 	end
-	local market = g:prompt(counter, "MARKET", "Soon")
+	local market = g:prompt(counter, "MARKET", "Packs")
+	market.Name = "MarketPrompt" -- the Outpost menu listens for it
 
 	-- Daylight through the skylight, with rain falling through it.
 	-- The spotlight hangs under the roof, because the long slot above would cut its pool into a box.

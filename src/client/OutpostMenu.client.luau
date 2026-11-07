@@ -1,23 +1,30 @@
--- The Outpost's menu: four buttons in the corner, each opening a page in the side panel.
+-- The Outpost's menu: five buttons in the corner, each opening a page in the side panel.
 local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local Workspace = game:GetService("Workspace")
 
+local Packs = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Packs"))
+local PullMotion = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("PullMotion"))
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local GunSounds = require(Guns:WaitForChild("GunSounds"))
 local MenuState = require(Guns:WaitForChild("MenuState"))
 local Palette = require(Guns:WaitForChild("Palette"))
 local Zones = require(Guns:WaitForChild("Zones"))
+local CardData = require(script.Parent.CardData)
 local CardInspect = require(script.Parent.CardInspect)
+local IncomeLine = require(script.Parent.IncomeLine)
 local MenuCamera = require(script.Parent.MenuCamera)
 local LoadoutPanel = require(script.Parent.LoadoutPanel)
 local MenuPanel = require(script.Parent.MenuPanel)
 local NavButton = require(script.Parent.NavButton)
+local PacksPanel = require(script.Parent.PacksPanel)
 local PlayerClick = require(script.Parent.PlayerClick)
 local PlayPanel = require(script.Parent.PlayPanel)
 local ProfilePanel = require(script.Parent.ProfilePanel)
+local PullReveal = require(script.Parent.PullReveal)
 local SettingsPanel = require(script.Parent.SettingsPanel)
 local SoundGroups = require(script.Parent.SoundGroups)
 
@@ -34,7 +41,7 @@ local NAV_OUTLINE = 2 -- pixels
 local HOVER_PITCH = 1.6
 local HOVER_VOLUME = 0.25
 
-local BUTTONS = { "PLAY", "LOADOUT", "PROFILE", "SETTINGS" }
+local BUTTONS = { "PLAY", "PACKS", "LOADOUT", "PROFILE", "SETTINGS" }
 
 local player = Players.LocalPlayer
 
@@ -46,6 +53,15 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.DisplayOrder = 5 -- under the title screen
 gui.Enabled = false
 gui.Parent = player:WaitForChild("PlayerGui")
+
+-- The nav and income line fade through this while a pack opens beside them. It only holds them
+-- during a fade, because a canvas group can soften small text.
+local fader = Instance.new("CanvasGroup")
+fader.BackgroundTransparency = 1
+fader.BorderSizePixel = 0
+fader.Size = UDim2.fromScale(1, 1)
+fader.Visible = false
+fader.Parent = gui
 
 local panel = MenuPanel.new(gui)
 MenuCamera.follow(panel)
@@ -63,9 +79,11 @@ hoverSound.Volume = HOVER_VOLUME
 hoverSound.Parent = SoundService
 
 local nav: Frame? = nil
+local income: Frame? = nil
 local rows: { [string]: any } = {}
 local openPage: string? = nil
 local profileUser = player.UserId
+local faded = 0 -- 1 when the nav has gone
 
 local function paint()
 	for name, row in rows do
@@ -84,6 +102,8 @@ local function fillPage(name: string)
 		SettingsPanel.fill(page)
 	elseif name == "PLAY" then
 		PlayPanel.fill(page)
+	elseif name == "PACKS" then
+		PacksPanel.fill(page)
 	elseif name == "LOADOUT" then
 		LoadoutPanel.fill(page)
 	else
@@ -130,7 +150,7 @@ local function buildNav()
 	block.AnchorPoint = Vector2.new(0, 1)
 	block.Position = UDim2.new(0, NAV_LEFT * unit, 1, -NAV_BOTTOM * unit)
 	block.Size = UDim2.fromOffset(NAV_WIDTH * unit, NAV_ROW * unit * #BUTTONS)
-	block.Parent = gui
+	block.Parent = if faded > 0 then fader else gui
 	local outline = Instance.new("UIStroke")
 	outline.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	outline.Color = Palette.Bone
@@ -163,6 +183,10 @@ local function buildNav()
 		})
 	end
 	nav = block
+	if income then
+		income:Destroy()
+	end
+	income = IncomeLine.new(if faded > 0 then fader else gui)
 	paint()
 end
 
@@ -174,11 +198,29 @@ Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(functio
 	end
 end)
 
+local function fadeNav(dt: number)
+	local target = if PullReveal.holdsMenu() then 1 else 0
+	if faded == target then
+		return
+	end
+	local stepSize = dt / PullMotion.MENU_FADE
+	faded = if target > faded then math.min(faded + stepSize, 1) else math.max(faded - stepSize, 0)
+	if nav and income then
+		local home = if faded > 0 then fader else gui
+		nav.Parent = home
+		income.Parent = home
+	end
+	fader.GroupTransparency = faded
+	fader.Visible = faded > 0 and faded < 1
+end
+
 -- The menu belongs to the Outpost, and stays away while the title screen is up.
-RunService.RenderStepped:Connect(function()
+RunService.RenderStepped:Connect(function(dt: number)
+	fadeNav(dt)
 	local visible = Zones.of(player) == Zones.Outpost and not MenuState.isOpen(MenuState.shared)
-	if nav then
+	if nav and income then
 		nav.Visible = not CardInspect.isOpen() -- it would sit on top of the card
+		income.Visible = nav.Visible
 	end
 	if visible == gui.Enabled then
 		return
@@ -191,9 +233,36 @@ RunService.RenderStepped:Connect(function()
 	else
 		SettingsPanel.stop()
 		CardInspect.close()
+		PullReveal.close()
 		openPage = nil
 		panel:close()
 		paint()
+	end
+end)
+
+CardData.packEvent:Connect(function(event: any)
+	if event.kind == "OpenedAll" then
+		PullReveal.summary(event.result)
+	elseif event.kind == "Banked" then
+		PullReveal.notice("YOUR OPEN ALL IS SAVED FOR YOUR NEXT PILE")
+	elseif event.kind == "Opened" and not event.auto then
+		PullReveal.pack(event.pack, event.cards)
+	elseif event.kind == "Opened" then
+		for _, card in event.cards do
+			if Packs.isRare(card) then
+				PullReveal.rare(event.pack, card)
+			end
+		end
+	end
+end)
+
+-- The Market stall opens the packs until the player market exists.
+ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt)
+	if prompt.Name == "MarketPrompt" and gui.Enabled then
+		clickSound:Play()
+		SettingsPanel.stop()
+		profileUser = player.UserId
+		show("PACKS")
 	end
 end)
 

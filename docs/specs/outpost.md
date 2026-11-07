@@ -1,6 +1,6 @@
 # The Outpost
 
-**Status:** step 1, the place itself, is built. River confirmed the floors, textures and lamp shadows in Play on 2026-11-05. The Market, the Loadout button and the Credits HUD aren't built. Checked against the code on 2026-11-05.
+**Status:** step 1, the place itself, is built. River confirmed the floors, textures and lamp shadows in Play on 2026-11-05. The Market stall opens the packs menu, and the Credits line is in the Outpost menu. The Loadout button isn't built. Checked against the code on 2026-11-07.
 
 **Code:** `src/server/Outpost/` builds it when the server starts: `Kit.luau` has the building helpers, `Map.luau` the layout, and `Outpost.server.luau` the zones and travel. `src/client/Outpost.client.luau` applies the lighting and draws the sign and screen text.
 
@@ -39,7 +39,7 @@ The Outpost is built at (4000, 0, 0), far from the test room at the world's orig
 | Windows | 12 glazed steel-framed windows: 4 in the main hall and 4 in each side hall, each letting in a little grey light. The glass is solid. |
 | Outside | Terrain sea with its surface at 0 and a ring of rocks at least 35 studs from the building. Seen only through the windows. |
 | Matchmaking booth | A market stall against the main hall's south wall, opposite the Market: scaffold frame, corrugated walls, a ragged navy and Bone awning, junk on a railed roof, cables to the walls and warm light inside. Three screens on its back wall, a `MATCHMAKING` sign and a short `PLAY` sign hung off its corner. Its prompt says "Soon" and does nothing yet. |
-| Market | The same stall at the far end of the hall, with shelves of blank navy and Bone cards, a `MARKET` sign and a short `CARDS` sign. Its prompt says "Soon" and does nothing yet. |
+| Market | The same stall at the far end of the hall, with shelves of blank navy and Bone cards, a `MARKET` sign and a short `CARDS` sign. Its prompt opens the packs menu until the player market exists. |
 | Test Range corridor | Flooded tiled corridor off the far end of the East Hall, with fluorescent ceiling lights and lift doors. The doors' prompt (hold 0.4s) takes you to the test room. |
 
 Movement matters here too: low walls to vault, a catwalk overhead.
@@ -82,6 +82,6 @@ Everything works as normal in the test room.
 
 ## Not built
 
-- The Market (needs pack rolling), the Loadout button and the Credits HUD.
+- The player market and the Loadout button.
 - Ambient sound: waits on River's hum loops.
 - Blender props, seating, and matches.

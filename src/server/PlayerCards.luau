@@ -12,6 +12,8 @@ local ProfileStore = require(script.Parent.vendor.ProfileStore)
 local PlayerStore = ProfileStore.New("PlayerData_v1", {})
 local profiles: { [Player]: any } = {}
 
+local SAVE_WAIT = 15 -- seconds
+
 local remotes = Instance.new("Folder")
 remotes.Name = "CardCoreRemotes"
 local snapshotEvent = Instance.new("RemoteEvent")
@@ -44,6 +46,9 @@ function PlayerCards.snapshot(player: Player): any?
 		ratePerSecond = Income.ratePerSecond(data),
 		class = data.class,
 		rifle = data.rifle,
+		packs = data.packs,
+		rebirths = data.rebirths,
+		openAllCredits = data.openAllCredits,
 	}
 end
 
@@ -52,6 +57,33 @@ function PlayerCards.changed(player: Player)
 	if snapshot then
 		snapshotEvent:FireClient(player, snapshot)
 	end
+end
+
+-- Asks ProfileStore to write now, for changes that can't wait for its next save.
+function PlayerCards.save(player: Player)
+	local profile = profiles[player]
+	if profile then
+		profile:Save()
+	end
+end
+
+-- Saves and waits to hear it landed, for a purchase that mustn't count until it has.
+function PlayerCards.saveAndWait(player: Player): boolean
+	local profile = profiles[player]
+	if not profile then
+		return false
+	end
+	local saved = false
+	local connection = profile.OnAfterSave:Connect(function()
+		saved = true
+	end)
+	profile:Save()
+	local deadline = os.clock() + SAVE_WAIT
+	while not saved and os.clock() < deadline do
+		task.wait(0.1)
+	end
+	connection:Disconnect()
+	return saved
 end
 
 local function onPlayerAdded(player: Player)
