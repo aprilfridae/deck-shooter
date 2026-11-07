@@ -10,7 +10,7 @@ local describe, it, expect = harness.describe, harness.it, harness.expect
 describe("Loadout saves", function()
 	it("starts new saves at the current version as Assault with the M4", function()
 		local data = SaveData.new()
-		expect(data.version).toBe(3)
+		expect(data.version).toBe(SaveData.CURRENT_VERSION)
 		expect(data.class).toBe("Assault")
 		expect(data.rifle).toBe("M4")
 	end)
