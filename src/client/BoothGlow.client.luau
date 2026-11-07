@@ -1,4 +1,4 @@
--- Dims the Outpost's stalls and flickers each one when the player walks up to it. Each player sees
+-- Flickers each of the Outpost's stalls when the player walks up to it. Each player sees
 -- their own, so this runs on the client.
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")

@@ -1,7 +1,7 @@
--- How the Outpost's stalls glow: dim, and when you walk up the lights waver and ease back on.
+-- How the Outpost's stalls glow: when you walk up, the lights waver and ease back on.
 local BoothGlow = {
-	LIGHT_SHARE = 0.45, -- of a light's full brightness, when fully on
-	NEON_SHARE = 0.5, -- how solid the neon is when fully on
+	LIGHT_SHARE = 0.8, -- of a light's full brightness, when fully on
+	NEON_SHARE = 1, -- how solid the neon is when fully on
 	RANGE = 22, -- studs from a stall's centre that count as walking up
 	FLICKER = 1, -- seconds of wavering
 	TOTAL = 3.6, -- seconds, including coming back on
