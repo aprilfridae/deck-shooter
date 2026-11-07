@@ -45,6 +45,11 @@ function PackText.credits(amount: number): string
 	return `{short(amount)} CR`
 end
 
+-- Open All's button, counting any purchases waiting for a pile.
+function PackText.openAll(saved: number): string
+	return if saved > 0 then `OPEN ALL X{saved}` else "OPEN ALL"
+end
+
 function PackText.luck(rebirths: number): string
 	return string.format("LUCK X%g", math.round(Packs.luck(rebirths) * 100) / 100)
 end

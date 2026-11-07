@@ -1,5 +1,6 @@
 -- Pack remotes on the server: rolling, opening, rebirths, and the auto roll and Auto Open loop.
 -- The rules live in ReplicatedStorage.CardCore. This holds what doesn't belong in a save.
+local GroupService = game:GetService("GroupService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -43,14 +44,20 @@ local function refreshUnlock(player: Player)
 	end
 end
 
+-- Asks for the player's groups fresh, so joining counts without a rejoin.
 local function checkGroup(player: Player)
-	local ok, member = pcall(function()
-		return player:IsInGroupAsync(Config.GroupId)
+	local ok, groups = pcall(function()
+		return GroupService:GetGroupsAsync(player.UserId)
 	end)
-	if ok then
-		session(player).inGroup = member
-		refreshUnlock(player)
+	if not ok then
+		return
 	end
+	local member = false
+	for _, group in groups do
+		member = member or group.Id == Config.GroupId
+	end
+	session(player).inGroup = member
+	refreshUnlock(player)
 end
 
 local function roll(player: Player, data: any, rng: () -> number): (boolean, string)

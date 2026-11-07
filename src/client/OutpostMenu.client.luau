@@ -215,6 +215,8 @@ end)
 CardData.packEvent:Connect(function(event: any)
 	if event.kind == "OpenedAll" then
 		PullReveal.summary(event.result)
+	elseif event.kind == "Banked" then
+		PullReveal.notice("YOUR OPEN ALL IS SAVED FOR YOUR NEXT PILE")
 	elseif event.kind == "Opened" and not event.auto then
 		PullReveal.pack(event.pack, event.cards)
 	elseif event.kind == "Opened" then

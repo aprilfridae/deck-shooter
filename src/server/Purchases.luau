@@ -42,9 +42,14 @@ function Purchases.start(remote: (string, (Player, any, any) -> any) -> (), rng:
 		end
 		local status, result = Packs.redeem(data, info.PurchaseId, rng)
 		PlayerCards.changed(player)
-		PlayerCards.save(player)
 		if status == "Opened" then
 			PackServer.announce(player, { kind = "OpenedAll", result = result })
+		elseif status == "Banked" then
+			PackServer.announce(player, { kind = "Banked" })
+		end
+		-- If the save doesn't land, Roblox asks again, and the receipt stops it paying twice.
+		if not PlayerCards.saveAndWait(player) then
+			return Enum.ProductPurchaseDecision.NotProcessedYet
 		end
 		return Enum.ProductPurchaseDecision.PurchaseGranted
 	end

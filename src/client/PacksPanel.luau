@@ -195,6 +195,7 @@ local function controls(view: Frame): () -> ()
 			tostring(autoOpen),
 			tostring(canRebirth),
 			tostring(canOpenAll),
+			tostring(snapshot.openAllCredits),
 			tostring(price),
 			tostring(confirming % 2),
 		}, "|")
@@ -229,7 +230,7 @@ local function controls(view: Frame): () -> ()
 
 		if not hidden then
 			local ready = Config.OpenAllProduct ~= 0 or snapshot.openAllCredits > 0
-			local openAll = small(if ready then "OPEN ALL" else "SOON", 1, { disabled = not canOpenAll })
+			local openAll = small(if ready then PackText.openAll(snapshot.openAllCredits) else "SOON", 1, { disabled = not canOpenAll })
 			openAll.Activated:Connect(function()
 				send("OpenAll")
 			end)

@@ -7,6 +7,7 @@ local PullMotion = {
 	TEAR_TIME = 0.5, -- seconds
 	FLIP_TIME = 0.28,
 	QUICK_ROW = 0.05, -- seconds between rows of a quick list
+	RARE_QUEUE = 3, -- Auto Open pulls that can wait to be shown
 }
 
 local TIER_BUILD = { Field = 0.2, BlackSite = 0.5, Prototype = 0.9 }
@@ -21,6 +22,11 @@ function PullMotion.buildTime(card: any): number
 		return ZERO_DAY_BUILD
 	end
 	return TIER_BUILD[card.tier] + VARIANT_BUILD[card.variant]
+end
+
+-- Auto Open can pull rares faster than they can be shown, so only a few wait. Never a Zero-Day.
+function PullMotion.keepsRare(waiting: number, card: any): boolean
+	return waiting < PullMotion.RARE_QUEUE or card.variant == Variant.ZeroDay
 end
 
 -- Where card 1, 2 or 3 sits: its distance from the middle and its tilt.

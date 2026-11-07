@@ -38,6 +38,8 @@ local LIST_TOP = 0.05
 local LIST_BOTTOM = 0.05
 local LIST_INSET = 0.02
 local COUNT_LINE = 0.135 -- below the screen's middle
+local NOTICE_HEIGHT = 0.09
+local NOTICE_LINE = 0.03
 
 local CARD_SHAPE = 240 / 150
 local CARD_CORNER = 10 / 150 -- of the width
@@ -68,8 +70,9 @@ sheet.BorderSizePixel = 0
 sheet.Size = UDim2.fromScale(1, 1)
 sheet.Parent = gui
 
-local queue: { (Frame, () -> ()) -> () } = {}
+local queue: { { run: (Frame, () -> ()) -> (), auto: boolean } } = {}
 local stage: Frame? = nil
+local playing: { auto: boolean, done: () -> () }? = nil
 local watching: RBXScriptConnection? = nil
 
 local PullReveal = {}
@@ -81,6 +84,7 @@ local function tween(gui_: Instance, seconds: number, goal: { [string]: any }): 
 end
 
 local function stop()
+	playing = nil
 	if stage then
 		stage:Destroy()
 		stage = nil
@@ -97,8 +101,8 @@ local function playNext()
 		stage:Destroy()
 		stage = nil
 	end
-	local job = table.remove(queue, 1)
-	if not job then
+	local entry = table.remove(queue, 1)
+	if not entry then
 		stop()
 		return
 	end
@@ -116,15 +120,33 @@ local function playNext()
 		end)
 	end
 	gui.Enabled = true
-	job(frame, function()
+	local function done()
 		if stage == frame then
 			playNext()
 		end
-	end)
+	end
+	playing = { auto = entry.auto, done = done }
+	entry.run(frame, done)
 end
 
-local function enqueue(job: (Frame, () -> ()) -> ())
-	table.insert(queue, job)
+-- A player's own reveal goes ahead of Auto Open's, and cuts one short.
+local function enqueue(job: (Frame, () -> ()) -> (), auto: boolean?)
+	local entry = { run = job, auto = auto == true }
+	if entry.auto then
+		table.insert(queue, entry)
+	else
+		local place = #queue + 1
+		for index, waiting in queue do
+			if waiting.auto then
+				place = index
+				break
+			end
+		end
+		table.insert(queue, place, entry)
+		if playing and playing.auto then
+			playing.done()
+		end
+	end
 	if not stage then
 		playNext()
 	end
@@ -319,6 +341,13 @@ end
 
 -- One rare card from Auto Open. There's no sheet, so an idle player can still walk and click.
 function PullReveal.rare(pack: string, card: any)
+	local waiting = 0
+	for _, entry in queue do
+		waiting += if entry.auto then 1 else 0
+	end
+	if not PullMotion.keepsRare(waiting, card) then
+		return
+	end
 	enqueue(function(frame: Frame, done: () -> ())
 		local unit = MenuPanel.unit()
 		sheet.Visible = false
@@ -326,6 +355,22 @@ function PullReveal.rare(pack: string, card: any)
 			task.delay(RARE_SECONDS, done)
 		end)
 		slot.flip()
+	end, true)
+end
+
+-- A short message with a button.
+function PullReveal.notice(text: string)
+	enqueue(function(frame: Frame, done: () -> ())
+		local unit = MenuPanel.unit()
+		local paper = Instance.new("Frame")
+		paper.BackgroundColor3 = PanelKit.PAPER
+		paper.BorderSizePixel = 0
+		paper.Size = UDim2.fromOffset(LIST_WIDTH * unit, NOTICE_HEIGHT * unit)
+		centred(paper)
+		paper.Parent = frame
+		PanelKit.label(paper, "Label", PanelKit.SMALL_SIZE, LIST_INSET, NOTICE_LINE):set(text)
+		local close = PanelKit.button(paper, "DONE", LIST_WIDTH / 2 - BUTTON_WIDTH / 2, NOTICE_HEIGHT - BUTTON_HEIGHT - 0.01, BUTTON_WIDTH, BUTTON_HEIGHT, {})
+		close.Activated:Once(done)
 	end)
 end
 

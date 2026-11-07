@@ -45,6 +45,11 @@ describe("PackText", function()
 		expect(PackText.credits(3200000000)).toBe("3.2B CR")
 	end)
 
+	it("shows a saved Open All on its button", function()
+		expect(PackText.openAll(0)).toBe("OPEN ALL")
+		expect(PackText.openAll(2)).toBe("OPEN ALL X2")
+	end)
+
 	it("shows luck", function()
 		expect(PackText.luck(0)).toBe("LUCK X1")
 		expect(PackText.luck(5)).toBe("LUCK X1.75")

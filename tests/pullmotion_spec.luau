@@ -29,6 +29,17 @@ describe("PullMotion", function()
 		expect(leftTilt).toBe(-rightTilt)
 	end)
 
+	it("keeps only a few Auto Open pulls waiting", function()
+		local chromatic = { tier = "Field", variant = "Chromatic" }
+		expect(PullMotion.keepsRare(0, chromatic)).toBe(true)
+		expect(PullMotion.keepsRare(PullMotion.RARE_QUEUE - 1, chromatic)).toBe(true)
+		expect(PullMotion.keepsRare(PullMotion.RARE_QUEUE, chromatic)).toBe(false)
+	end)
+
+	it("never drops a Zero-Day", function()
+		expect(PullMotion.keepsRare(100, { tier = "Field", variant = "ZeroDay" })).toBe(true)
+	end)
+
 	it("lists the rarest first", function()
 		local list = PullMotion.quickList({
 			["overclock:Field:Base"] = 40,

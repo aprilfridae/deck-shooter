@@ -61,10 +61,10 @@ A pack gives mostly its own rarity, with a small chance of each card being highe
 - Auto Open opens one pack every 2 seconds while the player is in the Outpost, starting with the commonest rarity. It clears existing piles as well as new packs.
 - That's only a little faster than auto roll adds packs, so a big pile takes hours of idling. Open All clears it at once, which is its use later on.
 - Free players open packs one at a time. The `OPEN ALL` button prompts the purchase.
-- If the pile is empty when an Open All purchase lands, because Auto Open got there first, the purchase is saved as `openAllCredits`. The next `OPEN ALL` click spends it without a prompt.
+- If the pile is empty when an Open All purchase lands, because Auto Open got there first, the purchase is saved as `openAllCredits`. The player is told, the button reads `OPEN ALL X1`, and the next click on a pile spends it without a prompt.
 - A rarity's pile stops at 1,000,000 packs, and rolling that rarity does nothing until it's opened. A card stack stops at the same limit.
 - `Config.OpenAllProduct` and `Config.AutoOpenPass` are 0 until River creates them, and their buttons read `SOON`.
-- The server opens the pile only once Roblox's `ProcessReceipt` reports the payment. A repeated receipt never opens anything twice.
+- The server opens the pile only once Roblox's `ProcessReceipt` reports the payment, and accepts the payment only once the save has landed. A repeated receipt never opens anything twice.
 - The odds are always shown in the menu, and its `ODDS` button shows the card odds as well. `PolicyService` hides Open All where paid random items are restricted.
 
 ## Rebirths and luck
@@ -109,7 +109,7 @@ This hasn't been mocked up. River judges it in Play. A rare pull is a Prototype 
 - **One pack:** the wrapper tears open and 3 cards fan out face down, on plain backs in the pack's colours. The player flips each one, and rarer cards shake for longer before turning.
 - **Zero-Day:** the world dims, and the card grows.
 - **Open All:** each rare stack shows until clicked, with `SKIP` to pass the rest, then a list of everything that arrived.
-- **Auto Open:** a rare pull plays by itself beside the middle of the screen and leaves after 4 seconds. The world stays usable, so an idle player's screen never blocks.
+- **Auto Open:** a rare pull plays by itself beside the middle of the screen and leaves after 4 seconds. The world stays usable, so an idle player's screen never blocks. Only 3 can wait at once and the rest aren't shown, except a Zero-Day, which always is. A pack the player opens goes first.
 
 The cards can be inspected in 3D like any other.
 

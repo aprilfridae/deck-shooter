@@ -7,6 +7,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Config"))
 local CardData = require(script.Parent.CardData)
 
+local PROMPT_WAIT = 15 -- seconds, because the service isn't supported and may never answer
+
 local prompting = false
 
 local AutoRollUnlock = {}
@@ -24,29 +26,30 @@ function AutoRollUnlock.prompt()
 		return
 	end
 	prompting = true
-	local finished = Instance.new("BindableEvent")
-	local connection = AvatarEditorService.PromptSetFavoriteCompleted:Once(function(result: Enum.AvatarPromptResult)
-		finished:Fire(result == Enum.AvatarPromptResult.Success)
+	local result: Enum.AvatarPromptResult? = nil
+	local connection = AvatarEditorService.PromptSetFavoriteCompleted:Once(function(answer: Enum.AvatarPromptResult)
+		result = answer
 	end)
 	local shown = pcall(function()
 		AvatarEditorService:PromptSetFavorite(game.PlaceId, Enum.AvatarItemType.Asset, true)
 	end)
-	if shown then
-		local favorited = finished.Event:Wait()
-		if favorited then
-			CardData.ask("ClaimFavorite")
-		else
-			askGroup()
-		end
+	local deadline = os.clock() + PROMPT_WAIT
+	while shown and result == nil and os.clock() < deadline do
+		task.wait(0.1)
+	end
+	connection:Disconnect()
+	if result == Enum.AvatarPromptResult.Success then
+		CardData.ask("ClaimFavorite")
 	else
-		connection:Disconnect()
 		askGroup()
 	end
-	finished:Destroy()
 	prompting = false
 end
 
 task.spawn(function()
+	while not CardData.get() do -- the server refuses until the save has loaded
+		CardData.changed:Wait()
+	end
 	local ok, favorited = pcall(function()
 		return AvatarEditorService:GetFavorite(game.PlaceId, Enum.AvatarItemType.Asset)
 	end)
