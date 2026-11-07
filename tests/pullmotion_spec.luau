@@ -30,7 +30,7 @@ describe("PullMotion", function()
 	end)
 
 	it("runs the opening's steps in order", function()
-		local times = PullMotion.phases({ { tier = "Field", variant = "Base" } })
+		local times = PullMotion.phases()
 		expect(times.rip > 0).toBe(true)
 		expect(times.slide > times.rip).toBe(true)
 		expect(times.spread > times.slide).toBe(true)
@@ -39,13 +39,10 @@ describe("PullMotion", function()
 		expect(times.rest > times.flip).toBe(true)
 	end)
 
-	it("waits as long as the best card needs before flipping", function()
-		local plain = { tier = "Field", variant = "Base" }
-		local zero = { tier = "Field", variant = "ZeroDay" }
-		local short = PullMotion.phases({ plain, plain, plain })
-		local long = PullMotion.phases({ plain, zero, plain })
-		expect(long.flip - long.build).toBe(PullMotion.buildTime(zero))
-		expect(long.flip - long.build > short.flip - short.build).toBe(true)
+	it("shakes every pack for a Prototype's build before flipping", function()
+		local times = PullMotion.phases()
+		expect(times.flip - times.build).toBeCloseTo(PullMotion.buildTime({ tier = "Prototype", variant = "Base" }))
+		expect(times.rest).toBeCloseTo(3.35)
 	end)
 
 	it("peels the strip from one end to the other", function()
