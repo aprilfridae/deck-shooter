@@ -1,7 +1,7 @@
 -- The movement state machine. Pure: the caller supplies input and the time.
 local MoveConfig = require("./MoveConfig")
 
-export type Mode = "Walk" | "Sprint" | "Crouch" | "Slide" | "Air" | "Climb"
+export type Mode = "Walk" | "Sprint" | "Crouch" | "Slide" | "Air" | "Dash"
 export type Input = {
 	moving: boolean,
 	sprint: boolean,
@@ -58,7 +58,7 @@ function MoveState.speed(state: State, now: number): number
 	elseif state.mode == "Air" then
 		local alpha = (now - state.dashFadeAt) / MoveConfig.DashFadeTime
 		return if alpha < 1 then lerp(state.dashFadeFrom, state.carrySpeed, alpha) else state.carrySpeed
-	elseif state.mode == "Climb" then
+	elseif state.mode == "Dash" then
 		return 0
 	end
 	local base = BASE_SPEED[state.mode]
@@ -100,16 +100,10 @@ function MoveState.finishDash(state: State, entrySpeed: number, dashSpeed: numbe
 	state.dashFadeAt = now
 end
 
-function MoveState.startClimb(state: State)
-	state.mode = "Climb"
+-- A dash carries the player along a set path. The rules stand still until finishDash.
+function MoveState.startDash(state: State)
+	state.mode = "Dash"
 	state.chained = false
-end
-
-function MoveState.finishClimb(state: State, now: number)
-	state.mode = "Air"
-	state.carrySpeed = MoveConfig.SprintSpeed
-	state.airSince = now
-	state.dashFadeAt = -math.huge
 end
 
 -- Holding crouch while falling pulls the player down. A jump's rise is left
@@ -142,7 +136,7 @@ function MoveState.step(state: State, input: Input, now: number)
 	local pressed = input.crouch and not state.crouchHeld
 	state.crouchHeld = input.crouch
 
-	if previous == "Climb" or (previous == "Air" and now - state.airSince < MoveConfig.MinAirTime) then
+	if previous == "Dash" or (previous == "Air" and now - state.airSince < MoveConfig.MinAirTime) then
 		return
 	end
 
