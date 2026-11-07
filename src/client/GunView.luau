@@ -2,6 +2,8 @@
 local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
 local BodyStyle = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("BodyStyle"))
 -- or a grey block if that model hasn't been imported.
+-- Guns with SoldierClips are held in the soldier's own arms (SoldierArms) once that model is imported:
+-- every pose sits relative to the camera at the centre of the red eye bar, aiming down sights included.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ArmClip = require(ReplicatedStorage.Guns.ArmClip)
@@ -9,7 +11,11 @@ local ArmClips = require(ReplicatedStorage.Guns.ArmClips)
 local CardClip = require(ReplicatedStorage.Guns.ArmClips.Card)
 local ArmPose = require(ReplicatedStorage.Guns.ArmPose)
 local GunConfig = require(ReplicatedStorage.Guns.GunConfig)
+local SoldierClip = require(ReplicatedStorage.Guns.SoldierClip)
+local SoldierClips = require(ReplicatedStorage.Guns.SoldierClips)
 local CardView = require(script.Parent.CardView)
+local PoseGun = require(script.Parent.PoseGun)
+local SoldierArms = require(script.Parent.SoldierArms)
 local ViewArms = require(script.Parent.ViewArms)
 
 local PRIMARY_LENGTH = 2.4
@@ -28,6 +34,7 @@ local JITTER_MOVE = 0.012
 local JITTER_TURN = math.rad(0.6)
 local JITTER_SEED = 100
 local IDLE_JITTER = 0.35 -- share of the jitter left while standing, walking or holding a card
+local AIM_JITTER = 0.5 -- share of the idle jitter left while aiming down sights
 -- Motion blur: Roblox can't blur one object, so faded copies of the gun and arms fill the jump between two poses.
 local SMEAR_COPIES = BodyStyle.smearCopies
 local SMEAR_TIME = BodyStyle.smearTime
@@ -76,6 +83,10 @@ local shownBase: any = nil
 local shownSnap: any = nil
 local smears: { any } = {}
 local smearAt: number? = nil
+-- The soldier's own arms and the posed gun, once SoldierArms is imported and the gun has SoldierClips.
+local soldier: any = nil
+local aimedLast = false
+local aimChangedAt = -math.huge
 
 local function makeBlock(): Part
 	local part = Instance.new("Part")
@@ -216,6 +227,24 @@ function GunView.setGun(gunId: string, slot: string)
 	barrelRise = 0
 	view = makeModel(GunConfig.guns[gunId].name) or makeBlock()
 	clips = ArmClips[GunConfig.guns[gunId].name]
+	if soldier then
+		soldier.gun.model:Destroy()
+		soldier = nil
+	end
+	local data = SoldierClips[GunConfig.guns[gunId].name]
+	if data and SoldierArms.ready() then
+		local idle = data.poses.Idle
+		local gun = PoseGun.build(GunConfig.guns[gunId].name, data.parts, PoseGun.frame(idle.Mag), PoseGun.frame(idle.Action))
+		if gun then
+			soldier = {
+				gun = gun,
+				clips = SoldierClip.expand(data),
+				muzzle = Vector3.new(table.unpack(data.muzzle)),
+				reload = GunConfig.guns[gunId].reload,
+				handle = nil,
+			}
+		end
+	end
 	firedAt = nil
 	reloadAt = nil
 	holsterAt = nil
@@ -241,6 +270,9 @@ end
 
 -- Where bullets leave the gun on screen, or nil while it's hidden.
 function GunView.muzzle(): Vector3?
+	if soldier then
+		return if soldier.handle and soldier.gun.model.Parent then soldier.handle * soldier.muzzle else nil
+	end
 	if not view or not view.Parent then
 		return nil
 	end
@@ -299,6 +331,62 @@ local function snapFrame(): any
 	return frame
 end
 
+-- The soldier's frame. Swapping guns beats everything, then reloading, then a shot, then aiming in or out,
+-- then aiming, running or idle. Reloads are stretched to the gun's reload time.
+local function soldierFrame(reloading: boolean, sprinting: boolean, aiming: boolean): any
+	local c = soldier.clips
+	local now = os.clock()
+	if holsterAt then
+		local elapsed = now - holsterAt
+		local frame = ArmClip.frameAt(c.holster, elapsed)
+		if frame or elapsed < HOLSTER_WAIT then
+			return frame or c.holster.frames[#c.holster.frames]
+		end
+		holsterAt = nil
+	end
+	if equipAt then
+		local frame = ArmClip.frameAt(c.equip, now - equipAt)
+		if frame then
+			return frame
+		end
+		equipAt = nil
+	end
+	reloadAt = if reloading then reloadAt or now else nil
+	if reloadAt then
+		c.reload.fps = SoldierClip.fpsFor(c.reload, soldier.reload)
+		local frame = ArmClip.frameAt(c.reload, now - reloadAt)
+		if frame then
+			return frame
+		end
+	end
+	if firedAt then
+		local frame = ArmClip.frameAt(if aiming then c.aimFire else c.fire, now - firedAt)
+		if frame then
+			return frame
+		end
+		firedAt = nil
+	end
+	if aiming ~= aimedLast then
+		aimedLast = aiming
+		aimChangedAt = now
+	end
+	local turning = ArmClip.frameAt(if aiming then c.aimIn else c.aimOut, now - aimChangedAt)
+	if turning then
+		return turning
+	end
+	if aiming then
+		return ArmClip.frameAt(c.aim, now)
+	end
+	return ArmClip.frameAt(if sprinting then c.run else c.idle, now)
+end
+
+local function hideSoldier()
+	if soldier then
+		soldier.gun.model.Parent = nil
+	end
+	SoldierArms.hide()
+end
+
 -- With a card out, the gun drops, then the arms play the card flying across and holding it.
 -- Returns true while the card has the screen.
 local function showCard(camera: Camera, cardOut: boolean, step: number): boolean
@@ -325,6 +413,7 @@ local function showCard(camera: Camera, cardOut: boolean, step: number): boolean
 		view.Parent = nil
 		hideSmears()
 	end
+	hideSoldier()
 	local frame = ArmClip.frameAt(CardClip.draw, elapsed) or ArmClip.frameAt(CardClip.hold, os.clock())
 	if frame ~= shownCard then
 		shownCard = frame
@@ -356,6 +445,25 @@ function GunView.update(
 	-- The camera stays smooth. Only the held pose steps.
 	local step = ArmPose.step(os.clock(), POSE_FPS)
 	if showCard(camera, cardOut, step) then
+		return
+	end
+	if soldier then
+		-- The soldier's own arms: every pose is relative to the camera at the centre of the red eye bar.
+		local frame = soldierFrame(reloading, sprinting, aiming)
+		local idle = not sprinting and not reloading and not firedAt
+		-- Aiming twitches least, so the sights stay on the middle of the view.
+		local jitter = if aiming and idle then IDLE_JITTER * AIM_JITTER elseif idle then IDLE_JITTER else 1
+		local base = camera.CFrame * ViewArms.shaken(step, JITTER_SEED, JITTER_MOVE * jitter, JITTER_TURN * jitter)
+		local bones = frame.bones
+		local handle = base * PoseGun.frame(bones.Gun)
+		soldier.handle = handle
+		PoseGun.place(soldier.gun, handle, PoseGun.frame(bones.Mag), PoseGun.frame(bones.Action), camera)
+		SoldierArms.place(camera, base, bones)
+		if view then
+			view.Parent = nil
+		end
+		hideSmears()
+		ViewArms.hide()
 		return
 	end
 	if clips then
@@ -395,6 +503,7 @@ function GunView.hide()
 	if view then
 		view.Parent = nil
 	end
+	hideSoldier()
 	hideSmears()
 	CardView.hide()
 	ViewArms.hide()
