@@ -46,9 +46,9 @@ Movement matters here too: low walls to vault, a catwalk overhead.
 
 ## Zones and travel
 
-- Each player has a `Zone` attribute set by the server: `Outpost` or `TestRoom`. It starts as `Outpost`. A missing or unknown value counts as the Outpost, so a late attribute never allows shooting (`src/shared/Guns/Zones.luau`).
+- Each player has a `Zone` attribute set by the server: `Outpost`, `TestRoom` or `Relay` (the 1v1 map, `relay.md`). It starts as `Outpost`. A missing or unknown value counts as the Outpost, so a late attribute never allows shooting (`src/shared/Guns/Zones.luau`).
 - Each zone has a spawn, and a player respawns in their current zone. A new character more than 60 studs from its zone's spawn is moved there.
-- The lift doors lead to the test room. A Deep Navy terminal 9 studs from the test room's spawn, with an `OUTPOST` sign, leads back.
+- The lift doors lead to the test room. A Deep Navy terminal 9 studs from the test room's spawn, with an `OUTPOST` sign, leads back. One 9 studs the other way, signed `RELAY 1V1`, leads to the Relay map, and a terminal in each Relay lobby leads back to the Outpost.
 - Travel has a 1s cooldown. The server gives the movement check 1s of grace first, then reloads the character at the other spawn.
 - You wear your own Roblox avatar in the Outpost and the game's soldier body (attribute `SoldierRig`) everywhere else. The server moves `StarterCharacter` to `ServerStorage` at startup, turns off `CharacterAutoLoads`, and puts it back in `StarterPlayer` only while loading a character outside the Outpost. It also handles respawns.
 - You leave a soft glowing blur in the Outpost that only you can see: up to 24 barely visible neon copies of your whole body, one every frame at 60 fps while you move, each nudged up to 0.12 studs so their edges melt together, fading from Deep Navy to Bone over 0.22s.

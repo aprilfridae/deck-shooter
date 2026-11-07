@@ -1,5 +1,5 @@
--- The Outpost on this screen: its fog and colour while you're there, and the text on its
--- signs and screens. The server builds the place itself.
+-- The Outpost and the Relay map on this screen: each one's fog and colour while you're there, and
+-- the text on their signs and screens. The server builds the places themselves.
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
@@ -25,6 +25,7 @@ local VERTICAL_WIDTH = 0.62
 local VERTICAL_FILL = 0.86
 
 -- While you're in the Outpost. The test room keeps the place's own lighting.
+-- RELAY_LIGHTING must set the same keys, so leaving either puts every one back.
 local OUTPOST_LIGHTING = {
 	Ambient = Color3.fromRGB(38, 46, 50),
 	OutdoorAmbient = Color3.fromRGB(96, 110, 112),
@@ -36,7 +37,19 @@ local OUTPOST_LIGHTING = {
 	GlobalShadows = true,
 	ShadowSoftness = 0.4,
 }
--- Effects the Outpost replaces while you're there.
+-- The Relay map: a cold morning in thick teal fog, so the far tower is a pale shape.
+local RELAY_LIGHTING = {
+	Ambient = Color3.fromRGB(58, 84, 92),
+	OutdoorAmbient = Color3.fromRGB(122, 164, 172),
+	Brightness = 1.6,
+	ClockTime = 9.5,
+	EnvironmentDiffuseScale = 0.5,
+	EnvironmentSpecularScale = 0.8,
+	ExposureCompensation = 0,
+	GlobalShadows = true,
+	ShadowSoftness = 0.6,
+}
+-- Effects the Outpost and the Relay map replace while you're there.
 local REPLACED = {
 	Atmosphere = true,
 	Sky = true,
@@ -57,7 +70,7 @@ local function effect(className: string, props: { [string]: any }): Instance
 	return instance
 end
 
-local effects = {
+local outpostEffects = {
 	effect("Atmosphere", {
 		Density = 0.44,
 		Offset = 0.12,
@@ -74,6 +87,30 @@ local effects = {
 		TintColor = Color3.fromRGB(226, 240, 238),
 	}),
 	effect("BloomEffect", { Intensity = 0.9, Size = 28, Threshold = 1.3 }),
+}
+
+local relayEffects = {
+	effect("Atmosphere", {
+		Density = 0.55,
+		Offset = 0.05,
+		Color = Color3.fromRGB(128, 196, 204),
+		Decay = Color3.fromRGB(90, 148, 158),
+		Glare = 0,
+		Haze = 2.4,
+	}),
+	effect("Sky", { CelestialBodiesShown = false, StarCount = 0 }),
+	effect("ColorCorrectionEffect", {
+		Saturation = -0.05,
+		Contrast = 0.08,
+		Brightness = 0,
+		TintColor = Color3.fromRGB(214, 244, 248),
+	}),
+	effect("BloomEffect", { Intensity = 1, Size = 30, Threshold = 1.2 }),
+}
+
+local PROFILES = {
+	[Zones.Outpost] = { lighting = OUTPOST_LIGHTING, effects = outpostEffects },
+	[Zones.Relay] = { lighting = RELAY_LIGHTING, effects = relayEffects },
 }
 
 local original: { [string]: any } = {}
@@ -94,15 +131,17 @@ local function applyZone()
 		return
 	end
 	shownZone = zone
-	local here = zone == Zones.Outpost
-	for name, value in OUTPOST_LIGHTING do
-		(Lighting :: any)[name] = if here then value else original[name]
+	local profile = PROFILES[zone]
+	for name in OUTPOST_LIGHTING do
+		(Lighting :: any)[name] = if profile then profile.lighting[name] else original[name]
 	end
-	for _, instance in effects do
-		instance.Parent = if here then Lighting else nil
+	for _, other in PROFILES do
+		for _, instance in other.effects do
+			instance.Parent = if other == profile then Lighting else nil
+		end
 	end
 	for _, instance in replaced do
-		instance.Parent = if here then nil else Lighting
+		instance.Parent = if profile then nil else Lighting
 	end
 end
 player:GetAttributeChangedSignal("Zone"):Connect(applyZone)

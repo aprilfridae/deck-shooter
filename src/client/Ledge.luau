@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Movement = ReplicatedStorage:WaitForChild("Movement")
 local Parry = require(Movement:WaitForChild("Parry"))
 local MoveConfig = require(Movement:WaitForChild("MoveConfig"))
+local Collision = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Collision"))
 
 local REACHES = { 1.5, 2.5, 3.5 } -- studs ahead of the character's centre
 local STAND_ROOM = 5.5
@@ -41,6 +42,7 @@ local Ledge = {}
 -- rootHeight is how far the root part sits above the feet.
 function Ledge.find(character: Model, root: BasePart, forward: Vector3, rootHeight: number): Found?
 	params.FilterDescendantsInstances = { character }
+	Collision.forShots(params) -- railings can't be parried off
 	local feetY = root.Position.Y - rootHeight
 	local start = feetY + MoveConfig.ParryMaxHeight + 1
 	local down = Vector3.new(0, feetY - start - 0.5, 0)

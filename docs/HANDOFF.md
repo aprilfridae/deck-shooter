@@ -53,6 +53,7 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 - The Outpost UI: the nav, the sliding panel, Settings, Play, Loadout, Profile with the card index, clicking players, and comments (`docs/specs/outpost-ui.md`). River approved it in Play. Play shows the queues as `SOON` until matches exist. Players can only pick Assault with the M57, or Marksman, for now.
 - The player body is the soldier (`StarterCharacter` in the group's place, attribute `SoldierRig`): an invisible part for each R15 part, joined by Motor6Ds, with SoldierBody's meshes welded on. Third person uses the gun poses in `src/shared/Movement/BodyPoses/`, picked by `GunStance.luau`, with the gun placed by `HeldGuns.luau`. Bodies move in 12 fps stop-motion and don't jitter; only the first-person arms jitter. First person shows `GunModels.SoldierArms`, posed by `SoldierPose.luau` from the old arm clips, so clip timing is unchanged. Hitboxes come in two sizes, soldier and plain Roblox body (`Hitbox.shapes`). Only the root part collides with the world (`CharacterBody.server.luau`). `docs/specs/movement.md` and `docs/specs/guns.md`.
 - The FBX files are group assets: SoldierBody 109394536713108, SoldierArms 129298333100302, PistolMagStandIn 137691897540108, ShellStandIn 99392044611539. The old body is `ServerStorage.StarterCharacterOld` and the old arms are `GunModels.Arms`, kept as backups.
+- The 1v1 map, Relay (`docs/specs/relay.md`): two identical relay towers in teal fog, an open bridge, and a hanging block of flats reached by one wide steel stair from each side. One ladder up the middle of each tower links the lobby, operations and top floor. It's a free-play combat zone, reached from a `RELAY 1V1` terminal in the test room. Built 2026-11-07 from River's reference pictures. After River's first look in Play it was stripped back: River wants it clean and easy to move around, with no clutter in rooms, on roofs or the bridge, and no z-fighting.
 - Not built: matches (Elimination and Tower). The agreed design is in `docs/specs/matches.md`.
 
 ## Where we are now
@@ -103,7 +104,7 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 
 ## Next up
 
-Serials, then the player market. The 1v1 map still waits. Outpost ambient sounds wait on River's rain, sea and hum loops. Matches are parked until gameplay looks, sounds and feels good. River decides what's next.
+Serials, then the player market. River checks the Relay map in Play: fog, lights, stairs, parries and sightlines (`docs/specs/relay.md`, "Not done"). Outpost ambient sounds wait on River's rain, sea and hum loops. Matches are parked until gameplay looks, sounds and feels good. River decides what's next.
 
 ## Practical notes
 

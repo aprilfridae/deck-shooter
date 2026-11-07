@@ -11,6 +11,7 @@ local ShotRequest = require(Guns:WaitForChild("ShotRequest"))
 local Spread = require(Guns:WaitForChild("Spread"))
 local Weapon = require(Guns:WaitForChild("Weapon"))
 local Zones = require(Guns:WaitForChild("Zones"))
+local Collision = require(Guns:WaitForChild("Collision"))
 local Requests = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Requests"))
 local GunTargets = require(script.Parent.GunTargets)
 local loadouts = require(script.Parent.Loadouts)
@@ -68,6 +69,7 @@ local function firstWall(origin: Vector3, direction: Vector3): RaycastResult?
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = exclude
 	params.RespectCanCollide = true
+	Collision.forShots(params) -- railings and window panes stop feet, not bullets
 	return workspace:Raycast(origin, direction, params)
 end
 

@@ -1,5 +1,6 @@
--- Builds the Outpost at startup, moves players between it and the test room, and loads each
--- character, since the body depends on the zone: your Roblox avatar here, the game's own elsewhere.
+-- Builds the Outpost and the Relay map at startup, moves players between them and the test room,
+-- and loads each character, since the body depends on the zone: your Roblox avatar here, the
+-- game's own elsewhere.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -8,9 +9,11 @@ local StarterPlayer = game:GetService("StarterPlayer")
 
 local Zones = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Zones"))
 local Map = require(script.Parent.Map)
+local Relay = require(script.Parent.Relay)
 local MoveGrace = require(script.Parent.Parent.MoveGrace)
 
 local ORIGIN = CFrame.new(4000, 0, 0) -- far from the test room, which sits at the world origin
+local RELAY_ORIGIN = CFrame.new(-4000, 300, 0) -- the Relay map's centre, high enough to fall from
 local TRAVEL_GRACE_SECONDS = 1
 local TRAVEL_COOLDOWN_SECONDS = 1
 local STREAM_TIMEOUT_SECONDS = 2
@@ -30,12 +33,35 @@ local outpost = Map.build(ORIGIN)
 local testRoom = workspace:WaitForChild("TestRoom")
 local testSpawn = testRoom:WaitForChild("Spawn") :: SpawnLocation
 local testRoomTerminal = Map.buildReturnTerminal(testRoom, testSpawn)
+local relay = Relay.build(RELAY_ORIGIN)
+local relayTerminal = Relay.buildTerminal(testRoom, testSpawn.Position + Vector3.new(-9, -testSpawn.Size.Y / 2, 0), Vector3.xAxis)
 
 local spawns: { [string]: SpawnLocation } = {
 	[Zones.Outpost] = outpost.spawn,
 	[Zones.TestRoom] = testSpawn,
+	[Zones.Relay] = relay.spawns[1],
 }
 local lastTravel: { [Player]: number } = {}
+-- Which Relay tower each player there spawns in: 1 or 2.
+local relaySide: { [Player]: number } = {}
+
+-- The tower with fewer players, so two players get one each.
+local function emptierRelaySide(): number
+	local counts = { 0, 0 }
+	for other, side in relaySide do
+		if other.Parent == Players then
+			counts[side] += 1
+		end
+	end
+	return if counts[2] < counts[1] then 2 else 1
+end
+
+local function spawnFor(player: Player, zone: string): SpawnLocation
+	if zone == Zones.Relay then
+		return relay.spawns[relaySide[player] or 1]
+	end
+	return spawns[zone]
+end
 local moving: { [Player]: boolean } = {}
 
 -- StarterCharacter applies to whoever loads while it's in StarterPlayer, so loads go one at a time.
@@ -72,7 +98,7 @@ local function moveTo(player: Player, zone: string)
 		return
 	end
 	moving[player] = true
-	local target = standingOn(spawns[zone])
+	local target = standingOn(spawnFor(player, zone))
 	-- Loads the far side first if the place streams. Does nothing otherwise.
 	pcall(player.RequestStreamAroundAsync, player, target.Position, STREAM_TIMEOUT_SECONDS)
 	if player.Character == character then
@@ -84,8 +110,13 @@ local function moveTo(player: Player, zone: string)
 end
 
 local function setZone(player: Player, zone: string)
+	if zone ~= Zones.Relay then
+		relaySide[player] = nil
+	elseif not relaySide[player] then
+		relaySide[player] = emptierRelaySide()
+	end
 	player:SetAttribute("Zone", zone)
-	player.RespawnLocation = spawns[zone]
+	player.RespawnLocation = spawnFor(player, zone)
 end
 
 local function travel(player: Player, zone: string)
@@ -105,6 +136,14 @@ end)
 testRoomTerminal.Triggered:Connect(function(player)
 	travel(player, Zones.Outpost)
 end)
+relayTerminal.Triggered:Connect(function(player)
+	travel(player, Zones.Relay)
+end)
+for _, prompt in relay.terminals do
+	prompt.Triggered:Connect(function(player)
+		travel(player, Zones.Outpost)
+	end)
+end
 
 -- A new character can land on the wrong spawn if it loaded before RespawnLocation was set.
 local function onCharacter(player: Player, character: Model)
@@ -123,7 +162,7 @@ local function onCharacter(player: Player, character: Model)
 	end
 	task.wait()
 	local zone = Zones.of(player)
-	if (root.Position - spawns[zone].Position).Magnitude > SPAWN_DRIFT then
+	if (root.Position - spawnFor(player, zone).Position).Magnitude > SPAWN_DRIFT then
 		moveTo(player, zone)
 	end
 end
@@ -146,6 +185,7 @@ end
 Players.PlayerRemoving:Connect(function(player)
 	lastTravel[player] = nil
 	moving[player] = nil
+	relaySide[player] = nil
 end)
 
 -- Getting out of the building somehow sends you back to the spawn.
@@ -160,6 +200,16 @@ local function isLost(player: Player): boolean
 	return offset.Y < LOST_HEIGHT or Vector2.new(offset.X, offset.Z).Magnitude > MAX_RANGE
 end
 
+-- Falling off the Relay map into the fog kills you; you respawn in your tower.
+local function fellOffRelay(player: Player)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if root and humanoid and humanoid.Health > 0 and root.Position.Y < RELAY_ORIGIN.Y + Relay.fallDepth then
+		humanoid.Health = 0
+	end
+end
+
 local waited = 0
 RunService.Heartbeat:Connect(function(dt)
 	waited += dt
@@ -168,8 +218,11 @@ RunService.Heartbeat:Connect(function(dt)
 	end
 	waited = 0
 	for _, player in Players:GetPlayers() do
-		if Zones.of(player) == Zones.Outpost and not moving[player] and isLost(player) then
+		local zone = Zones.of(player)
+		if zone == Zones.Outpost and not moving[player] and isLost(player) then
 			task.spawn(moveTo, player, Zones.Outpost)
+		elseif zone == Zones.Relay and not moving[player] then
+			fellOffRelay(player)
 		end
 	end
 end)
