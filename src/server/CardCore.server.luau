@@ -7,6 +7,7 @@ local Deck = require(CardCore.Deck)
 local Fusion = require(CardCore.Fusion)
 local Income = require(CardCore.Income)
 local Requests = require(CardCore.Requests)
+local Settings = require(CardCore.Settings)
 local PlayerCards = require(script.Parent.PlayerCards)
 
 local MAX_REQUESTS_PER_SECOND = 5
@@ -70,6 +71,15 @@ remote("SetDeck", function(player, data, raw)
 		return { ok = false, code = code }
 	end
 	PlayerCards.changed(player)
+	return { ok = true }
+end)
+
+remote("GetSettings", function(_, data)
+	return { ok = true, result = data.settings }
+end)
+
+remote("SetSettings", function(_, data, raw)
+	data.settings = Settings.clean(raw)
 	return { ok = true }
 end)
 
