@@ -74,7 +74,7 @@ All 4 are in set `set_01`. Stats are listed Field / Black-Site / Prototype.
 `src/shared/CardCore/SaveData.luau`, saved with ProfileStore (`src/server/vendor/ProfileStore.luau`, from MadStudioRoblox at commit `45c9847`, Apache-2.0, licence in `licenses/`).
 
 - Store `PlayerData_v1`, key `Player_<UserId>`. Session locking stops copies being duplicated across servers.
-- **Version 2 fields:** `version`, `credits`, `creditRemainder`, `stacks`, `deck`, `gunLevels` (2 numbers), `catalysts`, `class`, `rifle`.
+- **Version 3 fields:** `version`, `credits`, `creditRemainder`, `stacks`, `deck`, `gunLevels` (2 numbers), `catalysts`, `class`, `rifle`, `settings`.
 - **Loading** starts from a new save and copies in each valid field, so a version 1 save becomes Assault with the M4. A save from a newer version is never overwritten: the server ends the session and kicks the player with "This server is out of date. Please rejoin."
 - **Corrupt values** reset to their default one field at a time: stack counts above 1,000,000, Credits above 2^53, gun levels above 100, unknown classes or rifles, and badly formed stack keys. Copies of unknown cards are kept, so a removed card can come back.
 - **Deck repair:** each slot keeps its card, position and tier where it can. If the saved tier is no longer owned, the slot moves to the best tier owned. An empty slot takes the first unused owned card, then a starter card, which grants 1 Field copy. New players get their starter cards this way.

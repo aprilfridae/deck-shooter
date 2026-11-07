@@ -2,7 +2,7 @@
 
 **Status:** planned, not built. River approved the layout and mockups on 2026-11-06.
 
-**Values will live in:** the constants at the top of each panel's script, and `src/shared/Settings.luau` for setting ranges. Colours come from `src/shared/Guns/Palette.luau`.
+**Values will live in:** the constants at the top of each panel's script, and `src/shared/CardCore/Settings.luau` for setting ranges. Colours come from `src/shared/Guns/Palette.luau`.
 
 ## Goal
 
@@ -69,13 +69,14 @@ Sizes use the title screen's **unit**: the screen's width, or 16/9 of its height
 | --- | --- | --- |
 | Music, Game and Menu volume | 0 to 100% | 100% |
 | Mouse sensitivity | 0.1 to 3 times | 1 |
-| Longscope sensitivity | 0.1 to 2 times | 1 |
+| Longscope sensitivity | 0.1 to 2 times mouse sensitivity | 1 |
 | Field of view | 60 to 100 | The current base view |
 | Keybinds | Any keyboard key, or Mouse 1 and 2 | The current keys |
 
 - Settings apply at once and save to the player's profile.
 - Sprint, jump and slide widen the view as they do now, kept the same amount above the chosen base. Scoping in ignores the setting.
-- `KEYBINDS` opens a list of actions. Clicking one waits for the next key. A key already in use swaps with the other action. `RESET` restores the defaults.
+- `KEYBINDS` opens a list of actions, including `CROUCH 2` so C and Left Control both stay. Clicking one waits for the next key. A key already in use swaps with the other action. `RESET` restores the defaults.
+- W, A, S and D can't be bound, because Roblox moves the player with them. Nor can the test keys B, N, T and Y.
 - Keys stay in `Input.luau`, which reads them from the settings. The B, N and Studio test keys aren't listed.
 - Sounds move into three new `SoundGroup`s, one per volume.
 

@@ -47,6 +47,22 @@ describe("SaveData.load", function()
 		expect(#loaded.deck).toBe(3)
 	end)
 
+	it("is on version 3", function()
+		expect(SaveData.CURRENT_VERSION).toBe(3)
+	end)
+
+	it("gives a version 2 save default settings", function()
+		local old = SaveData.load({ version = 2, credits = 5 })
+		expect(old.credits).toBe(5)
+		expect(old.settings.fieldOfView).toBe(80)
+	end)
+
+	it("survives a corrupt settings field", function()
+		local odd = SaveData.load({ version = 3, settings = "broken", credits = 7 })
+		expect(odd.credits).toBe(7)
+		expect(odd.settings.music).toBe(1)
+	end)
+
 	-- Review Focus 5
 	it("refuses a save from a newer build", function()
 		local loaded, code = SaveData.load({ version = 99 })

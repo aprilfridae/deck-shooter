@@ -40,6 +40,7 @@ local listed = {
 	outpostscale_spec = true,
 	hudtext_spec = true,
 	zones_spec = true,
+	settings_spec = true,
 }
 
 require("./tier_spec")
@@ -77,6 +78,7 @@ require("./gable_spec")
 require("./bodypose_spec")
 require("./outpostscale_spec")
 require("./hudtext_spec")
+require("./settings_spec")
 require("./zones_spec")
 
 local missing = 0

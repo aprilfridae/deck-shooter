@@ -3,6 +3,7 @@ local Cards = require("./Cards")
 local Config = require("./Config")
 local Deck = require("./Deck")
 local Inventory = require("./Inventory")
+local Settings = require("./Settings")
 local Tier = require("./Tier")
 local Variant = require("./Variant")
 
@@ -19,10 +20,11 @@ export type SaveData = {
 	catalysts: number,
 	class: string,
 	rifle: string,
+	settings: Settings.Settings,
 }
 
 local SaveData = {
-	CURRENT_VERSION = 2,
+	CURRENT_VERSION = 3,
 }
 
 function SaveData.new(): SaveData
@@ -36,6 +38,7 @@ function SaveData.new(): SaveData
 		catalysts = 0,
 		class = Config.DefaultClass,
 		rifle = Config.DefaultRifle,
+		settings = Settings.new(),
 	}
 	for _, cardId in Config.StarterDeck do
 		Inventory.add(data, cardId, "Field", "Base", 1)
@@ -153,6 +156,7 @@ function SaveData.load(raw: any): (SaveData?, string?)
 	if type(raw.rifle) == "string" and Config.Rifles[raw.rifle] then
 		data.rifle = raw.rifle
 	end
+	data.settings = Settings.clean(raw.settings)
 	data.deck = cleanDeck(data, raw.deck)
 	return data, nil
 end
