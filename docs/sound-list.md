@@ -1,6 +1,6 @@
 # Sound list
 
-What the game already plays and what it still needs. Checked against the code on 2026-11-05.
+What the game already plays and what it still needs. Checked against the code on 2026-11-07.
 
 ## Making and adding a sound
 
@@ -29,7 +29,7 @@ What the game already plays and what it still needs. Checked against the code on
 | Footsteps | `step-1` to `10` | Every 9 studs while walking or sprinting |
 | Jumps | `jump-1` to `14` | A jump with Space (walking off an edge plays nothing). Each take opens with 0.1s of silence, which the game skips. |
 | Menu music | `menu-music-v2.mp3` | Loops from joining. Quieter and thinner after PLAY. |
-| Menu selection | `menu-select` | Clicking PLAY |
+| Menu selection | `menu-select` | Clicking PLAY, and clicks in the Outpost menu. Hovering a nav row plays it quieter and higher. |
 
 ## Still needed
 
@@ -107,7 +107,7 @@ The SMG and Shotgun are playable. The machine pistol, revolver and auto-pistol a
 
 ## Packs
 
-The packs menu and pull reveal have no sounds of their own yet: rolling, the wrapper tearing, the cards shaking, the cards turning over and a Zero-Day pull.
+The packs menu and pull reveal have no sounds of their own yet: rolling, the pack tearing down its side, the cards shaking, the three cards flipping, the burst and a Zero-Day pull.
 
 ## Later, with matches
 

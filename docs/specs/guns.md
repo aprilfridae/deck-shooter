@@ -1,6 +1,6 @@
 # Guns
 
-**Status:** built for the test room. Checked against the code on 2026-11-05.
+**Status:** built for the test room. Checked against the code on 2026-11-07.
 
 **Values live in:** `src/shared/Guns/GunConfig.luau` for gun stats and classes. Ammo and reload rules are in `Weapon.luau`, damage in `Damage.luau`, spread in `Spread.luau` and recoil in `src/client/Recoil.luau`. Hit checking uses `ShotRequest.luau` (rewind and origin limits), `Hitbox.luau` (hitbox sizes: one for the soldier, one for plain Roblox bodies such as the test dummy) and `History.luau` (position history), and `src/server/GunServer.server.luau` holds the respawn time, range and request limit.
 
@@ -85,7 +85,7 @@ Shots are instant. The server alone decides damage, health and ammo (`src/server
 - The origin must be within 6 studs of where the server had the shooter at the firing time plus ping (or now), with no wall between their body and the origin.
 - The fire rate is checked against the firing time, with 5% tolerance for network timing.
 - The server records every target's position and pose 20 times a second and keeps 1s of history. Targets are rewound to the firing time minus ping minus 0.08s, but never more than 0.2s back.
-- The server's raycast hits walls only. Targets are tested against shapes at their rewound positions: a head sphere (radius 0.8, 2 studs above the root part) and a body cylinder (radius 1.1, from 3 below the root to 1.2 above). Crouching lowers the head and the top of the body 1.5 studs, and sliding 2.5. The bottom of the body doesn't move.
+- The server's raycast hits walls only. Targets are tested against shapes at their rewound positions: a head sphere (radius 0.8) and a body cylinder (radius 1.1). On a soldier body the head is 2.9 studs above the root part and the body runs from 3.3 below the root to 2.1 above. On a plain Roblox body, such as the grey test dummy, the head is 2 above and the body runs from 3 below to 1.2 above (`Hitbox.shapes`). Crouching lowers the head and the top of the body 1.5 studs, and sliding 2.5. The bottom of the body doesn't move.
 - Range is 1000 studs. Pellet damage is added up per target before it's applied.
 - Reload, swap and loadout requests are limited to 10 per second in total.
 
@@ -99,6 +99,8 @@ Shots are instant. The server alone decides damage, health and ammo (`src/server
 ## View models and effects
 
 - Gun models come from `ReplicatedStorage.GunModels` in the group's place, found by display name. A gun with no model shows a grey block. A local export in `assets/models/GunModels.rbxm` had the M57, B33, SMG, Longscope, Energy Pistol, `Arms` and `Card`, with no Shotgun model. That hasn't been checked against the group's place.
+- First person shows the soldier's arms (`GunModels.SoldierArms`), not the old `Arms` model. `src/shared/Guns/SoldierPose.luau` lines the soldier's hands up with the arm clips' palms and bends the arms to reach from shoulders kept out of view (`SHOULDERS`, the tuning point if the arms look wrong), so clip timing is unchanged. Guns without a clip (B33, SMG, Longscope, Shotgun) use their grips and the M57's idle fingers. Only the first-person arms jitter.
 - Arm animations exported from Blender exist for the M57, the Energy Pistol and the card (`src/shared/Guns/ArmClips/`). The M57 and Energy Pistol each have 3 reload takes (`reload`, `reload2`, `reload3`) that differ only in position, and one is picked at random. Other guns use arms posed in code. `docs/HANDOFF.md` has the export steps.
+- The test room has two targets with real health that respawn after 3s (`src/server/TargetDummy.server.luau`): a plain grey Roblox body and a soldier copied from the first player to spawn as one, which holds the M57 in its standing pose.
 - Tracers, impacts and bullet holes: `ShotEffects.client.luau` and `BulletHoles.client.luau`.
 - Sounds: `GunAudio.luau`, with ids in `GunSounds.luau` and `SoundIds.luau`.

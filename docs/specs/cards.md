@@ -1,6 +1,6 @@
 # Cards and the card economy
 
-**Status:** the 4 ability cards and the card rules (tiers, fusion, income, Deck Power Rating, saves) are built. No screen yet shows Credits, the collection, fusion or deck editing, and there's no way to get new cards. Checked against the code on 2026-11-05.
+**Status:** the 4 ability cards and the card rules (tiers, fusion, income, Deck Power Rating, saves) are built. The Outpost menu shows Credits, DPR and the collection and edits the deck, and packs give new cards (`packs.md`). Nothing shows fusion or Catalysts yet. Checked against the code on 2026-11-07.
 
 **Values live in:** `src/shared/CardCore/Cards.luau` (cards and their stats) and `src/shared/CardCore/Config.luau` (everything else). The rules are pure modules in `src/shared/CardCore/`, tested in Lune. The server side is `src/server/CardCore.server.luau`, `PlayerCards.luau` and `AbilityServer.server.luau`.
 
@@ -58,8 +58,8 @@ All 4 are in set `set_01`. Stats are listed Field / Redline / Prototype.
 ## Collection
 
 - **Copies** are stored per card, tier and variant, as keys like `phase_dash:Field:Base`.
-- **Variants:** Base, Chromatic, Redacted and Zero-Day. They pay 1x, 1.5x, 2.5x and 5x income. The odds of a roll are 1/50 Chromatic, 1/500 Redacted and 1/5,000 Zero-Day; the rest are Base. Fusion rolls a variant at these odds. Packs use their own, in `packs.md`.
-- **Fusion:** 5 copies at one tier make 1 copy at the next tier. A Fusion Catalyst lowers that to 4. The fee is 100 Credits from Field and 600 from Black-Site, and a Catalyst doesn't lower it. Prototype can't be fused.
+- **Variants:** Base, Chromatic, Redacted and Zero-Day. They pay 1x, 1.5x, 2.5x and 5x income. The odds of a roll are 1/50 Chromatic, 1/500 Redacted and 1/5,000 Zero-Day; the rest are Base. Fusion and pack cards roll a variant at these odds. A Prototype pack and a Zero-Day pack's first card use their own, in `packs.md`.
+- **Fusion:** 5 copies at one tier make 1 copy at the next tier. A Fusion Catalyst lowers that to 4. The fee is 100 Credits from Field and 600 from Redline, and a Catalyst doesn't lower it. Prototype can't be fused.
   - Checks run in this order, and a failed check changes nothing: unknown card, bad tier, top tier, no Catalyst, not enough copies, variants not confirmed, not enough Credits.
   - Base copies are spent first. Spending any variant needs the request to confirm it, because variants are the most valuable copies.
   - The new copy's variant is rolled.
@@ -74,21 +74,21 @@ All 4 are in set `set_01`. Stats are listed Field / Redline / Prototype.
 `src/shared/CardCore/SaveData.luau`, saved with ProfileStore (`src/server/vendor/ProfileStore.luau`, from MadStudioRoblox at commit `45c9847`, Apache-2.0, licence in `licenses/`).
 
 - Store `PlayerData_v1`, key `Player_<UserId>`. Session locking stops copies being duplicated across servers.
-- **Version 3 fields:** `version`, `credits`, `creditRemainder`, `stacks`, `deck`, `gunLevels` (2 numbers), `catalysts`, `class`, `rifle`, `settings`.
+- **Version 4 fields:** `version`, `credits`, `creditRemainder`, `stacks`, `deck`, `gunLevels` (2 numbers), `catalysts`, `class`, `rifle`, `settings`, `commentsOff`, `packs`, `rebirths`, `openAllCredits`, `receipts`.
 - **Loading** starts from a new save and copies in each valid field, so a version 1 save becomes Assault with the M4. A save from a newer version is never overwritten: the server ends the session and kicks the player with "This server is out of date. Please rejoin."
-- **Corrupt values** reset to their default one field at a time: stack counts above 1,000,000, Credits above 2^53, gun levels above 100, unknown classes or rifles, and badly formed stack keys. Copies of unknown cards are kept, so a removed card can come back.
+- **Corrupt values** reset to their default one field at a time: stack, pack, rebirth and Catalyst counts above 1,000,000, Credits above 2^53, gun levels above 100, unknown classes or rifles, and badly formed stack keys. Copies of unknown cards are kept, so a removed card can come back.
 - **Deck repair:** each slot keeps its card, position and tier where it can. If the saved tier is no longer owned, the slot moves to the best tier owned. An empty slot takes the first unused owned card, then a starter card, which grants 1 Field copy. New players get their starter cards this way.
 
 ## Remotes
 
-All in `ReplicatedStorage.CardCoreRemotes`. Each player gets 5 calls per second across the three functions. Replies are `{ ok = true }`, with a `result` from `Fuse` and `GetSnapshot`, or `{ ok = false, code }`, with codes such as `RateLimited`, `NotLoaded` and `BadRequest`.
+All in `ReplicatedStorage.CardCoreRemotes`. Each player gets 5 calls per second across all the functions there, including the pack, purchase, profile, comment and settings ones (`packs.md`, `outpost-ui.md`). Replies are `{ ok = true }`, with a `result` from `Fuse`, `SetDeck` and `GetSnapshot`, or `{ ok = false, code }`, with codes such as `RateLimited`, `NotLoaded` and `BadRequest`.
 
 | Remote | Kind | Does |
 | --- | --- | --- |
 | `Fuse` | Function | Takes `{ cardId, tier, useCatalyst, includeVariants }` and returns the new copy |
-| `SetDeck` | Function | Takes exactly 3 slots of `{ cardId, tier }` |
+| `SetDeck` | Function | Takes exactly 3 slots of `{ cardId, tier }` and returns the new snapshot |
 | `GetSnapshot` | Function | Returns the current snapshot |
-| `Snapshot` | Event, server to client | `{ credits, stacks, deck, catalysts, dpr, ratePerSecond }`, sent on load, after each change and every 5s |
+| `Snapshot` | Event, server to client | `{ credits, stacks, deck, catalysts, dpr, ratePerSecond, class, rifle, packs, rebirths, openAllCredits }`, sent on load, after each change and every 5s |
 
 Requests go through `Requests.luau`, which drops bad types, NaN, extra fields and badly shaped tables without an error.
 
@@ -96,15 +96,17 @@ Requests go through `Requests.luau`, which drops bad types, NaN, extra fields an
 
 - The HUD's ability rows: key, card name, tier in its colour and a 10-segment cooldown bar (see `hud.md`).
 - The card in hand, drawn from the `Card` model in `GunModels` (`CardView.luau`).
-- Nothing shows DPR, Credits, copies, Catalysts, fusion or deck editing yet.
+- Credits and income in the Outpost's top left (`IncomeLine.luau`).
+- The Loadout page: DPR and the deck, with a card picker (`LoadoutPanel.luau`, see `outpost-ui.md`).
+- The Profile page: Credits, DPR and the card index with copy counts (`ProfilePanel.luau`).
+- Nothing shows Catalysts or fusion yet.
 
 ## Not built
 
-- Pack rolling, rebirths and Robux purchases, which are designed in `packs.md`. The Market and serialized seasonal cards.
-- A Credits HUD and a Loadout button (River: these are HUD or GUI features, not places).
-- Ways to get Catalysts, gun upgrades, teams.
+- The player market and serialized seasonal cards.
+- A fusion screen, ways to get Catalysts, gun upgrades, teams.
 
 ## Known issues
 
 - A deck change or a fusion that moves a slot up doesn't reach the abilities until the next respawn, because the server reads the deck only when cards reset.
-- The first `Snapshot` fires when the save loads. The only listener (`Outpost.client.luau`) connects later, which is the likely cause of the "no listener" console warning. Not verified.
+- The first `Snapshot` fires when the save loads. The listener (`CardData.luau`) connects later, which is the likely cause of the "no listener" console warning. Not verified.

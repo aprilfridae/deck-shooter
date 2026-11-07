@@ -1,6 +1,6 @@
 # Card art
 
-**Status:** step 1 is built: the art in the menus, and inspecting a card in 3D. The card in hand and serials aren't built, so serials show `--`. Chromatic and Redacted are proposals River hasn't seen drawn yet, and show only their rarity text. Checked against the code on 2026-11-07.
+**Status:** step 1 is built: the art in the menus and the pull reveal, and inspecting a card in 3D. The card in hand and serials aren't built, so serials show `--`. Chromatic and Redacted are proposals River hasn't seen drawn yet, and show only their rarity text. Checked against the code on 2026-11-07.
 
 **Covers:** how cards look, and the serial numbers printed on them. How cards work is in `cards.md`. The pull reveal is in `packs.md`, and fusion effects get their own spec.
 
@@ -10,7 +10,7 @@ Common cards stay calm in the game's navy and Bone, so rare ones hit hard. Every
 
 ## Names
 
-- The Black-Site tier is shown to players as **Redline**. Its id stays `BlackSite`, so saves don't change. `TIER_NAMES` in `LoadoutPanel.luau` and `ProfilePanel.luau` and the player-facing text in the specs change.
+- The Black-Site tier is shown to players as **Redline**. Its id stays `BlackSite`, so saves don't change. The shown names are `TIER_NAMES` in `src/shared/CardCore/CardLook.luau`.
 - Each card has a two-letter monogram: `PD` Phase Dash, `OC` Overclock, `RP` Recon Pulse, `AS` Aegis Shell. A new card needs one.
 
 ## Layout
@@ -61,12 +61,12 @@ Tiers and variants are separate: a card has one of each, so any tier can be Zero
 
 ## Colour rules
 
-- Signal Acid, Data Cyan and Hazard Red may appear on cards. The menus and HUD stay navy and Bone, so this is an exception to the rules in `outpost-ui.md`, which needs updating when this is built.
-- `Palette.Tiers` changes to match the table above, and `#0E1018` joins the palette as the Zero-Day background.
+- Signal Acid, Data Cyan and Hazard Red may appear on cards. The menus and HUD stay navy and Bone, and `outpost-ui.md` lists cards as the exception.
+- `Palette.Tiers` matches the table above, and `Palette.ZeroDayBack` is the Zero-Day background, `#0E1018`.
 
 ## Inspecting a card
 
-Clicking a card in the Profile index holds it up in the 3D world. `CardInspect.luau` draws it, and `CardSpin.luau` holds the motion rules.
+Clicking a card in the Profile index or the pull reveal holds it up in the 3D world. `CardInspect.luau` draws it, and `CardSpin.luau` holds the motion rules.
 
 - **Arrival:** the card spins once into place in the space beside the panel, at 70% of the screen's height. The panel stays open, the nav hides and the world dims to Deep Navy.
 - **Spinning:** dragging turns the card freely, and tips it up to 0.6 radians. Let go and it eases to whichever side is nearest, then sways gently.
@@ -95,13 +95,13 @@ Clicking a card in the Profile index holds it up in the 3D world. `CardInspect.l
 - **Art:** the background, monogram, glow and fixed details are one image per card and rarity, because Roblox UI can't blur text. Images are group assets, ids kept with the others. The monogram uses KH Interference Bold, the same as the menu titles. `tools/make-card-art.py` makes the images.
 - **Live parts** are drawn over the image: the serial and name through `TypeLabel`, the shine and foil as moving frames with `UIGradient`, the stripes as a scrolling image.
 - **Foil:** Roblox UI can't blend colours into what's beneath, so the band sits on top at partial transparency. River judges it in Play.
-- **Where cards show:** a new `CardFace.luau` draws a card in the Loadout slots and Profile index. `CardView.luau` is the 3D card held in a match.
+- **Where cards show:** `CardFace.luau` draws a card in the Loadout slots, the Profile index and the pull reveal. `CardView.luau` is the 3D card held in hand, still drawn from the `Card` model without this art.
 - **In the panels:** a Loadout slot's number moves under the card. An index card shows its copy count where the serial goes, since it stands for every copy of that card.
 - **Small sizes:** hairlines are baked in at 1.2 units so they survive the Profile index. Motion runs only while a card is on screen.
 
 ## Order of work
 
-1. The art and `CardFace.luau` in the menus, with serials shown as a placeholder.
+1. The art and `CardFace.luau` in the menus, with serials shown as a placeholder. Built.
 2. The card in hand, in `CardView.luau`.
 3. Serials: saves, counters and fusion.
 4. A separate spec for fusion effects.

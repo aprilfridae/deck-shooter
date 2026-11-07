@@ -65,6 +65,7 @@ The mode uses original arena names and layouts.
 - **Teams:** teams get assigned. Recon Pulse's teammate perk and the "everyone else is an enemy" rule in `AbilityServer` depend on it.
 - **Server authority:** the server alone controls tower capture, as it already does health, ammo and ability use.
 - **HUD:** a basic score display.
+- **Queues:** the Play page's queue rows (`PlayPanel.luau`) and the matchmaking booth's prompt in the Outpost say `SOON` and do nothing until matches exist.
 
 ## Risks
 

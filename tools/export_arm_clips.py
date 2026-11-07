@@ -3,7 +3,7 @@ from mathutils import Vector, Matrix, Quaternion
 
 # Pass GUN="Energy Pistol" with that gun's blend open. M57 is the default.
 GUN = globals().get("GUN", "M57")
-OUT = "H:/rblxgame/src/shared/Guns/ArmClips/%s.luau" % GUN.replace(" ", "")
+OUT = "H:/SplitDeck/src/shared/Guns/ArmClips/%s.luau" % GUN.replace(" ", "")
 arm = bpy.data.objects["Armature"]; pb = arm.pose.bones; vl = bpy.context.view_layer
 g = bpy.data.objects[GUN]
 MW = arm.matrix_world.copy(); inv = MW.inverted(); R3 = MW.to_3x3().normalized().inverted()

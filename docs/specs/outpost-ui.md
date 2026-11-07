@@ -1,12 +1,12 @@
 # Outpost UI
 
-**Status:** all four stages are built, and River approved them in Play on 2026-11-06. Comments haven't been tested with two players or on a live server. Layout and mockups approved by River on 2026-11-06.
+**Status:** all four stages are built, and River approved them in Play on 2026-11-06. Comments haven't been tested with two players or on a live server. Layout and mockups approved by River on 2026-11-06. The Packs page was added on 2026-11-07 (`packs.md`). Checked against the code on 2026-11-07.
 
-**Values will live in:** the constants at the top of each panel's script, and `src/shared/CardCore/Settings.luau` for setting ranges. Colours come from `src/shared/Guns/Palette.luau`.
+**Values live in:** the constants at the top of each panel's script, and `src/shared/CardCore/Settings.luau` for setting ranges. Colours come from `src/shared/Guns/Palette.luau`.
 
 ## Goal
 
-A menu for the Outpost, styled like a Swiss poster. It gives players four things without leaving the hub: start a match, change their loadout, see a profile, and change settings. Players can keep walking while it's open, so the Outpost stays a place to hang out.
+A menu for the Outpost, styled like a Swiss poster. It gives players five things without leaving the hub: start a match, open packs, change their loadout, see a profile, and change settings. Players can keep walking while it's open, so the Outpost stays a place to hang out.
 
 ## Style
 
@@ -25,7 +25,7 @@ Sizes use the title screen's **unit**: the screen's width, or 16/9 of its height
 
 | Item | Place |
 | --- | --- |
-| Nav | Bottom left, 3% from the edge: `PLAY`, `LOADOUT`, `PROFILE`, `SETTINGS` stacked, each with its number. The rows are Bone with Deep Navy text, like the panels. Under the mouse a Deep Navy wipe crosses the row in 40 fps steps with fading Deep Navy copies behind it and a Deep Navy glow ahead that spills past the row, the name kicks right and the number becomes `>`. A thin Bone outline runs round the whole nav. The open page's row wipes Deep Navy. Rows slide in one after another when the nav appears. |
+| Nav | Bottom left, 3% from the edge: `PLAY`, `PACKS`, `LOADOUT`, `PROFILE`, `SETTINGS` stacked, each with its number. The rows are Bone with Deep Navy text, like the panels. Under the mouse a Deep Navy wipe crosses the row in 40 fps steps with fading Deep Navy copies behind it and a Deep Navy glow ahead that spills past the row, the name kicks right and the number becomes `>`. A thin Bone outline runs round the whole nav. The open page's row wipes Deep Navy. Rows slide in one after another when the nav appears. |
 | Panel | Right half of the screen, full height, Bone. |
 
 - The nav and panels show only in the `Outpost` zone, after the title screen. Leaving the zone closes the panel.
@@ -56,7 +56,7 @@ Rolling, opening, rebirths and the odds. `specs/packs.md` has the page and how i
 - Roblox headshot, name, Credits and DPR, then two tabs: `CARD INDEX` and `COMMENTS`.
 - **Card index:** a scrolling grid of cards, one for every card at every tier, 4 cards by 3 tiers for now. Owned ones show their copy count and the rest are faded. Clicking a card inspects it in 3D, as `card-art.md` describes. In Studio, a fourth row previews each card as Zero-Day. A large `04/12` shows how many are owned.
 - **Other players:** left clicking a player in the Outpost, the player included, opens this page for them, within 40 studs. The click uses the cursor, or the screen's centre if the mouse is locked. Fusion and any other editing stay out of Profile.
-- The server sends another player's public data on request, through a new `GetProfile` function. Only players in the same server can be viewed.
+- The server sends another player's public data on request, through the `GetProfile` function. Only players in the same server can be viewed.
 
 ### Comments
 
@@ -75,7 +75,7 @@ Rolling, opening, rebirths and the odds. `specs/packs.md` has the page and how i
 | Music, Game and Menu volume | 0 to 100% | 100% |
 | Mouse sensitivity | 0.1 to 3 times | 1 |
 | Longscope sensitivity | 0.1 to 2 times mouse sensitivity | 1 |
-| Field of view | 60 to 100 | The current base view |
+| Field of view | 60 to 100 | 80 |
 | Keybinds | Any keyboard key, or Mouse 1 and 2 | The current keys |
 
 - Settings apply at once and save to the player's profile.
@@ -84,21 +84,21 @@ Rolling, opening, rebirths and the odds. `specs/packs.md` has the page and how i
 - W, A, S and D can't be bound, because Roblox moves the player with them. Nor can the test keys B, N, T and Y, or `/`, which opens chat.
 - Space is only a default: Roblox's own jump is switched off, and the game jumps from the player's binding.
 - Keys stay in `Input.luau`, which reads them from the settings. The B, N and Studio test keys aren't listed.
-- Sounds move into three new `SoundGroup`s, one per volume.
+- Sounds play through three `SoundGroup`s, one per volume (`SoundGroups.luau`).
 
 ## Save data
 
-Save version 3 adds `settings`: the volumes, sensitivities, field of view and keybinds. Loading fills a missing or bad value with its default one field at a time, as the rest of the save does. Saves also gain `commentsOff`.
+Save version 3 adds `settings`: the volumes, sensitivities, field of view and keybinds. Loading fills a missing or bad value with its default one field at a time, as the rest of the save does. Saves also gain `commentsOff`. The save is now on version 4, which adds the pack fields (`packs.md`).
 
-A new `SetSettings` remote takes the whole settings table, and the server checks it with `Settings.luau`. It's limited to 1 call a second, and sliders send when released.
+The `SetSettings` remote takes the whole settings table, and the server checks it with `Settings.luau`. The client sends at most once a second (`PlayerSettings.luau`), and sliders send when released.
 
 ## Fonts
 
-`Title` only has capitals, so `1V1`, `300` and `04/12` can't be drawn in it. The font export gains `0-9`, `/` and `_` for `Title`, and `_` for `Label` and `LabelBold` so names draw correctly. The new sheets are uploaded to the group, and their ids go in `FontImages.luau`. Player names are drawn in capitals.
+`Title` only has capitals, so `1V1`, `300` and `04/12` can't be drawn in it. The font export has `0-9`, `/` and `_` for `Title`, and `_` for `Label` and `LabelBold` so names draw correctly. The sheets are uploaded to the group, and their ids are in `FontImages.luau`. Player names are drawn in capitals.
 
 ## Build stages
 
-Each stage is its own plan and pull request, tested by River in Play before the next starts.
+All four are built. Each was its own plan and pull request, tested by River in Play before the next started.
 
 1. Fonts, the nav, the panel frame and Settings, with save version 3.
 2. Loadout and Play.
