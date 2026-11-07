@@ -23,6 +23,7 @@ local GLOW_PER_TRAVEL = 6.7 -- glow for each share of the panel crossed in one f
 local SHAKE = 0.012 -- how far the landing throws the view, per unit of depth
 local SHAKE_HEIGHT = 0.6 -- of the sideways throw
 local SHAKE_LEAN = math.rad(0.35)
+local VIEW_RAMP = 0.25 -- of an opening move, when the camera has caught up with the panel
 local FADE_FROM = 0.4 -- of a closing move, when its blur starts to fade
 local FADE_TO = 0.8 -- when it's gone, so the panel leaves clean
 local DECODE_STEP = 2 -- characters the text gains each frame
@@ -75,12 +76,15 @@ function PanelMotion.share(from: number, to: number, progress: number): number
 end
 
 -- Where the camera is at this point of a move. It runs every frame the screen draws, not in the
--- panel's steps. Opening it eases in and out, because a camera that lurches feels bad.
+-- panel's steps, and follows the panel's curve. Opening it eases onto that curve, because the
+-- panel starts at full speed and a camera that does that lurches.
 function PanelMotion.viewShare(from: number, to: number, progress: number): number
+	local share = PanelMotion.share(from, to, progress)
 	if to < from then
-		return PanelMotion.share(from, to, progress)
+		return share
 	end
-	return from + (to - from) * progress * progress * (3 - 2 * progress)
+	local ramp = math.min(progress / VIEW_RAMP, 1)
+	return from + (share - from) * ramp * ramp * (3 - 2 * ramp)
 end
 
 -- The copies left between the last frame and this one, nearest the panel first.

@@ -55,13 +55,11 @@ describe("PanelMotion", function()
 		expect(PanelMotion.decode(text, frame)).toBe(PanelMotion.decode(text, frame + 0.01))
 	end)
 
-	it("eases the camera in gently when opening, with no swing", function()
+	it("eases the camera in gently, then matches the panel", function()
 		expect(PanelMotion.viewShare(0, 1, 0)).toBe(0)
-		expect(PanelMotion.viewShare(0, 1, 1)).toBe(1)
+		expect(near(PanelMotion.viewShare(0, 1, 1), 1)).toBe(true)
 		expect(PanelMotion.viewShare(0, 1, 0.05) < PanelMotion.share(0, 1, 0.05) / 5).toBe(true)
-		for progress = 0, 1, 0.05 do
-			expect(PanelMotion.viewShare(0, 1, progress) <= 1).toBe(true)
-		end
+		expect(PanelMotion.viewShare(0, 1, 0.5)).toBe(PanelMotion.share(0, 1, 0.5))
 	end)
 
 	it("drops the camera away with the panel when closing", function()
