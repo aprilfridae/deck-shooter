@@ -107,7 +107,7 @@ function PlayPanel.fill(content: Frame)
 		end)
 	end
 
-	local block = PanelKit.block(content, MARGIN, 0, RIGHT - MARGIN, BLOCK_HEIGHT, Palette.SignalAcid)
+	local block = PanelKit.block(content, MARGIN, 0, RIGHT - MARGIN, BLOCK_HEIGHT, Palette.DataCyan)
 
 	-- Stacks the rows, each starting where the one above it ended.
 	local function stack()

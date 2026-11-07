@@ -51,7 +51,7 @@ end
 
 local function glowFrame(parent: Instance, fade: NumberSequence): Frame
 	local frame = Instance.new("Frame")
-	frame.BackgroundColor3 = Palette.SignalAcid
+	frame.BackgroundColor3 = Palette.DataCyan
 	frame.BorderSizePixel = 0
 	frame.Visible = false
 	frame.Parent = parent
@@ -161,7 +161,7 @@ function NavButton:target(): number
 end
 
 function NavButton:paint()
-	-- Signal Acid and Data Cyan both want dark text, so only the plain hover wipe turns it light.
+	-- Data Cyan wants dark text, so only the plain hover wipe turns it light.
 	local onNavy = self.share > TEXT_SWAP and not self.active and not self.pressed
 	local ink = if onNavy then Palette.Bone else Palette.DeepNavy
 	self.text:setColor(ink)
@@ -169,7 +169,7 @@ function NavButton:paint()
 	self.mark:set(if self:target() == 1 then ">" else self.number)
 	self.wipe.BackgroundColor3 = if self.pressed
 		then Palette.DataCyan
-		elseif self.active then Palette.SignalAcid
+		elseif self.active then Palette.DataCyan
 		else Palette.DeepNavy
 	self.wipe.Size = UDim2.fromScale(math.min(self.share, 1), 1)
 	self.text:setPosition(UDim2.fromOffset(self.left + self.kick * self.share, self.baseline))

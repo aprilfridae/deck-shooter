@@ -68,7 +68,7 @@ gui.Parent = player:WaitForChild("PlayerGui")
 
 local screen = Instance.new("Frame")
 screen.Size = UDim2.fromScale(1, 1)
-screen.BackgroundColor3 = Palette.SignalAcid
+screen.BackgroundColor3 = Palette.DataCyan
 screen.BorderSizePixel = 0
 screen.ClipsDescendants = true
 screen.Active = true
@@ -238,7 +238,7 @@ local function addMenu(parent: Frame, unit: number)
 	button.ZIndex = 3
 	button.Parent = parent
 	button.MouseEnter:Connect(function()
-		playLabel:setColor(Palette.SignalAcid)
+		playLabel:setColor(Palette.DataCyan)
 		playLabel:set("> PLAY")
 	end)
 	button.MouseLeave:Connect(function()
@@ -271,7 +271,7 @@ local function draw()
 	local left = MARGIN * unit
 	local title = TITLE_SIZE * unit
 	text(frame, "Title", "SPLIT", Palette.Bone, left, SPLIT_LINE * unit, title, 0)
-	text(frame, "Title", "DECK", Palette.SignalAcid, left, DECK_LINE * unit, title, 0)
+	text(frame, "Title", "DECK", Palette.DataCyan, left, DECK_LINE * unit, title, 0)
 	local rule = bar(frame, Palette.Bone, left, RULE_LINE * unit, RULE_WIDTH * unit, 1)
 	rule.BackgroundTransparency = RULE_TRANSPARENCY
 	addMenu(frame, unit)

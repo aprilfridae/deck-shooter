@@ -222,7 +222,7 @@ showMain = function(content: Frame)
 	local unit = MenuPanel.unit()
 	local bar = hitBox(content, MARGIN, KEYBINDS_TOP, RIGHT - MARGIN, KEYBINDS_HEIGHT)
 	bar.BackgroundTransparency = 0
-	bar.BackgroundColor3 = Palette.SignalAcid
+	bar.BackgroundColor3 = Palette.DataCyan
 	bar.BorderSizePixel = 0
 	bar.Activated:Connect(function()
 		SettingsPanel.showKeys(content)

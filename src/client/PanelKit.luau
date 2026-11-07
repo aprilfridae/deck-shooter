@@ -102,7 +102,7 @@ function PanelKit.hitBox(parent: Instance, x: number, top: number, width: number
 end
 
 -- A labelled button that inverts under the mouse and dips when pressed.
--- active leaves it in Signal Acid, and disabled greys it out and stops clicks. quiet thickens the
+-- active leaves it in Data Cyan, and disabled greys it out and stops clicks. quiet thickens the
 -- border instead of inverting, for buttons with their own contents.
 function PanelKit.button(
 	parent: Instance,
@@ -118,7 +118,7 @@ function PanelKit.button(
 	local size = choice.size or PanelKit.LABEL_SIZE
 	local button = PanelKit.hitBox(parent, x, top, width, height)
 	button.BackgroundTransparency = if choice.disabled then 0.9 else 0
-	button.BackgroundColor3 = if choice.disabled then NAVY elseif choice.active then Palette.SignalAcid else Palette.Bone
+	button.BackgroundColor3 = if choice.disabled then NAVY elseif choice.active then Palette.DataCyan else Palette.Bone
 	local stroke = Instance.new("UIStroke")
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	stroke.Color = NAVY
