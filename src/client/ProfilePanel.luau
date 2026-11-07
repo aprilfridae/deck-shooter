@@ -1,16 +1,16 @@
 -- The Profile page, for the player or anyone else in the server: headshot, name, Credits and Deck
 -- Power Rating, then the card index and comments.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local CardIndex = require(CardCore:WaitForChild("CardIndex"))
-local Guns = ReplicatedStorage:WaitForChild("Guns")
+local Variant = require(CardCore:WaitForChild("Variant"))
 local CardData = require(script.Parent.CardData)
+local CardFace = require(script.Parent.CardFace)
 local CommentsPanel = require(script.Parent.CommentsPanel)
 local MenuPanel = require(script.Parent.MenuPanel)
 local PanelKit = require(script.Parent.PanelKit)
-
-local TIER_NAMES = { Field = "FIELD", BlackSite = "BLACK SITE", Prototype = "PROTOTYPE" }
 
 local HEAD_TOP = 0.025
 local HEAD_SIZE = 0.09
@@ -26,14 +26,10 @@ local COUNT_SIZE = 0.04
 local COUNT_LINE = 0.215
 local GRID_TOP = 0.176
 local GRID_GAP = 0.006
-local CELL_WIDTH = 0.0755 -- a playing card's shape, with CELL_HEIGHT
+local CELL_WIDTH = 0.0661 -- a card's shape, with CELL_HEIGHT
 local CELL_HEIGHT = 0.1057
-local CELL_MARGIN = 0.008 -- inside a card, on all four sides
-local COPIES_SIZE = 0.02
-local NAME_SIZE_SMALL = 0.0082
-local NAME_STEP = 0.012
-local TIER_SIZE = 0.0068
-local GHOST_INK = PanelKit.INK:Lerp(PanelKit.PAPER, 0.6)
+local PREVIEW_COLUMN = 5 -- in Studio, where the Zero-Day previews start, under the count
+local PREVIEW_ROW = 2
 local PAGE_TOP = 0.172
 
 local ProfilePanel = {}
@@ -62,37 +58,44 @@ local function header(content: Frame, profile: any)
 	PanelKit.line(content, `DPR {profile.dpr}`, INFO_LEFT + STATS_GAP, STATS_LINE)
 end
 
+local function cell(page: Frame, column: number, row: number, options: any)
+	local unit = MenuPanel.unit()
+	local x = PanelKit.MARGIN + (column - 1) * (CELL_WIDTH + GRID_GAP)
+	local top = GRID_TOP + (row - 1) * (CELL_HEIGHT + GRID_GAP)
+	options.width = CELL_WIDTH * unit
+	options.position = UDim2.fromOffset(x * unit, top * unit)
+	CardFace.new(page, options)
+end
+
+-- Nobody can own a Zero-Day yet, so Studio shows each card as one to judge the look.
+local function zeroDayPreviews(page: Frame, cards: { any })
+	for index, card in cards do
+		local column = PREVIEW_COLUMN + (index - 1) % 2
+		local row = PREVIEW_ROW + math.floor((index - 1) / 2)
+		cell(page, column, row, { cardId = card.cardId, tier = "Field", variant = Variant.ZeroDay, serial = 1 })
+	end
+end
+
 local function cardGrid(page: Frame, profile: any)
-	local MARGIN, RIGHT = PanelKit.MARGIN, PanelKit.RIGHT
+	local RIGHT = PanelKit.RIGHT
 	local index = CardIndex.build(profile.stacks)
 	PanelKit.label(page, "Title", COUNT_SIZE, RIGHT, COUNT_LINE, true)
 		:set(string.format("%02d/%02d", index.owned, index.total))
 	PanelKit.label(page, "LabelBold", PanelKit.SMALL_SIZE, RIGHT, COUNT_LINE + 0.016, true):set("OWNED")
-	local width = CELL_WIDTH
 	for column, card in index.cards do
-		local x = MARGIN + (column - 1) * (width + GRID_GAP)
 		for row, entry in card.tiers do
-			local top = GRID_TOP + (row - 1) * (CELL_HEIGHT + GRID_GAP)
 			local owned = entry.count > 0
-			local cell = PanelKit.block(page, x, top, width, CELL_HEIGHT, PanelKit.PAPER)
-			cell.BackgroundTransparency = if owned then 0 else 1
-			local stroke = Instance.new("UIStroke")
-			stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-			stroke.Color = if owned then PanelKit.INK else GHOST_INK
-			stroke.Parent = cell
-			local ink = if owned then PanelKit.INK else GHOST_INK
-			local firstLine = CELL_MARGIN + NAME_SIZE_SMALL * PanelKit.CAP_HEIGHT
-			local words = string.split(string.upper(card.name), " ")
-			for line, word in words do
-				local y = firstLine + (line - 1) * NAME_STEP
-				PanelKit.cardLabel(cell, "LabelBold", NAME_SIZE_SMALL, CELL_MARGIN, y, ink):set(word)
-			end
-			local tierLine = firstLine + 2 * NAME_STEP + 0.002 -- under two lines, so tiers line up across cards
-			PanelKit.cardLabel(cell, "Label", TIER_SIZE, CELL_MARGIN, tierLine, ink):set(TIER_NAMES[entry.tier])
-			if owned then
-				PanelKit.cardLabel(cell, "Title", COPIES_SIZE, CELL_MARGIN, CELL_HEIGHT - CELL_MARGIN):set(`X{entry.count}`)
-			end
+			cell(page, column, row, {
+				cardId = card.cardId,
+				tier = entry.tier,
+				variant = entry.variant,
+				corner = if owned then `X{entry.count}` else nil,
+				ghost = not owned,
+			})
 		end
+	end
+	if RunService:IsStudio() then
+		zeroDayPreviews(page, index.cards)
 	end
 end
 

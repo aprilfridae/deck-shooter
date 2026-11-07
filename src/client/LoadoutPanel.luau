@@ -4,23 +4,24 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local CardIndex = require(CardCore:WaitForChild("CardIndex"))
-local Cards = require(CardCore:WaitForChild("Cards"))
+local CardLook = require(CardCore:WaitForChild("CardLook"))
 local Deck = require(CardCore:WaitForChild("Deck"))
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local GunConfig = require(Guns:WaitForChild("GunConfig"))
 local CardData = require(script.Parent.CardData)
+local CardFace = require(script.Parent.CardFace)
+local MenuPanel = require(script.Parent.MenuPanel)
 local PanelKit = require(script.Parent.PanelKit)
 
-local TIER_NAMES = { Field = "FIELD", BlackSite = "BLACK SITE", Prototype = "PROTOTYPE" }
 local CLASS_NAMES = { Assault = "ASSAULT", Rusher = "RUSHER", Marksman = "MARKSMAN", Breacher = "BREACHER" }
 
 local SLOTS_LINE = 0.128
 local SLOT_TOP = 0.14
-local SLOT_WIDTH = 0.107 -- a playing card's shape, with SLOT_HEIGHT
+local SLOT_WIDTH = 0.09375 -- a card's shape, with SLOT_HEIGHT
 local SLOT_HEIGHT = 0.15
 local SLOT_GAP = 0.01
-local SLOT_MARGIN = 0.01 -- inside a card, on all four sides
-local SLOT_NUMBER = 0.02
+local SLOT_CORNER = SLOT_WIDTH * 10 / 150 -- the card's own corner
+local SLOT_NUMBER_LINE = SLOT_TOP + SLOT_HEIGHT + 0.012
 local POWER_SIZE = 0.034
 local LOWER_LINE = 0.31
 local LOWER_TOP = 0.322
@@ -44,13 +45,19 @@ local function slotCell(content: Frame, snapshot: any, index: number, chosen: nu
 	local entry = snapshot.deck[index]
 	local width = SLOT_WIDTH
 	local x = PanelKit.MARGIN + (index - 1) * (width + SLOT_GAP)
+	local unit = MenuPanel.unit()
 	local cell = PanelKit.button(content, "", x, SLOT_TOP, width, SLOT_HEIGHT, { active = index == chosen, quiet = true })
-	local numberLine = SLOT_MARGIN + SLOT_NUMBER * PanelKit.CAP_HEIGHT
-	local tierLine = SLOT_HEIGHT - SLOT_MARGIN
-	PanelKit.cardLabel(cell, "Title", SLOT_NUMBER, SLOT_MARGIN, numberLine):set(tostring(index))
-	PanelKit.cardLabel(cell, "LabelBold", PanelKit.SMALL_SIZE, SLOT_MARGIN, tierLine - 0.015)
-		:set(string.upper(Cards.byId[entry.cardId].name))
-	PanelKit.cardLabel(cell, "Label", PanelKit.SMALL_SIZE, SLOT_MARGIN, tierLine):set(TIER_NAMES[entry.tier])
+	cell.BackgroundTransparency = 1
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, SLOT_CORNER * unit)
+	corner.Parent = cell
+	CardFace.new(cell, {
+		cardId = entry.cardId,
+		tier = entry.tier,
+		variant = CardIndex.variant(snapshot.stacks, entry.cardId, entry.tier),
+		width = width * unit,
+	})
+	PanelKit.label(content, "Label", PanelKit.SMALL_SIZE, x, SLOT_NUMBER_LINE):set(tostring(index))
 	cell.Activated:Connect(function()
 		draw(content, if index == chosen then nil else index)
 	end)
@@ -65,7 +72,7 @@ local function picker(content: Frame, snapshot: any, slot: number)
 		local x = MARGIN + (index - 1) % 2 * (width + PICK_GAP)
 		local top = LOWER_TOP + row * (PICK_HEIGHT + PICK_GAP)
 		local swapped = Deck.swap(snapshot.deck, slot, card.cardId, card.tier)
-		local name = `{string.upper(card.name)} {TIER_NAMES[card.tier]}`
+		local name = `{string.upper(card.name)} {CardLook.tierName(card.tier)}`
 		local button = PanelKit.button(content, name, x, top, width, PICK_HEIGHT, {
 			disabled = swapped == nil,
 			size = PanelKit.SMALL_SIZE,

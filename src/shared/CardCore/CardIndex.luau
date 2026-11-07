@@ -2,6 +2,7 @@
 local Cards = require("./Cards")
 local Inventory = require("./Inventory")
 local Tier = require("./Tier")
+local Variant = require("./Variant")
 
 local CardIndex = {}
 
@@ -13,6 +14,18 @@ local function namedIds(): { string }
 	return ids
 end
 
+-- The rarest variant owned of this card and tier, which is the one the menus show.
+function CardIndex.variant(stacks: { [string]: number }, cardId: string, tier: string): string
+	local data = { stacks = stacks }
+	for index = #Variant.order, 1, -1 do
+		local variant = Variant.order[index]
+		if Inventory.count(data, cardId, tier, variant) > 0 then
+			return variant
+		end
+	end
+	return Variant.Base
+end
+
 -- Every card at every tier, with the copies owned of each.
 function CardIndex.build(stacks: { [string]: number }): any
 	local data = { stacks = stacks }
@@ -21,7 +34,7 @@ function CardIndex.build(stacks: { [string]: number }): any
 		local card = { cardId = cardId, name = Cards.byId[cardId].name, tiers = {} }
 		for _, tier in Tier.order do
 			local count = Inventory.count(data, cardId, tier)
-			table.insert(card.tiers, { tier = tier, count = count })
+			table.insert(card.tiers, { tier = tier, count = count, variant = CardIndex.variant(stacks, cardId, tier) })
 			index.total += 1
 			if count > 0 then
 				index.owned += 1
