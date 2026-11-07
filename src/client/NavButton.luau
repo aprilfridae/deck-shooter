@@ -84,7 +84,7 @@ function NavButton.new(options: Options): any
 	self.button = Instance.new("TextButton")
 	self.button.Text = ""
 	self.button.AutoButtonColor = false
-	self.button.BackgroundColor3 = Palette.DeepNavy
+	self.button.BackgroundColor3 = Palette.Bone
 	self.button.BorderSizePixel = 0
 	self.button.ClipsDescendants = true
 	self.button.Position = UDim2.fromOffset(0, self.top)
@@ -95,7 +95,7 @@ function NavButton.new(options: Options): any
 	for _ = 1, PanelMotion.COPIES do
 		table.insert(self.copies, wipeFrame(self.button, Palette.DataCyan))
 	end
-	self.wipe = wipeFrame(self.button, Palette.Bone)
+	self.wipe = wipeFrame(self.button, Palette.DeepNavy)
 	local fadeOut = NumberSequence.new(0, 1)
 	self.glow = glowFrame(self.button, fadeOut)
 	self.glow.Size = UDim2.new(0, GLOW_WIDTH * options.unit, 1, 0)
@@ -107,7 +107,7 @@ function NavButton.new(options: Options): any
 		style = "LabelBold",
 		size = options.textSize,
 		tracking = options.tracking,
-		color = Palette.Bone,
+		color = Palette.DeepNavy,
 		shadow = false,
 		position = UDim2.fromOffset(options.left, self.baseline),
 	})
@@ -116,7 +116,7 @@ function NavButton.new(options: Options): any
 		style = "Label",
 		size = options.textSize * NUMBER_SIZE,
 		tracking = options.tracking,
-		color = Palette.Bone,
+		color = Palette.DeepNavy,
 		right = true,
 		shadow = false,
 		position = UDim2.new(1, -options.padding, 0, self.baseline),
@@ -127,7 +127,7 @@ function NavButton.new(options: Options): any
 	if options.index > 1 then
 		local rule = Instance.new("Frame")
 		rule.BorderSizePixel = 0
-		rule.BackgroundColor3 = Palette.Bone
+		rule.BackgroundColor3 = Palette.DeepNavy
 		rule.BackgroundTransparency = RULE_FADE
 		rule.Size = UDim2.new(1, 0, 0, 1)
 		rule.Parent = self.button
@@ -161,15 +161,16 @@ function NavButton:target(): number
 end
 
 function NavButton:paint()
-	local lit = self.share > TEXT_SWAP
-	local ink = if lit then Palette.DeepNavy else Palette.Bone
+	-- Signal Acid and Data Cyan both want dark text, so only the plain hover wipe turns it light.
+	local onNavy = self.share > TEXT_SWAP and not self.active and not self.pressed
+	local ink = if onNavy then Palette.Bone else Palette.DeepNavy
 	self.text:setColor(ink)
 	self.mark:setColor(ink)
 	self.mark:set(if self:target() == 1 then ">" else self.number)
 	self.wipe.BackgroundColor3 = if self.pressed
 		then Palette.DataCyan
 		elseif self.active then Palette.SignalAcid
-		else Palette.Bone
+		else Palette.DeepNavy
 	self.wipe.Size = UDim2.fromScale(math.min(self.share, 1), 1)
 	self.text:setPosition(UDim2.fromOffset(self.left + self.kick * self.share, self.baseline))
 end

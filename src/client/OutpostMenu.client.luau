@@ -125,7 +125,7 @@ local function buildNav()
 	local unit = MenuPanel.unit()
 	local block = Instance.new("Frame")
 	block.BorderSizePixel = 0
-	block.BackgroundColor3 = Palette.DeepNavy
+	block.BackgroundColor3 = Palette.Bone
 	block.AnchorPoint = Vector2.new(0, 1)
 	block.Position = UDim2.new(0, NAV_LEFT * unit, 1, -NAV_BOTTOM * unit)
 	block.Size = UDim2.fromOffset(NAV_WIDTH * unit, NAV_ROW * unit * #BUTTONS)
