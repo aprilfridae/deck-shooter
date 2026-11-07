@@ -1,10 +1,10 @@
 -- Ray tests against a character's rewound position: a sphere for the head and
 -- a vertical cylinder for the body. Plain numbers, measured from the root part.
-local HEAD_HEIGHT = 2
+local HEAD_HEIGHT = 2.9
 local HEAD_RADIUS = 0.8
 local BODY_RADIUS = 1.1
-local BODY_TOP = 1.2
-local BODY_BOTTOM = -3
+local BODY_TOP = 2.1
+local BODY_BOTTOM = -3.3
 
 local POSE_DROP = { Normal = 0, Crouch = 1.5, Slide = 2.5 }
 

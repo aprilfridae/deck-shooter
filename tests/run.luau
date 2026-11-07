@@ -5,6 +5,7 @@ local harness = require("./harness")
 
 local listed = {
 	tier_spec = true,
+	soldierpose_spec = true,
 	cards_spec = true,
 	inventory_spec = true,
 	variant_spec = true,
@@ -60,6 +61,7 @@ local listed = {
 }
 
 require("./tier_spec")
+require("./soldierpose_spec")
 require("./cards_spec")
 require("./cardlook_spec")
 require("./cardmotion_spec")
