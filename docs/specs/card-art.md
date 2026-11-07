@@ -79,16 +79,17 @@ Tiers and variants are separate: a card has one of each, so any tier can be Zero
 
 ## How it's built
 
-- **Art:** the background, monogram, glow and fixed details are one image per card and rarity, because Roblox UI can't blur text. Images are group assets, ids kept with the others. The monogram font is licensed or drawn for this, since the game's fonts lack the weight.
+- **Art:** the background, monogram, glow and fixed details are one image per card and rarity, because Roblox UI can't blur text. Images are group assets, ids kept with the others. The monogram uses Jost at weight 600, which is free for commercial use, since the game's fonts lack the shape. `tools/make-card-art.py` makes the images.
 - **Live parts** are drawn over the image: the serial and name through `TypeLabel`, the shine and foil as moving frames with `UIGradient`, the stripes as a scrolling image.
 - **Foil:** Roblox UI can't blend colours into what's beneath, so the band sits on top at partial transparency. River judges it in Play.
-- **Where cards show:** `CardView.luau` in the Loadout slots and Profile index, and `CardInHand.luau` for the card held in a match.
-- **Small sizes:** in the Profile index the hairlines may vanish, so that size can drop them. Motion runs only while a card is on screen.
+- **Where cards show:** a new `CardFace.luau` draws a card in the Loadout slots and Profile index. `CardView.luau` is the 3D card held in a match.
+- **In the panels:** a Loadout slot's number moves under the card. An index card shows its copy count where the serial goes, since it stands for every copy of that card.
+- **Small sizes:** hairlines are baked in at 1.2 units so they survive the Profile index. Motion runs only while a card is on screen.
 
 ## Order of work
 
-1. The art and `CardView.luau`, with serials shown as a placeholder.
-2. The card in hand.
+1. The art and `CardFace.luau` in the menus, with serials shown as a placeholder.
+2. The card in hand, in `CardView.luau`.
 3. Serials: saves, counters and fusion.
 4. A separate spec for the pull reveal and fusion effects, once packs exist.
 
