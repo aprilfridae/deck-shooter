@@ -41,28 +41,6 @@ BodyPose.crouch = {
 	LeftAnkle = { x = 65, y = 0, z = 0 },
 } :: { [string]: Angles }
 
--- Each joint twitches on its own every held frame, by up to this many degrees. These are the
--- arms' numbers, scaled up by jitterScale so they still read from third-person distance.
-BodyPose.jitterScale = 3
-BodyPose.jitter = {
-	Root = 0.6,
-	Waist = 0.4,
-	Neck = 0.4,
-	LeftShoulder = 0.4,
-	RightShoulder = 0.4,
-	LeftElbow = 0.4,
-	RightElbow = 0.4,
-	LeftWrist = 1,
-	RightWrist = 1,
-	LeftHip = 0.4,
-	RightHip = 0.4,
-	LeftKnee = 0.4,
-	RightKnee = 0.4,
-	LeftAnkle = 1,
-	RightAnkle = 1,
-} :: { [string]: number }
-BodyPose.idleJitter = 0.35 -- share left while standing, as on the arms
-
 -- The weight goes past the pose, then settles back.
 local SLIDE_IN: { Key } = { { 0, 0 }, { 0.05, 0.55 }, { 0.1, 1.12 }, { 0.17, 0.94 }, { 0.25, 1 } }
 local SLIDE_OUT: { Key } = { { 0, 1 }, { 0.06, 0.7 }, { 0.14, 0.2 }, { 0.2, 0 } }

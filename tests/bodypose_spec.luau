@@ -16,15 +16,6 @@ describe("BodyPose joints", function()
 		end
 	end)
 
-	it("jitters every R15 joint", function()
-		local count = 0
-		for _, degrees in BodyPose.jitter do
-			count += 1
-			expect(degrees > 0).toBe(true)
-		end
-		expect(count).toBe(15)
-	end)
-
 	it("keeps the slide above the floor", function()
 		local lowestPoseHeight = 1.61 -- measured on the rig in Play, with no drop
 		expect(BodyPose.slideDrop < lowestPoseHeight).toBe(true)

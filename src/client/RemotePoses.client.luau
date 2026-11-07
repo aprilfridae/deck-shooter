@@ -7,8 +7,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Guns = ReplicatedStorage:WaitForChild("Guns")
-local ArmPose = require(Guns:WaitForChild("ArmPose"))
-local Zones = require(Guns:WaitForChild("Zones"))
 local GunConfig = require(Guns:WaitForChild("GunConfig"))
 local Movement = ReplicatedStorage:WaitForChild("Movement")
 local BodyPose = require(Movement:WaitForChild("BodyPose"))
@@ -19,7 +17,6 @@ local HeldGuns = require(script.Parent:WaitForChild("HeldGuns"))
 local shotsRemote = ReplicatedStorage:WaitForChild("GunRemotes"):WaitForChild("Shots") :: RemoteEvent
 
 local FORWARD_LEAN_AXIS = Vector3.xAxis
-local STILL_SPEED = 1
 local FEET_BELOW_ROOT = 3 -- the soldier's root sits this far above its feet
 local GROUND_REACH = 0.6 -- studs below the feet that still count as standing
 local FIRST_PERSON = 1.5 -- a camera this close to your own head is first person, so your held gun hides
@@ -57,8 +54,6 @@ type Body = {
 	base: { [string]: CFrame },
 	held: { [string]: CFrame },
 	frame: number,
-	seed: number,
-	idleJitter: number,
 	sliding: boolean,
 	slideAt: number,
 	slideFrom: number,
@@ -111,9 +106,7 @@ local function onCharacter(character: Model)
 			joints[descendant.Name] = descendant
 		end
 	end)
-	-- An avatar stands still. Only the game's body keeps twitching at rest.
 	local player = Players:GetPlayerFromCharacter(character)
-	local avatar = player ~= nil and Zones.usesAvatar(Zones.of(player))
 	local body: Body = {
 		character = character,
 		root = root,
@@ -121,8 +114,6 @@ local function onCharacter(character: Model)
 		base = {},
 		held = {},
 		frame = -1,
-		seed = math.random(1, 10000), -- so bodies don't twitch in time with each other
-		idleJitter = if avatar then 0 else BodyPose.idleJitter,
 		sliding = false,
 		slideAt = -math.huge,
 		slideFrom = 0,
@@ -181,18 +172,6 @@ local function onGround(body: Body): boolean
 	return workspace:Raycast(body.root.Position, Vector3.new(0, -reach, 0), params) ~= nil
 end
 
-local function jitter(body: Body, strength: number)
-	local seed = body.seed
-	for name, degrees in BodyPose.jitter do
-		seed += 1
-		if body.held[name] then
-			local _, _, _, pitch, yaw, roll = ArmPose.shake(body.frame, seed)
-			local turn = math.rad(degrees * BodyPose.jitterScale * strength)
-			body.held[name] *= CFrame.Angles(pitch * turn, yaw * turn, roll * turn)
-		end
-	end
-end
-
 -- A soldier body: one gun pose per held frame, legs mirrored on every other step.
 local function sampleStance(body: Body, now: number)
 	local velocity = body.root.AssemblyLinearVelocity
@@ -234,7 +213,6 @@ local function sampleStance(body: Body, now: number)
 			body.held[name] = HeldGuns.frame(value)
 		end
 	end
-	jitter(body, if flatSpeed < STILL_SPEED and not airborne then body.idleJitter else 1)
 end
 
 local function samplePose(body: Body, now: number)
@@ -279,7 +257,6 @@ local function samplePose(body: Body, now: number)
 		body.held[name] = frame
 	end
 
-	jitter(body, if flatSpeed < STILL_SPEED and settled == 0 then body.idleJitter else 1)
 
 	local drop = BodyPose.slideDrop * settled + BodyPose.crouchDrop * crouch
 	local tilt = BodyPose.slideLean * slide - lean
