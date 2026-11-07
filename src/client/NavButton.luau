@@ -177,7 +177,7 @@ function NavButton:smear(from: number, to: number)
 		local step = trail[index]
 		copy.Visible = step ~= nil
 		if step then
-			copy.Size = UDim2.fromScale(math.min(step.share, 1), 1)
+			copy.Size = UDim2.fromScale(math.clamp(step.share, 0, 1), 1)
 			copy.BackgroundTransparency = step.transparency
 		end
 	end
