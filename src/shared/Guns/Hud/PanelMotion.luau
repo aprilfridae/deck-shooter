@@ -3,7 +3,7 @@
 local PanelMotion = {
 	FPS = 30,
 	DURATION = 0.5, -- seconds
-	COPIES = 3,
+	COPIES = 8,
 	SHAKE_TIME = 7 / 30, -- seconds, in whole frames
 	VIEW_SCALE = 0.75, -- the sheared camera is shrunk by this, which the picture doesn't show
 	EXPAND_TIME = 6 / 30, -- seconds, in whole frames, for a row to open
@@ -12,10 +12,12 @@ local PanelMotion = {
 
 local OVERSHOOT = 1.1 -- higher swings further past the mark
 local PULL_BACK = 0.6 -- higher gathers further before closing
-local COPY_TRANSPARENCY = { 0.55, 0.72, 0.87 } -- nearest the panel first
+local COPY_NEAREST = 0.5 -- transparency of the copy by the panel
+local COPY_FARTHEST = 0.95
+local COPY_REACH = 1.6 -- how many frames of travel the copies stretch back over
 local CHARACTER_PLACE = 0.5 -- of the way from the screen's centre to its left edge
-local BLUR_PER_TRAVEL = 70 -- blur size for each share of the panel crossed in one frame
-local MOST_BLUR = 18
+local BLUR_PER_TRAVEL = 130 -- blur size for each share of the panel crossed in one frame
+local MOST_BLUR = 32
 local LEAN_PER_TRAVEL = math.rad(7.5) -- tilt for each share of the panel crossed in one frame
 local GLOW_PER_TRAVEL = 5 -- glow for each share of the panel crossed in one frame
 local SHAKE = 0.022 -- how far the landing throws the view, per unit of depth
@@ -78,8 +80,8 @@ function PanelMotion.trail(from: number, to: number): { { share: number, transpa
 	end
 	for index = 1, PanelMotion.COPIES do
 		table.insert(trail, {
-			share = to + (from - to) * index / (PanelMotion.COPIES + 1),
-			transparency = COPY_TRANSPARENCY[index],
+			share = to + (from - to) * COPY_REACH * index / PanelMotion.COPIES,
+			transparency = COPY_NEAREST + (COPY_FARTHEST - COPY_NEAREST) * (index - 1) / (PanelMotion.COPIES - 1),
 		})
 	end
 	return trail

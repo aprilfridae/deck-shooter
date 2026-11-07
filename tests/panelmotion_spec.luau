@@ -55,6 +55,11 @@ describe("PanelMotion", function()
 		expect(PanelMotion.decode(text, frame)).toBe(PanelMotion.decode(text, frame + 0.01))
 	end)
 
+	it("smears further back than the last frame travelled", function()
+		local trail = PanelMotion.trail(0.5, 1)
+		expect(trail[#trail].share < 0.5).toBe(true)
+	end)
+
 	it("starts and lands on its marks", function()
 		expect(near(PanelMotion.share(0, 1, 0), 0)).toBe(true)
 		expect(near(PanelMotion.share(0, 1, 1), 1)).toBe(true)

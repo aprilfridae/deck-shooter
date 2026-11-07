@@ -17,7 +17,7 @@ Taken from River's poster references.
 - One loud block per panel. Barcodes, tick marks and simple circles and squares are the decoration.
 - **Colour:** Deep Navy is the paper, Bone is the ink, and whatever is selected or under the mouse inverts to Bone with navy text. A solid Bone block is the loud element. Signal Acid and Data Cyan are kept off the menus and HUD; Signal Acid is reserved for later. Cards are blank for now, with no tier colours, until River's custom card art is made. Hazard Red stays for threats and purchases.
 - **Truth:** every number on a panel is real, or the panel leaves it out. No made-up serials or stats, as on the title screen.
-- **Motion:** panels move at 30 frames a second over 0.5s and feel heavy. Opening, a panel swings a little past its mark and settles. Closing, it pulls back a touch and then drops away. Roblox UI has no blur, so each frame leaves fading copies of the panel between it and the last frame, like the smear on the guns. The copies are gone once the panel stops.
+- **Motion:** panels move at 30 frames a second over 0.5s and feel heavy. Opening, a panel swings a little past its mark and settles. Closing, it pulls back a touch and then drops away. Roblox UI has no blur, so each frame leaves eight fading copies of the panel, stretching back past the last frame, like the smear on the guns. The nav's wipes and its rows sliding in leave the same copies. The copies are gone once the panel stops.
 
 ## Layout
 

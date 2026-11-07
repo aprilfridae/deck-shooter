@@ -80,6 +80,17 @@ function NavButton.new(options: Options): any
 	self.baseline = (options.height + options.textSize) / 2
 	self.kick = KICK * options.unit
 
+	self.ghosts = {} -- blur behind the row while it slides in
+	for _ = 1, PanelMotion.COPIES do
+		local ghost = Instance.new("Frame")
+		ghost.BackgroundColor3 = Palette.Bone
+		ghost.BorderSizePixel = 0
+		ghost.Size = UDim2.fromOffset(options.width, options.height)
+		ghost.Visible = false
+		ghost.Parent = options.parent
+		table.insert(self.ghosts, ghost)
+	end
+
 	self.button = Instance.new("TextButton")
 	self.button.Text = ""
 	self.button.AutoButtonColor = false
@@ -214,19 +225,37 @@ function NavButton:setActive(active: boolean)
 	end
 end
 
+function NavButton:showGhosts(from: number, to: number)
+	local trail = PanelMotion.trail(from, to)
+	for index, ghost in self.ghosts do
+		local step = trail[index]
+		ghost.Visible = step ~= nil
+		if step then
+			ghost.Position = UDim2.fromOffset(self.width * (step.share - 1), self.top)
+			ghost.BackgroundTransparency = step.transparency
+		end
+	end
+end
+
 -- Slides the row in from the left.
 function NavButton:enter()
 	if self.entering then
 		self.entering:Disconnect()
 	end
 	local elapsed = -ENTER_STAGGER * (self.index - 1)
+	local last = 0
 	self.button.Position = UDim2.fromOffset(-self.width, self.top)
 	self.entering = RunService.RenderStepped:Connect(function(dt)
 		elapsed += dt
 		local progress = stepped(math.max(elapsed, 0), ENTER_TIME)
 		local share = PanelMotion.share(0, 1, progress)
 		self.button.Position = UDim2.fromOffset(self.width * (share - 1), self.top)
+		if share ~= last then
+			self:showGhosts(last, share)
+			last = share
+		end
 		if progress >= 1 then
+			self:showGhosts(share, share)
 			self.entering:Disconnect()
 			self.entering = nil
 		end
