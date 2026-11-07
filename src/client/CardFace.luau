@@ -35,6 +35,7 @@ local MONOGRAM_CENTRE = Vector2.new(58, 85)
 local CROSSHAIR = Vector2.new(130, 42)
 local CROSSHAIR_FILL = 6.4 -- radius, inside the baked ring
 local RING_THICKNESS = 1.2
+local OUTLINE_THICKNESS = 2
 
 local SET_CODES = { set_01 = "S01" }
 local GHOST_TRANSPARENCY = 0.75
@@ -52,6 +53,7 @@ local LOOKS = {
 		ink = Palette.DeepNavy,
 		rarity = Palette.HazardRed,
 		stripes = Palette.HazardRed,
+		outline = Palette.HazardRed,
 		shine = 0.7,
 	},
 	Prototype = {
@@ -180,6 +182,22 @@ local function stripes(root: GuiObject, unit: number, color: Color3): ImageLabel
 	return image
 end
 
+-- Drawn just inside the card's edge, because a ghosted card clips whatever falls outside it.
+local function outline(root: GuiObject, unit: number, color: Color3)
+	local thickness = OUTLINE_THICKNESS * unit
+	local frame = Instance.new("Frame")
+	frame.BackgroundTransparency = 1
+	frame.Position = UDim2.fromOffset(thickness, thickness)
+	frame.Size = UDim2.new(1, -thickness * 2, 1, -thickness * 2)
+	frame.Parent = root
+	rounded(frame, UDim.new(0, (CORNER - OUTLINE_THICKNESS) * unit))
+	local stroke = Instance.new("UIStroke")
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Color = color
+	stroke.Thickness = thickness
+	stroke.Parent = frame
+end
+
 local function crosshairFill(root: GuiObject, unit: number)
 	local fill = Instance.new("Frame")
 	fill.BackgroundColor3 = Palette.DataCyan
@@ -266,6 +284,9 @@ function CardFace.new(parent: GuiObject, options: Options): GuiObject
 	art.Size = UDim2.fromScale(1, 1)
 	art.Image = CardArt.base(options.cardId, look) or ""
 	art.Parent = root
+	if style.outline then
+		outline(root, unit, style.outline)
+	end
 
 	local stripesImage: ImageLabel? = nil
 	local bigSerial: any = nil
