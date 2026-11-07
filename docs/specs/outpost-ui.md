@@ -17,7 +17,7 @@ Taken from River's poster references.
 - One loud block per panel. Barcodes, tick marks and simple circles and squares are the decoration.
 - **Colour:** Bone is the paper, Deep Navy is the ink, and Signal Acid is the loud block. Tier colours appear only on cards. Hazard Red stays for threats and purchases.
 - **Truth:** every number on a panel is real, or the panel leaves it out. No made-up serials or stats, as on the title screen.
-- **Motion:** panels slide in stepped at 12 frames a second, to match the game's low-fps look.
+- **Motion:** panels slide in stepped at 12 frames a second, to match the game's low-fps look, with motion blur. Roblox UI has no blur, so each held frame leaves fading copies of the panel between it and the last frame, like the smear on the guns. The copies are gone once the panel stops.
 
 ## Layout
 
