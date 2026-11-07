@@ -17,6 +17,7 @@ return {
 	FastFallMaxSpeed = 110,
 	MinAirTime = 0.1, -- the ground check can lag a jump by a frame or two
 	LandFade = 0.6, -- how long landing keeps jump speed before it fades
+	HardLandSpeed = 60, -- falling this fast plays the hard landing; a chain jump lands at about 49
 
 	-- Heights are studs above the feet.
 	ParryMinHeight = 1,
