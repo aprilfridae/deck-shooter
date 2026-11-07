@@ -119,10 +119,10 @@ function MenuPanel:step(dt: number)
 	self:showCopies(before, share)
 	self.glow:show(1 - PANEL_WIDTH * share, self.travel * self.blurLeft)
 	local held = self.elapsed >= moveTime + 1 / PanelMotion.FPS
-	-- A closing sheet runs on a little longer to shake the view.
-	local sinceLanding = self.elapsed - moveTime
-	self.shake = PanelMotion.landShake(if self.opening then PanelMotion.SHAKE_TIME else sinceLanding)
-	if held and (self.opening or sinceLanding >= PanelMotion.SHAKE_TIME) then
+	-- A closing sheet shakes the view on its way out, once it's nearly gone.
+	local sinceShake = self.elapsed - PanelMotion.shakeStart()
+	self.shake = PanelMotion.landShake(if self.opening then PanelMotion.SHAKE_TIME else sinceShake)
+	if held then
 		self.frame.Visible = self.opening
 		self.moving = false
 		RunService:UnbindFromRenderStep(STEP_NAME)

@@ -6,7 +6,7 @@ local PanelMotion = {
 	DURATION = 0.5, -- seconds to open
 	CLOSE_TIME = 0.3, -- seconds to close
 	COPIES = 8,
-	SHAKE_TIME = 9 / 40, -- seconds, in whole frames
+	SHAKE_TIME = 6 / 40, -- seconds, in whole frames
 	VIEW_SCALE = 0.75, -- the sheared camera is shrunk by this, which the picture doesn't show
 	EXPAND_TIME = 0.2, -- seconds for a row to open
 	MOST_SHIFT = 1.2, -- at that scale Roblox accepts up to 1.25 facing any way, measured in Play
@@ -22,9 +22,10 @@ local BLUR_PER_TRAVEL = 173 -- blur size for each share of the panel crossed in 
 local MOST_BLUR = 32
 local LEAN_PER_TRAVEL = math.rad(10) -- tilt for each share of the panel crossed in one frame
 local GLOW_PER_TRAVEL = 6.7 -- glow for each share of the panel crossed in one frame
-local SHAKE = 0.012 -- how far the landing throws the view, per unit of depth
+local SHAKE = 0.006 -- how far a closing panel throws the view, per unit of depth
+local SHAKE_FROM = 0.35 -- of a closing move, when the shake starts: the sheet is nearly gone by then
 local SHAKE_HEIGHT = 0.6 -- of the sideways throw
-local SHAKE_LEAN = math.rad(0.35)
+local SHAKE_LEAN = math.rad(0.18)
 local VIEW_RAMP = 0.25 -- of an opening move, when the camera has caught up with the panel
 local FADE_FROM = 0.15 -- of a closing move, when its blur starts to fade
 local FADE_TO = 0.4 -- when it's gone, so the panel leaves clean
@@ -135,7 +136,12 @@ function PanelMotion.glow(travel: number): number
 	return math.min(math.abs(travel) * GLOW_PER_TRAVEL, 1)
 end
 
--- The view's throw this long after a closing panel lands: side to side, fading out in held frames.
+-- Seconds into a closing move when the view's shake starts.
+function PanelMotion.shakeStart(): number
+	return PanelMotion.CLOSE_TIME * SHAKE_FROM
+end
+
+-- The view's throw this long after the shake starts: side to side, fading out in held frames.
 function PanelMotion.landShake(elapsed: number): { x: number, y: number, lean: number }
 	local frame = math.floor(elapsed * PanelMotion.FPS + 1e-6)
 	local frames = math.round(PanelMotion.SHAKE_TIME * PanelMotion.FPS)

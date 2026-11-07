@@ -8,6 +8,12 @@ local function near(a: number, b: number): boolean
 end
 
 describe("PanelMotion", function()
+	it("shakes gently while a closing panel is still leaving", function()
+		expect(PanelMotion.shakeStart() < PanelMotion.CLOSE_TIME / 2).toBe(true)
+		expect(math.abs(PanelMotion.landShake(0).x) <= 0.006).toBe(true)
+		expect(PanelMotion.SHAKE_TIME <= 6 / PanelMotion.FPS).toBe(true)
+	end)
+
 	it("closes quicker than it opens", function()
 		expect(PanelMotion.moveTime(false) < PanelMotion.moveTime(true)).toBe(true)
 		expect(PanelMotion.moveTime(true)).toBe(PanelMotion.DURATION)
