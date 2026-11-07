@@ -509,7 +509,7 @@ end
 -- holds three screens.
 local function matchmakingBooth(kit)
 	local g = kit:group("MatchmakingBooth")
-	g.flickerStall = "Matchmaking"
+	g.noNeon = true
 	local counter = stall(g, 16, 1, 10, "MATCHMAKING", "PLAY")
 	for _, x in { -5, 0, 5 } do
 		Kit.decor(g:block(v(4, 3, 0.2), CFrame.new(x, DECK + 7, 17.65), Palette.DeepNavy, M.SmoothPlastic))
@@ -583,9 +583,9 @@ local function hallInside(kit)
 	end
 
 	-- The Market stall at the far end, with shelves of blank cards.
-	g.flickerStall = "Market"
+	g.noNeon = true
 	local counter = stall(g, 116, -1, 12, "MARKET", "CARDS")
-	g.flickerStall = nil
+	g.noNeon = nil
 	local cardColors = { Palette.Bone, Palette.DeepNavy }
 	for row, height in { 3.5, 6.5, 9 } do
 		g:boxOf("wood", v(-8, DECK + height, 113), v(8, DECK + height + 0.25, 114.6))
