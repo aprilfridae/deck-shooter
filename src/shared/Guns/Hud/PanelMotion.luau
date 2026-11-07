@@ -40,6 +40,12 @@ function PanelMotion.expand(elapsed: number): number
 	return 1 - (1 - progress) ^ 3
 end
 
+-- A noise character for this place and frame.
+function PanelMotion.noise(index: number, frame: number): string
+	local pick = (index * index * 7 + frame * 23) % #NOISE + 1
+	return string.sub(NOISE, pick, pick)
+end
+
 -- The text as it stands this long into typing out: settled letters with a front of noise ahead of
 -- them. The noise comes from the frame number, so it holds still for a whole frame.
 function PanelMotion.decode(text: string, elapsed: number): string
@@ -49,8 +55,7 @@ function PanelMotion.decode(text: string, elapsed: number): string
 	for index = 1, math.min(reached, #text) do
 		local letter = string.sub(text, index, index)
 		if index > reached - DECODE_FRONT and letter ~= " " and letter ~= "\n" then
-			local pick = (index * index * 7 + frame * 23) % #NOISE + 1
-			letter = string.sub(NOISE, pick, pick)
+			letter = PanelMotion.noise(index, frame)
 		end
 		table.insert(shown, letter)
 	end

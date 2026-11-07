@@ -1,0 +1,53 @@
+-- What a card shows: its letters, names and which of the four looks it takes.
+local Variant = require("./Variant")
+
+local CardLook = {}
+
+local MONOGRAMS = {
+	phase_dash = "PD",
+	overclock = "OC",
+	recon_pulse = "RP",
+	aegis_shell = "AS",
+}
+local TIER_NAMES = { Field = "FIELD", BlackSite = "REDLINE", Prototype = "PROTOTYPE" }
+local VARIANT_NAMES = {
+	[Variant.Chromatic] = "CHROMATIC",
+	[Variant.Redacted] = "REDACTED",
+	[Variant.ZeroDay] = "ZERO-DAY",
+}
+local TIER_LOOKS = { Field = "Field", BlackSite = "Redline", Prototype = "Prototype" }
+local LONGEST_BESIDE_SET_CODE = 14 -- characters of rarity text that still clear the set code
+local SERIAL_DIGITS = 2 -- the big serial's full size holds this many
+
+function CardLook.monogram(cardId: string): string
+	return MONOGRAMS[cardId]
+end
+
+function CardLook.tierName(tier: string): string
+	return TIER_NAMES[tier]
+end
+
+function CardLook.rarityText(tier: string, variant: string): string
+	local name = VARIANT_NAMES[variant]
+	return if name then `{TIER_NAMES[tier]} {name}` else TIER_NAMES[tier]
+end
+
+function CardLook.showsSetCode(tier: string, variant: string): boolean
+	return #CardLook.rarityText(tier, variant) <= LONGEST_BESIDE_SET_CODE
+end
+
+-- Zero-Day looks the same at every tier. Every other card looks like its tier.
+function CardLook.look(tier: string, variant: string): string
+	return if variant == Variant.ZeroDay then "ZeroDay" else TIER_LOOKS[tier]
+end
+
+function CardLook.serialText(serial: number?): string
+	return if serial then string.format("%02d", serial) else "--"
+end
+
+-- The big serial's size for this text, as a share of its size for two digits.
+function CardLook.bigSerialSize(text: string): number
+	return math.min(1, SERIAL_DIGITS / #text)
+end
+
+return CardLook
