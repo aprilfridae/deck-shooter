@@ -22,10 +22,11 @@ local PanelKit = {
 	RULE_LINE = 0.108,
 	CAP_HEIGHT = 0.7, -- of a font's size, for all three fonts
 	TITLE_INSET = 0.055, -- of the size: the blank space left of a Title letter
-	NAVY = Palette.DeepNavy,
+	INK = Palette.Bone, -- text, rules and whatever is selected
+	PAPER = Palette.DeepNavy, -- the page behind them
 }
 
-local NAVY = PanelKit.NAVY
+local INK, PAPER = PanelKit.INK, PanelKit.PAPER
 
 function PanelKit.label(parent: Instance, style: string, size: number, x: number, y: number, right: boolean?, color: Color3?): any
 	local unit = MenuPanel.unit()
@@ -33,7 +34,7 @@ function PanelKit.label(parent: Instance, style: string, size: number, x: number
 		style = style,
 		size = size * unit,
 		tracking = TRACKING * unit,
-		color = color or NAVY,
+		color = color or INK,
 		right = right,
 		shadow = false,
 		position = UDim2.fromOffset(x * unit, y * unit),
@@ -48,7 +49,7 @@ function PanelKit.cardLabel(parent: Instance, style: string, size: number, x: nu
 		style = style,
 		size = size * unit,
 		tracking = CARD_TRACKING * unit,
-		color = color or NAVY,
+		color = color or INK,
 		shadow = false,
 		position = UDim2.fromOffset((x - inset) * unit, y * unit),
 	})
@@ -70,7 +71,7 @@ function PanelKit.rule(parent: Instance, x: number, y: number, width: number): F
 	local unit = MenuPanel.unit()
 	local rule = Instance.new("Frame")
 	rule.BorderSizePixel = 0
-	rule.BackgroundColor3 = NAVY
+	rule.BackgroundColor3 = INK
 	rule.BackgroundTransparency = RULE_FADE
 	rule.Position = UDim2.fromOffset(x * unit, y * unit)
 	rule.Size = UDim2.fromOffset(width * unit, 1)
@@ -84,7 +85,7 @@ function PanelKit.title(parent: Instance, text: string)
 		style = "Title",
 		size = TITLE_SIZE * unit,
 		tracking = 0,
-		color = NAVY,
+		color = INK,
 		shadow = false,
 		position = UDim2.fromOffset((PanelKit.MARGIN - TITLE_SIZE * PanelKit.TITLE_INSET) * unit, TITLE_LINE * unit),
 	})
@@ -133,13 +134,13 @@ function PanelKit.button(
 	local size = choice.size or PanelKit.LABEL_SIZE
 	local button = PanelKit.hitBox(parent, x, top, width, height)
 	local filled = choice.active and not choice.quiet
-	local ink = if filled then Palette.Bone else NAVY
+	local ink = if filled then PAPER else INK
 	local border = if choice.active and choice.quiet then QUIET_HOVER else 1
 	button.BackgroundTransparency = if choice.disabled then 0.9 else 0
-	button.BackgroundColor3 = if choice.disabled or filled then NAVY else Palette.Bone
+	button.BackgroundColor3 = if choice.disabled or filled then INK else PAPER
 	local stroke = Instance.new("UIStroke")
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Color = NAVY
+	stroke.Color = INK
 	stroke.Thickness = border
 	stroke.Transparency = if choice.disabled then 0.7 else 0
 	stroke.Parent = button
@@ -159,8 +160,8 @@ function PanelKit.button(
 		if choice.quiet then
 			stroke.Thickness = QUIET_HOVER
 		else
-			button.BackgroundColor3 = NAVY
-			word:setColor(Palette.Bone)
+			button.BackgroundColor3 = INK
+			word:setColor(PAPER)
 		end
 	end)
 	button.MouseLeave:Connect(function()

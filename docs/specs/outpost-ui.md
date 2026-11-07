@@ -15,7 +15,7 @@ Taken from River's poster references.
 - One huge word or number leads each panel, with small labels around it.
 - Thin rules and strict columns, with small blocks of data in the corners.
 - One loud block per panel. Barcodes, tick marks and simple circles and squares are the decoration.
-- **Colour:** Bone is the paper, Deep Navy is the ink, and a solid Deep Navy block is the loud element. Signal Acid and Data Cyan are kept off the menus and HUD; Signal Acid is reserved for later. Cards are blank for now, with no tier colours, until River's custom card art is made. Hazard Red stays for threats and purchases.
+- **Colour:** Deep Navy is the paper, Bone is the ink, and whatever is selected or under the mouse inverts to Bone with navy text. A solid Bone block is the loud element. Signal Acid and Data Cyan are kept off the menus and HUD; Signal Acid is reserved for later. Cards are blank for now, with no tier colours, until River's custom card art is made. Hazard Red stays for threats and purchases.
 - **Truth:** every number on a panel is real, or the panel leaves it out. No made-up serials or stats, as on the title screen.
 - **Motion:** panels move at 30 frames a second over 0.5s and feel heavy. Opening, a panel swings a little past its mark and settles. Closing, it pulls back a touch and then drops away. Roblox UI has no blur, so each frame leaves fading copies of the panel between it and the last frame, like the smear on the guns. The copies are gone once the panel stops.
 
@@ -25,8 +25,8 @@ Sizes use the title screen's **unit**: the screen's width, or 16/9 of its height
 
 | Item | Place |
 | --- | --- |
-| Nav | Bottom left, 3% from the edge: `PLAY`, `LOADOUT`, `PROFILE`, `SETTINGS` stacked, each with its number. The rows are Bone with Deep Navy text, like the panels. Under the mouse a Deep Navy wipe crosses the row in 30 fps steps with fading Deep Navy copies behind it and a Deep Navy glow ahead that spills past the row, the name kicks right and the number becomes `>`. A thin Bone outline runs round the whole nav. The open page's row wipes Deep Navy. Rows slide in one after another when the nav appears. |
-| Panel | Right half of the screen, full height, Bone. |
+| Nav | Bottom left, 3% from the edge: `PLAY`, `LOADOUT`, `PROFILE`, `SETTINGS` stacked, each with its number. The rows are Deep Navy with Bone text, like the panels. Under the mouse a Bone wipe crosses the row in 30 fps steps with fading Bone copies behind it and a Bone glow ahead that spills past the row, the name kicks right and the number becomes `>`. A thin Bone outline runs round the whole nav. The open page's row wipes Bone. Rows slide in one after another when the nav appears. |
+| Panel | Right half of the screen, full height, Deep Navy. |
 
 - The nav and panels show only in the `Outpost` zone, after the title screen. Leaving the zone closes the panel.
 - One panel is open at a time. Clicking another button swaps it, and clicking the open button closes it.

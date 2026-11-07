@@ -8,7 +8,6 @@ local Cards = require(CardCore:WaitForChild("Cards"))
 local Deck = require(CardCore:WaitForChild("Deck"))
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local GunConfig = require(Guns:WaitForChild("GunConfig"))
-local Palette = require(Guns:WaitForChild("Palette"))
 local CardData = require(script.Parent.CardData)
 local PanelKit = require(script.Parent.PanelKit)
 
@@ -151,10 +150,10 @@ draw = function(content: Frame, chosen: number?)
 	end
 
 	local blockLeft = MARGIN + Deck.SIZE * (SLOT_WIDTH + SLOT_GAP)
-	local block = PanelKit.block(content, blockLeft, SLOT_TOP, RIGHT - blockLeft, SLOT_HEIGHT, PanelKit.NAVY)
-	PanelKit.label(block, "LabelBold", PanelKit.SMALL_SIZE, 0.008, 0.02, nil, Palette.Bone):set("DECK")
-	PanelKit.label(block, "LabelBold", PanelKit.SMALL_SIZE, 0.008, 0.034, nil, Palette.Bone):set("POWER")
-	PanelKit.label(block, "Title", POWER_SIZE, 0.008, SLOT_HEIGHT - 0.01, nil, Palette.Bone):set(tostring(snapshot.dpr))
+	local block = PanelKit.block(content, blockLeft, SLOT_TOP, RIGHT - blockLeft, SLOT_HEIGHT, PanelKit.INK)
+	PanelKit.label(block, "LabelBold", PanelKit.SMALL_SIZE, 0.008, 0.02, nil, PanelKit.PAPER):set("DECK")
+	PanelKit.label(block, "LabelBold", PanelKit.SMALL_SIZE, 0.008, 0.034, nil, PanelKit.PAPER):set("POWER")
+	PanelKit.label(block, "Title", POWER_SIZE, 0.008, SLOT_HEIGHT - 0.01, nil, PanelKit.PAPER):set(tostring(snapshot.dpr))
 
 	PanelKit.heading(content, "CARDS", SLOTS_LINE)
 	local note = PanelKit.label(content, "LabelBold", PanelKit.HEADING_SIZE, RIGHT, SLOTS_LINE, true)

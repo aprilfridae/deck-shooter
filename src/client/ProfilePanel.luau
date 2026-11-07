@@ -5,7 +5,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local CardIndex = require(CardCore:WaitForChild("CardIndex"))
 local Guns = ReplicatedStorage:WaitForChild("Guns")
-local Palette = require(Guns:WaitForChild("Palette"))
 local CardData = require(script.Parent.CardData)
 local CommentsPanel = require(script.Parent.CommentsPanel)
 local MenuPanel = require(script.Parent.MenuPanel)
@@ -34,7 +33,7 @@ local COPIES_SIZE = 0.02
 local NAME_SIZE_SMALL = 0.0082
 local NAME_STEP = 0.012
 local TIER_SIZE = 0.0068
-local GHOST_INK = Palette.DeepNavy:Lerp(Palette.Bone, 0.6)
+local GHOST_INK = PanelKit.INK:Lerp(PanelKit.PAPER, 0.6)
 local PAGE_TOP = 0.172
 
 local ProfilePanel = {}
@@ -43,7 +42,7 @@ local function header(content: Frame, profile: any)
 	local MARGIN, RIGHT = PanelKit.MARGIN, PanelKit.RIGHT
 	local unit = MenuPanel.unit()
 	local head = Instance.new("ImageLabel")
-	head.BackgroundColor3 = PanelKit.NAVY
+	head.BackgroundColor3 = PanelKit.INK
 	head.BorderSizePixel = 0
 	head.Image = `rbxthumb://type=AvatarHeadShot&id={profile.userId}&w=150&h=150`
 	head.Position = UDim2.fromOffset(MARGIN * unit, HEAD_TOP * unit)
@@ -75,13 +74,13 @@ local function cardGrid(page: Frame, profile: any)
 		for row, entry in card.tiers do
 			local top = GRID_TOP + (row - 1) * (CELL_HEIGHT + GRID_GAP)
 			local owned = entry.count > 0
-			local cell = PanelKit.block(page, x, top, width, CELL_HEIGHT, Palette.Bone)
+			local cell = PanelKit.block(page, x, top, width, CELL_HEIGHT, PanelKit.PAPER)
 			cell.BackgroundTransparency = if owned then 0 else 1
 			local stroke = Instance.new("UIStroke")
 			stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-			stroke.Color = if owned then PanelKit.NAVY else GHOST_INK
+			stroke.Color = if owned then PanelKit.INK else GHOST_INK
 			stroke.Parent = cell
-			local ink = if owned then PanelKit.NAVY else GHOST_INK
+			local ink = if owned then PanelKit.INK else GHOST_INK
 			local firstLine = CELL_MARGIN + NAME_SIZE_SMALL * PanelKit.CAP_HEIGHT
 			local words = string.split(string.upper(card.name), " ")
 			for line, word in words do

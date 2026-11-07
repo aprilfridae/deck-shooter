@@ -4,7 +4,6 @@ local RunService = game:GetService("RunService")
 
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local PanelMotion = require(Guns:WaitForChild("Hud"):WaitForChild("PanelMotion"))
-local Palette = require(Guns:WaitForChild("Palette"))
 local MenuPanel = require(script.Parent.MenuPanel)
 local PanelKit = require(script.Parent.PanelKit)
 
@@ -44,7 +43,7 @@ local function buildRow(content: Frame, queue: any): any
 	local base = ROW_HEIGHT / 2 + capHeight / 2
 	local labelBase = ROW_HEIGHT / 2 + PanelKit.LABEL_SIZE * PanelKit.CAP_HEIGHT / 2
 	local inkLeft = MARGIN + TICK_WIDTH + TEXT_GAP
-	local tick = PanelKit.block(box, MARGIN, base - capHeight, TICK_WIDTH, capHeight, PanelKit.NAVY)
+	local tick = PanelKit.block(box, MARGIN, base - capHeight, TICK_WIDTH, capHeight, PanelKit.INK)
 	PanelKit.label(box, "Title", SIZE_TEXT, inkLeft - SIZE_TEXT * PanelKit.TITLE_INSET, base):set(queue.size)
 	PanelKit.line(box, queue.mode, MODE_LEFT, labelBase)
 	PanelKit.line(box, "SOON", RIGHT, labelBase, true)
@@ -107,7 +106,7 @@ function PlayPanel.fill(content: Frame)
 		end)
 	end
 
-	local block = PanelKit.block(content, MARGIN, 0, RIGHT - MARGIN, BLOCK_HEIGHT, PanelKit.NAVY)
+	local block = PanelKit.block(content, MARGIN, 0, RIGHT - MARGIN, BLOCK_HEIGHT, PanelKit.INK)
 
 	-- Stacks the rows, each starting where the one above it ended.
 	local function stack()
@@ -146,7 +145,7 @@ function PlayPanel.fill(content: Frame)
 		stack()
 	end)
 
-	local word = PanelKit.label(block, "LabelBold", PanelKit.LABEL_SIZE, 0, 0, nil, Palette.Bone)
+	local word = PanelKit.label(block, "LabelBold", PanelKit.LABEL_SIZE, 0, 0, nil, PanelKit.PAPER)
 	word:setPosition(UDim2.fromOffset(MARGIN * unit, (BLOCK_HEIGHT + PanelKit.LABEL_SIZE) / 2 * unit))
 	word:set("MATCHES ARE ON THE WAY")
 end
