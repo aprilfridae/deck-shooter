@@ -121,7 +121,7 @@ def stripes():
     draw = ImageDraw.Draw(image)
     band = units(5)
     for offset in range(-size * 2, size * 4, size):
-        draw.line([offset, size * 2, offset + size * 2, 0], fill=(255, 255, 255, 255), width=band)
+        draw.line([offset - size, size * 3, offset + size * 3, -size], fill=(255, 255, 255, 255), width=band)
     return image
 
 

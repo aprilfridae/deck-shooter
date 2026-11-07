@@ -38,7 +38,7 @@ local OUTLINE = {
 }
 
 local CardArt = {
-	STRIPES = asset("76675415936133"), -- one tile, 28 card units square
+	STRIPES = asset("126017007753657"), -- one tile, 28 card units square
 }
 
 -- The image for this card and look, or nil if it has no art yet.
