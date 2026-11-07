@@ -43,6 +43,11 @@ describe("CardSpin", function()
 		expect(near(CardSpin.enter(CardSpin.ENTER_TIME * 5), 0)).toBe(true)
 	end)
 
+	it("ignores a click off the card just after it opens, so a double click doesn't close it", function()
+		expect(CardSpin.canClose(0.1)).toBe(false)
+		expect(CardSpin.canClose(CardSpin.CLOSE_DELAY)).toBe(true)
+	end)
+
 	it("shrinks away as it leaves", function()
 		expect(near(CardSpin.leave(0), 1)).toBe(true)
 		expect(near(CardSpin.leave(CardSpin.LEAVE_TIME), 0)).toBe(true)

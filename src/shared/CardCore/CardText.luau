@@ -28,11 +28,14 @@ local STATS = {
 local CardText = {}
 
 function CardText.blurb(cardId: string): string
-	return BLURBS[cardId]
+	return BLURBS[cardId] or ""
 end
 
 function CardText.stats(cardId: string, tier: string): { { label: string, value: string } }
 	local stats = {}
+	if not STATS[cardId] then
+		return stats -- a new card, before its words are written
+	end
 	for _, stat in STATS[cardId] do
 		local key, label, format, scale = stat[1], stat[2], stat[3], stat[4] or 1
 		local value = math.round(Cards.stat(cardId, tier, key) * scale * 100) / 100

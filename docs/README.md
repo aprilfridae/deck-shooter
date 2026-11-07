@@ -12,7 +12,7 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 | [`specs/movement.md`](specs/movement.md) | Moves, camera, keys, movement cheat checks | Built |
 | [`specs/guns.md`](specs/guns.md) | Classes, gun stats, recoil, ammo, hit checking, health | Built |
 | [`specs/cards.md`](specs/cards.md) | The 4 ability cards, tiers, fusion, variants, income, Deck Power Rating, saves, card remotes | Cards and rules built; no collection screens or pack rolling |
-| [`specs/card-art.md`](specs/card-art.md) | How cards look, rarities, variants, serial numbers | Designed, not built |
+| [`specs/card-art.md`](specs/card-art.md) | How cards look, rarities, variants, inspecting a card, serial numbers | Menus and inspect built; card in hand and serials aren't |
 | [`specs/packs.md`](specs/packs.md) | Rolling, opening, auto roll, Robux purchases, rebirths, luck and the packs menu | Designed, not built |
 | [`specs/hud.md`](specs/hud.md) | The HUD and the image font system | Built, with trial fonts |
 | [`specs/title-screen.md`](specs/title-screen.md) | The title screen and menu music | Built |
@@ -62,7 +62,7 @@ The specs explain the design. The code holds the actual values, so check it befo
 
 | Word | Meaning |
 | --- | --- |
-| Tier | A card's level: Field, Black-Site, Prototype (`Field`, `BlackSite`, `Prototype` in code) |
+| Tier | A card's level: Field, Redline, Prototype (`Field`, `BlackSite`, `Prototype` in code) |
 | Variant | A copy's finish, which only changes income: Base, Chromatic, Redacted, Zero-Day |
 | Fusion | Turning 5 copies (4 with a Catalyst) into 1 copy of the next tier |
 | DPR | Deck Power Rating, from the deck's tiers and gun levels only |

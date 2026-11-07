@@ -2,6 +2,7 @@
 local CardSpin = {
 	ENTER_TIME = 0.5, -- seconds
 	LEAVE_TIME = 0.15,
+	CLOSE_DELAY = 0.25, -- seconds after opening before a click off the card counts
 	PITCH_LIMIT = 0.6,
 }
 
@@ -37,6 +38,10 @@ function CardSpin.enter(elapsed: number): (number, number)
 	local left = 1 - math.clamp(elapsed / CardSpin.ENTER_TIME, 0, 1)
 	local ease = left * left * left
 	return ease * 2 * math.pi, 1 - ease * (1 - ENTER_SCALE)
+end
+
+function CardSpin.canClose(elapsed: number): boolean
+	return elapsed >= CardSpin.CLOSE_DELAY
 end
 
 function CardSpin.leave(elapsed: number): number

@@ -15,7 +15,7 @@ Taken from River's poster references.
 - One huge word or number leads each panel, with small labels around it.
 - Thin rules and strict columns, with small blocks of data in the corners.
 - One loud block per panel. Barcodes, tick marks and simple circles and squares are the decoration.
-- **Colour:** Bone is the paper, Deep Navy is the ink, and whatever is selected or under the mouse inverts to Deep Navy with Bone text. A solid Deep Navy block is the loud element. Signal Acid and Data Cyan are kept off the menus and HUD; Signal Acid is reserved for later. Cards are blank for now, with no tier colours, until River's custom card art is made. Hazard Red stays for threats and purchases.
+- **Colour:** Bone is the paper, Deep Navy is the ink, and whatever is selected or under the mouse inverts to Deep Navy with Bone text. A solid Deep Navy block is the loud element. Signal Acid and Data Cyan are kept off the menus and HUD; Signal Acid is reserved for later. Cards are the exception: they use their own colours from `card-art.md`. Hazard Red stays for threats and purchases.
 - **Truth:** every number on a panel is real, or the panel leaves it out. No made-up serials or stats, as on the title screen.
 - **Motion:** panels move at the full frame rate and feel heavy. Opening takes 0.5s and closing 0.3s, on the same curve: the panel goes at full speed straight away, swings a little past its mark and settles. Roblox UI has no blur, so each frame leaves eight fading copies of the panel, stretching back past the last frame, like the smear on the guns. The nav's wipes and its rows sliding in leave the same copies. The copies are gone once the panel stops. Closing, the blur, copies and glow fade from 15% of the way through and are gone by 40%, so the panel leaves clean.
 
@@ -50,7 +50,7 @@ Sizes use the title screen's **unit**: the screen's width, or 16/9 of its height
 ### Profile
 
 - Roblox headshot, name, Credits and DPR, then two tabs: `CARD INDEX` and `COMMENTS`.
-- **Card index:** a grid of playing card shapes, one for every card at every tier, 4 cards by 3 tiers for now. Owned ones show their copy count in full ink, and the rest are ghosted. A large `04/12` shows how many are owned.
+- **Card index:** a scrolling grid of cards, one for every card at every tier, 4 cards by 3 tiers for now. Owned ones show their copy count and the rest are faded. Clicking a card inspects it in 3D, as `card-art.md` describes. In Studio, a fourth row previews each card as Zero-Day. A large `04/12` shows how many are owned.
 - **Other players:** left clicking a player in the Outpost, the player included, opens this page for them, within 40 studs. The click uses the cursor, or the screen's centre if the mouse is locked. Fusion and any other editing stay out of Profile.
 - The server sends another player's public data on request, through a new `GetProfile` function. Only players in the same server can be viewed.
 

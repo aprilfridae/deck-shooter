@@ -1,8 +1,8 @@
 # Card art
 
-**Status:** designed with River in mockups on 2026-11-06, not built. Chromatic and Redacted are proposals River hasn't seen drawn yet.
+**Status:** step 1 is built: the art in the menus, and inspecting a card in 3D. The card in hand and serials aren't built, so serials show `--`. Chromatic and Redacted are proposals River hasn't seen drawn yet, and show only their rarity text. Checked against the code on 2026-11-07.
 
-**Covers:** how cards look, and the serial numbers printed on them. How cards work is in `cards.md`. The pull reveal and fusion effects get their own spec, because packs don't exist yet.
+**Covers:** how cards look, and the serial numbers printed on them. How cards work is in `cards.md`. The pull reveal is in `packs.md`, and fusion effects get their own spec.
 
 ## The idea
 
@@ -32,7 +32,7 @@ Cards are vertical, in the proportions 150 by 240. Positions below are in those 
 
 - All small text is upright when the card is held vertically, and uses `Label`.
 - The crosshair, ticks, slashes and rule are identical on every card, in the card's ink colour.
-- Stats aren't printed on the card. They show in the Loadout list and on hover.
+- Stats aren't printed on the card's face. They show on its back when it's inspected.
 
 ## Rarities
 
@@ -71,7 +71,7 @@ Clicking a card in the Profile index holds it up in the 3D world. `CardInspect.l
 - **Arrival:** the card spins once into place in the space beside the panel, at 70% of the screen's height. The panel stays open, the nav hides and the world dims to Deep Navy.
 - **Spinning:** dragging turns the card freely, and tips it up to 0.6 radians. Let go and it eases to whichever side is nearest, then sways gently.
 - **Shine:** while the card is turned, the shine and foil follow its angle. At rest they go back to the timed sweep.
-- **The back:** a click without a drag flips the card. The top third is a solid block of the rarity's colour with a crosshair, the copies owned or `NOT OWNED`, the name, rarity and set code. Below it, the first stat is large and the rest smaller, then a one-line description and a strip of hazard stripes in the ink colour. `CardText.luau` holds the words, which are limited to the menu font's characters, so percentages read `PCT`.
+- **The back:** a click without a drag flips the card. The top third is a solid block of the rarity's colour with a crosshair, the copies owned or `NOT OWNED`, the name, rarity and set code. Below it, the first stat is large and the rest smaller, then a short description and a strip of hazard stripes in the ink colour. `CardText.luau` holds the words, which are limited to the menu font's characters, so percentages read `PCT`.
 - **Unowned cards** open too, faded and still.
 - **Closing:** a click off the card closes it, as does anything that closes the menu. Esc can't be used, because Roblox keeps it for its own menu.
 - The part is clear with a `SurfaceGui` on each side, so the card keeps its rounded corners. Both draw over the world, so nothing in the Outpost can cross the card, and only the side facing the camera is shown.
@@ -104,7 +104,7 @@ Clicking a card in the Profile index holds it up in the 3D world. `CardInspect.l
 1. The art and `CardFace.luau` in the menus, with serials shown as a placeholder.
 2. The card in hand, in `CardView.luau`.
 3. Serials: saves, counters and fusion.
-4. A separate spec for the pull reveal and fusion effects, once packs exist.
+4. A separate spec for fusion effects.
 
 ## Tests
 

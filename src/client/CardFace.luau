@@ -456,7 +456,9 @@ function CardFace.back(parent: Instance, options: Options, count: number): GuiOb
 	end
 
 	local stats = CardText.stats(options.cardId, options.tier)
-	backStat(root, unit, style.ink, stats[1], LEFT, MAIN_LABEL_LINE, MAIN_VALUE_LINE, MAIN_VALUE_SIZE)
+	if stats[1] then
+		backStat(root, unit, style.ink, stats[1], LEFT, MAIN_LABEL_LINE, MAIN_VALUE_LINE, MAIN_VALUE_SIZE)
+	end
 	for index = 2, #stats do
 		local left = if index == 2 then LEFT else SMALL_SECOND_LEFT
 		backStat(root, unit, style.ink, stats[index], left, SMALL_LABEL_LINE, SMALL_VALUE_LINE, SMALL_VALUE_SIZE)

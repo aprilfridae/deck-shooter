@@ -40,6 +40,11 @@ describe("CardText", function()
 		end
 	end)
 
+	it("has nothing to say about a card with no words yet, and doesn't error", function()
+		expect(CardText.blurb("gone")).toBe("")
+		expect(#CardText.stats("gone", "Field")).toBe(0)
+	end)
+
 	it("reads each stat at the card's tier", function()
 		local field = CardText.stats("phase_dash", "Field")
 		expect(find(field, "DISTANCE")).toBe("13 STUDS")

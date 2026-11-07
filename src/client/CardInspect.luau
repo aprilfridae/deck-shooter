@@ -170,7 +170,7 @@ local function listen(inspect: any, hit: TextButton, outside: TextButton)
 		end)
 	)
 	table.insert(inspect.connections, outside.Activated:Connect(function()
-		if current == inspect and not inspect.closedAt then
+		if current == inspect and not inspect.closedAt and CardSpin.canClose(inspect.elapsed) then
 			inspect.closedAt = inspect.elapsed
 		end
 	end))
@@ -208,11 +208,14 @@ function CardInspect.open(options: any)
 
 	inspect.part = clearPart("CardInspect")
 	inspect.dim = clearPart("CardInspectDim")
+	inspect.instances = { inspect.part, inspect.dim }
 	inspect.dim.Size = Vector3.new(DIM_SIZE, DIM_SIZE, THICKNESS)
 
 	local canvas = Vector2.new(CANVAS_WIDTH, CANVAS_HEIGHT)
 	local front = surface(inspect.part, Enum.NormalId.Back, canvas)
 	local back = surface(inspect.part, Enum.NormalId.Front, canvas)
+	table.insert(inspect.instances, front)
+	table.insert(inspect.instances, back)
 	front.AlwaysOnTop = true
 	back.AlwaysOnTop = true
 	inspect.front, inspect.back = front, back
@@ -226,6 +229,7 @@ function CardInspect.open(options: any)
 	CardFace.back(back, face, options.count)
 
 	local dimGui = surface(inspect.dim, Enum.NormalId.Back, Vector2.new(4, 4))
+	table.insert(inspect.instances, dimGui)
 	inspect.dimFrame = Instance.new("Frame")
 	inspect.dimFrame.BackgroundColor3 = Palette.DeepNavy
 	inspect.dimFrame.BackgroundTransparency = 1
@@ -240,6 +244,7 @@ function CardInspect.open(options: any)
 	input.IgnoreGuiInset = true
 	input.ResetOnSpawn = false
 	input.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+	table.insert(inspect.instances, input)
 	local outside = clearButton(input)
 	outside.Size = UDim2.fromScale(1, 1)
 	local hit = clearButton(input)
@@ -251,8 +256,6 @@ function CardInspect.open(options: any)
 	constraint.AspectRatio = ASPECT
 	constraint.DominantAxis = Enum.DominantAxis.Height
 	constraint.Parent = hit
-
-	inspect.instances = { inspect.part, inspect.dim, front, back, dimGui, input }
 
 	-- The Outpost's colour grade tints the world green, card included, so it's off while one is held.
 	local grade = Lighting:FindFirstChildOfClass("ColorCorrectionEffect")
