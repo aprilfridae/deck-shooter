@@ -29,6 +29,70 @@ describe("PullMotion", function()
 		expect(leftTilt).toBe(-rightTilt)
 	end)
 
+	it("runs the opening's steps in order", function()
+		local times = PullMotion.phases({ { tier = "Field", variant = "Base" } })
+		expect(times.rip > 0).toBe(true)
+		expect(times.rise > times.rip).toBe(true)
+		expect(times.spread > times.rise).toBe(true)
+		expect(times.build > times.spread).toBe(true)
+		expect(times.flip > times.build).toBe(true)
+		expect(times.rest > times.flip).toBe(true)
+	end)
+
+	it("waits as long as the best card needs before flipping", function()
+		local plain = { tier = "Field", variant = "Base" }
+		local zero = { tier = "Field", variant = "ZeroDay" }
+		local short = PullMotion.phases({ plain, plain, plain })
+		local long = PullMotion.phases({ plain, zero, plain })
+		expect(long.flip - long.build).toBe(PullMotion.buildTime(zero))
+		expect(long.flip - long.build > short.flip - short.build).toBe(true)
+	end)
+
+	it("peels the strip from one end to the other", function()
+		expect(PullMotion.peel(0, 1, 6)).toBe(0)
+		expect(PullMotion.peel(0.2, 1, 6) > 0).toBe(true)
+		expect(PullMotion.peel(0.2, 6, 6)).toBe(0)
+		expect(PullMotion.peel(1, 1, 6)).toBe(1)
+		expect(PullMotion.peel(1, 6, 6)).toBe(1)
+	end)
+
+	it("finds the best card", function()
+		local best = PullMotion.best({
+			{ tier = "Prototype", variant = "Base" },
+			{ tier = "Field", variant = "Chromatic" },
+			{ tier = "Field", variant = "Base" },
+		})
+		expect(best.variant).toBe("Chromatic")
+	end)
+
+	it("puts the best card in the middle", function()
+		local order = PullMotion.fanOrder({
+			{ tier = "Prototype", variant = "Base" },
+			{ tier = "BlackSite", variant = "Base" },
+			{ tier = "Field", variant = "Base" },
+		})
+		expect(#order).toBe(3)
+		expect(order[2].tier).toBe("Prototype")
+	end)
+
+	it("keeps every card when it reorders them", function()
+		local plain = { tier = "Field", variant = "Base" }
+		local order = PullMotion.fanOrder({ plain, plain })
+		expect(#order).toBe(2)
+		expect(order[1]).toBe(plain)
+	end)
+
+	it("flashes harder for rarer cards and not at all for a plain Field", function()
+		local field = PullMotion.flash({ tier = "Field", variant = "Base" })
+		local redline = PullMotion.flash({ tier = "BlackSite", variant = "Base" })
+		local chromatic = PullMotion.flash({ tier = "BlackSite", variant = "Chromatic" })
+		local zero = PullMotion.flash({ tier = "Field", variant = "ZeroDay" })
+		expect(field).toBe(0)
+		expect(redline > 0).toBe(true)
+		expect(chromatic > redline).toBe(true)
+		expect(zero > chromatic).toBe(true)
+	end)
+
 	it("keeps only a few Auto Open pulls waiting", function()
 		local chromatic = { tier = "Field", variant = "Chromatic" }
 		expect(PullMotion.keepsRare(0, chromatic)).toBe(true)

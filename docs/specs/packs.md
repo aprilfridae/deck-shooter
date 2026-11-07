@@ -106,8 +106,9 @@ Each has a large `S1` reading up the wrapper, an outline and a strip of hazard s
 
 This hasn't been mocked up. River judges it in Play. A rare pull is a Prototype or any variant.
 
-- **One pack:** the wrapper tears open and 3 cards fan out face down, on plain backs in the pack's colours. The player flips each one, and rarer cards shake for longer before turning.
-- **Zero-Day:** the world dims, and the card grows.
+- **One pack:** clicking a pack plays the whole opening by itself, held up in 3D beside the menu, where an inspected card sits. The pack spins in and shakes, its top strip peels off, light in the colour of the best card shows at the tear, and the cards rise out. They spread out face down on the pack's own back design, with the best card in the middle, and shake for as long as the best card needs. All 3 then turn over at once. The menu stays usable, and opening another pack once this one has finished moves straight on to it.
+- **Rare cards:** a Redline or better flashes the screen in the best card's colour when the cards turn, and rarity names show under those cards.
+- **Zero-Day:** the world dims further and the flash is brightest.
 - **Open All:** each rare stack shows until clicked, with `SKIP` to pass the rest, then a list of everything that arrived.
 - **Auto Open:** a rare pull plays by itself beside the middle of the screen and leaves after 4 seconds. The world stays usable, so an idle player's screen never blocks. Only 3 can wait at once and the rest aren't shown, except a Zero-Day, which always is. A pack the player opens goes first.
 

@@ -176,7 +176,18 @@ local function listen(inspect: any, hit: TextButton, outside: TextButton)
 	end))
 end
 
-local CardInspect = {}
+-- The pack opening is held up in the same spot, the same way.
+local CardInspect = {
+	DEPTH = DEPTH,
+	SCREEN_X = SCREEN_X,
+	SCREEN_Y = SCREEN_Y,
+	THICKNESS = THICKNESS,
+	DIM_DEPTH = DIM_DEPTH,
+	DIM_SIZE = DIM_SIZE,
+	DIM_CLEAR = DIM_CLEAR,
+	surface = surface,
+	clearPart = clearPart,
+}
 
 function CardInspect.isOpen(): boolean
 	return current ~= nil
