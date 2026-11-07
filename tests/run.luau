@@ -49,6 +49,7 @@ local listed = {
 	cardspin_spec = true,
 	cardtext_spec = true,
 	cardart_spec = true,
+	packs_spec = true,
 }
 
 require("./tier_spec")
@@ -58,6 +59,7 @@ require("./cardmotion_spec")
 require("./cardspin_spec")
 require("./cardtext_spec")
 require("./cardart_spec")
+require("./packs_spec")
 require("./inventory_spec")
 require("./variant_spec")
 require("./deck_spec")

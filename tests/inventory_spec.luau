@@ -1,8 +1,17 @@
 local harness = require("./harness")
+local Config = require("../src/shared/CardCore/Config")
 local Inventory = require("../src/shared/CardCore/Inventory")
 local SaveData = require("../src/shared/CardCore/SaveData")
 
 local describe, it, expect = harness.describe, harness.it, harness.expect
+
+describe("Inventory limits", function()
+	it("never lets a stack pass the save's limit", function()
+		local data = { stacks = {} }
+		Inventory.add(data, "overclock", "Field", "Base", Config.MaxStackCount + 5)
+		expect(Inventory.count(data, "overclock", "Field", "Base")).toBe(Config.MaxStackCount)
+	end)
+end)
 
 describe("SaveData.new", function()
 	it("starts with no Credits or Catalysts", function()
