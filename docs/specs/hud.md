@@ -16,9 +16,9 @@ Roblox can't import font files, so `TextLabel` can't use these fonts. Text is dr
 | --- | --- | --- | --- |
 | `Number` | KH Interference Bold | `0-9 / +` | 138 |
 | `NumberThin` | KH Interference Light | `0-9 +` | 138 |
-| `Label` | PP Fraktion Mono Regular | `A-Z 0-9 / : . - > +` | 36 |
-| `LabelBold` | PP Fraktion Mono Bold | `A-Z 0-9 / : . - > +` | 36 |
-| `Title` | KH Interference Bold | `A-Z` | 180 |
+| `Label` | PP Fraktion Mono Regular | `A-Z 0-9 / : . - > + _` | 36 |
+| `LabelBold` | PP Fraktion Mono Bold | `A-Z 0-9 / : . - > + _` | 36 |
+| `Title` | KH Interference Bold | `A-Z 0-9 / _` | 180 |
 
 - For the HUD styles, source sizes are about twice the size they show at on a 1080p screen. If small text looks soft or shimmers, the source size is the one number to change.
 - A space isn't a glyph. Each style stores a space width, and any character a style doesn't have takes that width and draws nothing. That's what stops a bad value from erroring in the `Number` style, which has no letters.

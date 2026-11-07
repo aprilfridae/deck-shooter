@@ -25,8 +25,9 @@ function HudText.gunLabel(name: string, mag: number, reloading: boolean): string
 	return if reloading then "RELOADING" else `{name}  /  {mag}`
 end
 
-function HudText.key(slot: number): string
-	return tostring(slot + FIRST_KEY - 1)
+-- label is the key the player has bound, if there is one to show.
+function HudText.key(slot: number, label: string?): string
+	return label or tostring(slot + FIRST_KEY - 1)
 end
 
 -- How many cooldown segments are lit, with left seconds of the cooldown to go.

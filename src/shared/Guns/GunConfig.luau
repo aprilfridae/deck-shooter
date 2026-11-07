@@ -191,12 +191,13 @@ GunConfig.guns = {
 }
 
 GunConfig.classes = {
-	Assault = { primaries = { "M4", "AK47" }, sidearm = "Pistol" },
+	Assault = { primaries = { "M4" }, sidearm = "Pistol" },
 	Rusher = { primaries = { "SMG" }, sidearm = "Pistol" },
 	Marksman = { primaries = { "Sniper" }, sidearm = "Pistol" },
 	Breacher = { primaries = { "Shotgun" }, sidearm = "Pistol" },
 }
 
-GunConfig.classOrder = { "Assault", "Rusher", "Marksman", "Breacher" }
+-- The classes players can pick for now. Rusher, Breacher and the B33 wait in the data.
+GunConfig.classOrder = { "Assault", "Marksman" }
 
 return GunConfig

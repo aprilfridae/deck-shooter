@@ -15,7 +15,7 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 | [`specs/hud.md`](specs/hud.md) | The HUD and the image font system | Built, with trial fonts |
 | [`specs/title-screen.md`](specs/title-screen.md) | The title screen and menu music | Built |
 | [`specs/outpost.md`](specs/outpost.md) | The Outpost hub, zones, travel, the safe zone | The place is built; the Market isn't |
-| [`specs/outpost-ui.md`](specs/outpost-ui.md) | The Outpost menus: Play, Loadout, Profile, comments and Settings | Planned, not built |
+| [`specs/outpost-ui.md`](specs/outpost-ui.md) | The Outpost menus: Play, Loadout, Profile, comments and Settings | Built |
 | [`specs/matches.md`](specs/matches.md) | Elimination and Tower modes, rounds, arenas | Planned, not built |
 | [`sound-list.md`](sound-list.md) | Sounds in the game and sounds still needed | Kept current |
 

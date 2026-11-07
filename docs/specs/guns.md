@@ -6,7 +6,7 @@
 
 ## Classes
 
-Classes are free, change guns only, and work with any cards. Each class has 1 primary and 1 sidearm. Assault is the one class with a choice of primary.
+Classes are free, change guns only, and work with any cards. Each class has 1 primary and 1 sidearm. For now players can only pick Assault with the M57, or Marksman. The B33, Rusher and Breacher stay in the gun data, and a save holding one of them falls back to the default.
 
 | Class | Primary | Sidearm |
 | --- | --- | --- |
@@ -52,6 +52,8 @@ Damage falls off in a straight line between the two distances, then stays flat. 
 - The client applies recoil, so a no-recoil cheat is an accepted risk. The server rolls spread, so a client can't remove it.
 
 ## Keys
+
+These are the defaults. Players can rebind all but the test keys in Settings (`outpost-ui.md`).
 
 | Key | Action |
 | --- | --- |

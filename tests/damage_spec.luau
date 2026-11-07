@@ -44,7 +44,7 @@ describe("GunConfig", function()
 	end)
 
 	it("gives the right guns to each class", function()
-		expect(GunConfig.classes.Assault).toEqual({ primaries = { "M4", "AK47" }, sidearm = "Pistol" })
+		expect(GunConfig.classes.Assault).toEqual({ primaries = { "M4" }, sidearm = "Pistol" })
 		expect(GunConfig.classes.Rusher).toEqual({ primaries = { "SMG" }, sidearm = "Pistol" })
 		expect(GunConfig.classes.Marksman).toEqual({ primaries = { "Sniper" }, sidearm = "Pistol" })
 		expect(GunConfig.classes.Breacher).toEqual({ primaries = { "Shotgun" }, sidearm = "Pistol" })

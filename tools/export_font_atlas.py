@@ -17,13 +17,13 @@ DATA_PATH = os.path.join(ROOT, "src", "shared", "Guns", "Hud", "GlyphData.luau")
 
 SHEET = 1024
 PADDING = 4
-LABEL_CHARACTERS = string.ascii_uppercase + string.digits + "/:.->+"
+LABEL_CHARACTERS = string.ascii_uppercase + string.digits + "/:.->+_"
 
 # Style: font file pattern, characters, size the glyphs are drawn at.
 STYLES = {
     "Number": ("KHInterference*-Bold.otf", string.digits + "/+", 138),
     "NumberThin": ("KHInterference*-Light.otf", string.digits + "+", 138),
-    "Title": ("KHInterference*-Bold.otf", string.ascii_uppercase, 180),
+    "Title": ("KHInterference*-Bold.otf", string.ascii_uppercase + string.digits + "/_", 180),
     "Label": ("PPFraktionMono-Regular.otf", LABEL_CHARACTERS, 36),
     "LabelBold": ("PPFraktionMono-Bold.otf", LABEL_CHARACTERS, 36),
 }

@@ -27,6 +27,19 @@ function Deck.check(data: any, slots: { any }): (boolean, string?)
 	return true, nil
 end
 
+-- A copy of the deck with one slot changed, or nil if that card is already in another slot.
+function Deck.swap(deck: { any }, slot: number, cardId: string, tier: string): { any }?
+	local swapped = {}
+	for index, entry in deck do
+		if index ~= slot and entry.cardId == cardId then
+			return nil
+		end
+		swapped[index] = { cardId = entry.cardId, tier = entry.tier }
+	end
+	swapped[slot] = { cardId = cardId, tier = tier }
+	return swapped
+end
+
 function Deck.set(data: any, slots: { any }): (boolean, string?)
 	local ok, code = Deck.check(data, slots)
 	if not ok then

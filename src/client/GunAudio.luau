@@ -5,6 +5,8 @@ local SoundService = game:GetService("SoundService")
 
 local GunSounds = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("GunSounds"))
 
+local SoundGroups = require(script.Parent.SoundGroups)
+
 local GunAudio = {}
 
 local allSounds: { Sound } = {}
@@ -14,6 +16,7 @@ local function newSound(soundId: string): Sound
 	sound.Name = string.match(soundId, "[^/]+$") or soundId
 	sound.SoundId = soundId
 	sound.Volume = 1
+	sound.SoundGroup = SoundGroups.game
 	sound.Parent = SoundService
 	table.insert(allSounds, sound)
 	return sound

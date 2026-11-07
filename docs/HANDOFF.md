@@ -65,4 +65,8 @@ All the work above is merged to `main`. Nothing is half built.
 - A lag issue was noticed earlier and never diagnosed.
 - The console shows `CardCoreRemotes.Snapshot` events with no listener. The likely cause is that the first snapshot fires before `Outpost.client.luau` connects its listener. Not verified.
 
-**Next up:** the 1v1 map, then the Outpost's Market (needs pack rolling), the Loadout button and the Credits HUD. Outpost ambient sounds wait on River's rain, sea and hum loops. Phase 4 Matches is parked until gameplay looks, sounds and feels good. River decides what's next.
+- The Outpost UI: the nav, the sliding panel, Settings, Play, Loadout, Profile with the card index, clicking players, and comments (`docs/specs/outpost-ui.md`). River approved it in Play. Comments still need testing with two players, and the live filter, DataStores and reports need a live server. Play shows the queues as `SOON` until matches exist.
+- Players can only pick Assault with the M57, or Marksman, for now. The B33, Rusher and Breacher stay in the gun data.
+- Your own character leaves a faint glowing blur in the Outpost that only you can see.
+
+**Next up:** the 1v1 map, then the Outpost's Market (needs pack rolling) and the Credits HUD. Outpost ambient sounds wait on River's rain, sea and hum loops. Phase 4 Matches is parked until gameplay looks, sounds and feels good. River decides what's next.
