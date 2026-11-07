@@ -14,7 +14,7 @@ Reference board: River's Pinterest board "the-outpost", downloaded to `H:\outpos
 
 - Amber is for world lights only. Signs and screens use the palette (`Palette.luau`).
 - Every sign in the Outpost is Deep Navy with Bone text and a Bone outline. No other colours.
-- The stalls have no neon. Their strips and signs are matte, lit by ordinary lights that stay steady. A walk-up flicker and a distance fade were tried and removed, because the glow cut off at a distance and the cause was never found.
+- The stalls have no neon. Their strips and signs are matte, lit by ordinary lights that stay steady. A walk-up flicker and a distance fade were tried and removed. Sign outlines are drawn on the sign's face with its text, because thin strips laid over the face vanished into it at a distance.
 - Loadout and Credits will be HUD or GUI features, not places.
 - Rain around the camera was tried and removed, because the drops passing the camera looked wrong.
 

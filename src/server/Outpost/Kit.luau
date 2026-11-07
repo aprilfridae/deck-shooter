@@ -89,7 +89,7 @@ export type SignOptions = {
 	style: string?, -- a font style from GlyphData
 	back: Color3?,
 	fill: Color3?, -- a lit background, for lightboxes
-	outline: Color3?, -- a neon edge
+	outline: Color3?, -- an edge drawn on the face
 	light: Color3?, -- a glow cast forward
 	vertical: boolean?, -- one letter per line
 	scale: number?, -- text height as a share of the sign's
@@ -552,16 +552,9 @@ function Kit:sign(cframe: CFrame, width: number, height: number, options: SignOp
 	CollectionService:AddTag(back, SIGN_TAG)
 
 	if options.outline then
-		local front = -SIGN_DEPTH / 2 - 0.04
-		local edge = OUTLINE_WIDTH
-		for _, strip in {
-			{ 0, height / 2 - edge / 2, width, edge },
-			{ 0, -height / 2 + edge / 2, width, edge },
-			{ -width / 2 + edge / 2, 0, edge, height },
-			{ width / 2 - edge / 2, 0, edge, height },
-		} do
-			self:neon(Vector3.new(strip[3], strip[4], 0.08), cframe * CFrame.new(strip[1], strip[2], front), options.outline)
-		end
+		-- Drawn with the text, because a separate strip this close to the face gets buried by it from afar.
+		back:SetAttribute("SignOutline", options.outline)
+		back:SetAttribute("SignOutlineWidth", OUTLINE_WIDTH)
 	end
 	if options.light then
 		self:light(back, "SurfaceLight", {
