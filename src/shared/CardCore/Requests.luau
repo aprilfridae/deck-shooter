@@ -3,6 +3,7 @@ local Cards = require("./Cards")
 local Comments = require("./Comments")
 local Config = require("./Config")
 local Deck = require("./Deck")
+local Packs = require("./Packs")
 local Tier = require("./Tier")
 
 local Requests = {}
@@ -27,6 +28,10 @@ function Requests.parseLoadout(raw: any): any
 		return nil
 	end
 	return { class = raw.class, rifle = raw.rifle }
+end
+
+function Requests.parsePack(raw: any): string?
+	return if Packs.isValid(raw) then raw else nil
 end
 
 function Requests.parseUserId(raw: any): number?

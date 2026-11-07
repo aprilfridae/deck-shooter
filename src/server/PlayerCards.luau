@@ -44,6 +44,9 @@ function PlayerCards.snapshot(player: Player): any?
 		ratePerSecond = Income.ratePerSecond(data),
 		class = data.class,
 		rifle = data.rifle,
+		packs = data.packs,
+		rebirths = data.rebirths,
+		openAllCredits = data.openAllCredits,
 	}
 end
 
@@ -51,6 +54,14 @@ function PlayerCards.changed(player: Player)
 	local snapshot = PlayerCards.snapshot(player)
 	if snapshot then
 		snapshotEvent:FireClient(player, snapshot)
+	end
+end
+
+-- Asks ProfileStore to write now, for changes that can't wait for its next save.
+function PlayerCards.save(player: Player)
+	local profile = profiles[player]
+	if profile then
+		profile:Save()
 	end
 end
 

@@ -16,6 +16,7 @@ local Config = {
 	VariantIncome = { Base = 1, Chromatic = 1.5, Redacted = 2.5, ZeroDay = 5 },
 	VariantOdds = { Chromatic = 1 / 50, Redacted = 1 / 500, ZeroDay = 1 / 5000 },
 
+	GroupId = 237720778, -- Fridae Studios
 	RebirthPrice = 25000,
 	RebirthGrowth = 2.5,
 	LuckPerRebirth = 0.15,

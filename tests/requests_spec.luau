@@ -11,6 +11,14 @@ local function slots()
 	}
 end
 
+describe("Requests.parsePack", function()
+	it("accepts only real pack ids", function()
+		expect(Requests.parsePack("ZeroDay")).toBe("ZeroDay")
+		expect(Requests.parsePack("Nonsense")).toBe(nil)
+		expect(Requests.parsePack(5)).toBe(nil)
+	end)
+end)
+
 describe("Requests.parseFuse", function()
 	it("accepts a valid request", function()
 		local r = Requests.parseFuse({
