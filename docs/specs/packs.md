@@ -1,6 +1,6 @@
 # Packs and rebirths
 
-**Status:** designed with River on 2026-11-07, not built. Odds and prices are starting numbers to tune.
+**Status:** built on 2026-11-07, waiting on River's check in Play. Purchases, the favorite and the group check can only be proven on a live game. Odds and prices are starting numbers to tune, in `src/shared/CardCore/Config.luau`.
 
 **Covers:** rolling for packs, opening them, the pull reveal, auto roll, Robux purchases, rebirths and luck, the packs menu, and the income display. How cards work is in `cards.md`, and how they look is in `card-art.md`.
 
@@ -44,7 +44,7 @@ A pack gives mostly its own rarity, with a small chance of each card being highe
 
 ## Auto roll
 
-- Auto roll rolls every 3 seconds while it's on. It's unlocked by favoriting the game or joining the Fridae Studios group.
+- Auto roll rolls every 3 seconds while it's on. It's off each time a player joins. It's unlocked by favoriting the game or joining the Fridae Studios group.
 - It only runs while the player is in the Outpost. It stops in matches, and there's no rolling offline.
 - The server checks the group itself. It can't check a favorite, so it takes the client's word, and an exploiter could fake that. All they'd gain is auto roll.
 - The favorite check uses `AvatarEditorService`, which Roblox doesn't officially support for experiences, so the group is the fallback if it breaks.
@@ -61,15 +61,19 @@ A pack gives mostly its own rarity, with a small chance of each card being highe
 - Auto Open opens one pack every 2 seconds while the player is in the Outpost, starting with the commonest rarity. It clears existing piles as well as new packs.
 - That's only a little faster than auto roll adds packs, so a big pile takes hours of idling. Open All clears it at once, which is its use later on.
 - Free players open packs one at a time. The `OPEN ALL` button prompts the purchase.
+- If the pile is empty when an Open All purchase lands, because Auto Open got there first, the purchase is saved as `openAllCredits`. The next `OPEN ALL` click spends it without a prompt.
+- A rarity's pile stops at 1,000,000 packs, and rolling that rarity does nothing until it's opened. A card stack stops at the same limit.
+- `Config.OpenAllProduct` and `Config.AutoOpenPass` are 0 until River creates them, and their buttons read `SOON`.
 - The server opens the pile only once Roblox's `ProcessReceipt` reports the payment. A repeated receipt never opens anything twice.
-- The odds are always shown in the menu. `PolicyService` hides Open All where paid random items are restricted.
+- The odds are always shown in the menu, and its `ODDS` button shows the card odds as well. `PolicyService` hides Open All where paid random items are restricted.
 
 ## Rebirths and luck
 
 - A rebirth costs all of the player's Credits, and they must hold at least its price. Cards, decks and packs are kept.
 - The first costs 25,000 Credits, and each one after costs 2.5 times the last.
+- The button needs a second click, `CONFIRM REBIRTH`, within 3 seconds.
 - Luck is `1 + 0.15 x rebirths`. Rebirths have no limit.
-- Luck multiplies every outcome above the commonest one, in the pack roll and in each card roll. The commonest outcome takes what's left, and stops at 0.
+- Luck multiplies every outcome above the commonest one, in the pack roll and in each card roll. The commonest outcome takes what's left, and stops at 0. If the raised outcomes pass 100%, they're cut back evenly to total 100%.
 - Guaranteed outcomes don't change.
 - With 5 rebirths, luck is 1.75 and a Zero-Day pack is about 1 in 2,857.
 
@@ -83,13 +87,13 @@ From top to bottom:
 - A line with luck, income and rebirth count.
 - A big `ROLL` button, with `AUTO ROLL` beside it, and a bar for the wait until the next roll. Before it's unlocked, `AUTO ROLL` prompts the favorite.
 - The four packs, large and almost touching, each with its count and roll odds. Hovering lifts a pack, and clicking opens one.
-- `OPEN ALL` and the rebirth button, which shows its price.
+- `OPEN ALL`, `AUTO OPEN` and `ODDS`, then the rebirth button, which shows its price.
 
 ## Pack designs
 
 Packs are vertical foil wrappers with crimped ends, in the same colours as the cards, in the proportions 150 by 230.
 
-Each has a large `S1` reading up the wrapper, an outline and a strip of hazard stripes in the rarity's colour, and its name near the bottom. `S1` is the set.
+Each has a large `S1` reading up the wrapper, an outline and a strip of hazard stripes in the rarity's colour, and its name near the bottom. `S1` is the set. `tools/make-pack-art.py` bakes the wrapper, and `src/client/PackFace.luau` draws the name, stripes and effects.
 
 | Pack | Background | Art and outline | Effect |
 | --- | --- | --- | --- |
@@ -98,15 +102,14 @@ Each has a large `S1` reading up the wrapper, an outline and a strip of hazard s
 | Prototype | Signal Acid | Deep Navy | A shine, with scrolling stripes |
 | Zero-Day | `#0E1018` | Data Cyan | A shine with a blue foil band, and a cyan ring pinging from the corner |
 
-The wrapper art is baked like the card art, with the effects drawn live on top.
-
 ## Pull reveal
 
-This hasn't been mocked up. River judges it in Play.
+This hasn't been mocked up. River judges it in Play. A rare pull is a Prototype or any variant.
 
-- **One pack:** the wrapper tears open and 3 cards fan out face down. The player flips each one, and rarer cards build for longer before turning.
-- **Zero-Day:** the world dims, and the card's ring and foil take over the screen.
-- **Open All and Auto Open:** a quick list of what arrived, stopping for rare pulls.
+- **One pack:** the wrapper tears open and 3 cards fan out face down, on plain backs in the pack's colours. The player flips each one, and rarer cards shake for longer before turning.
+- **Zero-Day:** the world dims, and the card grows.
+- **Open All:** each rare stack shows until clicked, with `SKIP` to pass the rest, then a list of everything that arrived.
+- **Auto Open:** a rare pull plays by itself beside the middle of the screen and leaves after 4 seconds. The world stays usable, so an idle player's screen never blocks.
 
 The cards can be inspected in 3D like any other.
 

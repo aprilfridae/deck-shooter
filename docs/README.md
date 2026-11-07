@@ -11,13 +11,13 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 | [`HANDOFF.md`](HANDOFF.md) | Working with River, tools and setup, what's built, known gaps, what's next | Kept current every session |
 | [`specs/movement.md`](specs/movement.md) | Moves, camera, keys, movement cheat checks | Built |
 | [`specs/guns.md`](specs/guns.md) | Classes, gun stats, recoil, ammo, hit checking, health | Built |
-| [`specs/cards.md`](specs/cards.md) | The 4 ability cards, tiers, fusion, variants, income, Deck Power Rating, saves, card remotes | Cards and rules built; no collection screens or pack rolling |
+| [`specs/cards.md`](specs/cards.md) | The 4 ability cards, tiers, fusion, variants, income, Deck Power Rating, saves, card remotes | Built |
 | [`specs/card-art.md`](specs/card-art.md) | How cards look, rarities, variants, inspecting a card, serial numbers | Menus and inspect built; card in hand and serials aren't |
-| [`specs/packs.md`](specs/packs.md) | Rolling, opening, auto roll, Robux purchases, rebirths, luck and the packs menu | Designed, not built |
+| [`specs/packs.md`](specs/packs.md) | Rolling, opening, auto roll, Robux purchases, rebirths, luck and the packs menu | Built, waiting on River's check in Play |
 | [`specs/hud.md`](specs/hud.md) | The HUD and the image font system | Built, with trial fonts |
 | [`specs/title-screen.md`](specs/title-screen.md) | The title screen and menu music | Built |
-| [`specs/outpost.md`](specs/outpost.md) | The Outpost hub, zones, travel, the safe zone | The place is built; the Market isn't |
-| [`specs/outpost-ui.md`](specs/outpost-ui.md) | The Outpost menus: Play, Loadout, Profile, comments and Settings | Built |
+| [`specs/outpost.md`](specs/outpost.md) | The Outpost hub, zones, travel, the safe zone | The place is built; the player market isn't |
+| [`specs/outpost-ui.md`](specs/outpost-ui.md) | The Outpost menus: Play, Packs, Loadout, Profile, comments and Settings | Built |
 | [`specs/matches.md`](specs/matches.md) | Elimination and Tower modes, rounds, arenas | Planned, not built |
 | [`sound-list.md`](sound-list.md) | Sounds in the game and sounds still needed | Kept current |
 
@@ -51,7 +51,7 @@ The specs explain the design. The code holds the actual values, so check it befo
 | Guns and classes | `src/shared/Guns/GunConfig.luau` |
 | Hit checking | `src/shared/Guns/ShotRequest.luau`, `Hitbox.luau`, `History.luau`, and the top of `src/server/GunServer.server.luau` |
 | Cards | `src/shared/CardCore/Cards.luau` |
-| Fusion, income, DPR, card ability values, save limits | `src/shared/CardCore/Config.luau` |
+| Fusion, income, DPR, card ability values, save limits, pack odds, rebirth prices | `src/shared/CardCore/Config.luau` |
 | Colours | `src/shared/Guns/Palette.luau` |
 | Sounds | `src/shared/Guns/GunSounds.luau`, with ids in `SoundIds.luau` |
 | Outpost textures | `src/shared/Guns/OutpostAssets.luau` |

@@ -58,7 +58,7 @@ All 4 are in set `set_01`. Stats are listed Field / Redline / Prototype.
 ## Collection
 
 - **Copies** are stored per card, tier and variant, as keys like `phase_dash:Field:Base`.
-- **Variants:** Base, Chromatic, Redacted and Zero-Day. They pay 1x, 1.5x, 2.5x and 5x income. The odds of a roll are 1/50 Chromatic, 1/500 Redacted and 1/5,000 Zero-Day; the rest are Base. Today only fusion rolls a variant.
+- **Variants:** Base, Chromatic, Redacted and Zero-Day. They pay 1x, 1.5x, 2.5x and 5x income. The odds of a roll are 1/50 Chromatic, 1/500 Redacted and 1/5,000 Zero-Day; the rest are Base. Fusion rolls a variant at these odds. Packs use their own, in `packs.md`.
 - **Fusion:** 5 copies at one tier make 1 copy at the next tier. A Fusion Catalyst lowers that to 4. The fee is 100 Credits from Field and 600 from Black-Site, and a Catalyst doesn't lower it. Prototype can't be fused.
   - Checks run in this order, and a failed check changes nothing: unknown card, bad tier, top tier, no Catalyst, not enough copies, variants not confirmed, not enough Credits.
   - Base copies are spent first. Spending any variant needs the request to confirm it, because variants are the most valuable copies.
