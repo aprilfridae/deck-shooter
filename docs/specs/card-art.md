@@ -74,7 +74,7 @@ Clicking a card in the Profile index holds it up in the 3D world. `CardInspect.l
 - **The back:** a click without a drag flips the card. The top third is a solid block of the rarity's colour with a crosshair, the copies owned or `NOT OWNED`, the name, rarity and set code. Below it, the first stat is large and the rest smaller, then a one-line description and a strip of hazard stripes in the ink colour. `CardText.luau` holds the words, which are limited to the menu font's characters, so percentages read `PCT`.
 - **Unowned cards** open too, faded and still.
 - **Closing:** a click off the card closes it, as does anything that closes the menu. Esc can't be used, because Roblox keeps it for its own menu.
-- The part is clear with a `SurfaceGui` on each side, so the card keeps its rounded corners.
+- The part is clear with a `SurfaceGui` on each side, so the card keeps its rounded corners. Both draw over the world, so nothing in the Outpost can cross the card, and only the side facing the camera is shown.
 
 ## Serial numbers
 

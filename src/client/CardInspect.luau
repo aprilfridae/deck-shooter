@@ -125,6 +125,10 @@ local function step(inspect: any, dt: number)
 		* facing
 		* CFrame.Angles(inspect.pitch + swayPitch, inspect.yaw + spin + swayYaw, 0)
 	inspect.dim.CFrame = CFrame.new(atDepth(DEPTH + DIM_DEPTH)) * facing
+	-- Drawn over the world, so nothing hides the side turned away. Each is shown only when it faces us.
+	local showsFront = inspect.part.CFrame.LookVector:Dot(inspect.part.Position - camera.CFrame.Position) > 0
+	inspect.front.Enabled = showsFront
+	inspect.back.Enabled = not showsFront
 	local arrived = 1 - spin / (2 * math.pi)
 	inspect.dimFrame.BackgroundTransparency = 1 - (1 - DIM_CLEAR) * arrived * leaving
 end
@@ -209,6 +213,9 @@ function CardInspect.open(options: any)
 	local canvas = Vector2.new(CANVAS_WIDTH, CANVAS_HEIGHT)
 	local front = surface(inspect.part, Enum.NormalId.Back, canvas)
 	local back = surface(inspect.part, Enum.NormalId.Front, canvas)
+	front.AlwaysOnTop = true
+	back.AlwaysOnTop = true
+	inspect.front, inspect.back = front, back
 	local face = table.clone(options)
 	face.width = CANVAS_WIDTH
 	face.position = nil
