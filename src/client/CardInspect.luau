@@ -1,6 +1,7 @@
 -- Holds a card up in the 3D world beside the open panel, to spin with the mouse and flip over.
 -- It's a real part so it turns in perspective. The part itself is clear and each side is a
 -- SurfaceGui, so the card keeps its rounded corners.
+local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -76,6 +77,9 @@ end
 
 local function destroy(inspect: any)
 	RunService:UnbindFromRenderStep(STEP_NAME)
+	if inspect.grade then
+		inspect.grade.Enabled = true
+	end
 	for _, connection in inspect.connections do
 		connection:Disconnect()
 	end
@@ -242,6 +246,13 @@ function CardInspect.open(options: any)
 	constraint.Parent = hit
 
 	inspect.instances = { inspect.part, inspect.dim, front, back, dimGui, input }
+
+	-- The Outpost's colour grade tints the world green, card included, so it's off while one is held.
+	local grade = Lighting:FindFirstChildOfClass("ColorCorrectionEffect")
+	if grade and grade.Enabled then
+		grade.Enabled = false
+		inspect.grade = grade
+	end
 	listen(inspect, hit, outside)
 	RunService:BindToRenderStep(STEP_NAME, Enum.RenderPriority.Camera.Value + 1, function(dt)
 		step(inspect, dt)
