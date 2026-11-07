@@ -11,6 +11,7 @@ local PanelMotion = require(Guns:WaitForChild("Hud"):WaitForChild("PanelMotion")
 local PANEL_WIDTH = 0.5 -- share of the screen
 local BLEED = 0.05 -- extra sheet off the right edge, so swinging past its mark shows no gap
 local PANEL_LAYER = 10 -- above its copies
+local STEP_NAME = "OutpostMenuPanel"
 
 local MenuPanel = {}
 MenuPanel.__index = MenuPanel
@@ -38,6 +39,7 @@ end
 function MenuPanel.new(parent: Instance): any
 	local self = setmetatable({}, MenuPanel)
 	self.opening = false
+	self.moving = false
 	self.share = 0 -- 0 is closed, 1 is open
 	self.from = 0
 	self.elapsed = 0
@@ -98,13 +100,13 @@ function MenuPanel:step(dt: number)
 	if self.elapsed >= PanelMotion.DURATION + 1 / PanelMotion.FPS then
 		self:showCopies(share, share)
 		self.frame.Visible = self.opening
-		self.connection:Disconnect()
-		self.connection = nil
+		self.moving = false
+		RunService:UnbindFromRenderStep(STEP_NAME)
 	end
 end
 
 function MenuPanel:move(opening: boolean)
-	if opening == self.opening and (self.connection or self.share == (if opening then 1 else 0)) then
+	if opening == self.opening and (self.moving or self.share == (if opening then 1 else 0)) then
 		return
 	end
 	self.opening = opening
@@ -112,8 +114,10 @@ function MenuPanel:move(opening: boolean)
 	-- Picks up from where the panel is, so a reversed move doesn't jump.
 	self.from = self.share
 	self.elapsed = 0
-	if not self.connection then
-		self.connection = RunService.RenderStepped:Connect(function(dt)
+	if not self.moving then
+		self.moving = true
+		-- Steps just before MenuCamera reads it.
+		RunService:BindToRenderStep(STEP_NAME, Enum.RenderPriority.Camera.Value, function(dt)
 			self:step(dt)
 		end)
 	end

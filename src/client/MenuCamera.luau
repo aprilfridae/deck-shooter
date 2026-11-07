@@ -9,16 +9,13 @@ local Workspace = game:GetService("Workspace")
 
 local PanelMotion = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Hud"):WaitForChild("PanelMotion"))
 
-local EASE = 6 -- higher is quicker
-
-local open = false
-local amount = 0 -- 0 is the normal view, 1 is fully moved
 local real: CFrame? = nil -- the camera before shearing
+local panel: any = nil -- the view moves exactly as far as this has
 
 local MenuCamera = {}
 
-function MenuCamera.setOpen(isOpen: boolean)
-	open = isOpen
+function MenuCamera.follow(menuPanel: any)
+	panel = menuPanel
 end
 
 -- Everything that reads the camera, Roblox's controls and camera included, needs the true one,
@@ -30,8 +27,9 @@ RunService:BindToRenderStep("OutpostMenuCameraRestore", Enum.RenderPriority.Firs
 	end
 end)
 
-RunService:BindToRenderStep("OutpostMenuCamera", Enum.RenderPriority.Camera.Value + 1, function(dt)
-	amount += ((if open then 1 else 0) - amount) * (1 - math.exp(-dt * EASE))
+-- Runs just after the panel steps, so the two land on every frame together.
+RunService:BindToRenderStep("OutpostMenuCamera", Enum.RenderPriority.Camera.Value + 1, function()
+	local amount = if panel then panel.share else 0
 	if amount < 0.001 then
 		return
 	end

@@ -43,6 +43,7 @@ gui.Enabled = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local panel = MenuPanel.new(gui)
+MenuCamera.follow(panel)
 
 local clickSound = Instance.new("Sound")
 clickSound.Name = "OutpostMenuClick"
@@ -104,7 +105,6 @@ local function choose(name: string)
 		fillPage(name)
 		panel:open()
 	end
-	MenuCamera.setOpen(openPage ~= nil)
 	paint()
 end
 
@@ -166,7 +166,6 @@ RunService.RenderStepped:Connect(function()
 		SettingsPanel.stop()
 		openPage = nil
 		panel:close()
-		MenuCamera.setOpen(false)
 		paint()
 	end
 end)
