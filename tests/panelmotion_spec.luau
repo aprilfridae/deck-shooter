@@ -48,9 +48,9 @@ describe("PanelMotion", function()
 		expect(#PanelMotion.trail(1, 1)).toBe(0)
 	end)
 
-	it("moves the camera far enough to put the character at a quarter of the screen", function()
-		-- At 90 degrees tall on a square screen, half the width at distance 10 is 10 studs.
-		expect(near(PanelMotion.cameraShift(10, 90, 1), 5)).toBe(true)
-		expect(PanelMotion.cameraShift(0, 70, 1.78)).toBe(0)
+	it("moves the view's centre a quarter of the way across the screen", function()
+		-- At 90 degrees tall on a square screen, the edge of the view is 1 unit out per unit of depth.
+		expect(near(PanelMotion.viewShift(90, 1), 0.5)).toBe(true)
+		expect(near(PanelMotion.viewShift(90, 2), 1)).toBe(true)
 	end)
 end)

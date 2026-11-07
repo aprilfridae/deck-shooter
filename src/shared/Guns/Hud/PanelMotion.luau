@@ -47,9 +47,9 @@ function PanelMotion.trail(from: number, to: number): { { share: number, transpa
 	return trail
 end
 
--- How far right the camera moves, in studs, to put something this far away left of centre.
-function PanelMotion.cameraShift(distance: number, verticalFov: number, aspect: number): number
-	return distance * math.tan(math.rad(verticalFov) / 2) * aspect * CHARACTER_PLACE
+-- How far the view's centre moves left, as a shear per unit of depth.
+function PanelMotion.viewShift(verticalFov: number, aspect: number): number
+	return math.tan(math.rad(verticalFov) / 2) * aspect * CHARACTER_PLACE
 end
 
 return PanelMotion

@@ -31,7 +31,7 @@ Sizes use the title screen's **unit**: the screen's width, or 16/9 of its height
 - The nav and panels show only in the `Outpost` zone, after the title screen. Leaving the zone closes the panel.
 - One panel is open at a time. Clicking another button swaps it, and clicking the open button closes it.
 - WASD, jump, sprint and crouch keep working while a panel is open. The mouse works the panel.
-- Opening a panel eases the camera to the right, so the character sits a quarter of the way across the screen, beside the panel. A wall stops the camera short. Closing eases it back.
+- Opening a panel eases the centre of the view left, so the character sits a quarter of the way across the screen, beside the panel, with no stretching. The camera itself doesn't move: its CFrame is sheared for each frame drawn, then put back so controls read the true camera. Closing eases it back.
 - Typing in a text box stops movement, as `Input.luau` already does.
 
 ## Panels
