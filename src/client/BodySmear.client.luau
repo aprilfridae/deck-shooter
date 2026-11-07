@@ -17,7 +17,7 @@ local SETTLE = 0.5
 local MIN_MOVE = 0.06 -- studs
 local MIN_TURN = 0.04 -- radians
 -- An avatar's face and accessories would stay solid on a see-through copy.
-local STRIPPED = { Accessory = true, Animator = true, Decal = true, Highlight = true, Sound = true }
+local STRIPPED = { Accessory = true, Animator = true, Decal = true, Highlight = true, Sound = true, Trail = true }
 
 type Limb = { source: BasePart, copies: { BasePart }, from: CFrame?, to: CFrame?, poses: { CFrame }, moved: boolean }
 

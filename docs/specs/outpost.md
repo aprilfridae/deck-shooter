@@ -50,6 +50,7 @@ Movement matters here too: low walls to vault, a catwalk to climb up to.
 - The lift doors lead to the test room. A Deep Navy terminal 9 studs from the test room's spawn, with an `OUTPOST` sign, leads back.
 - Travel has a 1s cooldown. The server gives the movement check 1s of grace first, then reloads the character at the other spawn.
 - You wear your own Roblox avatar in the Outpost and the game's body everywhere else. The server moves `StarterCharacter` to `ServerStorage` at startup, turns off `CharacterAutoLoads`, and puts it back in `StarterPlayer` only while loading a character outside the Outpost. It also handles respawns.
+- A glowing Signal Acid to Data Cyan trail follows your own character in the Outpost. Only you see it.
 - Getting below the floors or more than 320 studs out sends the player back to the spawn. The server checks every 0.25s.
 
 ## Safe zone
