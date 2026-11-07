@@ -10,12 +10,15 @@ local PullMotion = {
 	SLIDE_TIME = 0.45,
 	SPREAD_TIME = 0.35,
 	TURN_TIME = 0.35,
-	SHAKE_TIME = 0.9, -- face-down cards shake this long before turning, whatever they are
+	SHAKE_TIME = 0.9, -- every pack's cards shake this long, a Prototype's build, whatever they hold
 	FLIP_TIME = 0.28,
 	QUICK_ROW = 0.05, -- seconds between rows of a quick list
 	RARE_QUEUE = 3, -- Auto Open pulls that can wait to be shown
 }
 
+local TIER_BUILD = { Field = 0.2, BlackSite = 0.5, Prototype = 0.9 }
+local VARIANT_BUILD = { Base = 0, Chromatic = 0.3, Redacted = 0.6 }
+local ZERO_DAY_BUILD = 2
 local FAN_STEP = 1.06 -- card widths
 local FAN_TILT = 3 -- degrees
 local PEEL_SPAN = 0.4 -- of the rip each strip piece takes
@@ -25,6 +28,14 @@ local ZERO_DAY_FLASH = 0.7
 
 local function rank(entry: any): number
 	return table.find(Variant.order, entry.variant) * 10 + table.find(Tier.order, entry.tier)
+end
+
+-- Seconds an Auto Open rare card shakes before turning. A longer shake means a better card.
+function PullMotion.buildTime(card: any): number
+	if card.variant == Variant.ZeroDay then
+		return ZERO_DAY_BUILD
+	end
+	return TIER_BUILD[card.tier] + VARIANT_BUILD[card.variant]
 end
 
 -- Auto Open can pull rares faster than they can be shown, so only a few wait. Never a Zero-Day.
@@ -47,6 +58,16 @@ end
 function PullMotion.peel(progress: number, index: number, count: number): number
 	local start = (index - 1) / count * (1 - PEEL_SPAN)
 	return math.clamp((progress - start) / PEEL_SPAN, 0, 1)
+end
+
+function PullMotion.best(cards: { any }): any
+	local best = cards[1]
+	for _, card in cards do
+		if rank(card) > rank(best) then
+			best = card
+		end
+	end
+	return best
 end
 
 -- The cards left to right, with the best in the middle of a full pack.
