@@ -10,6 +10,11 @@ local Workspace = game:GetService("Workspace")
 local PanelMotion = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Hud"):WaitForChild("PanelMotion"))
 
 local real: CFrame? = nil -- the camera before shearing
+
+-- Lives on the camera because the Outpost's lighting clears blur out of Lighting.
+local blur = Instance.new("BlurEffect")
+blur.Name = "OutpostMenuBlur"
+blur.Enabled = false
 local panel: any = nil -- the view moves exactly as far as this has
 
 local MenuCamera = {}
@@ -30,6 +35,10 @@ end)
 -- Runs just after the panel steps, so the two land on every frame together.
 RunService:BindToRenderStep("OutpostMenuCamera", Enum.RenderPriority.Camera.Value + 1, function()
 	local amount = if panel then panel.share else 0
+	local travel = if panel then panel.travel else 0
+	blur.Parent = Workspace.CurrentCamera
+	blur.Size = PanelMotion.viewBlur(travel)
+	blur.Enabled = travel ~= 0
 	if amount < 0.001 then
 		return
 	end
@@ -37,7 +46,9 @@ RunService:BindToRenderStep("OutpostMenuCamera", Enum.RenderPriority.Camera.Valu
 	local view = camera.ViewportSize
 	local shift = PanelMotion.viewShift(camera.FieldOfView, view.X / view.Y) * amount
 	real = camera.CFrame
-	camera.CFrame = camera.CFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, 1, 0, shift, 0, 1)
+	-- The lean comes first, so the picture tips around the character rather than the screen's centre.
+	local lean = CFrame.Angles(0, 0, -PanelMotion.viewLean(travel))
+	camera.CFrame = camera.CFrame * lean * CFrame.new(0, 0, 0, 1, 0, 0, 0, 1, 0, shift, 0, 1)
 end)
 
 return MenuCamera

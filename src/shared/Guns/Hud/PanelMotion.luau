@@ -10,6 +10,9 @@ local OVERSHOOT = 1.1 -- higher swings further past the mark
 local PULL_BACK = 0.6 -- higher gathers further before closing
 local COPY_TRANSPARENCY = { 0.55, 0.72, 0.87 } -- nearest the panel first
 local CHARACTER_PLACE = 0.5 -- of the way from the screen's centre to its left edge
+local BLUR_PER_TRAVEL = 70 -- blur size for each share of the panel crossed in one frame
+local MOST_BLUR = 18
+local LEAN_PER_TRAVEL = math.rad(7.5) -- tilt for each share of the panel crossed in one frame
 
 -- How far through a move it is, from 0 to 1, stepped to whole frames.
 function PanelMotion.held(elapsed: number): number
@@ -50,6 +53,16 @@ end
 -- How far the view's centre moves left, as a shear per unit of depth.
 function PanelMotion.viewShift(verticalFov: number, aspect: number): number
 	return math.tan(math.rad(verticalFov) / 2) * aspect * CHARACTER_PLACE
+end
+
+-- How much the view blurs for this much travel in one frame of the panel.
+function PanelMotion.viewBlur(travel: number): number
+	return math.min(math.abs(travel) * BLUR_PER_TRAVEL, MOST_BLUR)
+end
+
+-- How far the view leans, in radians, for this much travel in one frame of the panel.
+function PanelMotion.viewLean(travel: number): number
+	return travel * LEAN_PER_TRAVEL
 end
 
 return PanelMotion

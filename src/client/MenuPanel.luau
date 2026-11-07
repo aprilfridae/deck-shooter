@@ -41,6 +41,7 @@ function MenuPanel.new(parent: Instance): any
 	self.opening = false
 	self.moving = false
 	self.share = 0 -- 0 is closed, 1 is open
+	self.travel = 0 -- how far the last frame of the move went, opening being positive
 	self.from = 0
 	self.elapsed = 0
 
@@ -93,12 +94,14 @@ function MenuPanel:step(dt: number)
 	local share = PanelMotion.share(self.from, target, PanelMotion.held(self.elapsed))
 	if share ~= self.share then
 		self:showCopies(self.share, share)
+		self.travel = share - self.share
 		self.share = share
 		place(self.frame, share)
 	end
 	-- The last frame is held too, so its copies get their moment.
 	if self.elapsed >= PanelMotion.DURATION + 1 / PanelMotion.FPS then
 		self:showCopies(share, share)
+		self.travel = 0
 		self.frame.Visible = self.opening
 		self.moving = false
 		RunService:UnbindFromRenderStep(STEP_NAME)
