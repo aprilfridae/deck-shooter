@@ -13,7 +13,7 @@ Reference board: River's Pinterest board "the-outpost", downloaded to `H:\outpos
 ## Decisions from River
 
 - Amber is for world lights only. Signs and screens use the palette (`Palette.luau`).
-- The Market kiosk is the only booth. Its sign is Hazard Red, because red is for threats and purchases.
+- Every sign in the Outpost is Deep Navy with Bone text and a Bone outline. No other colours.
 - Loadout and Credits will be HUD or GUI features, not places.
 - Rain around the camera was tried and removed, because the drops passing the camera looked wrong.
 
@@ -33,12 +33,12 @@ The Outpost is built at (4000, 0, 0), far from the test room at the world's orig
 
 | Area | What's there |
 | --- | --- |
-| Market Hall | Barrel-vaulted concrete hall with a round skylight open to the rain over the middle of the crossing, a catwalk along the east wall, cut across the East Hall's mouth with two hanging plates to jump between (7 studs apart at walking-jump reach, with yellow take-off edges), and cables across. The gable walls stop just under the roof's outer face, so their stepped corners stay hidden in the shell. The vault's look changes band by band along the hall, not segment by segment, so overlapping segments can't flicker on the end faces. |
-| West and East Halls | Players spawn in the East Hall at x 45 and z 66, facing the main hall. The main hall's shape again, turned sideways and joined to either side of it at z 66, with their barrel vaults meeting the main vault on clean diagonal creases. Each has low walls to vault, crates and oil drums. The West Hall has an `OUTPOST 01` sign on its far end wall, and the East Hall has a door in its far end wall to the test range corridor. |
+| Market Hall | Barrel-vaulted concrete hall with a round skylight open to the rain over the middle of the crossing, a catwalk along the east wall, cut across the East Hall's mouth with two hanging plates to jump between (7 studs apart at walking-jump reach, with white take-off edges), and cables across. The gable walls stop just under the roof's outer face, so their stepped corners stay hidden in the shell. The vault's look changes band by band along the hall, not segment by segment, so overlapping segments can't flicker on the end faces. |
+| West and East Halls | Players spawn in the East Hall at x 45 and z 66, facing the main hall. The main hall's shape again, turned sideways and joined to either side of it at z 66, with their barrel vaults meeting the main vault on clean diagonal creases. Each has low walls to vault, crates and oil drums. The East Hall has a door in its far end wall to the test range corridor. |
 | Windows | 12 glazed steel-framed windows: 4 in the main hall and 4 in each side hall, each letting in a little grey light. The glass is solid. |
 | Outside | Terrain sea with its surface at 0 and a ring of rocks at least 35 studs from the building. Seen only through the windows. |
-| Matchmaking booth | Canopied booth against the main hall's south wall, opposite the Market, under a cyan `MATCHMAKING` sign. Its prompt says "Soon" and does nothing yet. |
-| Market | Kiosk at the far end of the hall under a red `MARKET` sign, with shelves of tier-coloured cards. Its prompt says "Soon" and does nothing yet. |
+| Matchmaking booth | A market stall against the main hall's south wall, opposite the Market: scaffold frame, corrugated walls, a ragged navy and Bone awning, junk on a railed roof, cables to the walls and warm light inside. Three screens on its back wall, a `MATCHMAKING` sign and a short `PLAY` sign hung off its corner. Its prompt says "Soon" and does nothing yet. |
+| Market | The same stall at the far end of the hall, with shelves of blank navy and Bone cards, a `MARKET` sign and a short `CARDS` sign. Its prompt says "Soon" and does nothing yet. |
 | Test Range corridor | Flooded tiled corridor off the far end of the East Hall, with fluorescent ceiling lights and lift doors. The doors' prompt (hold 0.4s) takes you to the test room. |
 
 Movement matters here too: low walls to vault, a catwalk to climb up to.

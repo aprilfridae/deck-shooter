@@ -362,15 +362,6 @@ local function sideHall(kit, name: string, turn: CFrame?)
 	local lamp = g:neon(v(6, 0.3, 10), CFrame.new(-73, 42.8, CROSS_Z), FLUORESCENT)
 	g:light(lamp, "SpotLight", { Face = Enum.NormalId.Bottom, Angle = 60, Range = 60, Brightness = 3, Color = FLUORESCENT })
 
-	if not turn then
-		g:sign(facing(v(wallEnd + 0.1, 27, CROSS_Z), v(1, 0, 0)), 16, 3, {
-			text = "OUTPOST 01",
-			color = Palette.DeepNavy,
-			fill = Palette.SignalAcid,
-			light = Palette.SignalAcid,
-		})
-	end
-
 	-- Low walls to vault, crates to move around and oil drums, one knocked over.
 	for _, z in { { CROSS_SOUTH, CROSS_Z - 7 }, { CROSS_Z + 7, CROSS_NORTH } } do
 		g:dirty(g:boxOf("darkConcrete", v(-64, DECK, z[1]), v(-62.5, DECK + 3.5, z[2])), "block")
@@ -396,32 +387,134 @@ local function sideHall(kit, name: string, turn: CFrame?)
 	end
 end
 
--- The matchmaking booth against the main hall's south wall, opposite the Market.
+-- Navy with Bone text is the only look a sign has.
+local function signLook(text: string, vertical: boolean?): any
+	return {
+		text = text,
+		color = Palette.Bone,
+		fill = Palette.DeepNavy,
+		back = Palette.DeepNavy,
+		outline = Palette.Bone,
+		light = Palette.Bone,
+		vertical = vertical,
+	}
+end
+
+-- A market stall knocked together inside the hall: a scaffold frame, corrugated walls, a ragged
+-- awning, junk on the roof and cables running off to the walls. It backs onto z = back, opens
+-- towards open (1 or -1) and returns its counter.
+local function stall(g, back: number, open: number, depth: number, name: string, blade: string): BasePart
+	local function z(along: number): number
+		return back + open * along
+	end
+	local function span(kind: string, x0: number, y0: number, near: number, x1: number, y1: number, far: number): BasePart
+		local low, high = math.min(z(near), z(far)), math.max(z(near), z(far))
+		return g:boxOf(kind, v(x0, DECK + y0, low), v(x1, DECK + y1, high))
+	end
+	local function bar(a: Vector3, b: Vector3, thickness: number)
+		local color, material = g:surface("steel")
+		Kit.decor(g:block(v(thickness, thickness, (a - b).Magnitude), CFrame.lookAt((a + b) / 2, b), color, material))
+	end
+
+	g:dirty(span("darkConcrete", -10, 0, 0, 10, 0.8, depth), "floor")
+
+	-- The back wall, ribbed like corrugated sheet.
+	g:dirty(span("steel", -8, 0.8, 0, 8, 10.6, 1.4), "wall", 0.5)
+	for x = -7.6, 7.6, 1.2 do
+		Kit.decor(span("steel", x - 0.15, 0.8, 1.4, x + 0.15, 10.6, 1.55))
+	end
+
+	-- The scaffold: posts, lower sheets on the sides, and a brace across each side above them.
+	for _, side in { -1, 1 } do
+		for _, along in { 0.2, depth - 1 } do
+			span("rust", side * 9.6 - 0.4, 0.8, along, side * 9.6 + 0.4, 11, along + 0.8)
+		end
+		g:dirty(span("rust", side * 9.8 - 0.1, 0.8, 1, side * 9.8 + 0.1, 5.5, depth - 1), "wall", 0.5)
+		bar(v(side * 9.8, DECK + 5.5, z(1)), v(side * 9.8, DECK + 11, z(depth - 1)), 0.25)
+	end
+
+	-- The roof, with the sign across a fascia at its front.
+	g:dirty(span("steel", -10, 11, 0, 10, 11.6, depth + 0.4), "block", 0.45)
+	g:dirty(span("steel", -10, 11.6, depth, 10, 15.4, depth + 0.4), "block")
+	local toHall = v(0, 0, open)
+	g:sign(facing(v(0, DECK + 13.5, z(depth + 0.45)), toHall), 18, 3, signLook(name))
+
+	-- A short sign hung off the corner, on a bracket, reads from down the hall.
+	span("steel", -11.2, 12.4, depth - 0.2, -9.6, 12.7, depth + 0.1)
+	span("steel", -11.2, 3.6, depth - 0.2, -9.6, 3.9, depth + 0.1)
+	g:sign(facing(v(-11.8, DECK + 8.1, z(depth)), toHall), 1.6, 9.2, signLook(blade, true))
+
+	-- The awning, in strips that don't quite agree, so it looks like tarp and not a plank.
+	local strips = 6
+	local reach = 3.4
+	for strip = 1, strips do
+		local width = 20 / strips
+		local x = -10 + (strip - 0.5) * width
+		local tilt = math.rad(g:range(14, 24))
+		local color = if strip % 2 == 0 then Palette.Bone else Palette.DeepNavy
+		local out = reach * g:range(0.85, 1.05) / 2
+		local at = CFrame.new(x, DECK + 11.3 - math.sin(tilt) * out, z(depth + 0.4 + math.cos(tilt) * out))
+		Kit.decor(g:block(v(width + 0.1, 0.12, out * 2), at * CFrame.Angles(open * tilt, 0, 0), g:vary(color, 0.04), M.Fabric))
+	end
+
+	-- Junk on the roof behind a rail.
+	for _, side in { -1, 1 } do
+		bar(v(side * 9.7, DECK + 14, z(0.3)), v(side * 9.7, DECK + 14, z(depth)), 0.14)
+		for along = 0.3, depth, 2.4 do
+			bar(v(side * 9.7, DECK + 11.6, z(along)), v(side * 9.7, DECK + 14, z(along)), 0.14)
+		end
+	end
+	bar(v(-9.7, DECK + 14, z(0.3)), v(9.7, DECK + 14, z(0.3)), 0.14)
+	span("steel", 3, 11.6, 2, 6.4, 13.4, 4.4)
+	span("darkConcrete", 3.6, 13.4, 2.4, 5.8, 13.5, 4)
+	for _, box in { { -6, 3, 2.4 }, { -3.4, 2.6, 1.8 }, { -5.2, 5.4, 1.5 } } do
+		g:block(
+			v(box[3], box[3] * 0.8, box[3]),
+			CFrame.new(box[1], DECK + 11.6 + box[3] * 0.4, z(box[2])) * CFrame.Angles(0, g:range(-0.4, 0.4), 0),
+			g:vary(CARDBOARD, 0.06),
+			M.Cardboard
+		)
+	end
+
+	-- An air conditioner on the side, and cables off to the hall's walls.
+	span("steel", 10, 7, 3, 11.4, 9, 6)
+	for along = 3.3, 5.7, 0.4 do
+		Kit.decor(g:box(v(11.4, DECK + 7.2, z(along) - 0.08), v(11.46, DECK + 8.8, z(along) + 0.08), SEAM, M.Metal))
+	end
+	for index, along in { 0.8, 3, 5.5 } do
+		g:cable(v(-9.8, DECK + 11.4, z(along)), v(-19.6, DECK + g:range(13, 17), z(along + index)), g:range(1.5, 3))
+		g:cable(v(9.8, DECK + 11.4, z(along)), v(19.6, DECK + g:range(13, 17), z(along - index)), g:range(1.5, 3))
+	end
+
+	-- Warm light inside, which is what makes a stall read as open.
+	for _, x in { -4, 4 } do
+		g:lamp(v(x, DECK + 10.4, z(depth / 2)), AMBER, 14, 1.2, false, 0.5)
+	end
+	for _, box in { { -8.6, depth - 2.6, 1.4 }, { 8.6, depth - 3.6, 1.2 }, { 8.2, depth - 2.1, 1 } } do
+		g:block(
+			v(box[3], box[3] * 0.8, box[3]),
+			CFrame.new(box[1], DECK + 0.8 + box[3] * 0.4, z(box[2])) * CFrame.Angles(0, g:range(-0.4, 0.4), 0),
+			g:vary(CARDBOARD, 0.06),
+			M.Cardboard
+		)
+	end
+
+	local counter = g:dirty(span("steel", -7, 0.8, depth - 1.8, 7, 4.2, depth - 0.4), "wall", 0.5)
+	span("steel", -7.2, 4.2, depth - 2, 7.2, 4.4, depth - 0.2)
+	g:neon(v(14, 0.2, 0.08), CFrame.new(0, DECK + 3.5, z(depth - 0.34)), Palette.Bone)
+	return counter
+end
+
+-- The matchmaking booth against the main hall's south wall, opposite the Market. Its back wall
+-- holds three screens.
 local function matchmakingBooth(kit)
 	local g = kit:group("MatchmakingBooth")
-	local x0, x1 = -10, 10
-	local centre = (x0 + x1) / 2
-	local front = 26
-	g:dirty(g:boxOf("darkConcrete", v(x0, DECK, 16), v(x1, DECK + 0.8, front)), "floor")
-	g:boxOf("steel", v(x0 + 2, DECK + 0.8, 16), v(x1 - 2, DECK + 10, 17.4))
-	local counter = g:dirty(g:boxOf("steel", v(centre - 7, DECK + 0.8, front - 1.8), v(centre + 7, DECK + 4.2, front - 0.4)), "wall", 0.5)
-	g:box(v(centre - 7.2, DECK + 4.2, front - 2), v(centre + 7.2, DECK + 4.4, front - 0.2), SEAM, M.Metal)
-	g:neon(v(14, 0.2, 0.08), CFrame.new(centre, DECK + 3.5, front - 0.34), Palette.DataCyan)
-
-	-- A canopy on two posts, with the sign across its front.
-	for _, x in { x0 + 0.4, x1 - 0.4 } do
-		g:boxOf("rust", v(x - 0.4, DECK + 0.8, front - 0.8), v(x + 0.4, DECK + 11, front))
-	end
-	g:dirty(g:boxOf("steel", v(x0, DECK + 11, 16), v(x1, DECK + 11.6, front + 0.4)), "block", 0.45)
-	g:dirty(g:boxOf("darkConcrete", v(x0, DECK + 11.6, front), v(x1, DECK + 15.4, front + 0.4)), "block")
-	g:sign(facing(v(centre, DECK + 13.5, front + 0.45), v(0, 0, 1)), 18, 3, {
-		text = "MATCHMAKING",
-		color = Palette.DeepNavy,
-		fill = Palette.DataCyan,
-		light = Palette.DataCyan,
-	})
-	for _, x in { centre - 4, centre + 4 } do
-		g:lamp(v(x, DECK + 10.6, 21), Palette.DataCyan, 14, 1.2, false, 0.5)
+	local counter = stall(g, 16, 1, 10, "MATCHMAKING", "PLAY")
+	for _, x in { -5, 0, 5 } do
+		Kit.decor(g:block(v(4, 3, 0.2), CFrame.new(x, DECK + 7, 17.65), Palette.DeepNavy, M.SmoothPlastic))
+		for line, width in { 3, 2.2, 2.7 } do
+			g:neon(v(width, 0.12, 0.05), CFrame.new(x - (3 - width) / 2, DECK + 7.7 - line * 0.5 + 0.2, 17.78), Palette.Bone)
+		end
 	end
 	return g:prompt(counter, "MATCHMAKING", "Soon")
 end
@@ -461,10 +554,10 @@ local function hallInside(kit)
 	end
 	g:boxOf("steel", v(12, 20.2, 107.8), v(20, 20.4, 108))
 
-	-- Two plates hung from the roof carry the jump across the gap, so the floor stays open. Yellow
+	-- Two plates hung from the roof carry the jump across the gap, so the floor stays open. White
 	-- edges mark every take-off.
 	local function edge(z: number, x0: number, x1: number, top: number)
-		Kit.decor(g:box(v(x0, top, z - 0.35), v(x1, top + 0.05, z + 0.35), Palette.SignalAcid, M.SmoothPlastic))
+		Kit.decor(g:box(v(x0, top, z - 0.35), v(x1, top + 0.05, z + 0.35), Palette.Bone, M.SmoothPlastic))
 	end
 	edge(CROSS_SOUTH - 0.4, 12, 20, 17)
 	edge(CROSS_NORTH + 0.4, 12, 20, 17)
@@ -488,13 +581,9 @@ local function hallInside(kit)
 		g:solid("wood", v(size, size, size), CFrame.new(crate[1], DECK + size / 2, crate[2]) * CFrame.Angles(0, g:range(-0.3, 0.3), 0))
 	end
 
-	-- The Market kiosk at the far end.
-	g:dirty(g:boxOf("darkConcrete", v(-10, DECK, 104), v(10, DECK + 0.8, 116)), "floor")
-	local counter = g:dirty(g:boxOf("steel", v(-7, DECK + 0.8, 105), v(7, DECK + 4.2, 106.6)), "wall", 0.5)
-	g:box(v(-7.2, DECK + 4.2, 104.8), v(7.2, DECK + 4.4, 106.8), SEAM, M.Metal)
-	g:neon(v(14, 0.2, 0.08), CFrame.new(0, DECK + 3.5, 104.86), Palette.HazardRed)
-	g:boxOf("wood", v(-8, DECK + 0.8, 114.6), v(8, DECK + 10, 116))
-	local tiers = { Palette.Tiers.Field, Palette.Tiers.BlackSite, Palette.Tiers.Prototype }
+	-- The Market stall at the far end, with shelves of blank cards.
+	local counter = stall(g, 116, -1, 12, "MARKET", "CARDS")
+	local cardColors = { Palette.Bone, Palette.DeepNavy }
 	for row, height in { 3.5, 6.5, 9 } do
 		g:boxOf("wood", v(-8, DECK + height, 113), v(8, DECK + height + 0.25, 114.6))
 		for index = 1, 6 do
@@ -502,23 +591,10 @@ local function hallInside(kit)
 			g:block(
 				v(0.9, 1.3, 0.25),
 				CFrame.new(x, DECK + height + 0.9, 113.9) * CFrame.Angles(math.rad(-8), g:range(-0.15, 0.15), 0),
-				tiers[(index + row) % 3 + 1],
+				cardColors[(index + row) % 2 + 1],
 				M.SmoothPlastic
 			)
 		end
-	end
-	g:sign(CFrame.new(0, 21, 115.8), 16, 4, {
-		text = "MARKET",
-		color = Palette.HazardRed,
-		outline = Palette.HazardRed,
-		light = Palette.HazardRed,
-	})
-	for _, x in { -4, 4 } do
-		g:lamp(v(x, DECK + 9, 106), AMBER, 14, 1.2, false, 0.5)
-	end
-	for _, crate in { { -8.5, 108, 1.4 }, { 8.6, 110, 1.2 }, { 8.2, 108.4, 1 } } do
-		local size = crate[3]
-		g:block(v(size, size * 0.8, size), CFrame.new(crate[1], DECK + 0.8 + size * 0.4, crate[2]) * CFrame.Angles(0, g:range(-0.4, 0.4), 0), g:vary(CARDBOARD, 0.06), M.Cardboard)
 	end
 	local market = g:prompt(counter, "MARKET", "Soon")
 
@@ -598,7 +674,7 @@ local function rangeCorridor(kit)
 	local door = g:dirty(g:box(v(49.7, DECK, 63.2), v(49.9, 14, 66), Color3.fromRGB(120, 126, 126), M.Metal), "wall", 0.5)
 	g:dirty(g:box(v(49.7, DECK, 66), v(49.9, 14, 68.8), Color3.fromRGB(116, 122, 122), M.Metal), "wall", 0.5)
 	Kit.decor(g:box(v(49.56, 9.4, 63.2), v(49.62, 9.9, 68.8), RUST, M.SmoothPlastic))
-	g:neon(v(0.08, 2.7, 0.4), CFrame.new(49.6, 11.85, 69.8), Palette.SignalAcid)
+	g:neon(v(0.08, 2.7, 0.4), CFrame.new(49.6, 11.85, 69.8), Palette.Bone)
 	g:lamp(v(48.4, 14.4, 66), AMBER, 10, 1)
 	local prompt = g:prompt(door, "TEST RANGE", "Travel", 0.4)
 	moveGroup(kit, g, CFrame.new(CORRIDOR_SHIFT, 0, 0))
@@ -654,9 +730,10 @@ function Map.buildReturnTerminal(room: Instance, spawn: BasePart): ProximityProm
 	local console = kit:box(base + v(-1.2, 0, -1), base + v(1.2, 4, 1), Palette.DeepNavy, M.Metal)
 	kit:sign(facing(base + v(-1.4, 3, 0), v(-1, 0, 0)), 1.8, 0.9, {
 		text = "OUTPOST",
-		color = Palette.DeepNavy,
-		fill = Palette.SignalAcid,
-		light = Palette.SignalAcid,
+		color = Palette.Bone,
+		fill = Palette.DeepNavy,
+		back = Palette.DeepNavy,
+		light = Palette.Bone,
 	})
 	return kit:prompt(console, "OUTPOST", "Travel", 0.4)
 end

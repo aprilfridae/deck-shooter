@@ -218,7 +218,7 @@ local updaters: { () -> () } = {}
 local screens = {
 	Name = function(frame: Frame, width: number, height: number)
 		centred(frame, "Title", "SPLIT", Palette.Bone, height * 0.32, width / 2, height * 0.32, width * FIT_SHARE)
-		centred(frame, "Title", "DECK", Palette.SignalAcid, height * 0.32, width / 2, height * 0.7, width * FIT_SHARE)
+		centred(frame, "Title", "DECK", Palette.Bone, height * 0.32, width / 2, height * 0.7, width * FIT_SHARE)
 	end,
 }
 
