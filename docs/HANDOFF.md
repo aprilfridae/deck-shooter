@@ -48,7 +48,7 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 - Sounds: guns, hits, kills, low health, footsteps, jumps, menu music, selection. Roblox's default running sound is muted on every character. `docs/sound-list.md` has what's in and what's still needed.
 - Title screen, with menu music, a visualizer and cursor parallax. `docs/specs/title-screen.md`.
 - The Outpost hub, step 1: the place itself, built at server start by `src/server/Outpost/`. PLAY lands in its main hall. Lift doors in its east corridor go to the test room, and a terminal by the test room spawn comes back. The Outpost is a safe zone: no guns, cards or HUD. `docs/specs/outpost.md`.
-- The player body: the low poly model, styled like the arms (`BodyStyle.luau`), in 12 fps stop-motion with jitter, a slide pose and weight (`BodyPose.luau`, `RemotePoses.client.luau`). Only its root part collides with the world (`CharacterBody.server.luau`). `docs/specs/movement.md`.
+- The player body: the low poly model, styled like the arms (`BodyStyle.luau`), in 12 fps stop-motion with jitter, a slide pose and weight (`BodyPose.luau`, `RemotePoses.client.luau`). A soldier body (attribute `SoldierRig`) uses the gun poses in `BodyPoses/` with `GunStance.luau` and `HeldGuns.luau` instead; the soldier model needs that attribute when it is imported as `StarterCharacter`. Only its root part collides with the world (`CharacterBody.server.luau`). `docs/specs/movement.md`.
 - Not built: matches (Elimination and Tower). The agreed design is in `docs/specs/matches.md`.
 
 ## Where we are now
