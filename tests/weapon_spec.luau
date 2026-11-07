@@ -14,8 +14,8 @@ end
 
 describe("Weapon", function()
 	it("gives each class its guns and full magazines", function()
-		local loadout = Weapon.newLoadout("Assault", "AK47")
-		expect(loadout.slots.primary.gunId).toBe("AK47")
+		local loadout = Weapon.newLoadout("Assault", "M4")
+		expect(loadout.slots.primary.gunId).toBe("M4")
 		expect(loadout.slots.sidearm.gunId).toBe("Pistol")
 		expect(loadout.active).toBe("primary")
 		expect(Weapon.ammo(loadout)).toBe(30)

@@ -18,7 +18,7 @@ local PanelKit = {
 	RIGHT = 0.475,
 	LABEL_SIZE = 0.0125,
 	HEADING_SIZE = 0.011,
-	SMALL_SIZE = 0.0095,
+	SMALL_SIZE = 0.0105,
 	NAVY = Palette.DeepNavy,
 }
 

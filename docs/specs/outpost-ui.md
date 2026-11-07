@@ -25,7 +25,7 @@ Sizes use the title screen's **unit**: the screen's width, or 16/9 of its height
 
 | Item | Place |
 | --- | --- |
-| Nav | Bottom left, 3% from the edge: `PLAY`, `LOADOUT`, `PROFILE`, `SETTINGS` stacked, each with its number. Under the mouse a Bone wipe crosses the row in 30 fps steps with a Data Cyan copy behind it, the name kicks right and the number becomes `>`. The open page's row wipes Signal Acid. Rows slide in one after another when the nav appears. |
+| Nav | Bottom left, 3% from the edge: `PLAY`, `LOADOUT`, `PROFILE`, `SETTINGS` stacked, each with its number. Under the mouse a Bone wipe crosses the row in 30 fps steps with fading Data Cyan copies behind it and a Signal Acid glow ahead that spills past the row, the name kicks right and the number becomes `>`. A thin Bone outline runs round the whole nav. The open page's row wipes Signal Acid. Rows slide in one after another when the nav appears. |
 | Panel | Right half of the screen, full height, Bone. |
 
 - The nav and panels show only in the `Outpost` zone, after the title screen. Leaving the zone closes the panel.
@@ -42,15 +42,15 @@ Sizes use the title screen's **unit**: the screen's width, or 16/9 of its height
 
 ### Loadout
 
-- `LOAD OUT`, with the player's real Deck Power Rating in the acid block.
-- Three card slots, each with its number, name and tier colour. Clicking a slot lists the owned cards and tiers. Choosing one calls the existing `SetDeck`. A deck can't hold the same card twice, so cards already in the deck are greyed out.
-- Class and rifle sit below the slots, with the guns they give. Changing them sends the same loadout message as the B and N test keys, and follows the same rule for when the change applies.
+- `LOAD OUT`, with the player's real Deck Power Rating in the acid block beside the card slots.
+- Three card slots shaped like playing cards, each with its number, name and tier colour. Clicking a slot lists the owned cards and tiers. Choosing one calls the existing `SetDeck`. A deck can't hold the same card twice, so cards already in the deck are greyed out.
+- Class sits below the slots, with the guns it gives, and a rifle choice shows if the class has more than one. Changing them sends the same loadout message as the B and N test keys, and follows the same rule for when the change applies.
 - A deck change reaches abilities on the next respawn, as `cards.md` says, so the panel shows `NEXT RESPAWN` after a change until then.
 
 ### Profile
 
 - Roblox headshot, name, Credits and DPR, then two tabs: `CARD INDEX` and `COMMENTS`.
-- **Card index:** a grid of every card at every tier, 4 cards by 3 tiers for now. Owned ones show their copy count and tier colour, and the rest are ghosted. A large `04/12` shows how many are owned.
+- **Card index:** a grid of playing card shapes, one for every card at every tier, 4 cards by 3 tiers for now. Owned ones show their copy count and tier colour, and the rest are ghosted. A large `04/12` shows how many are owned.
 - **Other players:** left clicking a player in the Outpost, the player included, opens this page for them, within 40 studs. The click uses the cursor, or the screen's centre if the mouse is locked. Fusion and any other editing stay out of Profile.
 - The server sends another player's public data on request, through a new `GetProfile` function. Only players in the same server can be viewed.
 

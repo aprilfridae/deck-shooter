@@ -36,8 +36,8 @@ local Config = {
 	MaxGunLevel = 100,
 	DefaultClass = "Assault",
 	DefaultRifle = "M4",
-	Classes = { Assault = true, Rusher = true, Marksman = true, Breacher = true },
-	Rifles = { M4 = true, AK47 = true },
+	Classes = { Assault = true, Marksman = true },
+	Rifles = { M4 = true },
 }
 
 return Config

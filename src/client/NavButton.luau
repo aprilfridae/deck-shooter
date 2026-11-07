@@ -1,5 +1,6 @@
--- One row of the Outpost nav. Colour wipes across it in stepped frames with a fading copy behind,
--- the same way the panels move, and the name kicks right. Rows slide in one after another.
+-- One row of the Outpost nav. Colour wipes across it in stepped frames with fading copies behind
+-- and a glow ahead, the same way the panels move, and the name kicks right. Rows slide in one after
+-- another.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -8,17 +9,21 @@ local Palette = require(Guns:WaitForChild("Palette"))
 local PanelMotion = require(Guns:WaitForChild("Hud"):WaitForChild("PanelMotion"))
 local TypeLabel = require(script.Parent.TypeLabel)
 
-local WIPE_TIME = 0.2 -- seconds
+local WIPE_TIME = 0.28 -- seconds
 local ENTER_TIME = 0.3 -- seconds
 local ENTER_STAGGER = 0.06 -- seconds between rows
 local KICK = 0.008 -- how far the name moves, as a share of the unit
 local TEXT_SWAP = 0.5 -- of the wipe, when the text changes colour
-local COPY_FADE = 0.55
+local GLOW_WIDTH = 0.05 -- how far the glow reaches ahead of the wipe, as a share of the unit
+local HALO_WIDTH = 0.045 -- how far the glow spills past the row, as a share of the unit
+local HALO_FROM = 0.75 -- of the wipe, when the glow reaches the end of the row
+local GLOW_STRENGTH = 0.85 -- 1 is solid at its brightest
 local RULE_FADE = 0.8
 local NUMBER_SIZE = 0.8 -- of the name's size
 
 export type Options = {
 	parent: Instance,
+	glowParent: Instance, -- isn't clipped, so the glow can spill out of the row
 	name: string,
 	index: number,
 	unit: number,
@@ -40,6 +45,18 @@ local function wipeFrame(parent: Instance, color: Color3): Frame
 	frame.BackgroundColor3 = color
 	frame.Size = UDim2.fromScale(0, 1)
 	frame.Parent = parent
+	return frame
+end
+
+local function glowFrame(parent: Instance, fade: NumberSequence): Frame
+	local frame = Instance.new("Frame")
+	frame.BackgroundColor3 = Palette.SignalAcid
+	frame.BorderSizePixel = 0
+	frame.Visible = false
+	frame.Parent = parent
+	local gradient = Instance.new("UIGradient")
+	gradient.Transparency = fade
+	gradient.Parent = frame
 	return frame
 end
 
@@ -73,9 +90,17 @@ function NavButton.new(options: Options): any
 	self.button.Size = UDim2.fromOffset(options.width, options.height)
 	self.button.Parent = options.parent
 
-	self.copy = wipeFrame(self.button, Palette.DataCyan)
-	self.copy.BackgroundTransparency = COPY_FADE
+	self.copies = {}
+	for _ = 1, PanelMotion.COPIES do
+		table.insert(self.copies, wipeFrame(self.button, Palette.DataCyan))
+	end
 	self.wipe = wipeFrame(self.button, Palette.Bone)
+	local fadeOut = NumberSequence.new(0, 1)
+	self.glow = glowFrame(self.button, fadeOut)
+	self.glow.Size = UDim2.new(0, GLOW_WIDTH * options.unit, 1, 0)
+	self.halo = glowFrame(options.glowParent, fadeOut)
+	self.halo.Position = UDim2.fromOffset(options.width, self.top)
+	self.halo.Size = UDim2.fromOffset(HALO_WIDTH * options.unit, options.height)
 
 	self.text = TypeLabel.new(self.button, {
 		style = "LabelBold",
@@ -148,18 +173,37 @@ function NavButton:paint()
 	self.text:setPosition(UDim2.fromOffset(self.padding + self.kick * self.share, self.baseline))
 end
 
+-- The blur and glow for one frame of the wipe. A move of nothing clears them.
+function NavButton:smear(from: number, to: number)
+	local trail = PanelMotion.trail(from, to)
+	for index, copy in self.copies do
+		local step = trail[index]
+		copy.Visible = step ~= nil
+		if step then
+			copy.Size = UDim2.fromScale(math.min(step.share, 1), 1)
+			copy.BackgroundTransparency = step.transparency
+		end
+	end
+	local bright = PanelMotion.glow(to - from)
+	local fade = 1 - GLOW_STRENGTH * bright
+	self.glow.Visible = bright > 0
+	self.glow.Position = UDim2.fromScale(math.min(to, 1), 0)
+	self.glow.BackgroundTransparency = fade
+	self.halo.Visible = bright > 0 and to >= HALO_FROM
+	self.halo.BackgroundTransparency = fade
+end
+
 function NavButton:step(dt: number)
 	self.elapsed += dt
 	local target = self:target()
 	local share = PanelMotion.share(self.from, target, stepped(self.elapsed, WIPE_TIME))
 	if share ~= self.share then
-		self.copy.Size = UDim2.fromScale(math.min(self.share, 1), 1)
-		self.copy.Visible = true
+		self:smear(self.share, share)
 		self.share = share
 		self:paint()
 	end
 	if self.elapsed >= WIPE_TIME + 1 / PanelMotion.FPS then
-		self.copy.Visible = false
+		self:smear(share, share)
 		self.connection:Disconnect()
 		self.connection = nil
 	end
@@ -211,6 +255,7 @@ function NavButton:destroy()
 		self.entering:Disconnect()
 	end
 	self.button:Destroy()
+	self.halo:Destroy()
 end
 
 return NavButton

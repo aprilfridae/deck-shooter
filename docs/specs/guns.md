@@ -6,7 +6,7 @@
 
 ## Classes
 
-Classes are free, change guns only, and work with any cards. Each class has 1 primary and 1 sidearm. Assault is the one class with a choice of primary.
+Classes are free, change guns only, and work with any cards. Each class has 1 primary and 1 sidearm. For now players can only pick Assault with the M57, or Marksman. The B33, Rusher and Breacher stay in the gun data, and a save holding one of them falls back to the default.
 
 | Class | Primary | Sidearm |
 | --- | --- | --- |

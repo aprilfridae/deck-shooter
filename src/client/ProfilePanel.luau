@@ -23,11 +23,15 @@ local STATS_GAP = 0.13
 local TABS_TOP = 0.13
 local TABS_HEIGHT = 0.03
 local TABS_GAP = 0.008
-local COUNT_SIZE = 0.05
-local COUNT_LINE = 0.222
-local GRID_TOP = 0.236
+local COUNT_SIZE = 0.04
+local COUNT_LINE = 0.215
+local GRID_TOP = 0.176
 local GRID_GAP = 0.006
-local CELL_HEIGHT = 0.078
+local CELL_WIDTH = 0.0714 -- a playing card's shape, with CELL_HEIGHT
+local CELL_HEIGHT = 0.1
+local NAME_SIZE_SMALL = 0.0088
+local NAME_STEP = 0.012
+local TIER_SIZE = 0.0068
 local GHOST_INK = Palette.DeepNavy:Lerp(Palette.Bone, 0.6)
 local PAGE_TOP = 0.172
 
@@ -60,9 +64,10 @@ end
 local function cardGrid(page: Frame, profile: any)
 	local MARGIN, RIGHT = PanelKit.MARGIN, PanelKit.RIGHT
 	local index = CardIndex.build(profile.stacks)
-	PanelKit.label(page, "Title", COUNT_SIZE, MARGIN, COUNT_LINE)
+	PanelKit.label(page, "Title", COUNT_SIZE, RIGHT, COUNT_LINE, true)
 		:set(string.format("%02d/%02d", index.owned, index.total))
-	local width = (RIGHT - MARGIN - GRID_GAP * (#index.cards - 1)) / #index.cards
+	PanelKit.label(page, "LabelBold", PanelKit.SMALL_SIZE, RIGHT, COUNT_LINE + 0.016, true):set("OWNED")
+	local width = CELL_WIDTH
 	for column, card in index.cards do
 		local x = MARGIN + (column - 1) * (width + GRID_GAP)
 		for row, entry in card.tiers do
@@ -76,12 +81,13 @@ local function cardGrid(page: Frame, profile: any)
 			stroke.Parent = cell
 			local ink = if owned then PanelKit.NAVY else GHOST_INK
 			local padding = 0.006
-			PanelKit.label(cell, "LabelBold", PanelKit.SMALL_SIZE * 0.82, padding, 0.015, nil, ink)
-				:set(string.upper(card.name))
-			PanelKit.label(cell, "Label", PanelKit.SMALL_SIZE * 0.82, padding, 0.03, nil, ink)
-				:set(TIER_NAMES[entry.tier])
+			local words = string.split(string.upper(card.name), " ")
+			for line, word in words do
+				PanelKit.label(cell, "LabelBold", NAME_SIZE_SMALL, padding, 0.004 + line * NAME_STEP, nil, ink):set(word)
+			end
+			PanelKit.label(cell, "Label", TIER_SIZE, padding, 0.042, nil, ink):set(TIER_NAMES[entry.tier])
 			if owned then
-				PanelKit.label(cell, "Title", 0.024, padding, CELL_HEIGHT - padding):set(`X{entry.count}`)
+				PanelKit.label(cell, "Title", 0.02, padding, CELL_HEIGHT - padding):set(`X{entry.count}`)
 			end
 		end
 	end

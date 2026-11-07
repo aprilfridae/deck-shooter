@@ -25,11 +25,11 @@ describe("Loadout saves", function()
 
 	it("keeps a saved class and rifle", function()
 		local raw = SaveData.new()
-		raw.class = "Assault"
-		raw.rifle = "AK47"
-		expect(SaveData.load(raw).rifle).toBe("AK47")
 		raw.class = "Marksman"
-		expect(SaveData.load(raw).class).toBe("Marksman")
+		raw.rifle = "M4"
+		local loaded = SaveData.load(raw)
+		expect(loaded.class).toBe("Marksman")
+		expect(loaded.rifle).toBe("M4")
 	end)
 
 	it("repairs an unknown class or rifle to the default", function()
@@ -50,18 +50,18 @@ describe("Loadout saves", function()
 		expect(loaded.rifle).toBe("M4")
 	end)
 
-	it("keeps the rifle choice on another class", function()
+	it("moves a save off a class or rifle that is not offered", function()
 		local raw = SaveData.new()
 		raw.class = "Rusher"
 		raw.rifle = "AK47"
 		local loaded = SaveData.load(raw)
-		expect(loaded.class).toBe("Rusher")
-		expect(loaded.rifle).toBe("AK47")
+		expect(loaded.class).toBe("Assault")
+		expect(loaded.rifle).toBe("M4")
 	end)
 
 	it("lists the same classes and rifles as the gun data", function()
 		local classes = {}
-		for class in GunConfig.classes do
+		for _, class in GunConfig.classOrder do
 			classes[class] = true
 		end
 		expect(Config.Classes).toEqual(classes)
@@ -73,9 +73,11 @@ describe("Loadout saves", function()
 	end)
 
 	it("parses a good loadout and rejects anything else", function()
-		expect(Requests.parseLoadout({ class = "Rusher", rifle = "AK47" })).toEqual({ class = "Rusher", rifle = "AK47" })
+		expect(Requests.parseLoadout({ class = "Marksman", rifle = "M4" })).toEqual({ class = "Marksman", rifle = "M4" })
 		expect(Requests.parseLoadout({ class = "Wizard", rifle = "M4" })).toBeNil()
-		expect(Requests.parseLoadout({ class = "Rusher", rifle = "SMG" })).toBeNil()
+		expect(Requests.parseLoadout({ class = "Rusher", rifle = "M4" })).toBeNil()
+		expect(Requests.parseLoadout({ class = "Assault", rifle = "AK47" })).toBeNil()
+		expect(Requests.parseLoadout({ class = "Marksman", rifle = "SMG" })).toBeNil()
 		expect(Requests.parseLoadout({ class = {}, rifle = 1 })).toBeNil()
 		expect(Requests.parseLoadout("Rusher")).toBeNil()
 	end)

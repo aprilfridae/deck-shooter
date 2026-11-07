@@ -10,28 +10,26 @@ local Guns = ReplicatedStorage:WaitForChild("Guns")
 local GunConfig = require(Guns:WaitForChild("GunConfig"))
 local Palette = require(Guns:WaitForChild("Palette"))
 local CardData = require(script.Parent.CardData)
-local MenuPanel = require(script.Parent.MenuPanel)
 local PanelKit = require(script.Parent.PanelKit)
 
 local TIER_NAMES = { Field = "FIELD", BlackSite = "BLACK SITE", Prototype = "PROTOTYPE" }
 local CLASS_NAMES = { Assault = "ASSAULT", Rusher = "RUSHER", Marksman = "MARKSMAN", Breacher = "BREACHER" }
 
-local BLOCK_TOP = 0.12
-local BLOCK_HEIGHT = 0.05
-local POWER_SIZE = 0.036
-local SLOTS_LINE = 0.19
-local SLOT_TOP = 0.2
-local SLOT_HEIGHT = 0.085
+local SLOTS_LINE = 0.128
+local SLOT_TOP = 0.14
+local SLOT_WIDTH = 0.107 -- a playing card's shape, with SLOT_HEIGHT
+local SLOT_HEIGHT = 0.15
 local SLOT_GAP = 0.01
 local BAND_HEIGHT = 0.008
+local POWER_SIZE = 0.034
 local LOWER_LINE = 0.31
 local LOWER_TOP = 0.322
-local PICK_HEIGHT = 0.028
-local PICK_GAP = 0.006
+local PICK_HEIGHT = 0.026
+local PICK_GAP = 0.004
 local CLASS_GAP = 0.008
 local RIFLE_LINE = 0.375
 local RIFLE_TOP = 0.387
-local GUNS_LINE = 0.44
+local GUNS_LINE = 0.375
 local NEXT_RESPAWN = "NEXT RESPAWN"
 
 local LoadoutPanel = {}
@@ -43,17 +41,16 @@ end
 local draw: (Frame, number?) -> ()
 
 local function slotCell(content: Frame, snapshot: any, index: number, chosen: number?)
-	local MARGIN, RIGHT = PanelKit.MARGIN, PanelKit.RIGHT
 	local entry = snapshot.deck[index]
-	local width = (RIGHT - MARGIN - SLOT_GAP * (Deck.SIZE - 1)) / Deck.SIZE
-	local x = MARGIN + (index - 1) * (width + SLOT_GAP)
+	local width = SLOT_WIDTH
+	local x = PanelKit.MARGIN + (index - 1) * (width + SLOT_GAP)
 	local cell = PanelKit.button(content, "", x, SLOT_TOP, width, SLOT_HEIGHT, { active = index == chosen, quiet = true })
 	PanelKit.block(cell, 0, 0, width, BAND_HEIGHT, Palette.Tiers[entry.tier] or PanelKit.NAVY)
 	local padding = 0.008
 	PanelKit.label(cell, "Title", 0.02, padding, BAND_HEIGHT + 0.026):set(tostring(index))
-	PanelKit.label(cell, "LabelBold", PanelKit.SMALL_SIZE, padding, 0.062)
+	PanelKit.label(cell, "LabelBold", PanelKit.SMALL_SIZE, padding, 0.124)
 		:set(string.upper(Cards.byId[entry.cardId].name))
-	PanelKit.label(cell, "Label", PanelKit.SMALL_SIZE, padding, 0.075):set(TIER_NAMES[entry.tier])
+	PanelKit.label(cell, "Label", PanelKit.SMALL_SIZE, padding, 0.139):set(TIER_NAMES[entry.tier])
 	cell.Activated:Connect(function()
 		draw(content, if index == chosen then nil else index)
 	end)
@@ -142,19 +139,15 @@ draw = function(content: Frame, chosen: number?)
 	PanelKit.title(content, "LOAD OUT")
 	local snapshot = CardData.get()
 	if not snapshot then
-		PanelKit.line(content, "LOADING", MARGIN, BLOCK_TOP + 0.02)
+		PanelKit.line(content, "LOADING", MARGIN, SLOT_TOP + 0.02)
 		return
 	end
 
-	local unit = MenuPanel.unit()
-	local block = PanelKit.block(content, MARGIN, BLOCK_TOP, RIGHT - MARGIN, BLOCK_HEIGHT, Palette.SignalAcid)
-	local middle = (BLOCK_HEIGHT + PanelKit.LABEL_SIZE) / 2 * unit
-	local word = PanelKit.label(block, "LabelBold", PanelKit.LABEL_SIZE, 0, 0)
-	word:setPosition(UDim2.fromOffset(0.012 * unit, middle))
-	word:set("DECK POWER")
-	local power = PanelKit.label(block, "Title", POWER_SIZE, 0, 0, true)
-	power:setPosition(UDim2.new(1, -0.012 * unit, 0, (BLOCK_HEIGHT + POWER_SIZE) / 2 * unit))
-	power:set(tostring(snapshot.dpr))
+	local blockLeft = MARGIN + Deck.SIZE * (SLOT_WIDTH + SLOT_GAP)
+	local block = PanelKit.block(content, blockLeft, SLOT_TOP, RIGHT - blockLeft, SLOT_HEIGHT, Palette.SignalAcid)
+	PanelKit.label(block, "LabelBold", PanelKit.SMALL_SIZE, 0.008, 0.02):set("DECK")
+	PanelKit.label(block, "LabelBold", PanelKit.SMALL_SIZE, 0.008, 0.034):set("POWER")
+	PanelKit.label(block, "Title", POWER_SIZE, 0.008, SLOT_HEIGHT - 0.01):set(tostring(snapshot.dpr))
 
 	PanelKit.heading(content, "CARDS", SLOTS_LINE)
 	local note = PanelKit.label(content, "LabelBold", PanelKit.HEADING_SIZE, RIGHT, SLOTS_LINE, true)
