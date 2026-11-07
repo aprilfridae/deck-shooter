@@ -1,0 +1,48 @@
+-- Made by tools/build_body_poses.py. Don't edit by hand.
+-- The empty-handed stance (gun slung) and the soldier rig's joints.
+return {
+	rig = {
+		rootDrop = 2.009,
+		Root = { part0 = "HumanoidRootPart", part1 = "LowerTorso", c0 = { 0, -1, 0, 0, 0, 0, 1 }, c1 = { 0, 0.1, 0, 0, 0, 0, 1 } },
+		Waist = { part0 = "LowerTorso", part1 = "UpperTorso", c0 = { 0, 0.25, 0, -0.0436, 0, 0, 0.999 }, c1 = { 0, -0.78, 0, 0, 0, 0, 1 } },
+		Neck = { part0 = "UpperTorso", part1 = "Head", c0 = { 0, 0.55, -0.35, 0.0523, 0, 0, 0.9986 }, c1 = { 0, -0.35, 0.05, 0, 0, 0, 1 } },
+		RightShoulder = { part0 = "UpperTorso", part1 = "RightUpperArm", c0 = { 1.12, 0.45, 0, 0.0698, 0, 0, 0.9976 }, c1 = { 0, 0.55, 0, 0, 0, 0, 1 } },
+		RightElbow = { part0 = "RightUpperArm", part1 = "RightLowerArm", c0 = { 0, -0.62, 0, 0.0872, 0, 0, 0.9962 }, c1 = { 0, 0.55, 0, 0, 0, 0, 1 } },
+		RightWrist = { part0 = "RightLowerArm", part1 = "RightHand", c0 = { 0, -0.6, 0, 0, 0, 0, 1 }, c1 = { 0, 0.25, 0, 0, 0, 0, 1 } },
+		LeftShoulder = { part0 = "UpperTorso", part1 = "LeftUpperArm", c0 = { -1.12, 0.45, 0, 0.0698, 0, 0, 0.9976 }, c1 = { 0, 0.55, 0, 0, 0, 0, 1 } },
+		LeftElbow = { part0 = "LeftUpperArm", part1 = "LeftLowerArm", c0 = { 0, -0.62, 0, 0.0872, 0, 0, 0.9962 }, c1 = { 0, 0.55, 0, 0, 0, 0, 1 } },
+		LeftWrist = { part0 = "LeftLowerArm", part1 = "LeftHand", c0 = { 0, -0.6, 0, 0, 0, 0, 1 }, c1 = { 0, 0.25, 0, 0, 0, 0, 1 } },
+		RightHip = { part0 = "LowerTorso", part1 = "RightUpperLeg", c0 = { 0.45, -0.2, 0, 0.0698, 0, 0, 0.9976 }, c1 = { 0, 0.85, 0, 0, 0, 0, 1 } },
+		RightKnee = { part0 = "RightUpperLeg", part1 = "RightLowerLeg", c0 = { 0, -0.85, 0, -0.1219, 0, 0, 0.9925 }, c1 = { 0, 0.82, 0, 0, 0, 0, 1 } },
+		RightAnkle = { part0 = "RightLowerLeg", part1 = "RightFoot", c0 = { 0, -0.82, 0, 0.0523, 0, 0, 0.9986 }, c1 = { 0, 0.17, 0.2, 0, 0, 0, 1 } },
+		LeftHip = { part0 = "LowerTorso", part1 = "LeftUpperLeg", c0 = { -0.45, -0.2, 0, 0.0698, 0, 0, 0.9976 }, c1 = { 0, 0.85, 0, 0, 0, 0, 1 } },
+		LeftKnee = { part0 = "LeftUpperLeg", part1 = "LeftLowerLeg", c0 = { 0, -0.85, 0, -0.1219, 0, 0, 0.9925 }, c1 = { 0, 0.82, 0, 0, 0, 0, 1 } },
+		LeftAnkle = { part0 = "LeftLowerLeg", part1 = "LeftFoot", c0 = { 0, -0.82, 0, 0.0523, 0, 0, 0.9986 }, c1 = { 0, 0.17, 0.2, 0, 0, 0, 1 } },
+	},
+	poses = {
+		Stand = {
+			joints = {
+				Root = { 0.2, -0.12, 0, -0.0037, -0.0697, 0.0522, 0.9962 },
+				Waist = { 0, 0, 0, 0.0151, 0.053, -0.0445, 0.9975 },
+				Neck = { 0, 0, 0, -0.0332, 0.1087, 0.039, 0.9928 },
+				RightShoulder = { 0, 0, 0, -0.189, 0.5353, 0.1813, 0.803 },
+				RightElbow = { 0, 0, 0, 0.3918, 0, 0, 0.9201 },
+				RightWrist = { 0, 0, 0, -0.2593, -0.4022, 0.1124, 0.8708 },
+				LeftShoulder = { 0, 0, 0, -0.2126, -0.6051, -0.1923, 0.7428 },
+				LeftElbow = { 0, 0, 0, 0.3679, 0, 0, 0.9299 },
+				LeftWrist = { 0, 0, 0, -0.1113, 0.6974, -0.1925, 0.6813 },
+				RightHip = { 0, 0, 0, 0.0089, -0.0167, -0.0805, 0.9966 },
+				RightKnee = { 0, 0, 0, -0.1036, 0, 0, 0.9946 },
+				RightAnkle = { 0, 0, 0, 0.0958, -0.0503, 0.0252, 0.9938 },
+				LeftHip = { 0, 0, 0, 0.1341, 0.1145, -0.1237, 0.9765 },
+				LeftKnee = { 0, 0, 0, -0.2547, 0, 0, 0.967 },
+				LeftAnkle = { 0, 0, 0, 0.1906, 0.0282, 0.0383, 0.9805 },
+			},
+			gunOn = "UpperTorso",
+			gun = { -0.1044, 0.1422, 0.95, -0.1349, -0.6941, -0.1349, 0.6941 },
+			mag = { 0, 0, 0, 0, 0, 0, 1 },
+			action = { 0, 0, 0, 0, 0, 0, 1 },
+			shell = { 0, 0, 0, 0, 0, 0, 1 },
+		},
+	},
+}
