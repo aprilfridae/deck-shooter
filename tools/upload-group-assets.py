@@ -1,5 +1,5 @@
 # Uploads images and sounds to Roblox as Fridae Studios group assets through Open Cloud,
-# and records each file's asset id. PNGs upload as Image, sounds as Audio, GLB models as Model.
+# and records each file's asset id. PNGs upload as Image, sounds as Audio, GLB and FBX models as Model.
 #
 # The API key is read from the ROBLOX_GROUP_API_KEY environment variable and never written anywhere.
 # Use a key created in the group's settings with permission to write assets.
@@ -24,6 +24,7 @@ TYPES = {
     ".mp3": ("Audio", "audio/mpeg"),
     ".ogg": ("Audio", "audio/ogg"),
     ".glb": ("Model", "model/gltf-binary"),
+    ".fbx": ("Model", "model/fbx"),
 }
 
 
