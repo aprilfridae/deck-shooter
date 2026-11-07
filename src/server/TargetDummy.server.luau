@@ -11,6 +11,7 @@ local POSITION = CFrame.new(-20, 3.2, 10)
 local SOLDIER_POSITION = CFrame.new(-12, 3.4, 10)
 local POSED_TAG = "PosedBody" -- RemotePoses.client.luau poses these like a player's body
 local BODY_GROUP = "BodyMesh" -- from CharacterBody.server.luau
+local DUMMY_GUN = "M4" -- the M57, so its third-person poses can be checked
 -- A player's character also carries scripts, a glow, sounds and tools.
 local STRIP = { Highlight = true, Sound = true, Tool = true, ForceField = true }
 
@@ -62,6 +63,7 @@ local function spawnSoldier()
 	end
 	local dummy = soldier:Clone()
 	dummy.Name = "SoldierDummy"
+	dummy:SetAttribute("GunId", DUMMY_GUN)
 	while not PhysicsService:IsCollisionGroupRegistered(BODY_GROUP) do
 		task.wait()
 	end

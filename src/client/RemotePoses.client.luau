@@ -158,9 +158,10 @@ local function onCharacter(character: Model)
 	end)
 end
 
--- The gun a player holds, by the display name the pose files use, and its poses.
-local function gunOf(player: Player?): (string?, any)
-	local id = player and player:GetAttribute("GunId")
+-- The gun a body holds, by the display name the pose files use, and its poses. A body with no player,
+-- such as the soldier test dummy, names its gun with its own GunId attribute.
+local function gunOf(player: Player?, character: Model): (string?, any)
+	local id = if player then player:GetAttribute("GunId") else character:GetAttribute("GunId")
 	local gun = id and GunConfig.guns[id]
 	if not gun then
 		return nil, BodyPoses.Empty
@@ -207,7 +208,7 @@ local function sampleStance(body: Body, now: number)
 	body.sampledAt = now
 
 	local player = body.player
-	local gunName, poses = gunOf(player)
+	local gunName, poses = gunOf(player, body.character)
 	local pick = GunStance.pick({
 		reloading = player ~= nil and player:GetAttribute("Reloading") == true,
 		pose = body.character:GetAttribute("MovePose"),
