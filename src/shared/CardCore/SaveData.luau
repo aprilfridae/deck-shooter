@@ -21,6 +21,7 @@ export type SaveData = {
 	class: string,
 	rifle: string,
 	settings: Settings.Settings,
+	commentsOff: boolean,
 }
 
 local SaveData = {
@@ -39,6 +40,7 @@ function SaveData.new(): SaveData
 		class = Config.DefaultClass,
 		rifle = Config.DefaultRifle,
 		settings = Settings.new(),
+		commentsOff = false,
 	}
 	for _, cardId in Config.StarterDeck do
 		Inventory.add(data, cardId, "Field", "Base", 1)
@@ -157,6 +159,7 @@ function SaveData.load(raw: any): (SaveData?, string?)
 		data.rifle = raw.rifle
 	end
 	data.settings = Settings.clean(raw.settings)
+	data.commentsOff = raw.commentsOff == true
 	data.deck = cleanDeck(data, raw.deck)
 	return data, nil
 end

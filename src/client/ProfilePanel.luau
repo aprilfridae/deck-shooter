@@ -1,0 +1,134 @@
+-- The Profile page, for the player or anyone else in the server: headshot, name, Credits and Deck
+-- Power Rating, then the card index and comments.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local CardCore = ReplicatedStorage:WaitForChild("CardCore")
+local CardIndex = require(CardCore:WaitForChild("CardIndex"))
+local Guns = ReplicatedStorage:WaitForChild("Guns")
+local Palette = require(Guns:WaitForChild("Palette"))
+local CardData = require(script.Parent.CardData)
+local CommentsPanel = require(script.Parent.CommentsPanel)
+local MenuPanel = require(script.Parent.MenuPanel)
+local PanelKit = require(script.Parent.PanelKit)
+
+local TIER_NAMES = { Field = "FIELD", BlackSite = "BLACK SITE", Prototype = "PROTOTYPE" }
+
+local HEAD_TOP = 0.025
+local HEAD_SIZE = 0.09
+local INFO_LEFT = 0.125
+local NAME_SIZE = 0.042
+local NAME_LINE = 0.065
+local STATS_LINE = 0.09
+local STATS_GAP = 0.13
+local TABS_TOP = 0.13
+local TABS_HEIGHT = 0.03
+local TABS_GAP = 0.008
+local COUNT_SIZE = 0.05
+local COUNT_LINE = 0.222
+local GRID_TOP = 0.236
+local GRID_GAP = 0.006
+local CELL_HEIGHT = 0.078
+local GHOST_INK = Palette.DeepNavy:Lerp(Palette.Bone, 0.6)
+local PAGE_TOP = 0.172
+
+local ProfilePanel = {}
+
+local function header(content: Frame, profile: any)
+	local MARGIN, RIGHT = PanelKit.MARGIN, PanelKit.RIGHT
+	local unit = MenuPanel.unit()
+	local head = Instance.new("ImageLabel")
+	head.BackgroundColor3 = PanelKit.NAVY
+	head.BorderSizePixel = 0
+	head.Image = `rbxthumb://type=AvatarHeadShot&id={profile.userId}&w=150&h=150`
+	head.Position = UDim2.fromOffset(MARGIN * unit, HEAD_TOP * unit)
+	head.Size = UDim2.fromOffset(HEAD_SIZE * unit, HEAD_SIZE * unit)
+	head.Parent = content
+
+	local name = string.upper(profile.name)
+	local measured = PanelKit.label(content, "Title", NAME_SIZE, INFO_LEFT, NAME_LINE)
+	measured:set(name)
+	local room = (RIGHT - INFO_LEFT) * unit
+	if measured:width() > room then
+		local size = NAME_SIZE * room / measured:width()
+		measured:setVisible(false)
+		PanelKit.label(content, "Title", size, INFO_LEFT, NAME_LINE):set(name)
+	end
+	PanelKit.line(content, `CREDITS {profile.credits}`, INFO_LEFT, STATS_LINE)
+	PanelKit.line(content, `DPR {profile.dpr}`, INFO_LEFT + STATS_GAP, STATS_LINE)
+end
+
+local function cardGrid(page: Frame, profile: any)
+	local MARGIN, RIGHT = PanelKit.MARGIN, PanelKit.RIGHT
+	local index = CardIndex.build(profile.stacks)
+	PanelKit.label(page, "Title", COUNT_SIZE, MARGIN, COUNT_LINE)
+		:set(string.format("%02d/%02d", index.owned, index.total))
+	local width = (RIGHT - MARGIN - GRID_GAP * (#index.cards - 1)) / #index.cards
+	for column, card in index.cards do
+		local x = MARGIN + (column - 1) * (width + GRID_GAP)
+		for row, entry in card.tiers do
+			local top = GRID_TOP + (row - 1) * (CELL_HEIGHT + GRID_GAP)
+			local owned = entry.count > 0
+			local cell = PanelKit.block(page, x, top, width, CELL_HEIGHT, Palette.Tiers[entry.tier])
+			cell.BackgroundTransparency = if owned then 0 else 1
+			local stroke = Instance.new("UIStroke")
+			stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			stroke.Color = if owned then PanelKit.NAVY else GHOST_INK
+			stroke.Parent = cell
+			local ink = if owned then PanelKit.NAVY else GHOST_INK
+			local padding = 0.006
+			PanelKit.label(cell, "LabelBold", PanelKit.SMALL_SIZE * 0.82, padding, 0.015, nil, ink)
+				:set(string.upper(card.name))
+			PanelKit.label(cell, "Label", PanelKit.SMALL_SIZE * 0.82, padding, 0.03, nil, ink)
+				:set(TIER_NAMES[entry.tier])
+			if owned then
+				PanelKit.label(cell, "Title", 0.024, padding, CELL_HEIGHT - padding):set(`X{entry.count}`)
+			end
+		end
+	end
+end
+
+local function tabs(content: Frame, profile: any, chosen: string)
+	local MARGIN, RIGHT = PanelKit.MARGIN, PanelKit.RIGHT
+	local width = (RIGHT - MARGIN - TABS_GAP) / 2
+	for index, name in { "CARD INDEX", "COMMENTS" } do
+		local x = MARGIN + (index - 1) * (width + TABS_GAP)
+		local button = PanelKit.button(content, name, x, TABS_TOP, width, TABS_HEIGHT, { active = name == chosen })
+		button.Activated:Connect(function()
+			ProfilePanel.draw(content, profile, name)
+		end)
+	end
+end
+
+function ProfilePanel.draw(content: Frame, profile: any, tab: string)
+	content:ClearAllChildren()
+	header(content, profile)
+	tabs(content, profile, tab)
+	local page = Instance.new("Frame")
+	page.BackgroundTransparency = 1
+	page.Size = UDim2.fromScale(1, 1)
+	page.Parent = content
+	if tab == "COMMENTS" then
+		CommentsPanel.fill(page, profile, PAGE_TOP)
+	else
+		cardGrid(page, profile)
+	end
+end
+
+-- Draws the profile for this user, or a message if they've left.
+function ProfilePanel.fill(content: Frame, userId: number)
+	PanelKit.line(content, "LOADING", PanelKit.MARGIN, 0.05)
+	task.spawn(function()
+		local reply = CardData.ask("GetProfile", userId)
+		if not content.Parent then
+			return
+		end
+		if reply.ok then
+			ProfilePanel.draw(content, reply.result, "CARD INDEX")
+		else
+			content:ClearAllChildren()
+			PanelKit.line(content, "PLAYER NOT FOUND", PanelKit.MARGIN, 0.05)
+		end
+	end)
+end
+
+return ProfilePanel

@@ -69,4 +69,22 @@ describe("Deck", function()
 		slots[1].tier = "Prototype"
 		expect(data.deck[1].tier).toBe("Field")
 	end)
+
+	it("swaps one slot and leaves the others", function()
+		local deck = { { cardId = "a", tier = "Field" }, { cardId = "b", tier = "Field" } }
+		local swapped = Deck.swap(deck, 2, "c", "Prototype")
+		expect(swapped[1].cardId).toBe("a")
+		expect(swapped[2].cardId).toBe("c")
+		expect(deck[2].cardId).toBe("b")
+	end)
+
+	it("can change the tier of a card in its own slot", function()
+		local deck = { { cardId = "a", tier = "Field" } }
+		expect(Deck.swap(deck, 1, "a", "Prototype")[1].tier).toBe("Prototype")
+	end)
+
+	it("won't put a card in two slots", function()
+		local deck = { { cardId = "a", tier = "Field" }, { cardId = "b", tier = "Field" } }
+		expect(Deck.swap(deck, 2, "a", "Prototype")).toBe(nil)
+	end)
 end)

@@ -42,6 +42,8 @@ local listed = {
 	zones_spec = true,
 	settings_spec = true,
 	panelmotion_spec = true,
+	cardindex_spec = true,
+	comments_spec = true,
 }
 
 require("./tier_spec")
@@ -81,6 +83,8 @@ require("./outpostscale_spec")
 require("./hudtext_spec")
 require("./settings_spec")
 require("./panelmotion_spec")
+require("./cardindex_spec")
+require("./comments_spec")
 require("./zones_spec")
 
 local missing = 0

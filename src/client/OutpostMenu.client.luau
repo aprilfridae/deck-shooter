@@ -8,13 +8,16 @@ local Workspace = game:GetService("Workspace")
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local GunSounds = require(Guns:WaitForChild("GunSounds"))
 local MenuState = require(Guns:WaitForChild("MenuState"))
-local Palette = require(Guns:WaitForChild("Palette"))
 local Zones = require(Guns:WaitForChild("Zones"))
 local MenuCamera = require(script.Parent.MenuCamera)
+local LoadoutPanel = require(script.Parent.LoadoutPanel)
 local MenuPanel = require(script.Parent.MenuPanel)
+local NavButton = require(script.Parent.NavButton)
+local PlayerClick = require(script.Parent.PlayerClick)
+local PlayPanel = require(script.Parent.PlayPanel)
+local ProfilePanel = require(script.Parent.ProfilePanel)
 local SettingsPanel = require(script.Parent.SettingsPanel)
 local SoundGroups = require(script.Parent.SoundGroups)
-local TypeLabel = require(script.Parent.TypeLabel)
 
 -- Shares of the unit.
 local NAV_LEFT = 0.03
@@ -24,10 +27,8 @@ local NAV_ROW = 0.03
 local NAV_PADDING = 0.012
 local NAV_TEXT = 0.0125
 local NAV_TRACKING = 0.0025
-local PAGE_MARGIN = 0.025
-local PAGE_TITLE = 0.085
-local PAGE_LINE = 0.095
-local PAGE_NOTE = 0.13
+local HOVER_PITCH = 1.6
+local HOVER_VOLUME = 0.25
 
 local BUTTONS = { "PLAY", "LOADOUT", "PROFILE", "SETTINGS" }
 
@@ -51,97 +52,100 @@ clickSound.SoundId = GunSounds.menuSelect
 clickSound.SoundGroup = SoundGroups.menu
 clickSound.Parent = SoundService
 
+local hoverSound = clickSound:Clone()
+hoverSound.Name = "OutpostMenuHover"
+hoverSound.PlaybackSpeed = HOVER_PITCH
+hoverSound.Volume = HOVER_VOLUME
+hoverSound.Parent = SoundService
+
 local nav: Frame? = nil
-local rows: { [string]: { button: TextButton, text: any } } = {}
+local rows: { [string]: any } = {}
 local openPage: string? = nil
+local profileUser = player.UserId
 
 local function paint()
 	for name, row in rows do
-		local active = name == openPage
-		row.button.BackgroundColor3 = if active then Palette.SignalAcid else Palette.DeepNavy
-		row.text:setColor(if active then Palette.DeepNavy else Palette.Bone)
+		row:setActive(name == openPage)
 	end
-end
-
-local function soonPage(name: string)
-	local unit = MenuPanel.unit()
-	local title = TypeLabel.new(panel.content, {
-		style = "Title",
-		size = PAGE_TITLE * unit,
-		tracking = 0,
-		color = Palette.DeepNavy,
-		shadow = false,
-		position = UDim2.fromOffset(PAGE_MARGIN * unit, PAGE_LINE * unit),
-	})
-	title:set(name)
-	local note = TypeLabel.new(panel.content, {
-		style = "LabelBold",
-		size = NAV_TEXT * unit,
-		tracking = NAV_TRACKING * unit,
-		color = Palette.DeepNavy,
-		shadow = false,
-		position = UDim2.fromOffset(PAGE_MARGIN * unit, PAGE_NOTE * unit),
-	})
-	note:set("SOON")
 end
 
 local function fillPage(name: string)
 	panel:clear()
+	-- Each page gets its own frame, so a reply that arrives after a swap can tell it's out of date.
+	local page = Instance.new("Frame")
+	page.BackgroundTransparency = 1
+	page.Size = UDim2.fromScale(1, 1)
+	page.Parent = panel.content
 	if name == "SETTINGS" then
-		SettingsPanel.fill(panel.content)
+		SettingsPanel.fill(page)
+	elseif name == "PLAY" then
+		PlayPanel.fill(page)
+	elseif name == "LOADOUT" then
+		LoadoutPanel.fill(page)
 	else
-		soonPage(name)
+		ProfilePanel.fill(page, profileUser)
 	end
+end
+
+local function show(name: string)
+	openPage = name
+	fillPage(name)
+	panel:open()
+	paint()
 end
 
 local function choose(name: string)
 	clickSound:Play()
 	SettingsPanel.stop()
-	if openPage == name then
+	-- The PROFILE button leads back to the player's own page from someone else's.
+	if name == "PROFILE" and openPage == name and profileUser ~= player.UserId then
+		profileUser = player.UserId
+		show(name)
+	elseif openPage == name then
 		openPage = nil
 		panel:close()
+		paint()
 	else
-		openPage = name
-		fillPage(name)
-		panel:open()
+		profileUser = player.UserId
+		show(name)
 	end
-	paint()
 end
 
 local function buildNav()
 	if nav then
+		for _, row in rows do
+			row:destroy()
+		end
 		nav:Destroy()
 	end
 	rows = {}
 	local unit = MenuPanel.unit()
 	local block = Instance.new("Frame")
 	block.BorderSizePixel = 0
-	block.BackgroundColor3 = Palette.DeepNavy
+	block.BackgroundTransparency = 1
+	block.ClipsDescendants = true
 	block.AnchorPoint = Vector2.new(0, 1)
 	block.Position = UDim2.new(0, NAV_LEFT * unit, 1, -NAV_BOTTOM * unit)
 	block.Size = UDim2.fromOffset(NAV_WIDTH * unit, NAV_ROW * unit * #BUTTONS)
 	block.Parent = gui
 	for index, name in BUTTONS do
-		local button = Instance.new("TextButton")
-		button.Text = ""
-		button.AutoButtonColor = false
-		button.BorderSizePixel = 0
-		button.Position = UDim2.fromOffset(0, (index - 1) * NAV_ROW * unit)
-		button.Size = UDim2.fromOffset(NAV_WIDTH * unit, NAV_ROW * unit)
-		button.Parent = block
-		local text = TypeLabel.new(button, {
-			style = "LabelBold",
-			size = NAV_TEXT * unit,
+		rows[name] = NavButton.new({
+			parent = block,
+			name = name,
+			index = index,
+			unit = unit,
+			width = NAV_WIDTH * unit,
+			height = NAV_ROW * unit,
+			padding = NAV_PADDING * unit,
+			textSize = NAV_TEXT * unit,
 			tracking = NAV_TRACKING * unit,
-			color = Palette.Bone,
-			shadow = false,
-			position = UDim2.fromOffset(NAV_PADDING * unit, (NAV_ROW + NAV_TEXT) / 2 * unit),
+			onClick = function()
+				choose(name)
+			end,
+			onHover = function()
+				hoverSound:Play()
+			end,
 		})
-		text:set(name)
-		rows[name] = { button = button, text = text }
-		button.Activated:Connect(function()
-			choose(name)
-		end)
 	end
 	nav = block
 	paint()
@@ -157,15 +161,28 @@ end)
 
 -- The menu belongs to the Outpost, and stays away while the title screen is up.
 RunService.RenderStepped:Connect(function()
-	local show = Zones.of(player) == Zones.Outpost and not MenuState.isOpen(MenuState.shared)
-	if show == gui.Enabled then
+	local visible = Zones.of(player) == Zones.Outpost and not MenuState.isOpen(MenuState.shared)
+	if visible == gui.Enabled then
 		return
 	end
-	gui.Enabled = show
-	if not show then
+	gui.Enabled = visible
+	if visible then
+		for _, row in rows do
+			row:enter()
+		end
+	else
 		SettingsPanel.stop()
 		openPage = nil
 		panel:close()
 		paint()
 	end
+end)
+
+PlayerClick.listen(function()
+	return gui.Enabled
+end, function(clicked: Player)
+	clickSound:Play()
+	SettingsPanel.stop()
+	profileUser = clicked.UserId
+	show("PROFILE")
 end)

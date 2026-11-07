@@ -1,5 +1,6 @@
 -- Turns untrusted client input into clean requests. Anything invalid becomes nil.
 local Cards = require("./Cards")
+local Comments = require("./Comments")
 local Config = require("./Config")
 local Deck = require("./Deck")
 local Tier = require("./Tier")
@@ -26,6 +27,37 @@ function Requests.parseLoadout(raw: any): any
 		return nil
 	end
 	return { class = raw.class, rifle = raw.rifle }
+end
+
+function Requests.parseUserId(raw: any): number?
+	if type(raw) == "number" and raw > 0 and raw == math.floor(raw) then
+		return raw
+	end
+	return nil
+end
+
+function Requests.parseComment(raw: any): any
+	if type(raw) ~= "table" then
+		return nil
+	end
+	local owner = Requests.parseUserId(raw.owner)
+	local text = Comments.clean(raw.text)
+	if not owner or not text then
+		return nil
+	end
+	return { owner = owner, text = text }
+end
+
+function Requests.parseCommentTarget(raw: any): any
+	if type(raw) ~= "table" then
+		return nil
+	end
+	local owner = Requests.parseUserId(raw.owner)
+	local author = Requests.parseUserId(raw.author)
+	if not owner or not author then
+		return nil
+	end
+	return { owner = owner, author = author }
 end
 
 function Requests.parseDeck(raw: any): { any }?

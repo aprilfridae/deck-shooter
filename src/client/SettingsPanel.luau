@@ -6,18 +6,13 @@ local Guns = ReplicatedStorage:WaitForChild("Guns")
 local Palette = require(Guns:WaitForChild("Palette"))
 local Settings = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Settings"))
 local MenuPanel = require(script.Parent.MenuPanel)
+local PanelKit = require(script.Parent.PanelKit)
 local PlayerSettings = require(script.Parent.PlayerSettings)
-local TypeLabel = require(script.Parent.TypeLabel)
 
 -- Shares of the unit.
-local MARGIN = 0.025
-local RIGHT = 0.475
-local TITLE_SIZE = 0.085
-local TITLE_LINE = 0.095
-local RULE_LINE = 0.108
-local LABEL_SIZE = 0.0125
-local HEADING_SIZE = 0.011
-local TRACKING = 0.002
+local MARGIN = PanelKit.MARGIN
+local RIGHT = PanelKit.RIGHT
+local LABEL_SIZE = PanelKit.LABEL_SIZE
 local SLIDER_LEFT = 0.2
 local SLIDER_RIGHT = 0.41
 local SLIDER_STEP = 0.032
@@ -42,59 +37,13 @@ function SettingsPanel.stop()
 	end
 end
 
-local function label(parent: Instance, style: string, size: number, x: number, y: number, right: boolean?): any
-	local unit = MenuPanel.unit()
-	return TypeLabel.new(parent, {
-		style = style,
-		size = size * unit,
-		tracking = TRACKING * unit,
-		color = NAVY,
-		right = right,
-		shadow = false,
-		position = UDim2.fromOffset(x * unit, y * unit),
-	})
-end
-
-local function line(parent: Instance, text: string, x: number, y: number, right: boolean?): any
-	local drawn = label(parent, "Label", LABEL_SIZE, x, y, right)
-	drawn:set(text)
-	return drawn
-end
+local label = PanelKit.label
+local line = PanelKit.line
+local title = PanelKit.title
+local hitBox = PanelKit.hitBox
 
 local function heading(parent: Instance, text: string, y: number)
-	label(parent, "LabelBold", HEADING_SIZE, MARGIN, y):set(text)
-end
-
-local function title(parent: Instance, text: string)
-	local unit = MenuPanel.unit()
-	local big = TypeLabel.new(parent, {
-		style = "Title",
-		size = TITLE_SIZE * unit,
-		tracking = 0,
-		color = NAVY,
-		shadow = false,
-		position = UDim2.fromOffset(MARGIN * unit, TITLE_LINE * unit),
-	})
-	big:set(text)
-	local rule = Instance.new("Frame")
-	rule.BorderSizePixel = 0
-	rule.BackgroundColor3 = NAVY
-	rule.BackgroundTransparency = 0.5
-	rule.Position = UDim2.fromOffset(MARGIN * unit, RULE_LINE * unit)
-	rule.Size = UDim2.fromOffset((RIGHT - MARGIN) * unit, 1)
-	rule.Parent = parent
-end
-
-local function hitBox(parent: Instance, x: number, top: number, width: number, height: number): TextButton
-	local unit = MenuPanel.unit()
-	local button = Instance.new("TextButton")
-	button.Text = ""
-	button.AutoButtonColor = false
-	button.BackgroundTransparency = 1
-	button.Position = UDim2.fromOffset(x * unit, top * unit)
-	button.Size = UDim2.fromOffset(width * unit, height * unit)
-	button.Parent = parent
-	return button
+	PanelKit.heading(parent, text, y)
 end
 
 local function round(value: number, step: number): number

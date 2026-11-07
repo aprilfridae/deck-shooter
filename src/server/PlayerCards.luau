@@ -42,6 +42,8 @@ function PlayerCards.snapshot(player: Player): any?
 		catalysts = data.catalysts,
 		dpr = Dpr.compute(data.deck, data.gunLevels),
 		ratePerSecond = Income.ratePerSecond(data),
+		class = data.class,
+		rifle = data.rifle,
 	}
 end
 

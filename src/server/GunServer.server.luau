@@ -220,6 +220,7 @@ local function onSetLoadout(player: Player, raw: any)
 	data.class = request.class
 	data.rifle = request.rifle
 	applyIfUnused(player)
+	PlayerCards.changed(player)
 end
 
 local function onPlayer(player: Player)
