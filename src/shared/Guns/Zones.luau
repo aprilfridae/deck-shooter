@@ -38,4 +38,9 @@ function Zones.autoRotates(zone: string): boolean
 	return zone == Zones.Outpost
 end
 
+-- Everywhere else you wear the game's own body.
+function Zones.usesAvatar(zone: string): boolean
+	return zone == Zones.Outpost
+end
+
 return Zones

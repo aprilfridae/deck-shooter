@@ -1,4 +1,5 @@
--- Gives every player's body the same look as the first-person arms.
+-- Gives the game's body the same look as the first-person arms. Avatars in the Outpost stay as
+-- they are.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -16,6 +17,9 @@ local function paint(part: Instance)
 end
 
 local function onCharacter(player: Player, character: Model)
+	if Zones.usesAvatar(Zones.of(player)) then
+		return
+	end
 	for _, child in character:GetChildren() do
 		paint(child)
 	end

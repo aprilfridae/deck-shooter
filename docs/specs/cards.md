@@ -96,8 +96,7 @@ Requests go through `Requests.luau`, which drops bad types, NaN, extra fields an
 
 - The HUD's ability rows: key, card name, tier in its colour and a 10-segment cooldown bar (see `hud.md`).
 - The card in hand, drawn from the `Card` model in `GunModels` (`CardView.luau`).
-- DPR on the screen tower in the Outpost (see `outpost.md`).
-- Nothing shows Credits, copies, Catalysts, fusion or deck editing yet.
+- Nothing shows DPR, Credits, copies, Catalysts, fusion or deck editing yet.
 
 ## Not built
 

@@ -4,7 +4,9 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
-local ArmPose = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("ArmPose"))
+local Guns = ReplicatedStorage:WaitForChild("Guns")
+local ArmPose = require(Guns:WaitForChild("ArmPose"))
+local Zones = require(Guns:WaitForChild("Zones"))
 local BodyPose = require(ReplicatedStorage:WaitForChild("Movement"):WaitForChild("BodyPose"))
 
 local FORWARD_LEAN_AXIS = Vector3.xAxis
@@ -29,6 +31,7 @@ type Body = {
 	held: { [string]: CFrame },
 	frame: number,
 	seed: number,
+	idleJitter: number,
 	sliding: boolean,
 	slideAt: number,
 	slideFrom: number,
@@ -55,6 +58,9 @@ local function onCharacter(character: Model)
 			joints[descendant.Name] = descendant
 		end
 	end
+	-- An avatar stands still. Only the game's body keeps twitching at rest.
+	local player = Players:GetPlayerFromCharacter(character)
+	local avatar = player ~= nil and Zones.usesAvatar(Zones.of(player))
 	local body: Body = {
 		character = character,
 		root = root,
@@ -63,6 +69,7 @@ local function onCharacter(character: Model)
 		held = {},
 		frame = -1,
 		seed = math.random(1, 10000), -- so bodies don't twitch in time with each other
+		idleJitter = if avatar then 0 else BodyPose.idleJitter,
 		sliding = false,
 		slideAt = -math.huge,
 		slideFrom = 0,
@@ -119,7 +126,7 @@ local function samplePose(body: Body, now: number)
 		body.held[name] = frame
 	end
 
-	local strength = if flatSpeed < STILL_SPEED and settled == 0 then BodyPose.idleJitter else 1
+	local strength = if flatSpeed < STILL_SPEED and settled == 0 then body.idleJitter else 1
 	local seed = body.seed
 	for name, degrees in BodyPose.jitter do
 		seed += 1

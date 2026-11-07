@@ -252,6 +252,9 @@ function Kit:dirty(part: BasePart, how: string, transparency: number?): BasePart
 	elseif how == "shell" then
 		grimeTexture(self, part, Enum.NormalId.Top, transparency)
 		grimeTexture(self, part, Enum.NormalId.Bottom, transparency)
+	elseif how == "wedgeShell" then -- a wedge's two big faces are its sides
+		grimeTexture(self, part, Enum.NormalId.Left, transparency)
+		grimeTexture(self, part, Enum.NormalId.Right, transparency)
 	end
 	return part
 end
