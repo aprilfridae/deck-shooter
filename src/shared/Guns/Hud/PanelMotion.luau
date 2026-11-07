@@ -1,9 +1,10 @@
--- How the Outpost panels move. A heavy sheet: it swings past its mark on the way in and settles,
--- and pulls back a touch before it drops away. Fading copies between frames give it motion blur.
+-- How the Outpost panels move. A heavy sheet: it goes at full speed straight away, swings past its
+-- mark and settles, both ways. Fading copies between frames give it motion blur.
 local PanelMotion = {
 	FPS = 40, -- of the nav, and the length of a frame of travel for the panel's blur
 	DECODE_FPS = 20, -- of text typing out
-	DURATION = 0.5, -- seconds
+	DURATION = 0.5, -- seconds to open
+	CLOSE_TIME = 0.3, -- seconds to close
 	COPIES = 8,
 	SHAKE_TIME = 9 / 40, -- seconds, in whole frames
 	VIEW_SCALE = 0.75, -- the sheared camera is shrunk by this, which the picture doesn't show
@@ -25,8 +26,8 @@ local SHAKE = 0.012 -- how far the landing throws the view, per unit of depth
 local SHAKE_HEIGHT = 0.6 -- of the sideways throw
 local SHAKE_LEAN = math.rad(0.35)
 local VIEW_RAMP = 0.25 -- of an opening move, when the camera has caught up with the panel
-local FADE_FROM = 0.4 -- of a closing move, when its blur starts to fade
-local FADE_TO = 0.8 -- when it's gone, so the panel leaves clean
+local FADE_FROM = 0.15 -- of a closing move, when its blur starts to fade
+local FADE_TO = 0.4 -- when it's gone, so the panel leaves clean
 local DECODE_STEP = 4 -- characters the text gains each frame
 local DECODE_FRONT = 8 -- characters of noise at its leading edge
 local NOISE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/:.-+_>" -- all drawn by the Label font
@@ -69,14 +70,21 @@ function PanelMotion.share(from: number, to: number, progress: number): number
 	return from + (to - from) * eased
 end
 
+-- How long a panel's move takes.
+function PanelMotion.moveTime(opening: boolean): number
+	return if opening then PanelMotion.DURATION else PanelMotion.CLOSE_TIME
+end
+
+-- Where a panel is at this point of a move. It takes the same curve both ways.
+function PanelMotion.sheet(from: number, to: number, progress: number): number
+	return from + (to - from) * swingIn(progress)
+end
+
 -- Where the camera is at this point of a move. It runs every frame the screen draws, not in the
--- panel's steps, and follows the panel's curve. Opening it eases onto that curve, because the
--- panel starts at full speed and a camera that does that lurches.
+-- panel's steps, and follows the panel's curve. It eases onto that curve, because the panel starts
+-- at full speed and a camera that does that lurches.
 function PanelMotion.viewShare(from: number, to: number, progress: number): number
-	local share = PanelMotion.share(from, to, progress)
-	if to < from then
-		return share
-	end
+	local share = PanelMotion.sheet(from, to, progress)
 	local ramp = math.min(progress / VIEW_RAMP, 1)
 	return from + (share - from) * ramp * ramp * (3 - 2 * ramp)
 end

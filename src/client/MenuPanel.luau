@@ -99,16 +99,17 @@ end
 function MenuPanel:step(dt: number)
 	self.elapsed += dt
 	local target = if self.opening then 1 else 0
+	local moveTime = PanelMotion.moveTime(self.opening)
 	local function shareAt(elapsed: number): number
-		return PanelMotion.share(self.from, target, math.clamp(elapsed / PanelMotion.DURATION, 0, 1))
+		return PanelMotion.sheet(self.from, target, math.clamp(elapsed / moveTime, 0, 1))
 	end
 	local share = shareAt(self.elapsed)
 	-- Blur is measured over a fixed stretch of time, so it looks the same at any frame rate.
 	local before = shareAt(self.elapsed - 1 / PanelMotion.FPS)
-	local progress = math.min(self.elapsed / PanelMotion.DURATION, 1)
+	local progress = math.min(self.elapsed / moveTime, 1)
 	self.blurLeft = if self.opening then 1 else PanelMotion.closeFade(progress)
 	local function viewAt(elapsed: number): number
-		return PanelMotion.viewShare(self.viewFrom, target, math.clamp(elapsed / PanelMotion.DURATION, 0, 1))
+		return PanelMotion.viewShare(self.viewFrom, target, math.clamp(elapsed / moveTime, 0, 1))
 	end
 	self.view = viewAt(self.elapsed)
 	self.viewTravel = self.view - viewAt(self.elapsed - 1 / PanelMotion.FPS)
@@ -117,9 +118,9 @@ function MenuPanel:step(dt: number)
 	place(self.frame, share)
 	self:showCopies(before, share)
 	self.glow:show(1 - PANEL_WIDTH * share, self.travel * self.blurLeft)
-	local held = self.elapsed >= PanelMotion.DURATION + 1 / PanelMotion.FPS
-	-- A closing sheet lands hard, so it runs on a little longer to shake the view.
-	local sinceLanding = self.elapsed - PanelMotion.DURATION
+	local held = self.elapsed >= moveTime + 1 / PanelMotion.FPS
+	-- A closing sheet runs on a little longer to shake the view.
+	local sinceLanding = self.elapsed - moveTime
 	self.shake = PanelMotion.landShake(if self.opening then PanelMotion.SHAKE_TIME else sinceLanding)
 	if held and (self.opening or sinceLanding >= PanelMotion.SHAKE_TIME) then
 		self.frame.Visible = self.opening
