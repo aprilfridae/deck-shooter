@@ -29,7 +29,8 @@ export type Options = {
 	unit: number,
 	width: number,
 	height: number,
-	padding: number,
+	left: number, -- from the row's left edge to its name
+	padding: number, -- from the row's right edge to its number
 	textSize: number,
 	tracking: number,
 	onClick: () -> (),
@@ -76,7 +77,7 @@ function NavButton.new(options: Options): any
 	self.width = options.width
 	self.index = options.index
 	self.top = (options.index - 1) * options.height
-	self.padding = options.padding
+	self.left = options.left
 	self.baseline = (options.height + options.textSize) / 2
 	self.kick = KICK * options.unit
 
@@ -108,7 +109,7 @@ function NavButton.new(options: Options): any
 		tracking = options.tracking,
 		color = Palette.Bone,
 		shadow = false,
-		position = UDim2.fromOffset(options.padding, self.baseline),
+		position = UDim2.fromOffset(options.left, self.baseline),
 	})
 	self.text:set(options.name)
 	self.mark = TypeLabel.new(self.button, {
@@ -170,7 +171,7 @@ function NavButton:paint()
 		elseif self.active then Palette.SignalAcid
 		else Palette.Bone
 	self.wipe.Size = UDim2.fromScale(math.min(self.share, 1), 1)
-	self.text:setPosition(UDim2.fromOffset(self.padding + self.kick * self.share, self.baseline))
+	self.text:setPosition(UDim2.fromOffset(self.left + self.kick * self.share, self.baseline))
 end
 
 -- The blur and glow for one frame of the wipe. A move of nothing clears them.

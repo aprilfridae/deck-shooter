@@ -25,6 +25,7 @@ local NAV_LEFT = 0.03
 local NAV_BOTTOM = 0.03
 local NAV_WIDTH = 0.165
 local NAV_ROW = 0.042
+local NAV_LEFT_PADDING = 0.008
 local NAV_PADDING = 0.014
 local NAV_TEXT = 0.0187 -- about the font sheet's own size on a 1080p screen, so it stays sharp
 local NAV_TRACKING = 0.003
@@ -148,6 +149,7 @@ local function buildNav()
 			unit = unit,
 			width = NAV_WIDTH * unit,
 			height = NAV_ROW * unit,
+			left = NAV_LEFT_PADDING * unit,
 			padding = NAV_PADDING * unit,
 			textSize = NAV_TEXT * unit,
 			tracking = NAV_TRACKING * unit,
