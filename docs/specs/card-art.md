@@ -39,10 +39,11 @@ Cards are vertical, in the proportions 150 by 240. Positions below are in those 
 | Rarity | Background | Monogram | Ink | Lower block | Shine strength |
 | --- | --- | --- | --- | --- | --- |
 | Field | Deep Navy | Bone, Bone glow | Bone | Bone stripes | 28% |
-| Redline | Bone, with a Hazard Red outline 2 wide just inside the edge | Hazard Red, red glow | Deep Navy, rarity text in Red | Red stripes | 70% |
-| Prototype | Signal Acid | Deep Navy | Deep Navy | Deep Navy stripes, scrolling | 50% |
-| Zero-Day | `#0E1018` | Data Cyan, cyan glow | Bone, rarity text in Cyan | Big serial | 60% |
+| Redline | Bone, Hazard Red outline | Hazard Red, red glow | Deep Navy, rarity text in Red | Red stripes | 70% |
+| Prototype | Signal Acid, Deep Navy outline | Deep Navy | Deep Navy | Deep Navy stripes, scrolling | 50% |
+| Zero-Day | `#0E1018`, Data Cyan outline | Data Cyan, cyan glow | Bone, rarity text in Cyan | Big serial | 60% |
 
+- **Outline:** 2 wide, just inside the edge. Field has none.
 - **Shine:** every card has a slanted white band that crosses it every 2.6s.
 - **Prototype:** an outline of its monogram pulses outward and fades every 1.8s, and its stripes scroll.
 - **Zero-Day** adds three things:

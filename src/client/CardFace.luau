@@ -61,9 +61,16 @@ local LOOKS = {
 		ink = Palette.DeepNavy,
 		rarity = Palette.DeepNavy,
 		stripes = Palette.DeepNavy,
+		outline = Palette.DeepNavy,
 		shine = 0.5,
 	},
-	ZeroDay = { back = Palette.ZeroDayBack, ink = Palette.Bone, rarity = Palette.DataCyan, shine = 0.6 },
+	ZeroDay = {
+		back = Palette.ZeroDayBack,
+		ink = Palette.Bone,
+		rarity = Palette.DataCyan,
+		outline = Palette.DataCyan,
+		shine = 0.6,
+	},
 }
 
 export type Options = {
