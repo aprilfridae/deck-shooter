@@ -87,7 +87,6 @@ These need to be recognisable, because they tell other players what you just did
 | `shield-hit` | A shot lands on a shield. Should sound nothing like hitting a body | Mono | 0.2s |
 | `shield-end` | The shield ends and pushes enemies away | Mono | 0.8s |
 | `move-parry` | An edge parry | Mono | 0.25s |
-| `move-climb` | Climbing up a ledge | Mono | 0.35s |
 | `move-chain-jump` | The big jump after a fast fall and slide | Mono | 0.4s |
 | `wind-fall` | Air rushing during a fast fall. Must loop with no click | Stereo | 2s |
 | `wind-speed` | Air rushing at high speed, faded in as you go faster. Must loop with no click | Stereo | 2s |

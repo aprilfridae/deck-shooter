@@ -40,7 +40,7 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 
 ## What's built
 
-- Movement: sprint, slide, chain jumps, parry, climb, and the server's cheat checks. `docs/specs/movement.md`.
+- Movement: sprint, slide, chain jumps, parry, and the server's cheat checks. Climbing was removed on 2026-11-07. `docs/specs/movement.md`.
 - Guns, with first-person arms, reloads and sounds. Each of the M57 and pistol has 3 reload takes that differ only in position. `docs/specs/guns.md`.
 - Abilities and the card core: 4 cards, fusion, Deck Power Rating, income, saves through ProfileStore. `docs/specs/cards.md`.
 - HUD in River's fonts, using image text (`TypeLabel`). `docs/specs/hud.md`.
@@ -59,7 +59,7 @@ All the work above is merged to `main`. Nothing is half built.
 
 **Known gaps:**
 - Other players' footsteps and shots can't be heard. Roblox's default footsteps are muted and ours play only for the local player, and only your own shots make a sound.
-- Sounds still to record and hook up are in `docs/sound-list.md`, among them landing, slide, parry and climb. The M57's reload hit isn't aligned to the new assault reload sound.
+- Sounds still to record and hook up are in `docs/sound-list.md`, among them landing, slide and parry. The M57's reload hit isn't aligned to the new assault reload sound.
 - Fonts: River has the Pro downloads in `Downloads`. KH Interference's file still names itself TRIAL, and the titles and card monograms use it, so River needs to confirm the licence before publishing.
 - If Studio says "We could not open the place [70756985983915]. Failed to fetch place info." again: it's a known 2026 Studio bug. Roblox staff suggest logging out of Studio, ending it in Task Manager and logging back in. River's group role is listed as "Member" (rank 1) and the group has no Owner role, which is worth checking in the group's settings if that doesn't work.
 - A lag issue was noticed earlier and never diagnosed.

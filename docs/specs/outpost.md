@@ -42,7 +42,7 @@ The Outpost is built at (4000, 0, 0), far from the test room at the world's orig
 | Market | The same stall at the far end of the hall, with shelves of blank navy and Bone cards, a `MARKET` sign and a short `CARDS` sign. Its prompt opens the packs menu until the player market exists. |
 | Test Range corridor | Flooded tiled corridor off the far end of the East Hall, with fluorescent ceiling lights and lift doors. The doors' prompt (hold 0.4s) takes you to the test room. |
 
-Movement matters here too: low walls to vault, a catwalk to climb up to.
+Movement matters here too: low walls to vault, a catwalk overhead.
 
 ## Zones and travel
 

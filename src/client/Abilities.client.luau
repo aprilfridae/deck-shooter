@@ -39,7 +39,7 @@ end)
 
 RunService.Heartbeat:Connect(function()
 	local keys = Input.readAbility()
-	if player:GetAttribute("Climbing") or not Zones.allowsCombat(Zones.of(player)) then
+	if not Zones.allowsCombat(Zones.of(player)) then
 		CardHand.putAway(CardInHand)
 	else
 		for index = 1, 3 do

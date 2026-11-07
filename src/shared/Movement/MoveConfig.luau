@@ -19,15 +19,12 @@ return {
 	LandFade = 0.6, -- how long landing keeps jump speed before it fades
 
 	-- Heights are studs above the feet.
-	ClimbMinHeight = 1,
-	ClimbMinFlatness = 0.98, -- upward share of the surface normal
+	ParryMinHeight = 1,
+	ParryMinFlatness = 0.98, -- upward share of the surface normal
 	ParryMaxHeight = 4.5,
 	ParryClearance = 1.5,
 	ParryBoost = 6,
 	ParryMaxSpeed = 58, -- matches the fastest chain jump
-	ClimbMaxHeight = 12,
-	ClimbDuration = 0.35,
-	ClimbRiseShare = 0.65, -- the rest of the climb moves forward onto the top
 
 	-- Cheat checks. SpeedLimit is the fastest chain jump plus a margin.
 	SpeedLimit = 63,

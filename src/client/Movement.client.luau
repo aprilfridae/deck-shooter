@@ -13,8 +13,7 @@ local Zones = require(Guns:WaitForChild("Zones"))
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local Config = require(CardCore:WaitForChild("Config"))
 local Movement = ReplicatedStorage:WaitForChild("Movement")
-local Climb = require(Movement:WaitForChild("Climb"))
-local MoveConfig = require(Movement:WaitForChild("MoveConfig"))
+local Parry = require(Movement:WaitForChild("Parry"))
 local MoveState = require(Movement:WaitForChild("MoveState"))
 local poseRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("Pose") :: RemoteEvent
 local abilityRemotes = ReplicatedStorage:WaitForChild("AbilityRemotes")
@@ -53,9 +52,6 @@ local sentPose = "Normal"
 local poseSentAt = -math.huge
 local jumpHeld = false
 local stepTravel = 0
-
-type ClimbPath = { from: Vector3, top: Vector3, landing: Vector3, forward: Vector3, startedAt: number }
-local climb: ClimbPath? = nil
 
 type DashPath = {
 	from: Vector3,
@@ -112,7 +108,7 @@ end
 local function startParry(forward: Vector3, height: number, now: number)
 	MoveState.parry(state, now)
 	local speed = MoveState.speed(state, now)
-	local rise = Climb.riseSpeed(height, workspace.Gravity)
+	local rise = Parry.riseSpeed(height, workspace.Gravity)
 	humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
 	root.AssemblyLinearVelocity = forward * speed + Vector3.new(0, rise, 0)
 	slideDirection = forward
@@ -121,67 +117,22 @@ local function startParry(forward: Vector3, height: number, now: number)
 	airStartedAt = now
 end
 
-local function startClimb(forward: Vector3, landing: Vector3, now: number)
-	local from = root.Position
-	climb = {
-		from = from,
-		top = Vector3.new(from.X, landing.Y, from.Z),
-		landing = landing,
-		forward = forward,
-		startedAt = now,
-	}
-	MoveState.startClimb(state)
-	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-end
-
--- Space near an edge: a press parries a low edge, holding it climbs a tall one.
-local function tryLedge(pressed: boolean, moveDirection: Vector3, now: number)
+-- A jump press near a low edge parries off it.
+local function tryParry(moveDirection: Vector3, now: number)
 	local rootHeight = humanoid.HipHeight + root.Size.Y / 2
-	local character = humanoid.Parent :: Model
-
-	if pressed then
-		local heading = if state.mode == "Slide" or (airFromSlide and moveDirection.Magnitude == 0)
-			then slideDirection
-			elseif moveDirection.Magnitude > 0 then moveDirection.Unit
-			else flatLook()
-		local edge = Ledge.find(character, root, heading, rootHeight)
-		if edge and edge.kind == "Parry" then
-			startParry(heading, edge.height, now)
-			return
-		end
-	end
-
-	local look = flatLook()
-	local wall = Ledge.find(character, root, look, rootHeight)
-	if wall and wall.kind == "Climb" then
-		startClimb(look, wall.landing, now)
+	local heading = if state.mode == "Slide" or (airFromSlide and moveDirection.Magnitude == 0)
+		then slideDirection
+		elseif moveDirection.Magnitude > 0 then moveDirection.Unit
+		else flatLook()
+	local edge = Ledge.find(humanoid.Parent :: Model, root, heading, rootHeight)
+	if edge then
+		startParry(heading, edge.height, now)
 	end
 end
 
-local function advanceClimb(path: ClimbPath, now: number)
-	local progress = (now - path.startedAt) / MoveConfig.ClimbDuration
-	local share = MoveConfig.ClimbRiseShare
-	local position = if progress < share
-		then path.from:Lerp(path.top, progress / share)
-		else path.top:Lerp(path.landing, math.min((progress - share) / (1 - share), 1))
-	root.CFrame = CFrame.new(position) * root.CFrame.Rotation
-	root.AssemblyLinearVelocity = Vector3.zero
-
-	if progress >= 1 then
-		climb = nil
-		MoveState.finishClimb(state, now)
-		humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
-		root.AssemblyLinearVelocity = path.forward * MoveConfig.SprintSpeed
-		slideDirection = path.forward
-		airFromSlide = true
-		jumped = false
-		airStartedAt = now
-	end
-end
-
--- A dash runs like a climb: a set path, then back to normal movement in the air.
+-- A dash follows a set path, then hands back to normal movement in the air.
 local function startDash(distance: number)
-	if not humanoid or not root or humanoid.Health <= 0 or climb or dash then
+	if not humanoid or not root or humanoid.Health <= 0 or dash then
 		return
 	end
 	local direction = humanoid.MoveDirection
@@ -211,7 +162,7 @@ local function startDash(distance: number)
 		entrySpeed = MoveState.speed(state, os.clock()),
 		fallSpeed = root.AssemblyLinearVelocity.Y,
 	}
-	MoveState.startClimb(state)
+	MoveState.startDash(state)
 	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
 end
 
@@ -254,7 +205,6 @@ local function onCharacter(character: Model)
 	landDip = 0
 	sentPose = "Normal"
 	jumpHeld = false
-	climb = nil
 	dash = nil
 	workspace.CurrentCamera.FieldOfView = FIELD_OF_VIEW
 end
@@ -275,13 +225,9 @@ local function onFrame(dt: number)
 		humanoid.Jump = true
 	end
 
-	if keys.jump and state.mode ~= "Climb" then
-		tryLedge(jumpPressed, direction, now)
+	if jumpPressed and state.mode ~= "Dash" then
+		tryParry(direction, now)
 	end
-	if climb then
-		advanceClimb(climb, now)
-	end
-	player:SetAttribute("Climbing", climb ~= nil)
 	if dash then
 		advanceDash(dash, now)
 	end
@@ -394,7 +340,7 @@ end
 
 dashRemote.OnClientEvent:Connect(startDash)
 pushRemote.OnClientEvent:Connect(function(velocity: Vector3)
-	if humanoid and root and not climb and not dash then
+	if humanoid and root and not dash then
 		local flat = Vector3.new(velocity.X, 0, velocity.Z)
 		MoveState.launch(state, flat.Magnitude, os.clock())
 		humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
