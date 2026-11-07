@@ -302,10 +302,10 @@ local function onFrame(dt: number)
 	local target = BODY_CAMERA + (if sliding then SLIDE_CAMERA_DROP else Vector3.zero) + LAND_CAMERA_DIP * landDip
 	humanoid.CameraOffset = humanoid.CameraOffset:Lerp(target, math.min(dt * CAMERA_EASE, 1))
 
-	-- In first-person (TestRoom), manually rotate character to face camera direction.
+	-- In first person (the combat zones), manually rotate character to face camera direction.
 	-- In third-person (Outpost), AutoRotate is enabled so character faces move direction.
 	local zone = Zones.of(player)
-	if zone == Zones.TestRoom then
+	if not Zones.autoRotates(zone) then
 		local yaw = math.atan2(-workspace.CurrentCamera.CFrame.LookVector.X, -workspace.CurrentCamera.CFrame.LookVector.Z)
 		root.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, yaw, 0)
 	end

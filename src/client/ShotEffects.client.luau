@@ -6,6 +6,7 @@ local RunService = game:GetService("RunService")
 
 local GunView = require(script.Parent.GunView)
 local Tracer = require(ReplicatedStorage.Guns.Tracer)
+local Collision = require(ReplicatedStorage.Guns.Collision)
 
 local remotes = ReplicatedStorage:WaitForChild("GunRemotes")
 local shotsRemote = remotes:WaitForChild("Shots") :: RemoteEvent
@@ -129,6 +130,7 @@ local function splatter(position: Vector3, direction: Vector3, hit: Instance?)
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = ignored
 	params.RespectCanCollide = true
+	Collision.forShots(params)
 	for _, reach in { direction * SPLAT_REACH, Vector3.new(0, -SPLAT_REACH, 0) } do
 		local surface = workspace:Raycast(position, reach, params)
 		if surface then

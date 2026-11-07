@@ -19,6 +19,7 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 | [`specs/outpost.md`](specs/outpost.md) | The Outpost hub, zones, travel, the safe zone | The place is built; the player market isn't |
 | [`specs/outpost-ui.md`](specs/outpost-ui.md) | The Outpost menus: Play, Packs, Loadout, Profile, comments and Settings | Built |
 | [`specs/matches.md`](specs/matches.md) | Elimination and Tower modes, rounds, arenas | Planned, not built |
+| [`specs/relay.md`](specs/relay.md) | Relay, the 1v1 map: two fog towers, a bridge, the undercity | Built as a free-play zone, not checked in Play |
 | [`sound-list.md`](sound-list.md) | Sounds in the game and sounds still needed | Kept current |
 
 Other places with rules:
@@ -57,6 +58,7 @@ The specs explain the design. The code holds the actual values, so check it befo
 | Outpost textures | `src/shared/Guns/OutpostAssets.luau` |
 | Font sheets | `src/shared/Guns/Hud/GlyphData.luau` (generated) and `FontImages.luau` (ids) |
 | HUD, title screen and Outpost layout | The constants at the top of `Hud.client.luau`, `TitleScreen.client.luau` and `src/server/Outpost/Map.luau` |
+| Relay map layout and its fog | The constants at the top of `src/server/Outpost/Relay.luau`; `RELAY_LIGHTING` and `relayEffects` in `src/client/Outpost.client.luau` |
 
 ## Words
 
@@ -68,7 +70,7 @@ The specs explain the design. The code holds the actual values, so check it befo
 | DPR | Deck Power Rating, from the deck's tiers and gun levels only |
 | Credits | The currency cards earn while you play |
 | Soldier | The player body (attribute `SoldierRig`), which replaced the old low poly body and arms |
-| Zone | Where a player is: `Outpost` (safe, no combat) or `TestRoom` |
+| Zone | Where a player is: `Outpost` (safe, no combat), `TestRoom` or `Relay` (the 1v1 map) |
 | Test room | The grey room for trying guns and cards, with a grey dummy and a soldier dummy. Reached from the Outpost. |
 | Palette | Deep Navy, Signal Acid, Data Cyan, Field Green, Hazard Red and Bone. Red is for threats and purchases only. |
 | Group | Fridae Studios (group 237720778), which owns the experience and every asset |

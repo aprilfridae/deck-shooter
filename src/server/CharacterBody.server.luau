@@ -3,13 +3,20 @@
 -- arm-span-wide box, which would snag on doors and edges.
 local Players = game:GetService("Players")
 local PhysicsService = game:GetService("PhysicsService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Collision = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Collision"))
 
 local GROUP = "BodyMesh"
 
-PhysicsService:RegisterCollisionGroup(GROUP)
+-- Collision.setup may have registered it first.
+if not PhysicsService:IsCollisionGroupRegistered(GROUP) then
+	PhysicsService:RegisterCollisionGroup(GROUP)
+end
 PhysicsService:CollisionGroupSetCollidable(GROUP, "Default", false)
 -- Your blur copies sit right on your body. Touching it, they threw the player into the air.
 PhysicsService:CollisionGroupSetCollidable(GROUP, GROUP, false)
+Collision.setup()
 
 local function join(part: Instance)
 	if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then

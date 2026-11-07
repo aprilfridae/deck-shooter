@@ -55,6 +55,7 @@ The mode uses original arena names and layouts.
 - Grey blockouts first. Real art comes later.
 - Tower: 7 arenas sized for 5v5, plus 1 tiebreaker arena.
 - Elimination: a smaller arena reused for all 3 team sizes, walled in for 1v1.
+- The first 1v1 map, Relay, is built as a free-play zone (`relay.md`). It's not a grey blockout: River asked for the real look straight away.
 
 ## What matches change in built systems
 

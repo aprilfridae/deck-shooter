@@ -1,19 +1,27 @@
 -- Which part of the world a player is in. The server sets each player's Zone attribute.
--- The Outpost is a safe zone: guns and cards only work in the test room.
+-- The Outpost is a safe zone: guns and cards only work in the test room and on the Relay map.
 local Zones = {
 	Outpost = "Outpost",
 	TestRoom = "TestRoom",
+	Relay = "Relay",
+}
+
+local KNOWN = {
+	[Zones.Outpost] = true,
+	[Zones.TestRoom] = true,
+	[Zones.Relay] = true,
 }
 
 local COMBAT = {
 	[Zones.TestRoom] = true,
+	[Zones.Relay] = true,
 }
 
 -- Anything missing or unknown counts as the Outpost, so a late attribute never allows shooting.
 function Zones.of(player: any): string
 	local zone = player:GetAttribute("Zone")
-	if zone == Zones.TestRoom then
-		return Zones.TestRoom
+	if type(zone) == "string" and KNOWN[zone] then
+		return zone
 	end
 	return Zones.Outpost
 end

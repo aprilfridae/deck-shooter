@@ -43,6 +43,7 @@ local listed = {
 	outpostscale_spec = true,
 	hudtext_spec = true,
 	zones_spec = true,
+	relay_spec = true,
 	settings_spec = true,
 	panelmotion_spec = true,
 	cardindex_spec = true,
@@ -114,6 +115,7 @@ require("./panelmotion_spec")
 require("./cardindex_spec")
 require("./comments_spec")
 require("./zones_spec")
+require("./relay_spec")
 
 local missing = 0
 for _, name in fs.readDir("tests") do

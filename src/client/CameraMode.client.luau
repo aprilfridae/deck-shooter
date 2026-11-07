@@ -1,6 +1,6 @@
 -- Sets the camera mode and mouse behavior based on the current zone.
 -- Outpost: third-person camera with free mouse for UI interaction.
--- TestRoom: first-person locked camera for combat.
+-- Everywhere else (the test room, the Relay map): first-person locked camera for combat.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
@@ -23,8 +23,8 @@ local function applyZone()
 		end)
 		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 		UserInputService.MouseIconEnabled = true
-	elseif zone == Zones.TestRoom then
-		-- TestRoom: first-person locked camera for combat
+	else
+		-- First-person locked camera for combat
 		pcall(function()
 			player.CameraMode = Enum.CameraMode.LockFirstPerson
 			player.CameraMinZoomDistance = 0.5
