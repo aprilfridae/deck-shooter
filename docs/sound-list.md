@@ -32,7 +32,7 @@ What the game already plays and what it still needs. Checked against the code on
 | Menu selection | `menu-select` | Clicking PLAY, and clicks in the Outpost menu. Hovering a nav row plays it quieter and higher. |
 | Landings | `move-land-soft`, `move-land-hard` | Landing after at least 0.15s in the air. Hard if the fall reached 60 studs per second (a fast fall or long drop), else soft. |
 | Slide start | `move-slide-start` | Every slide as it begins, including one started by landing |
-| Pack open | `pack-open` | Once as a pack spins in, in the Menu volume group |
+| Pack open | `pack-open-common`, `-rarer`, `-rarest` | Once as a pack spins in, in the Menu volume group. Common for Field, rarer for Redline and Prototype, rarest for Zero-Day. |
 
 ## Still needed
 
@@ -107,7 +107,7 @@ The SMG and Shotgun are playable. The machine pistol, revolver and auto-pistol a
 
 ## Packs
 
-`pack-open` plays as a pack spins in. Still without sounds: rolling, the pack tearing down its side, the cards shaking, the three cards flipping, the burst and a Zero-Day pull.
+A pack plays its rarity's opening sound as it spins in. Still without sounds: rolling, the pack tearing down its side, the cards shaking, the three cards flipping, the burst and a Zero-Day pull.
 
 ## Later, with matches
 

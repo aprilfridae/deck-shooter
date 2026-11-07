@@ -3,6 +3,7 @@ local Combat = require("../src/shared/Guns/Combat")
 local Damage = require("../src/shared/Guns/Damage")
 local GunConfig = require("../src/shared/Guns/GunConfig")
 local GunSounds = require("../src/shared/Guns/GunSounds")
+local Packs = require("../src/shared/CardCore/Packs")
 
 local describe, it, expect = harness.describe, harness.it, harness.expect
 
@@ -135,6 +136,12 @@ describe("GunSounds", function()
 					expect(string.match(sound, "^rbxassetid://%d+$") ~= nil).toBe(true)
 				end
 			end
+		end
+	end)
+
+	it("has an opening sound for every pack rarity", function()
+		for _, pack in Packs.ids do
+			expect(string.match(GunSounds.packOpens[pack] or "", "^rbxassetid://%d+$") ~= nil).toBe(true)
 		end
 	end)
 end)

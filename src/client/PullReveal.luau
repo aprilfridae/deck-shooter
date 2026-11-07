@@ -66,11 +66,15 @@ sheet.BorderSizePixel = 0
 sheet.Size = UDim2.fromScale(1, 1)
 sheet.Parent = gui
 
-local openSound = Instance.new("Sound")
-openSound.Name = "PackOpen"
-openSound.SoundId = GunSounds.packOpen
-openSound.SoundGroup = SoundGroups.menu
-openSound.Parent = SoundService
+local openSounds: { [string]: Sound } = {}
+for pack, soundId in GunSounds.packOpens do
+	local openSound = Instance.new("Sound")
+	openSound.Name = `PackOpen{pack}`
+	openSound.SoundId = soundId
+	openSound.SoundGroup = SoundGroups.menu
+	openSound.Parent = SoundService
+	openSounds[pack] = openSound
+end
 
 local queue: { { run: (Frame, () -> (), boolean) -> (), auto: boolean } } = {}
 local stage: Frame? = nil
@@ -255,7 +259,7 @@ function PullReveal.pack(pack: string, cards: { any })
 			if not frame.Parent then
 				return
 			end
-			openSound:Play()
+			openSounds[pack]:Play()
 			PullStage.play(frame, pack, cards, {
 				inspect = inspect,
 				rested = function(line: number)
