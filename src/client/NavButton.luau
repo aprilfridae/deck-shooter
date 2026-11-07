@@ -1,4 +1,4 @@
--- One row of the Outpost nav. Colour wipes across it in stepped frames with fading copies behind
+-- One row of the Outpost nav. Bone wipes across it in stepped frames with fading copies behind
 -- and a glow ahead, the same way the panels move, and the name kicks right. Rows slide in one after
 -- another.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -51,7 +51,7 @@ end
 
 local function glowFrame(parent: Instance, fade: NumberSequence): Frame
 	local frame = Instance.new("Frame")
-	frame.BackgroundColor3 = Palette.SignalAcid
+	frame.BackgroundColor3 = Palette.Bone
 	frame.BorderSizePixel = 0
 	frame.Visible = false
 	frame.Parent = parent
@@ -70,7 +70,6 @@ function NavButton.new(options: Options): any
 	local self = setmetatable({}, NavButton)
 	self.active = false
 	self.hovering = false
-	self.pressed = false
 	self.share = 0
 	self.from = 0
 	self.elapsed = 0
@@ -80,6 +79,17 @@ function NavButton.new(options: Options): any
 	self.left = options.left
 	self.baseline = (options.height + options.textSize) / 2
 	self.kick = KICK * options.unit
+
+	self.ghosts = {} -- blur behind the row while it slides in
+	for _ = 1, PanelMotion.COPIES do
+		local ghost = Instance.new("Frame")
+		ghost.BackgroundColor3 = Palette.Bone
+		ghost.BorderSizePixel = 0
+		ghost.Size = UDim2.fromOffset(options.width, options.height)
+		ghost.Visible = false
+		ghost.Parent = options.parent
+		table.insert(self.ghosts, ghost)
+	end
 
 	self.button = Instance.new("TextButton")
 	self.button.Text = ""
@@ -93,7 +103,7 @@ function NavButton.new(options: Options): any
 
 	self.copies = {}
 	for _ = 1, PanelMotion.COPIES do
-		table.insert(self.copies, wipeFrame(self.button, Palette.DataCyan))
+		table.insert(self.copies, wipeFrame(self.button, Palette.Bone))
 	end
 	self.wipe = wipeFrame(self.button, Palette.Bone)
 	local fadeOut = NumberSequence.new(0, 1)
@@ -140,16 +150,7 @@ function NavButton.new(options: Options): any
 	end)
 	self.button.MouseLeave:Connect(function()
 		self.hovering = false
-		self.pressed = false
 		self:retarget()
-	end)
-	self.button.MouseButton1Down:Connect(function()
-		self.pressed = true
-		self:paint()
-	end)
-	self.button.MouseButton1Up:Connect(function()
-		self.pressed = false
-		self:paint()
 	end)
 	self.button.Activated:Connect(options.onClick)
 	self:paint()
@@ -161,15 +162,10 @@ function NavButton:target(): number
 end
 
 function NavButton:paint()
-	local lit = self.share > TEXT_SWAP
-	local ink = if lit then Palette.DeepNavy else Palette.Bone
+	local ink = if self.share > TEXT_SWAP then Palette.DeepNavy else Palette.Bone
 	self.text:setColor(ink)
 	self.mark:setColor(ink)
 	self.mark:set(if self:target() == 1 then ">" else self.number)
-	self.wipe.BackgroundColor3 = if self.pressed
-		then Palette.DataCyan
-		elseif self.active then Palette.SignalAcid
-		else Palette.Bone
 	self.wipe.Size = UDim2.fromScale(math.min(self.share, 1), 1)
 	self.text:setPosition(UDim2.fromOffset(self.left + self.kick * self.share, self.baseline))
 end
@@ -181,7 +177,7 @@ function NavButton:smear(from: number, to: number)
 		local step = trail[index]
 		copy.Visible = step ~= nil
 		if step then
-			copy.Size = UDim2.fromScale(math.min(step.share, 1), 1)
+			copy.Size = UDim2.fromScale(math.clamp(step.share, 0, 1), 1)
 			copy.BackgroundTransparency = step.transparency
 		end
 	end
@@ -229,19 +225,37 @@ function NavButton:setActive(active: boolean)
 	end
 end
 
+function NavButton:showGhosts(from: number, to: number)
+	local trail = PanelMotion.trail(from, to)
+	for index, ghost in self.ghosts do
+		local step = trail[index]
+		ghost.Visible = step ~= nil
+		if step then
+			ghost.Position = UDim2.fromOffset(self.width * (step.share - 1), self.top)
+			ghost.BackgroundTransparency = step.transparency
+		end
+	end
+end
+
 -- Slides the row in from the left.
 function NavButton:enter()
 	if self.entering then
 		self.entering:Disconnect()
 	end
 	local elapsed = -ENTER_STAGGER * (self.index - 1)
+	local last = 0
 	self.button.Position = UDim2.fromOffset(-self.width, self.top)
 	self.entering = RunService.RenderStepped:Connect(function(dt)
 		elapsed += dt
 		local progress = stepped(math.max(elapsed, 0), ENTER_TIME)
 		local share = PanelMotion.share(0, 1, progress)
 		self.button.Position = UDim2.fromOffset(self.width * (share - 1), self.top)
+		if share ~= last then
+			self:showGhosts(last, share)
+			last = share
+		end
 		if progress >= 1 then
+			self:showGhosts(share, share)
 			self.entering:Disconnect()
 			self.entering = nil
 		end

@@ -5,7 +5,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local CardIndex = require(CardCore:WaitForChild("CardIndex"))
 local Guns = ReplicatedStorage:WaitForChild("Guns")
-local Palette = require(Guns:WaitForChild("Palette"))
 local CardData = require(script.Parent.CardData)
 local CommentsPanel = require(script.Parent.CommentsPanel)
 local MenuPanel = require(script.Parent.MenuPanel)
@@ -27,12 +26,14 @@ local COUNT_SIZE = 0.04
 local COUNT_LINE = 0.215
 local GRID_TOP = 0.176
 local GRID_GAP = 0.006
-local CELL_WIDTH = 0.0714 -- a playing card's shape, with CELL_HEIGHT
-local CELL_HEIGHT = 0.1
-local NAME_SIZE_SMALL = 0.0088
+local CELL_WIDTH = 0.0755 -- a playing card's shape, with CELL_HEIGHT
+local CELL_HEIGHT = 0.1057
+local CELL_MARGIN = 0.008 -- inside a card, on all four sides
+local COPIES_SIZE = 0.02
+local NAME_SIZE_SMALL = 0.0082
 local NAME_STEP = 0.012
 local TIER_SIZE = 0.0068
-local GHOST_INK = Palette.DeepNavy:Lerp(Palette.Bone, 0.6)
+local GHOST_INK = PanelKit.INK:Lerp(PanelKit.PAPER, 0.6)
 local PAGE_TOP = 0.172
 
 local ProfilePanel = {}
@@ -41,7 +42,7 @@ local function header(content: Frame, profile: any)
 	local MARGIN, RIGHT = PanelKit.MARGIN, PanelKit.RIGHT
 	local unit = MenuPanel.unit()
 	local head = Instance.new("ImageLabel")
-	head.BackgroundColor3 = PanelKit.NAVY
+	head.BackgroundColor3 = PanelKit.INK
 	head.BorderSizePixel = 0
 	head.Image = `rbxthumb://type=AvatarHeadShot&id={profile.userId}&w=150&h=150`
 	head.Position = UDim2.fromOffset(MARGIN * unit, HEAD_TOP * unit)
@@ -73,21 +74,23 @@ local function cardGrid(page: Frame, profile: any)
 		for row, entry in card.tiers do
 			local top = GRID_TOP + (row - 1) * (CELL_HEIGHT + GRID_GAP)
 			local owned = entry.count > 0
-			local cell = PanelKit.block(page, x, top, width, CELL_HEIGHT, Palette.Tiers[entry.tier])
+			local cell = PanelKit.block(page, x, top, width, CELL_HEIGHT, PanelKit.PAPER)
 			cell.BackgroundTransparency = if owned then 0 else 1
 			local stroke = Instance.new("UIStroke")
 			stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-			stroke.Color = if owned then PanelKit.NAVY else GHOST_INK
+			stroke.Color = if owned then PanelKit.INK else GHOST_INK
 			stroke.Parent = cell
-			local ink = if owned then PanelKit.NAVY else GHOST_INK
-			local padding = 0.006
+			local ink = if owned then PanelKit.INK else GHOST_INK
+			local firstLine = CELL_MARGIN + NAME_SIZE_SMALL * PanelKit.CAP_HEIGHT
 			local words = string.split(string.upper(card.name), " ")
 			for line, word in words do
-				PanelKit.label(cell, "LabelBold", NAME_SIZE_SMALL, padding, 0.004 + line * NAME_STEP, nil, ink):set(word)
+				local y = firstLine + (line - 1) * NAME_STEP
+				PanelKit.cardLabel(cell, "LabelBold", NAME_SIZE_SMALL, CELL_MARGIN, y, ink):set(word)
 			end
-			PanelKit.label(cell, "Label", TIER_SIZE, padding, 0.042, nil, ink):set(TIER_NAMES[entry.tier])
+			local tierLine = firstLine + 2 * NAME_STEP + 0.002 -- under two lines, so tiers line up across cards
+			PanelKit.cardLabel(cell, "Label", TIER_SIZE, CELL_MARGIN, tierLine, ink):set(TIER_NAMES[entry.tier])
 			if owned then
-				PanelKit.label(cell, "Title", 0.02, padding, CELL_HEIGHT - padding):set(`X{entry.count}`)
+				PanelKit.cardLabel(cell, "Title", COPIES_SIZE, CELL_MARGIN, CELL_HEIGHT - CELL_MARGIN):set(`X{entry.count}`)
 			end
 		end
 	end

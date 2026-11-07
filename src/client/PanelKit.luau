@@ -6,9 +6,9 @@ local MenuPanel = require(script.Parent.MenuPanel)
 local TypeLabel = require(script.Parent.TypeLabel)
 
 local TRACKING = 0.002
+local CARD_TRACKING = 0.0014 -- long names have to fit on a card
 local TITLE_SIZE = 0.085
 local TITLE_LINE = 0.095
-local RULE_LINE = 0.108
 local RULE_FADE = 0.5
 local PRESSED_SHRINK = 0.97
 local QUIET_HOVER = 3 -- pixels
@@ -19,10 +19,14 @@ local PanelKit = {
 	LABEL_SIZE = 0.0125,
 	HEADING_SIZE = 0.011,
 	SMALL_SIZE = 0.0105,
-	NAVY = Palette.DeepNavy,
+	RULE_LINE = 0.108,
+	CAP_HEIGHT = 0.7, -- of a font's size, for all three fonts
+	TITLE_INSET = 0.055, -- of the size: the blank space left of a Title letter
+	INK = Palette.Bone, -- text, rules and whatever is selected
+	PAPER = Palette.DeepNavy, -- the page behind them
 }
 
-local NAVY = PanelKit.NAVY
+local INK, PAPER = PanelKit.INK, PanelKit.PAPER
 
 function PanelKit.label(parent: Instance, style: string, size: number, x: number, y: number, right: boolean?, color: Color3?): any
 	local unit = MenuPanel.unit()
@@ -30,10 +34,24 @@ function PanelKit.label(parent: Instance, style: string, size: number, x: number
 		style = style,
 		size = size * unit,
 		tracking = TRACKING * unit,
-		color = color or NAVY,
+		color = color or INK,
 		right = right,
 		shadow = false,
 		position = UDim2.fromOffset(x * unit, y * unit),
+	})
+end
+
+-- Text on a card. Pass where the ink starts: it makes up for the blank side of a Title letter.
+function PanelKit.cardLabel(parent: Instance, style: string, size: number, x: number, y: number, color: Color3?): any
+	local unit = MenuPanel.unit()
+	local inset = if style == "Title" then size * PanelKit.TITLE_INSET else 0
+	return TypeLabel.new(parent, {
+		style = style,
+		size = size * unit,
+		tracking = CARD_TRACKING * unit,
+		color = color or INK,
+		shadow = false,
+		position = UDim2.fromOffset((x - inset) * unit, y * unit),
 	})
 end
 
@@ -53,7 +71,7 @@ function PanelKit.rule(parent: Instance, x: number, y: number, width: number): F
 	local unit = MenuPanel.unit()
 	local rule = Instance.new("Frame")
 	rule.BorderSizePixel = 0
-	rule.BackgroundColor3 = NAVY
+	rule.BackgroundColor3 = INK
 	rule.BackgroundTransparency = RULE_FADE
 	rule.Position = UDim2.fromOffset(x * unit, y * unit)
 	rule.Size = UDim2.fromOffset(width * unit, 1)
@@ -67,12 +85,12 @@ function PanelKit.title(parent: Instance, text: string)
 		style = "Title",
 		size = TITLE_SIZE * unit,
 		tracking = 0,
-		color = NAVY,
+		color = INK,
 		shadow = false,
-		position = UDim2.fromOffset(PanelKit.MARGIN * unit, TITLE_LINE * unit),
+		position = UDim2.fromOffset((PanelKit.MARGIN - TITLE_SIZE * PanelKit.TITLE_INSET) * unit, TITLE_LINE * unit),
 	})
 	big:set(text)
-	PanelKit.rule(parent, PanelKit.MARGIN, RULE_LINE, PanelKit.RIGHT - PanelKit.MARGIN)
+	PanelKit.rule(parent, PanelKit.MARGIN, PanelKit.RULE_LINE, PanelKit.RIGHT - PanelKit.MARGIN)
 end
 
 function PanelKit.block(parent: Instance, x: number, top: number, width: number, height: number, color: Color3): Frame
@@ -100,8 +118,8 @@ function PanelKit.hitBox(parent: Instance, x: number, top: number, width: number
 end
 
 -- A labelled button that inverts under the mouse and dips when pressed.
--- active leaves it in Signal Acid, and disabled greys it out and stops clicks. quiet thickens the
--- border instead of inverting, for buttons with their own contents.
+-- active leaves it inverted, and disabled greys it out and stops clicks. quiet thickens the border
+-- instead of inverting, for buttons with their own contents, and active leaves it thick.
 function PanelKit.button(
 	parent: Instance,
 	text: string,
@@ -115,16 +133,20 @@ function PanelKit.button(
 	local unit = MenuPanel.unit()
 	local size = choice.size or PanelKit.LABEL_SIZE
 	local button = PanelKit.hitBox(parent, x, top, width, height)
+	local filled = choice.active and not choice.quiet
+	local ink = if filled then PAPER else INK
+	local border = if choice.active and choice.quiet then QUIET_HOVER else 1
 	button.BackgroundTransparency = if choice.disabled then 0.9 else 0
-	button.BackgroundColor3 = if choice.disabled then NAVY elseif choice.active then Palette.SignalAcid else Palette.Bone
+	button.BackgroundColor3 = if choice.disabled or filled then INK else PAPER
 	local stroke = Instance.new("UIStroke")
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Color = NAVY
+	stroke.Color = INK
+	stroke.Thickness = border
 	stroke.Transparency = if choice.disabled then 0.7 else 0
 	stroke.Parent = button
 	local scale = Instance.new("UIScale")
 	scale.Parent = button
-	local word = PanelKit.label(button, "LabelBold", size, 0, 0)
+	local word = PanelKit.label(button, "LabelBold", size, 0, 0, nil, ink)
 	word:setPosition(UDim2.new(0.5, 0, 0, (height + size) / 2 * unit))
 	word:set(text)
 	word:setPosition(UDim2.new(0.5, -word:width() / 2, 0, (height + size) / 2 * unit))
@@ -138,14 +160,14 @@ function PanelKit.button(
 		if choice.quiet then
 			stroke.Thickness = QUIET_HOVER
 		else
-			button.BackgroundColor3 = NAVY
-			word:setColor(Palette.Bone)
+			button.BackgroundColor3 = INK
+			word:setColor(PAPER)
 		end
 	end)
 	button.MouseLeave:Connect(function()
-		stroke.Thickness = 1
+		stroke.Thickness = border
 		button.BackgroundColor3 = rest
-		word:setColor(NAVY)
+		word:setColor(ink)
 		scale.Scale = 1
 	end)
 	button.MouseButton1Down:Connect(function()

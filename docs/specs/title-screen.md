@@ -14,10 +14,10 @@ Sizes are shares of a **unit**, which is the screen's width, or 16/9 of its heig
 
 | Item | Place | Type | Colour |
 | --- | --- | --- | --- |
-| Background | Full screen | | Signal Acid |
+| Background | Full screen | | Bone |
 | Navy panel | Left side. Its right edge is a diagonal at 15.9°, centred at 60% of the screen's width, which runs from 68% along the top to 52% along the bottom on a 16:9 screen | | Deep Navy |
 | `SPLIT` | 5% from the left, baseline at 18.5% | `Title`, size 15% | Bone |
-| `DECK` | Baseline at 31.5% | `Title`, size 15% | Signal Acid |
+| `DECK` | Baseline at 31.5% | `Title`, size 15% | Bone |
 | Rule | At 34%, 40% wide | 1-pixel line, 65% transparent | Bone |
 | Menu | First baseline at 37.5%, then every 3.6% | `LabelBold` 1.7%, tracking 0.4% | See Buttons |
 | Details | Top right, right aligned 5% from the edge: `BUILD 0.4`, then `2 GUNS / 3 CARDS` | `Label` 1.25%, tracking 0.3% | Deep Navy |
@@ -41,7 +41,7 @@ Sizes are shares of a **unit**, which is the screen's width, or 16/9 of its heig
 | `LOADOUT` | Dimmed, with a small `SOON` | None |
 | `SETTINGS` | Dimmed, with a small `SOON` | None |
 
-- Hovering `PLAY` turns it Signal Acid and shows `> PLAY`. The dimmed buttons don't react.
+- Hovering `PLAY` shows `> PLAY`. The dimmed buttons don't react.
 - `PLAY` is an invisible button with `Modal` on, which frees the mouse while the screen shows. It fires on release, so no stray shot follows.
 
 ## Sound

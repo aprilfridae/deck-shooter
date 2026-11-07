@@ -15,9 +15,9 @@ Taken from River's poster references.
 - One huge word or number leads each panel, with small labels around it.
 - Thin rules and strict columns, with small blocks of data in the corners.
 - One loud block per panel. Barcodes, tick marks and simple circles and squares are the decoration.
-- **Colour:** Bone is the paper, Deep Navy is the ink, and Signal Acid is the loud block. Tier colours appear only on cards. Hazard Red stays for threats and purchases.
+- **Colour:** Deep Navy is the paper, Bone is the ink, and whatever is selected or under the mouse inverts to Bone with navy text. A solid Bone block is the loud element. Signal Acid and Data Cyan are kept off the menus and HUD; Signal Acid is reserved for later. Cards are blank for now, with no tier colours, until River's custom card art is made. Hazard Red stays for threats and purchases.
 - **Truth:** every number on a panel is real, or the panel leaves it out. No made-up serials or stats, as on the title screen.
-- **Motion:** panels move at 30 frames a second over 0.5s and feel heavy. Opening, a panel swings a little past its mark and settles. Closing, it pulls back a touch and then drops away. Roblox UI has no blur, so each frame leaves fading copies of the panel between it and the last frame, like the smear on the guns. The copies are gone once the panel stops.
+- **Motion:** panels move at the full frame rate over 0.5s and feel heavy. Opening, a panel swings a little past its mark and settles. Closing, it pulls back a touch and then drops away. Roblox UI has no blur, so each frame leaves eight fading copies of the panel, stretching back past the last frame, like the smear on the guns. The nav's wipes and its rows sliding in leave the same copies. The copies are gone once the panel stops. Closing, the blur, copies and glow fade from 40% of the way through and are gone by 80%, so the panel leaves clean.
 
 ## Layout
 
@@ -25,32 +25,32 @@ Sizes use the title screen's **unit**: the screen's width, or 16/9 of its height
 
 | Item | Place |
 | --- | --- |
-| Nav | Bottom left, 3% from the edge: `PLAY`, `LOADOUT`, `PROFILE`, `SETTINGS` stacked, each with its number. Under the mouse a Bone wipe crosses the row in 30 fps steps with fading Data Cyan copies behind it and a Signal Acid glow ahead that spills past the row, the name kicks right and the number becomes `>`. A thin Bone outline runs round the whole nav. The open page's row wipes Signal Acid. Rows slide in one after another when the nav appears. |
-| Panel | Right half of the screen, full height, Bone. |
+| Nav | Bottom left, 3% from the edge: `PLAY`, `LOADOUT`, `PROFILE`, `SETTINGS` stacked, each with its number. The rows are Deep Navy with Bone text, like the panels. Under the mouse a Bone wipe crosses the row in 40 fps steps with fading Bone copies behind it and a Bone glow ahead that spills past the row, the name kicks right and the number becomes `>`. A thin Bone outline runs round the whole nav. The open page's row wipes Bone. Rows slide in one after another when the nav appears. |
+| Panel | Right half of the screen, full height, Deep Navy. |
 
 - The nav and panels show only in the `Outpost` zone, after the title screen. Leaving the zone closes the panel.
 - One panel is open at a time. Clicking another button swaps it, and clicking the open button closes it.
 - WASD, jump, sprint and crouch keep working while a panel is open. The mouse works the panel.
-- Opening a panel moves the centre of the view left in step with the sheet, frame for frame, swing and all, so the character sits a quarter of the way across the screen, beside the panel, with no stretching. The camera itself doesn't move: its CFrame is sheared and scaled to 0.75 for each frame drawn, because Roblox straightens a larger shear at a limit that depends on where the camera faces, then put back so controls read the true camera. Closing moves it back the same way. While it moves, the 3D view blurs and leans with the speed of each frame, and the panel and interface stay sharp. The world blooms with the same speed. The panel's left edge glows Signal Acid. When a closing panel lands, the view shakes for 7 frames, fading out.
+- Opening a panel moves the centre of the view left over the same 0.5s at the full frame rate, not in steps. It eases in over the first quarter of the move and then follows the sheet, swing and all, so the character sits a quarter of the way across the screen, beside the panel, with no stretching. The camera itself doesn't move: its CFrame is sheared and scaled to 0.75 for each frame drawn, because Roblox straightens a larger shear at a limit that depends on where the camera faces, then put back so controls read the true camera. Closing moves it back the same way. While it moves, the 3D view blurs and leans with the speed of each frame, and the panel and interface stay sharp. The world blooms with the same speed. The panel's left edge glows Deep Navy. When a closing panel lands, the view shakes for 7 frames, fading out.
 - Typing in a text box stops movement, as `Input.luau` already does.
 
 ## Panels
 
 ### Play
 
-`PLAY` in full size, then the launch queues from `matches.md`: Elimination 1V1, 2V2 and 3V3, and Tower 5V5. Each says `SOON` and does nothing until matches exist.
+`PLAY` in full size, then the launch queues from `matches.md`: Elimination 1V1, 2V2 and 3V3, and Tower 5V5. Each says `SOON` and does nothing until matches exist. Under the mouse a row opens downward smoothly, pushing the rows below it, and two lines of small `Label` text saying how the queue plays decode in from left to right at 20 fps, with a front of random characters ahead of the settled text. Its tick grows to run alongside them. Only one row is open at a time, and its text clears as soon as the mouse leaves.
 
 ### Loadout
 
-- `LOAD OUT`, with the player's real Deck Power Rating in the acid block beside the card slots.
-- Three card slots shaped like playing cards, each with its number, name and tier colour. Clicking a slot lists the owned cards and tiers. Choosing one calls the existing `SetDeck`. A deck can't hold the same card twice, so cards already in the deck are greyed out.
+- `LOAD OUT`, with the player's real Deck Power Rating in the navy block beside the card slots.
+- Three card slots shaped like playing cards, each with its number, name and tier. Clicking a slot lists the owned cards and tiers. Choosing one calls the existing `SetDeck`. A deck can't hold the same card twice, so cards already in the deck are greyed out.
 - Class sits below the slots, with the guns it gives, and a rifle choice shows if the class has more than one. Changing them sends the same loadout message as the B and N test keys, and follows the same rule for when the change applies.
 - A deck change reaches abilities on the next respawn, as `cards.md` says, so the panel shows `NEXT RESPAWN` after a change until then.
 
 ### Profile
 
 - Roblox headshot, name, Credits and DPR, then two tabs: `CARD INDEX` and `COMMENTS`.
-- **Card index:** a grid of playing card shapes, one for every card at every tier, 4 cards by 3 tiers for now. Owned ones show their copy count and tier colour, and the rest are ghosted. A large `04/12` shows how many are owned.
+- **Card index:** a grid of playing card shapes, one for every card at every tier, 4 cards by 3 tiers for now. Owned ones show their copy count in full ink, and the rest are ghosted. A large `04/12` shows how many are owned.
 - **Other players:** left clicking a player in the Outpost, the player included, opens this page for them, within 40 studs. The click uses the cursor, or the screen's centre if the mouse is locked. Fusion and any other editing stay out of Profile.
 - The server sends another player's public data on request, through a new `GetProfile` function. Only players in the same server can be viewed.
 

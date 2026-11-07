@@ -16,7 +16,7 @@ function PanelGlow.new(parent: Instance): any
 	local self = setmetatable({}, PanelGlow)
 	self.frame = Instance.new("Frame")
 	self.frame.AnchorPoint = Vector2.new(1, 0)
-	self.frame.BackgroundColor3 = Palette.SignalAcid
+	self.frame.BackgroundColor3 = Palette.Bone
 	self.frame.BorderSizePixel = 0
 	self.frame.Size = UDim2.fromScale(GLOW_WIDTH, 1)
 	self.frame.ZIndex = GLOW_LAYER
@@ -34,10 +34,6 @@ function PanelGlow:show(edge: number, travel: number)
 	self.frame.Visible = glow > 0
 	self.frame.Position = UDim2.fromScale(edge, 0)
 	self.frame.BackgroundTransparency = 1 - GLOW_STRENGTH * glow
-end
-
-function PanelGlow:hide()
-	self.frame.Visible = false
 end
 
 return PanelGlow

@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local RETRY = 1 -- seconds
+local GIVE_UP = 15 -- seconds to wait for the server before a request fails
 
 local changedEvent = Instance.new("BindableEvent")
 local current: any? = nil
@@ -33,7 +34,8 @@ end
 -- Sends a remote and returns its reply. Waits for the server, so call it off the main path.
 function CardData.ask(name: string, request: any?): any
 	local ok, reply = pcall(function()
-		return remotes():WaitForChild(name):InvokeServer(request)
+		local folder = ReplicatedStorage:WaitForChild("CardCoreRemotes", GIVE_UP)
+		return folder:WaitForChild(name, GIVE_UP):InvokeServer(request)
 	end)
 	return if ok then reply else { ok = false, code = "NoReply" }
 end

@@ -3,7 +3,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local Guns = ReplicatedStorage:WaitForChild("Guns")
-local Palette = require(Guns:WaitForChild("Palette"))
 local Settings = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Settings"))
 local MenuPanel = require(script.Parent.MenuPanel)
 local PanelKit = require(script.Parent.PanelKit)
@@ -24,7 +23,6 @@ local KEYBINDS_HEIGHT = 0.04
 local TRACK_FADE = 0.75
 local MESSAGE_TIME = 1.5 -- seconds
 
-local NAVY = Palette.DeepNavy
 
 local listening: RBXScriptConnection? = nil
 
@@ -59,7 +57,7 @@ local function slider(parent: Instance, name: string, field: string, y: number, 
 	local hit = hitBox(parent, SLIDER_LEFT, y - SLIDER_STEP * 0.7, SLIDER_RIGHT - SLIDER_LEFT, SLIDER_STEP)
 	local track = Instance.new("Frame")
 	track.BorderSizePixel = 0
-	track.BackgroundColor3 = NAVY
+	track.BackgroundColor3 = PanelKit.INK
 	track.BackgroundTransparency = TRACK_FADE
 	track.AnchorPoint = Vector2.new(0, 0.5)
 	track.Position = UDim2.fromScale(0, 0.5)
@@ -70,7 +68,7 @@ local function slider(parent: Instance, name: string, field: string, y: number, 
 	fill.Parent = hit
 	local handle = Instance.new("Frame")
 	handle.BorderSizePixel = 0
-	handle.BackgroundColor3 = NAVY
+	handle.BackgroundColor3 = PanelKit.INK
 	handle.AnchorPoint = Vector2.new(0.5, 0.5)
 	handle.Size = UDim2.fromOffset(math.max(3, 0.003 * unit), 0.013 * unit)
 	handle.Parent = hit
@@ -222,7 +220,7 @@ showMain = function(content: Frame)
 	local unit = MenuPanel.unit()
 	local bar = hitBox(content, MARGIN, KEYBINDS_TOP, RIGHT - MARGIN, KEYBINDS_HEIGHT)
 	bar.BackgroundTransparency = 0
-	bar.BackgroundColor3 = Palette.SignalAcid
+	bar.BackgroundColor3 = PanelKit.INK
 	bar.BorderSizePixel = 0
 	bar.Activated:Connect(function()
 		SettingsPanel.showKeys(content)
@@ -230,9 +228,11 @@ showMain = function(content: Frame)
 	local baseline = (KEYBINDS_HEIGHT + LABEL_SIZE) / 2 * unit
 	local name = label(bar, "LabelBold", LABEL_SIZE, 0, 0)
 	name:setPosition(UDim2.fromOffset(MARGIN * unit, baseline))
+	name:setColor(PanelKit.PAPER)
 	name:set("KEYBINDS")
 	local arrow = label(bar, "LabelBold", LABEL_SIZE, 0, 0, true)
 	arrow:setPosition(UDim2.new(1, -MARGIN * unit, 0, baseline))
+	arrow:setColor(PanelKit.PAPER)
 	arrow:set(">")
 end
 

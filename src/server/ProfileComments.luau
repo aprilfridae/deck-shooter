@@ -9,8 +9,15 @@ local TextService = game:GetService("TextService")
 
 local Comments = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Comments"))
 
-local store = DataStoreService:GetDataStore("ProfileComments_v1")
-local reports = DataStoreService:GetDataStore("ProfileCommentReports_v1")
+-- Asked for on use and inside a pcall, because asking throws in a place that was never published,
+-- and at the top of this module that would stop the whole of CardCore from starting.
+local function store(): DataStore
+	return DataStoreService:GetDataStore("ProfileComments_v1")
+end
+
+local function reports(): DataStore
+	return DataStoreService:GetDataStore("ProfileCommentReports_v1")
+end
 
 local memory: { [number]: { any } } = {} -- stands in for the DataStore in Studio without API access
 local lastPost: { [Player]: number } = {}
@@ -23,7 +30,7 @@ end
 
 local function read(ownerId: number): { any }?
 	local ok, saved = pcall(function()
-		return store:GetAsync(keyOf(ownerId))
+		return store():GetAsync(keyOf(ownerId))
 	end)
 	if ok then
 		return saved or memory[ownerId] or {}
@@ -35,7 +42,7 @@ end
 
 local function change(ownerId: number, edit: ({ any }) -> ()): boolean
 	local ok = pcall(function()
-		store:UpdateAsync(keyOf(ownerId), function(saved)
+		store():UpdateAsync(keyOf(ownerId), function(saved)
 			local list = saved or {}
 			edit(list)
 			return list
@@ -138,7 +145,7 @@ function ProfileComments.report(reporter: Player, ownerId: number, authorId: num
 	end
 	return (
 		pcall(function()
-			reports:SetAsync(`Report_{ownerId}_{authorId}_{reporter.UserId}`, {
+			reports():SetAsync(`Report_{ownerId}_{authorId}_{reporter.UserId}`, {
 				owner = ownerId,
 				author = authorId,
 				authorName = comment.authorName,

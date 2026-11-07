@@ -55,14 +55,16 @@ end)
 -- Runs after the panel steps, so the two land on every frame together, and after the guns' recoil,
 -- so nothing else writes to the camera once it's sheared.
 RunService:BindToRenderStep("OutpostMenuCamera", Enum.RenderPriority.Camera.Value + 2, function()
-	local amount = if panel then panel.share else 0
+	local amount = if panel then panel.view else 0
 	local travel = if panel then panel.travel else 0
+	local viewTravel = if panel then panel.viewTravel else 0
 	local shake = if panel then panel.shake else { x = 0, y = 0, lean = 0 }
+	local blurLeft = if panel then panel.blurLeft else 1
 	blur.Parent = Workspace.CurrentCamera
-	blur.Size = PanelMotion.viewBlur(travel)
+	blur.Size = PanelMotion.viewBlur(travel) * blurLeft
 	blur.Enabled = travel ~= 0
 	bloom.Parent = Workspace.CurrentCamera
-	bloom.Intensity = PanelMotion.glow(travel) * MOST_BLOOM
+	bloom.Intensity = PanelMotion.glow(travel) * blurLeft * MOST_BLOOM
 	bloom.Enabled = travel ~= 0
 	if amount < 0.001 and shake.x == 0 then
 		across = 0
@@ -73,7 +75,7 @@ RunService:BindToRenderStep("OutpostMenuCamera", Enum.RenderPriority.Camera.Valu
 	local shift = PanelMotion.viewShift(camera.FieldOfView, view.X / view.Y) * amount
 	real = camera.CFrame
 	-- The lean comes first, so the picture tips around the character rather than the screen's centre.
-	local lean = CFrame.Angles(0, 0, shake.lean - PanelMotion.viewLean(travel))
+	local lean = CFrame.Angles(0, 0, shake.lean - PanelMotion.viewLean(viewTravel))
 	across = PanelMotion.safeShift(shift + shake.x)
 	local size = PanelMotion.VIEW_SCALE
 	local shear = CFrame.new(0, 0, 0, size, 0, 0, 0, size, 0, across * size, shake.y * size, size)

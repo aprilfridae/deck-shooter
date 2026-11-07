@@ -52,25 +52,25 @@ Sizes are in pixels on a 720-pixel-tall screen. All text is capitals.
 | Item | Place | Style | Colour |
 | --- | --- | --- | --- |
 | Health | Bottom left, baseline 32 from the bottom, 32 from the left | `Number` 46 | Bone |
-| Shield `+40` | 8 after the health number, only while shielded | `NumberThin` 46 | Signal Acid |
+| Shield `+40` | 8 after the health number, only while shielded | `NumberThin` 46 | Bone |
 | `HEALTH` | 44 above the baseline, 34 from the left | `Label` 12, tracking 3 | Bone |
 | Class | Same line, 108 from the left | `Label` 12, tracking 3 | Bone |
 | Ammo | Bottom right, same baseline and margin | `Number` 46 | Bone |
 | Gun label `M57  /  30` | 44 above the ammo baseline, right aligned 34 from the edge | `Label` 12, tracking 3 | Bone |
-| `RELOADING` | Replaces the gun label. The ammo number stays. | `LabelBold` 12, tracking 3 | Signal Acid |
+| `RELOADING` | Replaces the gun label. The ammo number stays. | `LabelBold` 12, tracking 3 | Bone |
 | Ability rows | 3 rows above health, the first 130 above the baseline, 25 apart | See below | |
 
 Each ability row is 220 wide, starting 34 from the left, with tracking 2 throughout:
 
-- The key (3, 4 or 5) in `LabelBold` 12. Signal Acid when the card is ready, otherwise Bone.
+- The key (3, 4 or 5) in `LabelBold` 12, in Bone.
 - The card name, 18 from the row's left edge, in `Label` 12.
-- The tier on the right edge in `Label` 10, in its tier colour: Field Green, Data Cyan or Signal Acid.
+- The tier on the right edge in `Label` 10, in Bone.
 - 5 below the baseline, a cooldown bar of 10 segments, 2 tall and 2 apart. Filled segments are Bone, empty ones Deep Navy.
 - An empty slot shows nothing.
 
 Health and shield round up, so a player on 0.4 health shows 1.
 
-**Crosshair and hit marker:** the crosshair is a 4 by 4 Bone square. A hit shows 4 Signal Acid dashes in an X around it for 0.3s. It starts 1.6 times bigger and shrinks, and a kill's marker is 1.5 times bigger. Neither is scaled with the rest of the HUD.
+**Crosshair and hit marker:** the crosshair is a 4 by 4 Bone square. A hit shows 4 Bone dashes in an X around it for 0.3s. It starts 1.6 times bigger and shrinks, and a kill's marker is 1.5 times bigger. Neither is scaled with the rest of the HUD.
 
 ## Scaling
 

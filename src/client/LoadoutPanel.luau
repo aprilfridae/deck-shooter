@@ -8,7 +8,6 @@ local Cards = require(CardCore:WaitForChild("Cards"))
 local Deck = require(CardCore:WaitForChild("Deck"))
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local GunConfig = require(Guns:WaitForChild("GunConfig"))
-local Palette = require(Guns:WaitForChild("Palette"))
 local CardData = require(script.Parent.CardData)
 local PanelKit = require(script.Parent.PanelKit)
 
@@ -20,7 +19,8 @@ local SLOT_TOP = 0.14
 local SLOT_WIDTH = 0.107 -- a playing card's shape, with SLOT_HEIGHT
 local SLOT_HEIGHT = 0.15
 local SLOT_GAP = 0.01
-local BAND_HEIGHT = 0.008
+local SLOT_MARGIN = 0.01 -- inside a card, on all four sides
+local SLOT_NUMBER = 0.02
 local POWER_SIZE = 0.034
 local LOWER_LINE = 0.31
 local LOWER_TOP = 0.322
@@ -45,12 +45,12 @@ local function slotCell(content: Frame, snapshot: any, index: number, chosen: nu
 	local width = SLOT_WIDTH
 	local x = PanelKit.MARGIN + (index - 1) * (width + SLOT_GAP)
 	local cell = PanelKit.button(content, "", x, SLOT_TOP, width, SLOT_HEIGHT, { active = index == chosen, quiet = true })
-	PanelKit.block(cell, 0, 0, width, BAND_HEIGHT, Palette.Tiers[entry.tier] or PanelKit.NAVY)
-	local padding = 0.008
-	PanelKit.label(cell, "Title", 0.02, padding, BAND_HEIGHT + 0.026):set(tostring(index))
-	PanelKit.label(cell, "LabelBold", PanelKit.SMALL_SIZE, padding, 0.124)
+	local numberLine = SLOT_MARGIN + SLOT_NUMBER * PanelKit.CAP_HEIGHT
+	local tierLine = SLOT_HEIGHT - SLOT_MARGIN
+	PanelKit.cardLabel(cell, "Title", SLOT_NUMBER, SLOT_MARGIN, numberLine):set(tostring(index))
+	PanelKit.cardLabel(cell, "LabelBold", PanelKit.SMALL_SIZE, SLOT_MARGIN, tierLine - 0.015)
 		:set(string.upper(Cards.byId[entry.cardId].name))
-	PanelKit.label(cell, "Label", PanelKit.SMALL_SIZE, padding, 0.139):set(TIER_NAMES[entry.tier])
+	PanelKit.cardLabel(cell, "Label", PanelKit.SMALL_SIZE, SLOT_MARGIN, tierLine):set(TIER_NAMES[entry.tier])
 	cell.Activated:Connect(function()
 		draw(content, if index == chosen then nil else index)
 	end)
@@ -70,7 +70,6 @@ local function picker(content: Frame, snapshot: any, slot: number)
 			disabled = swapped == nil,
 			size = PanelKit.SMALL_SIZE,
 		})
-		PanelKit.block(button, 0, 0, 0.005, PICK_HEIGHT, Palette.Tiers[card.tier])
 		button.Activated:Connect(function()
 			if swapped then
 				task.spawn(function()
@@ -140,14 +139,21 @@ draw = function(content: Frame, chosen: number?)
 	local snapshot = CardData.get()
 	if not snapshot then
 		PanelKit.line(content, "LOADING", MARGIN, SLOT_TOP + 0.02)
+		local arrived
+		arrived = CardData.changed:Connect(function()
+			arrived:Disconnect()
+			if content.Parent then
+				draw(content, nil)
+			end
+		end)
 		return
 	end
 
 	local blockLeft = MARGIN + Deck.SIZE * (SLOT_WIDTH + SLOT_GAP)
-	local block = PanelKit.block(content, blockLeft, SLOT_TOP, RIGHT - blockLeft, SLOT_HEIGHT, Palette.SignalAcid)
-	PanelKit.label(block, "LabelBold", PanelKit.SMALL_SIZE, 0.008, 0.02):set("DECK")
-	PanelKit.label(block, "LabelBold", PanelKit.SMALL_SIZE, 0.008, 0.034):set("POWER")
-	PanelKit.label(block, "Title", POWER_SIZE, 0.008, SLOT_HEIGHT - 0.01):set(tostring(snapshot.dpr))
+	local block = PanelKit.block(content, blockLeft, SLOT_TOP, RIGHT - blockLeft, SLOT_HEIGHT, PanelKit.INK)
+	PanelKit.label(block, "LabelBold", PanelKit.SMALL_SIZE, 0.008, 0.02, nil, PanelKit.PAPER):set("DECK")
+	PanelKit.label(block, "LabelBold", PanelKit.SMALL_SIZE, 0.008, 0.034, nil, PanelKit.PAPER):set("POWER")
+	PanelKit.label(block, "Title", POWER_SIZE, 0.008, SLOT_HEIGHT - 0.01, nil, PanelKit.PAPER):set(tostring(snapshot.dpr))
 
 	PanelKit.heading(content, "CARDS", SLOTS_LINE)
 	local note = PanelKit.label(content, "LabelBold", PanelKit.HEADING_SIZE, RIGHT, SLOTS_LINE, true)

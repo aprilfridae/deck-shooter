@@ -23,10 +23,9 @@ local remotes = ReplicatedStorage:WaitForChild("GunRemotes")
 local hitRemote = remotes:WaitForChild("HitConfirm") :: RemoteEvent
 
 local BONE = Palette.Bone
-local ACID = Palette.SignalAcid
 local EMPTY = Palette.DeepNavy
 -- The hit marker: four dashes in an X around the crosshair.
-local MARKER_COLOR = Palette.SignalAcid
+local MARKER_COLOR = Palette.Bone
 local MARKER_SECONDS = 0.3
 local MARKER_GAP = 5 -- from the middle of the screen to the inner end of each dash
 local MARKER_LENGTH = 6
@@ -126,13 +125,13 @@ local function small(style: string, right: boolean?, position: UDim2): any
 end
 
 local healthText = number("Number", BONE, false, UDim2.new(0, MARGIN, 1, BASELINE))
-local shieldText = number("NumberThin", ACID, false, UDim2.new(0, MARGIN, 1, BASELINE))
+local shieldText = number("NumberThin", BONE, false, UDim2.new(0, MARGIN, 1, BASELINE))
 local ammoText = number("Number", BONE, true, UDim2.new(1, -MARGIN, 1, BASELINE))
 local healthLabel = small("Label", false, UDim2.new(0, MARGIN + LABEL_INSET, 1, LABEL_LINE))
 local classText = small("Label", false, UDim2.new(0, CLASS_X, 1, LABEL_LINE))
 local gunText = small("Label", true, UDim2.new(1, -MARGIN - LABEL_INSET, 1, LABEL_LINE))
 local reloadText = small("LabelBold", true, UDim2.new(1, -MARGIN - LABEL_INSET, 1, LABEL_LINE))
-reloadText:setColor(ACID)
+reloadText:setColor(BONE)
 healthLabel:set("HEALTH")
 
 local markerAt = 0
@@ -200,10 +199,8 @@ local function showRow(index: number, now: number)
 	row.name:set(card.name)
 	local tier = player:GetAttribute(`Ability{index}Tier`)
 	row.tier:set(tostring(tier))
-	row.tier:setColor(Palette.Tiers[tier] or BONE)
 	local left = player:GetAttribute(`Ability{index}ReadyAt`) - now
 	local filled = HudText.filled(left, player:GetAttribute(`Ability{index}Cooldown`), #row.segments)
-	row.key:setColor(if filled == #row.segments then ACID else BONE)
 	for i, segment in row.segments do
 		segment.BackgroundColor3 = if i <= filled then BONE else EMPTY
 	end

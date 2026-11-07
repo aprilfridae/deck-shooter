@@ -8,12 +8,74 @@ local function near(a: number, b: number): boolean
 end
 
 describe("PanelMotion", function()
-	it("steps through a move at 30 frames a second", function()
-		expect(PanelMotion.FPS).toBe(30)
-		expect(PanelMotion.held(0)).toBe(0)
-		expect(PanelMotion.held(0.01)).toBe(0)
-		expect(PanelMotion.held(PanelMotion.DURATION)).toBe(1)
-		expect(PanelMotion.held(10)).toBe(1)
+	it("opens a row smoothly and lands on 1", function()
+		expect(PanelMotion.expand(0)).toBe(0)
+		expect(PanelMotion.expand(0.001) > 0).toBe(true)
+		expect(near(PanelMotion.expand(PanelMotion.EXPAND_TIME), 1)).toBe(true)
+		expect(near(PanelMotion.expand(10), 1)).toBe(true)
+	end)
+
+	it("decodes at a low frame rate", function()
+		expect(PanelMotion.DECODE_FPS < PanelMotion.FPS).toBe(true)
+		local held = 0.5 / PanelMotion.DECODE_FPS
+		expect(PanelMotion.decode("HELLO", held)).toBe("")
+	end)
+
+	it("starts a decode with nothing on screen", function()
+		expect(PanelMotion.decode("HELLO", 0)).toBe("")
+	end)
+
+	it("runs noise out in front of the text", function()
+		local shown = PanelMotion.decode("AAAAAAAAAAAAAAAAAAAA", 2 / PanelMotion.DECODE_FPS)
+		expect(#shown > 0).toBe(true)
+		expect(#shown < 20).toBe(true)
+		expect(string.find(shown, "[^A]") ~= nil).toBe(true)
+	end)
+
+	it("settles on the exact text", function()
+		local text = "FIRST TO 5.\nSECOND LINE"
+		expect(PanelMotion.decode(text, 10)).toBe(text)
+	end)
+
+	it("keeps spaces and line breaks in place while decoding", function()
+		local shown = PanelMotion.decode("AB CD\nEF GH", 2 / PanelMotion.DECODE_FPS)
+		for index = 1, #shown do
+			local letter = string.sub("AB CD\nEF GH", index, index)
+			if letter == " " or letter == "\n" then
+				expect(string.sub(shown, index, index)).toBe(letter)
+			end
+		end
+	end)
+
+	it("holds the same noise for a whole frame", function()
+		local frame = 3 / PanelMotion.DECODE_FPS
+		local text = string.rep("X", 30)
+		expect(PanelMotion.decode(text, frame)).toBe(PanelMotion.decode(text, frame + 0.01))
+	end)
+
+	it("eases the camera in gently, then matches the panel", function()
+		expect(PanelMotion.viewShare(0, 1, 0)).toBe(0)
+		expect(near(PanelMotion.viewShare(0, 1, 1), 1)).toBe(true)
+		expect(PanelMotion.viewShare(0, 1, 0.05) < PanelMotion.share(0, 1, 0.05) / 5).toBe(true)
+		expect(PanelMotion.viewShare(0, 1, 0.5)).toBe(PanelMotion.share(0, 1, 0.5))
+	end)
+
+	it("drops the camera away with the panel when closing", function()
+		expect(PanelMotion.viewShare(1, 0, 0.5)).toBe(PanelMotion.share(1, 0, 0.5))
+	end)
+
+	it("fades the blur out before a closing panel has left", function()
+		expect(PanelMotion.closeFade(0)).toBe(1)
+		expect(PanelMotion.closeFade(0.3)).toBe(1)
+		expect(PanelMotion.closeFade(0.8)).toBe(0)
+		expect(PanelMotion.closeFade(1)).toBe(0)
+		local middle = PanelMotion.closeFade(0.6)
+		expect(middle > 0 and middle < 1).toBe(true)
+	end)
+
+	it("smears further back than the last frame travelled", function()
+		local trail = PanelMotion.trail(0.5, 1)
+		expect(trail[#trail].share < 0.5).toBe(true)
 	end)
 
 	it("starts and lands on its marks", function()
