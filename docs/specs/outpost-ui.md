@@ -43,7 +43,7 @@ Sizes use the title screen's **unit**: the screen's width, or 16/9 of its height
 ### Loadout
 
 - `LOAD OUT`, with the player's real Deck Power Rating in the navy block beside the card slots.
-- Three card slots shaped like playing cards, each with its number, name and tier. Clicking a slot lists the owned cards and tiers. Choosing one calls the existing `SetDeck`. A deck can't hold the same card twice, so cards already in the deck are greyed out.
+- Three card slots showing the deck's cards, each with its number underneath. Clicking a slot replaces the page with every card laid out as in the index, with a `BACK` button. Clicking an owned card calls the existing `SetDeck` and returns to the page. A deck can't hold the same card twice, so cards already in the deck are faded and marked `EQUIPPED` or `IN DECK`, and unowned cards are faded. None of those can be clicked.
 - Class sits below the slots, with the guns it gives, and a rifle choice shows if the class has more than one. Changing them sends the same loadout message as the B and N test keys, and follows the same rule for when the change applies.
 - A deck change reaches abilities on the next respawn, as `cards.md` says, so the panel shows `NEXT RESPAWN` after a change until then.
 

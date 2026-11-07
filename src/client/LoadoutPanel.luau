@@ -4,12 +4,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local CardIndex = require(CardCore:WaitForChild("CardIndex"))
-local CardLook = require(CardCore:WaitForChild("CardLook"))
 local Deck = require(CardCore:WaitForChild("Deck"))
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local GunConfig = require(Guns:WaitForChild("GunConfig"))
 local CardData = require(script.Parent.CardData)
 local CardFace = require(script.Parent.CardFace)
+local CardGrid = require(script.Parent.CardGrid)
 local MenuPanel = require(script.Parent.MenuPanel)
 local PanelKit = require(script.Parent.PanelKit)
 
@@ -26,12 +26,15 @@ local POWER_SIZE = 0.034
 local LOWER_LINE = 0.33
 local LOWER_TOP = 0.342
 local PICK_HEIGHT = 0.026
-local PICK_GAP = 0.004
+local BACK_WIDTH = 0.06
+local BACK_TOP = 0.104
+local CHOOSER_TOP = 0.14
 local CLASS_GAP = 0.008
 local RIFLE_LINE = 0.395
 local RIFLE_TOP = 0.407
 local GUNS_LINE = 0.395
 local NEXT_RESPAWN = "NEXT RESPAWN"
+local CORNERS = { Equipped = "EQUIPPED", InDeck = "IN DECK" }
 
 local LoadoutPanel = {}
 
@@ -41,12 +44,12 @@ end
 
 local draw: (Frame, number?) -> ()
 
-local function slotCell(content: Frame, snapshot: any, index: number, chosen: number?)
+local function slotCell(content: Frame, snapshot: any, index: number)
 	local entry = snapshot.deck[index]
 	local width = SLOT_WIDTH
 	local x = PanelKit.MARGIN + (index - 1) * (width + SLOT_GAP)
 	local unit = MenuPanel.unit()
-	local cell = PanelKit.button(content, "", x, SLOT_TOP, width, SLOT_HEIGHT, { active = index == chosen, quiet = true })
+	local cell = PanelKit.button(content, "", x, SLOT_TOP, width, SLOT_HEIGHT, { quiet = true })
 	cell.BackgroundTransparency = 1
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, SLOT_CORNER * unit)
@@ -59,34 +62,43 @@ local function slotCell(content: Frame, snapshot: any, index: number, chosen: nu
 	})
 	PanelKit.label(content, "Label", PanelKit.SMALL_SIZE, x, SLOT_NUMBER_LINE):set(tostring(index))
 	cell.Activated:Connect(function()
-		draw(content, if index == chosen then nil else index)
+		draw(content, index)
 	end)
 end
 
-local function picker(content: Frame, snapshot: any, slot: number)
-	local MARGIN, RIGHT = PanelKit.MARGIN, PanelKit.RIGHT
-	PanelKit.heading(content, `CHOOSE FOR SLOT {slot}`, LOWER_LINE)
-	local width = (RIGHT - MARGIN - PICK_GAP) / 2
-	for index, card in CardIndex.owned(snapshot.stacks) do
-		local row = math.floor((index - 1) / 2)
-		local x = MARGIN + (index - 1) % 2 * (width + PICK_GAP)
-		local top = LOWER_TOP + row * (PICK_HEIGHT + PICK_GAP)
-		local swapped = Deck.swap(snapshot.deck, slot, card.cardId, card.tier)
-		local name = `{string.upper(card.name)} {CardLook.tierName(card.tier)}`
-		local button = PanelKit.button(content, name, x, top, width, PICK_HEIGHT, {
-			disabled = swapped == nil,
-			size = PanelKit.SMALL_SIZE,
-		})
-		button.Activated:Connect(function()
-			if swapped then
-				task.spawn(function()
-					CardData.setDeck(swapped)
-					if content.Parent then
-						draw(content, nil)
-					end
-				end)
-			end
-		end)
+-- The whole page while choosing: every card, as in the index, with the ones that fit clickable.
+local function chooser(content: Frame, snapshot: any, slot: number)
+	PanelKit.heading(content, `CHOOSE FOR SLOT {slot}`, SLOTS_LINE)
+	local x = PanelKit.RIGHT - BACK_WIDTH
+	local back = PanelKit.button(content, "BACK", x, BACK_TOP, BACK_WIDTH, PICK_HEIGHT, { size = PanelKit.SMALL_SIZE })
+	back.Activated:Connect(function()
+		draw(content, nil)
+	end)
+
+	local index = CardIndex.build(snapshot.stacks)
+	local grid = CardGrid.new(content, CHOOSER_TOP, #index.cards[1].tiers)
+	for column, card in index.cards do
+		for row, entry in card.tiers do
+			local choice = CardIndex.choice(snapshot.deck, slot, card.cardId, entry.tier, entry.count)
+			local open = choice == "Open"
+			local options = {
+				cardId = card.cardId,
+				tier = entry.tier,
+				variant = entry.variant,
+				corner = CORNERS[choice] or if entry.count > 0 then `X{entry.count}` else nil,
+				ghost = not open,
+			}
+			CardGrid.add(grid, column, row, options, if open
+				then function()
+					task.spawn(function()
+						CardData.setDeck(Deck.swap(snapshot.deck, slot, card.cardId, entry.tier))
+						if content.Parent then
+							draw(content, nil)
+						end
+					end)
+				end
+				else nil)
+		end
 	end
 end
 
@@ -156,6 +168,11 @@ draw = function(content: Frame, chosen: number?)
 		return
 	end
 
+	if chosen then
+		chooser(content, snapshot, chosen)
+		return
+	end
+
 	local blockLeft = MARGIN + Deck.SIZE * (SLOT_WIDTH + SLOT_GAP)
 	local block = PanelKit.block(content, blockLeft, SLOT_TOP, RIGHT - blockLeft, SLOT_HEIGHT, PanelKit.INK)
 	PanelKit.label(block, "LabelBold", PanelKit.SMALL_SIZE, 0.008, 0.02, nil, PanelKit.PAPER):set("DECK")
@@ -176,13 +193,9 @@ draw = function(content: Frame, chosen: number?)
 	end)
 
 	for index = 1, Deck.SIZE do
-		slotCell(content, snapshot, index, chosen)
+		slotCell(content, snapshot, index)
 	end
-	if chosen then
-		picker(content, snapshot, chosen)
-	else
-		loadoutRows(content, snapshot)
-	end
+	loadoutRows(content, snapshot)
 end
 
 function LoadoutPanel.fill(content: Frame)

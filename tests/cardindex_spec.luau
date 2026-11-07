@@ -47,6 +47,19 @@ describe("CardIndex", function()
 		expect(CardIndex.variant(stacks, "overclock", "Field")).toBe(Variant.Base)
 	end)
 
+	it("says which cards can go in a deck slot", function()
+		local deck = {
+			{ cardId = "phase_dash", tier = "Field" },
+			{ cardId = "overclock", tier = "Field" },
+			{ cardId = "recon_pulse", tier = "Field" },
+		}
+		expect(CardIndex.choice(deck, 1, "aegis_shell", "Field", 0)).toBe("Unowned")
+		expect(CardIndex.choice(deck, 1, "aegis_shell", "Field", 1)).toBe("Open")
+		expect(CardIndex.choice(deck, 1, "phase_dash", "Field", 1)).toBe("Equipped")
+		expect(CardIndex.choice(deck, 1, "phase_dash", "Prototype", 1)).toBe("Open")
+		expect(CardIndex.choice(deck, 1, "overclock", "Prototype", 1)).toBe("InDeck")
+	end)
+
 	it("keeps the cards in name order", function()
 		local index = CardIndex.build({})
 		for i = 2, #index.cards do
@@ -57,19 +70,5 @@ describe("CardIndex", function()
 	it("ignores a card that no longer exists", function()
 		local index = CardIndex.build({ [Inventory.key("gone", "Field", "Base")] = 1 })
 		expect(index.owned).toBe(0)
-	end)
-
-	it("lists only what is owned for choosing a card", function()
-		local stacks = {
-			[Inventory.key("overclock", "Field", "Base")] = 2,
-			[Inventory.key("overclock", "BlackSite", "Base")] = 1,
-			[Inventory.key("recon_pulse", "Field", "Base")] = 1,
-		}
-		local owned = CardIndex.owned(stacks)
-		expect(#owned).toBe(3)
-		expect(owned[1].cardId).toBe("overclock")
-		expect(owned[1].tier).toBe("Field")
-		expect(owned[2].tier).toBe("BlackSite")
-		expect(owned[3].cardId).toBe("recon_pulse")
 	end)
 end)
