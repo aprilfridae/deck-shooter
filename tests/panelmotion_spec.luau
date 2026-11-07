@@ -16,6 +16,45 @@ describe("PanelMotion", function()
 		expect(PanelMotion.held(10)).toBe(1)
 	end)
 
+	it("opens a row in stepped frames and lands on 1", function()
+		expect(PanelMotion.expand(0)).toBe(0)
+		expect(PanelMotion.expand(0.001)).toBe(0)
+		expect(near(PanelMotion.expand(PanelMotion.EXPAND_TIME), 1)).toBe(true)
+		expect(near(PanelMotion.expand(10), 1)).toBe(true)
+	end)
+
+	it("starts a decode with nothing on screen", function()
+		expect(PanelMotion.decode("HELLO", 0)).toBe("")
+	end)
+
+	it("runs noise out in front of the text", function()
+		local shown = PanelMotion.decode("AAAAAAAAAAAAAAAAAAAA", 2 / PanelMotion.FPS)
+		expect(#shown > 0).toBe(true)
+		expect(#shown < 20).toBe(true)
+		expect(string.find(shown, "[^A]") ~= nil).toBe(true)
+	end)
+
+	it("settles on the exact text", function()
+		local text = "FIRST TO 5.\nSECOND LINE"
+		expect(PanelMotion.decode(text, 10)).toBe(text)
+	end)
+
+	it("keeps spaces and line breaks in place while decoding", function()
+		local shown = PanelMotion.decode("AB CD\nEF GH", 2 / PanelMotion.FPS)
+		for index = 1, #shown do
+			local letter = string.sub("AB CD\nEF GH", index, index)
+			if letter == " " or letter == "\n" then
+				expect(string.sub(shown, index, index)).toBe(letter)
+			end
+		end
+	end)
+
+	it("holds the same noise for a whole frame", function()
+		local frame = 3 / PanelMotion.FPS
+		local text = string.rep("X", 30)
+		expect(PanelMotion.decode(text, frame)).toBe(PanelMotion.decode(text, frame + 0.01))
+	end)
+
 	it("starts and lands on its marks", function()
 		expect(near(PanelMotion.share(0, 1, 0), 0)).toBe(true)
 		expect(near(PanelMotion.share(0, 1, 1), 1)).toBe(true)

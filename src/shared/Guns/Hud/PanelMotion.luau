@@ -6,6 +6,7 @@ local PanelMotion = {
 	COPIES = 3,
 	SHAKE_TIME = 7 / 30, -- seconds, in whole frames
 	VIEW_SCALE = 0.75, -- the sheared camera is shrunk by this, which the picture doesn't show
+	EXPAND_TIME = 6 / 30, -- seconds, in whole frames, for a row to open
 	MOST_SHIFT = 1.2, -- at that scale Roblox accepts up to 1.25 facing any way, measured in Play
 }
 
@@ -20,11 +21,38 @@ local GLOW_PER_TRAVEL = 5 -- glow for each share of the panel crossed in one fra
 local SHAKE = 0.022 -- how far the landing throws the view, per unit of depth
 local SHAKE_HEIGHT = 0.6 -- of the sideways throw
 local SHAKE_LEAN = math.rad(0.6)
+local DECODE_STEP = 2 -- characters the text gains each frame
+local DECODE_FRONT = 8 -- characters of noise at its leading edge
+local NOISE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/:.-+_>" -- all drawn by the Label font
 
 -- How far through a move it is, from 0 to 1, stepped to whole frames.
 function PanelMotion.held(elapsed: number): number
 	local frame = math.floor(elapsed * PanelMotion.FPS + 1e-6)
 	return math.min(frame / PanelMotion.FPS / PanelMotion.DURATION, 1)
+end
+
+-- How open a row is, from 0 to 1, stepped to whole frames and easing out.
+function PanelMotion.expand(elapsed: number): number
+	local frame = math.floor(elapsed * PanelMotion.FPS + 1e-6)
+	local progress = math.min(frame / PanelMotion.FPS / PanelMotion.EXPAND_TIME, 1)
+	return 1 - (1 - progress) ^ 3
+end
+
+-- The text as it stands this long into typing out: settled letters with a front of noise ahead of
+-- them. The noise comes from the frame number, so it holds still for a whole frame.
+function PanelMotion.decode(text: string, elapsed: number): string
+	local frame = math.floor(elapsed * PanelMotion.FPS + 1e-6)
+	local reached = frame * DECODE_STEP
+	local shown = {}
+	for index = 1, math.min(reached, #text) do
+		local letter = string.sub(text, index, index)
+		if index > reached - DECODE_FRONT and letter ~= " " and letter ~= "\n" then
+			local pick = (index * index * 7 + frame * 23) % #NOISE + 1
+			letter = string.sub(NOISE, pick, pick)
+		end
+		table.insert(shown, letter)
+	end
+	return table.concat(shown)
 end
 
 local function swingIn(progress: number): number

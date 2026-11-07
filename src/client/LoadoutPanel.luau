@@ -140,6 +140,13 @@ draw = function(content: Frame, chosen: number?)
 	local snapshot = CardData.get()
 	if not snapshot then
 		PanelKit.line(content, "LOADING", MARGIN, SLOT_TOP + 0.02)
+		local arrived
+		arrived = CardData.changed:Connect(function()
+			arrived:Disconnect()
+			if content.Parent then
+				draw(content, nil)
+			end
+		end)
 		return
 	end
 

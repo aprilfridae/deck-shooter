@@ -38,7 +38,7 @@ Sizes use the title screen's **unit**: the screen's width, or 16/9 of its height
 
 ### Play
 
-`PLAY` in full size, then the launch queues from `matches.md`: Elimination 1V1, 2V2 and 3V3, and Tower 5V5. Each says `SOON` and does nothing until matches exist.
+`PLAY` in full size, then the launch queues from `matches.md`: Elimination 1V1, 2V2 and 3V3, and Tower 5V5. Each says `SOON` and does nothing until matches exist. Under the mouse a row opens downward in 30 fps steps, pushing the rows below it, and two lines of small `Label` text saying how the queue plays decode in from left to right, with a front of random characters ahead of the settled text. Its tick grows to run alongside them.
 
 ### Loadout
 
