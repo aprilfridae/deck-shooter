@@ -120,9 +120,8 @@ local function onFrame(dt: number)
 	local keys = Input.readGun()
 	local now = workspace:GetServerTimeNow()
 	syncGun(now)
-	local climbing = player:GetAttribute("Climbing") == true
 	local cardOut = CardInHand.slot ~= nil
-	local aiming = keys.aim and gun ~= nil and gun.aimFov ~= nil and not climbing and not reloading and not cardOut
+	local aiming = keys.aim and gun ~= nil and gun.aimFov ~= nil and not reloading and not cardOut
 	player:SetAttribute("AimFov", if aiming then gun.aimFov else nil)
 
 	for _, slot in { "primary", "sidearm" } do
@@ -144,7 +143,7 @@ local function onFrame(dt: number)
 	end
 
 	local pressed = keys.fire and not previous.fire
-	if not climbing and not CardHand.blocksFire(CardInHand, keys.fire) then
+	if not CardHand.blocksFire(CardInHand, keys.fire) then
 		local shotTime = nextShot(pressed, keys.fire, now)
 		if shotTime then
 			fire(camera, aiming, shotTime)

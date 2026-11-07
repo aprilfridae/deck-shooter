@@ -42,7 +42,7 @@ All 4 are in set `set_01`. Stats are listed Field / Redline / Prototype.
 
 - Keys 3, 4 and 5 (the defaults) pull out the card in deck slots 1, 2 and 3, but only if it's ready. The same key puts it away, and another key swaps to that card.
 - Left click uses the held card. The gun can't fire while a card is out, or until that click is released.
-- Cards are put away when you swap guns, while climbing and in the Outpost.
+- Cards are put away when you swap guns and in the Outpost.
 - A cooldown starts when the card is used, even while its effect runs.
 - Every card comes back ready on each spawn. Matches will reset them each round instead (see `matches.md`). Effects end at death.
 - The server checks the slot number, that the player is alive, the zone and the cooldown (`Ability.luau`, `AbilityServer.server.luau`).

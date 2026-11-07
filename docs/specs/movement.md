@@ -1,6 +1,6 @@
 # Movement
 
-**Status:** built. Checked against the code on 2026-11-05.
+**Status:** built. Checked against the code on 2026-11-07. Climbing was removed on 2026-11-07.
 
 **Values live in:** `src/shared/Movement/MoveConfig.luau` for the moves and the speed limits. Camera values are at the top of `src/client/Movement.client.luau`, the edge check's reach and headroom in `src/client/Ledge.luau`, and the cheat check's timings at the top of `src/server/MovementGuard.server.luau`. The grace times come from `src/shared/CardCore/Config.luau` (dash and push) and `src/server/Outpost/Outpost.server.luau` (travel).
 
@@ -10,7 +10,7 @@
 - The camera is locked to first person (`StarterPlayer.CameraMode = LockFirstPerson`). Gravity is 150 for a slower arc. Both are set in `default.project.json`.
 - The character turns with the camera every frame. The client sends its pose (Normal, Crouch or Slide) to the server, which stores it as the character's `MovePose` attribute. `src/client/RemotePoses.client.luau` draws every body in stop-motion at 12 frames per second, matching the arms' run clips, with the poses in `src/shared/Movement/BodyPose.luau`: crouching (root joint lowered 1.5 studs, knees bent) and sliding (lowered 1.5 studs and tilted back 50 degrees). Each joint also twitches every held frame, like the arms but 3 times stronger so it reads from a distance. Only the root part collides with the world. In the Outpost, your own body gets the guns' motion blur: faded copies between held poses (`src/client/BodySmear.client.luau`).
 - Only `src/client/Input.luau` reads keys, so touch and controller can be added later.
-- Movement never changes accuracy. You can shoot in every move except a climb, which also puts a held card away.
+- Movement never changes accuracy. You can shoot in every move.
 
 ## Keys
 
@@ -21,7 +21,7 @@ These are the defaults. Players can rebind all but W, A, S and D in Settings (`o
 | W, A, S, D | Move (Roblox's default controls) |
 | Left Shift | Sprint |
 | C or Left Ctrl | Crouch, slide, fast fall |
-| Space | Jump, edge parry, climb |
+| Space | Jump, edge parry |
 
 ## Moves
 
@@ -38,7 +38,6 @@ Speeds are studs per second.
 | Fast fall | Hold crouch in the air to fall faster: 350 per second per second, up to 110. Landing while moving with crouch and sprint held starts a slide. |
 | Chain jump | A jump from a slide that began by landing from the air goes 8 studs high and adds 16. |
 | Edge parry | Press jump at a fixed flat edge 1 to 4.5 studs above the feet, on the ground or in the air. Keeps the current speed (at least 24) and adds 6, up to 58. It goes in the slide direction while sliding (or in the air after a slide with no move key held), otherwise the move direction, otherwise the camera's. |
-| Climb | Hold jump facing a fixed flat edge 4.5 to 12 studs above the feet, with 5.5 studs of headroom on top. Takes 0.35s (65% of it rising) and ends at sprint speed. "Facing" is the camera's flat look direction. |
 
 A **fixed flat edge** is an anchored part that isn't part of a character, with a top surface whose normal points at least 0.98 up. The edge check looks 1.5, 2.5 and 3.5 studs ahead (`src/client/Ledge.luau`).
 
@@ -51,7 +50,7 @@ A **fixed flat edge** is an anchored part that isn't part of a character, with a
 
 ## Sounds
 
-- A footstep plays every 9 studs while walking or sprinting, and a jump sound plays when a jump starts. `docs/sound-list.md` lists what's missing (landing, slide, parry, climb).
+- A footstep plays every 9 studs while walking or sprinting, and a jump sound plays when a jump starts. `docs/sound-list.md` lists what's missing (landing, slide, parry).
 - Roblox's default running sound is muted on every character.
 
 ## Cheat checks
