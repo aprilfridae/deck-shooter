@@ -1,5 +1,5 @@
 -- The Outpost's side panel: a Bone sheet that slides over the right half of the screen.
--- It moves in held frames, with plain copies of its shape standing in for motion blur.
+-- It swings in with some weight, with plain copies of its shape standing in for motion blur.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -9,6 +9,7 @@ local Palette = require(Guns:WaitForChild("Palette"))
 local PanelMotion = require(Guns:WaitForChild("Hud"):WaitForChild("PanelMotion"))
 
 local PANEL_WIDTH = 0.5 -- share of the screen
+local BLEED = 0.05 -- extra sheet off the right edge, so swinging past its mark shows no gap
 local PANEL_LAYER = 10 -- above its copies
 
 local MenuPanel = {}
@@ -24,7 +25,7 @@ local function sheet(parent: Instance): Frame
 	local frame = Instance.new("Frame")
 	frame.BorderSizePixel = 0
 	frame.BackgroundColor3 = Palette.Bone
-	frame.Size = UDim2.fromScale(PANEL_WIDTH, 1)
+	frame.Size = UDim2.fromScale(PANEL_WIDTH + BLEED, 1)
 	frame.Visible = false
 	frame.Parent = parent
 	return frame
@@ -38,6 +39,7 @@ function MenuPanel.new(parent: Instance): any
 	local self = setmetatable({}, MenuPanel)
 	self.opening = false
 	self.share = 0 -- 0 is closed, 1 is open
+	self.from = 0
 	self.elapsed = 0
 
 	self.clip = Instance.new("Frame")
@@ -58,7 +60,7 @@ function MenuPanel.new(parent: Instance): any
 
 	self.content = Instance.new("Frame")
 	self.content.BackgroundTransparency = 1
-	self.content.Size = UDim2.fromScale(1, 1)
+	self.content.Size = UDim2.fromScale(PANEL_WIDTH / (PANEL_WIDTH + BLEED), 1)
 	self.content.Parent = self.frame
 	return self
 end
@@ -85,15 +87,15 @@ end
 
 function MenuPanel:step(dt: number)
 	self.elapsed += dt
-	local progress = PanelMotion.held(self.elapsed)
-	local share = if self.opening then progress else 1 - progress
+	local target = if self.opening then 1 else 0
+	local share = PanelMotion.share(self.from, target, PanelMotion.held(self.elapsed))
 	if share ~= self.share then
 		self:showCopies(self.share, share)
 		self.share = share
 		place(self.frame, share)
 	end
 	-- The last frame is held too, so its copies get their moment.
-	if self.elapsed >= (PanelMotion.FRAMES + 1) / PanelMotion.FPS then
+	if self.elapsed >= PanelMotion.DURATION + 1 / PanelMotion.FPS then
 		self:showCopies(share, share)
 		self.frame.Visible = self.opening
 		self.connection:Disconnect()
@@ -108,8 +110,8 @@ function MenuPanel:move(opening: boolean)
 	self.opening = opening
 	self.frame.Visible = true
 	-- Picks up from where the panel is, so a reversed move doesn't jump.
-	local done = if opening then self.share else 1 - self.share
-	self.elapsed = done * PanelMotion.FRAMES / PanelMotion.FPS
+	self.from = self.share
+	self.elapsed = 0
 	if not self.connection then
 		self.connection = RunService.RenderStepped:Connect(function(dt)
 			self:step(dt)

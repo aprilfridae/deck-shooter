@@ -10,6 +10,7 @@ local GunSounds = require(Guns:WaitForChild("GunSounds"))
 local MenuState = require(Guns:WaitForChild("MenuState"))
 local Palette = require(Guns:WaitForChild("Palette"))
 local Zones = require(Guns:WaitForChild("Zones"))
+local MenuCamera = require(script.Parent.MenuCamera)
 local MenuPanel = require(script.Parent.MenuPanel)
 local SettingsPanel = require(script.Parent.SettingsPanel)
 local SoundGroups = require(script.Parent.SoundGroups)
@@ -103,6 +104,7 @@ local function choose(name: string)
 		fillPage(name)
 		panel:open()
 	end
+	MenuCamera.setOpen(openPage ~= nil)
 	paint()
 end
 
@@ -164,6 +166,7 @@ RunService.RenderStepped:Connect(function()
 		SettingsPanel.stop()
 		openPage = nil
 		panel:close()
+		MenuCamera.setOpen(false)
 		paint()
 	end
 end)

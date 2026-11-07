@@ -17,7 +17,7 @@ Taken from River's poster references.
 - One loud block per panel. Barcodes, tick marks and simple circles and squares are the decoration.
 - **Colour:** Bone is the paper, Deep Navy is the ink, and Signal Acid is the loud block. Tier colours appear only on cards. Hazard Red stays for threats and purchases.
 - **Truth:** every number on a panel is real, or the panel leaves it out. No made-up serials or stats, as on the title screen.
-- **Motion:** panels slide in stepped at 12 frames a second, to match the game's low-fps look, with motion blur. Roblox UI has no blur, so each held frame leaves fading copies of the panel between it and the last frame, like the smear on the guns. The copies are gone once the panel stops.
+- **Motion:** panels move at 30 frames a second over 0.5s and feel heavy. Opening, a panel swings a little past its mark and settles. Closing, it pulls back a touch and then drops away. Roblox UI has no blur, so each frame leaves fading copies of the panel between it and the last frame, like the smear on the guns. The copies are gone once the panel stops.
 
 ## Layout
 
@@ -30,7 +30,8 @@ Sizes use the title screen's **unit**: the screen's width, or 16/9 of its height
 
 - The nav and panels show only in the `Outpost` zone, after the title screen. Leaving the zone closes the panel.
 - One panel is open at a time. Clicking another button swaps it, and clicking the open button closes it.
-- WASD, jump, sprint and crouch keep working while a panel is open. The mouse works the panel and the camera stays still.
+- WASD, jump, sprint and crouch keep working while a panel is open. The mouse works the panel.
+- Opening a panel eases the camera to the right, so the character sits a quarter of the way across the screen, beside the panel. A wall stops the camera short. Closing eases it back.
 - Typing in a text box stops movement, as `Input.luau` already does.
 
 ## Panels
