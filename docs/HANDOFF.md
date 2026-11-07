@@ -57,22 +57,20 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 
 ## Where we are now
 
-**Branch:** `feature/soldier-first-person`, pushed, not merged. `main` has everything else. Latest good release: `build-2026-11-07-0233` (packs and gun pose code, no soldier). `build-2026-11-07-0232` was a mistake and its notes say so.
+**Branch:** everything is on `main`. Latest release: `build-2026-11-07-1254`, the first with the soldier, built on the published place. `build-2026-11-07-0232` was a mistake and its notes say so.
 
-**The soldier swap is half done.** River asked to replace the old body and arms with the soldier. On 2026-11-07 River and their brother played it together in Team Test, which turned up these, all fixed on the branch and synced through Rojo but **not yet confirmed in Play**:
+**The soldier swap is done.** River asked to replace the old body and arms with the soldier. On 2026-11-07 River and their brother played it together in Team Test, which turned up these, all fixed and merged in PR 42. River confirmed it works on 2026-11-07:
 
 - Sliding and looking down showed a second gun on the ground: your own third-person gun showed mid-slide. It now always hides in locked first person.
 - Other players' bodies held the gun over their heads: our pose script missed their joints, which arrive over the network after the parts, so Roblox's default idle animation bent the soldier rig. It now waits for the body and keeps collecting joints.
 - Headshots on the grey dummy stopped counting (no headshot sound): the taller soldier hitbox was used for every body. Each target now gets its own size.
 - Added the soldier dummy with the M57, and removed the jitter from every third-person body.
 
-**Next steps, in order:**
+**Left over from the swap:**
 
-1. River restarts Team Test with their brother and checks: no gun on the floor mid-slide; other players and the soldier dummy hold the gun in front of them, not overhead; poses change with walk, sprint, slide, jump and reload; headshots on both dummies play the headshot sound; nobody jitters in third person; hands sit on all six guns in first person; elbows don't cross the screen in reloads; the taller view doesn't clip low ceilings or doorways. If a body still looks wrong, read its Motor6D `Transform`s on the Client while River is in Play: a pose file's elbow only bends about X, so anything else means our poses aren't applied.
-2. Out of Play, set `StarterPlayer.StarterCharacter`'s Humanoid `HipHeight` to about 2.3. The soldier's root is 3.315 above its feet and the Humanoid still has 2, so the feet probably sink about 0.3.
-3. River publishes the place (File > Publish to Roblox). **The soldier exists only in River's Team Create session, not in a published version.** The group place was still version 52 without it. A build made before this has no soldier.
-4. Merge the branch through a pull request, then build from the published place. Pass the new version to `tools/download-place.py` and check `StarterCharacter` has the `SoldierRig` attribute before releasing.
-5. Once River is happy, ask whether to delete the backups `GunModels.Arms` and `ServerStorage.StarterCharacterOld`.
+- `StarterPlayer.StarterCharacter`'s Humanoid `HipHeight` is still 2. The soldier's root is 3.315 above its feet, so the feet may sink about 0.3. Set it to about 2.3 if they do.
+- Ask River whether to delete the backups `GunModels.Arms` and `ServerStorage.StarterCharacterOld`.
+- If a body ever looks wrong, read its Motor6D `Transform`s on the Client while River is in Play: a pose file's elbow only bends about X, so anything else means our poses aren't applied.
 
 **How the soldier fits together (for fixes):**
 
@@ -105,7 +103,7 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 
 ## Next up
 
-Finish the soldier swap (above). After that: serials, then the player market. The 1v1 map still waits. Outpost ambient sounds wait on River's rain, sea and hum loops. Matches are parked until gameplay looks, sounds and feels good. River decides what's next.
+Serials, then the player market. The 1v1 map still waits. Outpost ambient sounds wait on River's rain, sea and hum loops. Matches are parked until gameplay looks, sounds and feels good. River decides what's next.
 
 ## Practical notes
 
