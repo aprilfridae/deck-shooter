@@ -1,5 +1,6 @@
--- A glowing 3D trail behind your own character in the Outpost: neon copies of your whole body, hair
--- and accessories included, left where you stood and fading out. Only you see yours.
+-- A soft glowing blur behind your own character in the Outpost. Roblox can't blur an object, so it's
+-- made of very faint neon copies of your whole body, hair and accessories included, packed close
+-- and each nudged a little at random so their edges melt together. Only you see yours.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -12,10 +13,11 @@ local Zones = require(Guns:WaitForChild("Zones"))
 local BODY_GROUP = "BodyMesh" -- from CharacterBody.server.luau; it never touches the world
 local COPIES = 24
 local STAMP_EVERY = 0.012 -- seconds; every frame at 60 fps, so the copies run together
-local LIFETIME = 0.35 -- seconds
+local LIFETIME = 0.22 -- seconds
 local FADE_EVERY = 1 / 30 -- seconds
-local MIN_MOVE = 0.15 -- studs a player must move for a new copy
-local START_FADE = 0.95 -- how see-through a copy is when it's left, kept high as they stack up
+local SPREAD = 0.12 -- studs each copy is nudged, which softens its edges
+local MIN_MOVE = 0.1 -- studs a player must move for a new copy
+local START_FADE = 0.975 -- how see-through a copy is when it's left, kept high as they stack up
 local SETTLE = 0.5 -- seconds; the rest of the body is still arriving
 local APPEARANCE_WAIT = 5 -- seconds
 local ID = "OutpostTrailId"
@@ -56,6 +58,7 @@ type Trail = {
 
 local player = Players.LocalPlayer
 local trail: Trail? = nil
+local random = Random.new()
 
 local function dress(ghost: Model)
 	for _, item in ghost:GetDescendants() do
@@ -179,10 +182,11 @@ local function stamp(current: Trail, now: number)
 	current.nextCopy = current.nextCopy % COPIES + 1
 	current.nextStamp = now + STAMP_EVERY
 	copy.bornAt = now
+	local nudge = Vector3.new(random:NextNumber(-1, 1), random:NextNumber(-1, 1), random:NextNumber(-1, 1)) * SPREAD
 	for index, part in copy.parts do
 		local source = current.sources[index]
 		if source.Parent then
-			part.CFrame = source.CFrame
+			part.CFrame = source.CFrame + nudge
 		end
 	end
 	dressAge(copy, 0)
