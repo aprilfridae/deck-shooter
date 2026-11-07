@@ -31,6 +31,17 @@ What the game already plays and what it still needs. Checked against the code on
 | Menu music | `menu-music-v2.mp3` | Loops from joining. Quieter and thinner after PLAY. |
 | Menu selection | `menu-select` | Clicking PLAY, and clicks in the Outpost menu. Hovering a nav row plays it quieter and higher. |
 
+## Uploaded, not hooked up yet
+
+These have ids in `SoundIds.luau` but no code plays them. Uploaded 2026-11-07. River's takes are stereo and longer than the targets below; the 32-bit float takes were saved as 16-bit with the extra WAV chunks stripped.
+
+| Sound | File | Length | For |
+| --- | --- | --- | --- |
+| Soft landing | `move-land-soft` | 0.86s | `move-land-soft` below |
+| Hard landing | `move-land-hard` | 0.86s | `move-land-hard` below |
+| Slide start | `move-slide-start` | 1.05s | `move-slide-start` below |
+| Pack open | `pack-open` | 2.61s | Opening a pack (see Packs) |
+
 ## Still needed
 
 In order of how much each group changes the feel. Every sound below needs a little code to hook it up once it's uploaded. The notes call out the ones that need more than that.
