@@ -54,10 +54,10 @@ local SMALL_VALUE_LINE = 178
 local SMALL_VALUE_SIZE = 22
 local SMALL_SECOND_LEFT = 80
 local UNIT_GAP = 3
-local BLURB_SIZE = 9
+local BLURB_SIZE = 6.5
 local BLURB_BOTTOM = 208
-local BLURB_STEP = 11
-local BLURB_WIDTH = 22 -- letters
+local BLURB_STEP = 8.5
+local BLURB_WIDTH = 30 -- letters
 local BACK_STRIPES_TOP = 214
 local BACK_STRIPES_HEIGHT = 12
 
