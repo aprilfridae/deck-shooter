@@ -13,10 +13,10 @@ local BODY_GROUP = "BodyMesh" -- from CharacterBody.server.luau; it never touche
 local COPIES = 24 -- for your own body
 local OTHERS_SHARE = 0.5 -- other players get this share of the copies, twice as far apart in time
 local STAMP_EVERY = 0.025 -- seconds
-local LIFETIME = 0.6 -- seconds
+local LIFETIME = 0.35 -- seconds
 local FADE_EVERY = 1 / 30 -- seconds
 local MIN_MOVE = 0.35 -- studs a player must move for a new copy
-local START_FADE = 0.78 -- how see-through a copy is when it's left, kept high as they stack up
+local START_FADE = 0.93 -- how see-through a copy is when it's left, kept high as they stack up
 local RANGE = 90 -- studs from the camera; players further off leave no trail
 local SETTLE = 0.5 -- seconds; the rest of the body is still arriving
 local APPEARANCE_WAIT = 5 -- seconds
@@ -184,7 +184,7 @@ local function watch(player: Player)
 end
 
 local function dressAge(copy: Copy, age: number)
-	local transparency = START_FADE + (1 - START_FADE) * age
+	local transparency = START_FADE + (1 - START_FADE) * math.sqrt(age) -- drops off early
 	local color = Palette.SignalAcid:Lerp(Palette.DataCyan, age)
 	for _, part in copy.shown do
 		part.Transparency = transparency
