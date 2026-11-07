@@ -55,6 +55,19 @@ describe("PanelMotion", function()
 		expect(PanelMotion.decode(text, frame)).toBe(PanelMotion.decode(text, frame + 0.01))
 	end)
 
+	it("eases the camera in gently when opening, with no swing", function()
+		expect(PanelMotion.viewShare(0, 1, 0)).toBe(0)
+		expect(PanelMotion.viewShare(0, 1, 1)).toBe(1)
+		expect(PanelMotion.viewShare(0, 1, 0.05) < PanelMotion.share(0, 1, 0.05) / 5).toBe(true)
+		for progress = 0, 1, 0.05 do
+			expect(PanelMotion.viewShare(0, 1, progress) <= 1).toBe(true)
+		end
+	end)
+
+	it("drops the camera away with the panel when closing", function()
+		expect(PanelMotion.viewShare(1, 0, 0.5)).toBe(PanelMotion.share(1, 0, 0.5))
+	end)
+
 	it("fades the blur out before a closing panel has left", function()
 		expect(PanelMotion.closeFade(0)).toBe(1)
 		expect(PanelMotion.closeFade(0.3)).toBe(1)

@@ -74,6 +74,15 @@ function PanelMotion.share(from: number, to: number, progress: number): number
 	return from + (to - from) * eased
 end
 
+-- Where the camera is at this point of a move. It runs every frame the screen draws, not in the
+-- panel's steps. Opening it eases in and out, because a camera that lurches feels bad.
+function PanelMotion.viewShare(from: number, to: number, progress: number): number
+	if to < from then
+		return PanelMotion.share(from, to, progress)
+	end
+	return from + (to - from) * progress * progress * (3 - 2 * progress)
+end
+
 -- The copies left between the last frame and this one, nearest the panel first.
 function PanelMotion.trail(from: number, to: number): { { share: number, transparency: number } }
 	local trail = {}

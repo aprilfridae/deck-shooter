@@ -44,6 +44,9 @@ function MenuPanel.new(parent: Instance): any
 	self.share = 0 -- 0 is closed, 1 is open
 	self.travel = 0 -- how far the last frame of the move went, opening being positive
 	self.blurLeft = 1 -- how much of the blur shows, which a closing panel fades early
+	self.view = 0 -- where the camera is, which moves smoothly while the panel steps
+	self.viewTravel = 0 -- how far the camera went over the length of one panel frame
+	self.viewFrom = 0
 	self.shake = PanelMotion.landShake(PanelMotion.SHAKE_TIME) -- none yet
 	self.from = 0
 	self.elapsed = 0
@@ -99,6 +102,11 @@ function MenuPanel:step(dt: number)
 	local progress = PanelMotion.held(self.elapsed)
 	local share = PanelMotion.share(self.from, target, progress)
 	self.blurLeft = if self.opening then 1 else PanelMotion.closeFade(progress)
+	local function viewAt(elapsed: number): number
+		return PanelMotion.viewShare(self.viewFrom, target, math.clamp(elapsed / PanelMotion.DURATION, 0, 1))
+	end
+	self.view = viewAt(self.elapsed)
+	self.viewTravel = self.view - viewAt(self.elapsed - 1 / PanelMotion.FPS)
 	if share ~= self.share then
 		self:showCopies(self.share, share)
 		self.travel = share - self.share
@@ -131,6 +139,7 @@ function MenuPanel:move(opening: boolean)
 	self.frame.Visible = true
 	-- Picks up from where the panel is, so a reversed move doesn't jump.
 	self.from = self.share
+	self.viewFrom = self.view
 	self.elapsed = 0
 	if not self.moving then
 		self.moving = true
