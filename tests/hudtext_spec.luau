@@ -32,6 +32,8 @@ describe("HudText", function()
 	it("numbers ability keys from 3", function()
 		expect(HudText.key(1)).toBe("3")
 		expect(HudText.key(3)).toBe("5")
+		expect(HudText.key(1, "Q")).toBe("Q")
+		expect(HudText.key(2, "L SHIFT")).toBe("L SHIFT")
 	end)
 
 	it("fills cooldown segments", function()

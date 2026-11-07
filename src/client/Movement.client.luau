@@ -6,6 +6,7 @@ local RunService = game:GetService("RunService")
 local GunAudio = require(script.Parent.GunAudio)
 local Input = require(script.Parent.Input)
 local Ledge = require(script.Parent.Ledge)
+local PlayerSettings = require(script.Parent.PlayerSettings)
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local Zones = require(Guns:WaitForChild("Zones"))
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
@@ -72,11 +73,8 @@ local function poseFor(mode: string): string
 	return "Normal"
 end
 
-local function targetFieldOfView(): number
-	local aimFov = player:GetAttribute("AimFov")
-	if aimFov then
-		return aimFov
-	elseif state.mode == "Slide" then
+local function movementFieldOfView(): number
+	if state.mode == "Slide" then
 		return SLIDE_FOV
 	elseif state.mode ~= "Air" then
 		return FIELD_OF_VIEW
@@ -87,6 +85,15 @@ local function targetFieldOfView(): number
 		return if state.chained then CHAIN_JUMP_FOV else SLIDE_JUMP_FOV
 	end
 	return if jumped then JUMP_FOV else FIELD_OF_VIEW
+end
+
+-- The player's setting moves the base view, and the boosts keep their distance above it.
+local function targetFieldOfView(): number
+	local aimFov = player:GetAttribute("AimFov")
+	if aimFov then
+		return aimFov
+	end
+	return movementFieldOfView() + PlayerSettings.get().fieldOfView - FIELD_OF_VIEW
 end
 
 local function flatLook(): Vector3

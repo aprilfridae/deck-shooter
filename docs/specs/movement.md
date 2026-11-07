@@ -14,6 +14,8 @@
 
 ## Keys
 
+These are the defaults. Players can rebind all but W, A, S and D in Settings (`outpost-ui.md`).
+
 | Key | Action |
 | --- | --- |
 | W, A, S, D | Move (Roblox's default controls) |

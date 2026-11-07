@@ -6,10 +6,6 @@ local Settings = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild
 local SEND_EVERY = 1 -- seconds
 local LOAD_RETRY = 1 -- seconds
 
-local remotes = ReplicatedStorage:WaitForChild("CardCoreRemotes")
-local getRemote = remotes:WaitForChild("GetSettings")
-local setRemote = remotes:WaitForChild("SetSettings")
-
 local changedEvent = Instance.new("BindableEvent")
 
 local current = Settings.new()
@@ -20,6 +16,11 @@ local queued = false
 local PlayerSettings = {
 	changed = changedEvent.Event,
 }
+
+-- Looked up when needed, so requiring this module never waits for the server.
+local function remote(name: string): RemoteFunction
+	return ReplicatedStorage:WaitForChild("CardCoreRemotes"):WaitForChild(name)
+end
 
 function PlayerSettings.get(): Settings.Settings
 	return current
@@ -37,7 +38,7 @@ local function push()
 	queued = false
 	lastSent = os.clock()
 	task.spawn(function()
-		setRemote:InvokeServer(current)
+		remote("SetSettings"):InvokeServer(current)
 	end)
 end
 
@@ -56,7 +57,7 @@ end
 
 task.spawn(function()
 	while true do
-		local reply = getRemote:InvokeServer()
+		local reply = remote("GetSettings"):InvokeServer()
 		if reply.ok then
 			if not touched then
 				current = Settings.clean(reply.result)

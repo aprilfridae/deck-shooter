@@ -8,6 +8,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local GunSounds = require(Guns:WaitForChild("GunSounds"))
+local SoundGroups = require(script.Parent.SoundGroups)
 local MenuState = require(Guns:WaitForChild("MenuState"))
 local MusicBars = require(Guns:WaitForChild("MusicBars"))
 local Palette = require(Guns:WaitForChild("Palette"))
@@ -77,6 +78,7 @@ local music = Instance.new("Sound")
 music.Name = "MenuMusic"
 music.SoundId = GunSounds.menuMusic
 music.Looped = true
+music.SoundGroup = SoundGroups.music
 music.Parent = SoundService
 music:Play()
 
@@ -89,6 +91,7 @@ highPass.Parent = music
 local selectSound = Instance.new("Sound")
 selectSound.Name = "MenuSelect"
 selectSound.SoundId = GunSounds.menuSelect
+selectSound.SoundGroup = SoundGroups.menu
 selectSound.Parent = SoundService
 
 local columns: { { Frame } } = {}

@@ -6,20 +6,28 @@ local UserInputService = game:GetService("UserInputService")
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local MenuState = require(Guns:WaitForChild("MenuState"))
 local Zones = require(Guns:WaitForChild("Zones"))
+local PlayerSettings = require(script.Parent.PlayerSettings)
 
 local player = Players.LocalPlayer
 
 local Input = {}
 
+local function pressed(keyName: string): boolean
+	if string.sub(keyName, 1, 5) == "Mouse" then
+		return UserInputService:IsMouseButtonPressed(Enum.UserInputType[keyName])
+	end
+	return UserInputService:IsKeyDown(Enum.KeyCode[keyName])
+end
+
 function Input.read(): { sprint: boolean, crouch: boolean, jump: boolean }
 	if UserInputService:GetFocusedTextBox() then
 		return { sprint = false, crouch = false, jump = false }
 	end
+	local keys = PlayerSettings.get().keys
 	return MenuState.filter(MenuState.shared, {
-		sprint = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift),
-		crouch = UserInputService:IsKeyDown(Enum.KeyCode.C)
-			or UserInputService:IsKeyDown(Enum.KeyCode.LeftControl),
-		jump = UserInputService:IsKeyDown(Enum.KeyCode.Space),
+		sprint = pressed(keys.sprint),
+		crouch = pressed(keys.crouch) or pressed(keys.crouchAlt),
+		jump = pressed(keys.jump),
 	})
 end
 
@@ -36,12 +44,13 @@ function Input.readGun(): { [string]: boolean }
 		}
 	end
 	-- Guns and cards are off in the Outpost.
+	local keys = PlayerSettings.get().keys
 	return Zones.filter(Zones.of(player), MenuState.filter(MenuState.shared, {
-		fire = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1),
-		aim = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2),
-		reload = UserInputService:IsKeyDown(Enum.KeyCode.R),
-		primary = UserInputService:IsKeyDown(Enum.KeyCode.One),
-		sidearm = UserInputService:IsKeyDown(Enum.KeyCode.Two),
+		fire = pressed(keys.fire),
+		aim = pressed(keys.aim),
+		reload = pressed(keys.reload),
+		primary = pressed(keys.primary),
+		sidearm = pressed(keys.sidearm),
 		nextClass = UserInputService:IsKeyDown(Enum.KeyCode.B),
 		nextRifle = UserInputService:IsKeyDown(Enum.KeyCode.N),
 	}))
@@ -51,11 +60,12 @@ function Input.readAbility(): { [string]: boolean }
 	if UserInputService:GetFocusedTextBox() then
 		return { slot1 = false, slot2 = false, slot3 = false, use = false, testDeck = false, testTier = false }
 	end
+	local keys = PlayerSettings.get().keys
 	return Zones.filter(Zones.of(player), MenuState.filter(MenuState.shared, {
-		slot1 = UserInputService:IsKeyDown(Enum.KeyCode.Three),
-		slot2 = UserInputService:IsKeyDown(Enum.KeyCode.Four),
-		slot3 = UserInputService:IsKeyDown(Enum.KeyCode.Five),
-		use = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1),
+		slot1 = pressed(keys.slot1),
+		slot2 = pressed(keys.slot2),
+		slot3 = pressed(keys.slot3),
+		use = pressed(keys.fire),
 		testDeck = UserInputService:IsKeyDown(Enum.KeyCode.T),
 		testTier = UserInputService:IsKeyDown(Enum.KeyCode.Y),
 	}))

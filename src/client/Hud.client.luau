@@ -11,10 +11,12 @@ local MenuState = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("M
 local Zones = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Zones"))
 local GunAudio = require(script.Parent.GunAudio)
 local GunView = require(script.Parent.GunView)
+local PlayerSettings = require(script.Parent.PlayerSettings)
 local TypeLabel = require(script.Parent.TypeLabel)
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local Cards = require(CardCore:WaitForChild("Cards"))
 local Config = require(CardCore:WaitForChild("Config"))
+local Settings = require(CardCore:WaitForChild("Settings"))
 local HudText = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Hud"):WaitForChild("HudText"))
 
 local remotes = ReplicatedStorage:WaitForChild("GunRemotes")
@@ -152,7 +154,11 @@ local function abilityRow(index: number)
 	local key = rowText("LabelBold", LABEL_SIZE, false, left)
 	local name = rowText("Label", LABEL_SIZE, false, left + ROW_NAME_X)
 	local tier = rowText("Label", TIER_SIZE, true, left + ROW_WIDTH)
-	key:set(HudText.key(index))
+	local function showKey()
+		key:set(HudText.key(index, Settings.keyLabel(PlayerSettings.get().keys[`slot{index}`])))
+	end
+	showKey()
+	PlayerSettings.changed:Connect(showKey)
 
 	local bar = Instance.new("Frame")
 	bar.BackgroundTransparency = 1

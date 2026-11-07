@@ -53,6 +53,8 @@ Damage falls off in a straight line between the two distances, then stays flat. 
 
 ## Keys
 
+These are the defaults. Players can rebind all but the test keys in Settings (`outpost-ui.md`).
+
 | Key | Action |
 | --- | --- |
 | Left mouse | Fire. Also uses a held card. |
