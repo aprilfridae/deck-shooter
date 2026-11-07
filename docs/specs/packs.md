@@ -1,0 +1,138 @@
+# Packs and rebirths
+
+**Status:** designed with River on 2026-11-07, not built. Odds and prices are starting numbers to tune.
+
+**Covers:** rolling for packs, opening them, the pull reveal, auto roll, Robux purchases, rebirths and luck, the packs menu, and the income display. How cards work is in `cards.md`, and how they look is in `card-art.md`.
+
+## The idea
+
+Rolling and opening are free. Luck decides what you get, and it's the thing you work towards.
+
+Cards earn Credits while you idle. Credits buy rebirths, and each rebirth raises your luck. Later, a player market lets lucky pulls be sold for Credits, which feeds more rebirths. Luck never affects combat.
+
+## Rolling
+
+- A roll is free and gives one pack. The roll decides the pack's rarity.
+- A player can roll once every 3 seconds. The server enforces this and holds every result.
+- Every player can roll by hand. See Auto roll for rolling while idle.
+
+| Pack | Odds |
+| --- | --- |
+| Field | 80% |
+| Redline | 16% |
+| Prototype | 3.98% |
+| Zero-Day | 0.02% (1 in 5,000) |
+
+## Opening
+
+Opening a pack is free and gives 3 separate cards. Unopened packs are stored as a count for each rarity, so a large pile costs nothing in the save.
+
+A pack gives mostly its own rarity, with a small chance of each card being higher. The tier is rolled first, then the variant.
+
+| Pack | Field | Redline | Prototype | Zero-Day variant |
+| --- | --- | --- | --- | --- |
+| Field | 90% | 9% | 1% | 1 in 5,000 |
+| Redline | None | 88% | 12% | 1 in 5,000 |
+| Prototype | None | None | 100% | 5% |
+| Zero-Day, first card | 60% | 30% | 10% | Always |
+| Zero-Day, other 2 cards | None | 60% | 40% | 1 in 5,000 |
+
+- A Zero-Day pack gives exactly 1 guaranteed Zero-Day card. Its other 2 cards can still roll one at the normal odds.
+- Chromatic and Redacted keep their odds of 1 in 50 and 1 in 500 on every card that isn't already Zero-Day.
+- The card itself is picked evenly from the set.
+- Credits and Catalysts never come from packs.
+
+## Auto roll
+
+- Auto roll rolls every 3 seconds while it's on. It's unlocked by favoriting the game or joining the Fridae Studios group.
+- It only runs while the player is in the Outpost. It stops in matches, and there's no rolling offline.
+- The server checks the group itself. It can't check a favorite, so it takes the client's word, and an exploiter could fake that. All they'd gain is auto roll.
+- The favorite check uses `AvatarEditorService`, which Roblox doesn't officially support for experiences, so the group is the fallback if it breaks.
+- River decided this knowing that Roblox's rules appear to ban rewards for favorites.
+- The group has to be open for anyone to join.
+
+## Robux
+
+| Purchase | Type | Price | What it does |
+| --- | --- | --- | --- |
+| Open All | Developer product | 1,500 Robux for each use | Opens the player's whole pile once |
+| Auto Open | Gamepass | 100 Robux, once | Works through the player's pile, showing rare pulls only |
+
+- Auto Open opens one pack every 2 seconds while the player is in the Outpost, starting with the commonest rarity. It clears existing piles as well as new packs.
+- That's only a little faster than auto roll adds packs, so a big pile takes hours of idling. Open All clears it at once, which is its use later on.
+- Free players open packs one at a time. The `OPEN ALL` button prompts the purchase.
+- The server opens the pile only once Roblox's `ProcessReceipt` reports the payment. A repeated receipt never opens anything twice.
+- The odds are always shown in the menu. `PolicyService` hides Open All where paid random items are restricted.
+
+## Rebirths and luck
+
+- A rebirth costs all of the player's Credits, and they must hold at least its price. Cards, decks and packs are kept.
+- The first costs 25,000 Credits, and each one after costs 2.5 times the last.
+- Luck is `1 + 0.15 x rebirths`. Rebirths have no limit.
+- Luck multiplies every outcome above the commonest one, in the pack roll and in each card roll. The commonest outcome takes what's left, and stops at 0.
+- Guaranteed outcomes don't change.
+- With 5 rebirths, luck is 1.75 and a Zero-Day pack is about 1 in 2,857.
+
+## The packs menu
+
+A new `PACKS` row joins the nav. The Market stall's prompt opens the same menu until the player market exists.
+
+From top to bottom:
+
+- The `PACKS` title.
+- A line with luck, income and rebirth count.
+- A big `ROLL` button, with `AUTO ROLL` beside it, and a bar for the wait until the next roll. Before it's unlocked, `AUTO ROLL` prompts the favorite.
+- The four packs, large and almost touching, each with its count and roll odds. Hovering lifts a pack, and clicking opens one.
+- `OPEN ALL` and the rebirth button, which shows its price.
+
+## Pack designs
+
+Packs are vertical foil wrappers with crimped ends, in the same colours as the cards, in the proportions 150 by 230.
+
+Each has a large `S1` reading up the wrapper, an outline and a strip of hazard stripes in the rarity's colour, and its name near the bottom. `S1` is the set.
+
+| Pack | Background | Art and outline | Effect |
+| --- | --- | --- | --- |
+| Field | Deep Navy | Bone | A soft shine |
+| Redline | Bone | Hazard Red | A strong shine, with a pulsing red edge |
+| Prototype | Signal Acid | Deep Navy | A shine, with scrolling stripes |
+| Zero-Day | `#0E1018` | Data Cyan | A shine with a blue foil band, and a cyan ring pinging from the corner |
+
+The wrapper art is baked like the card art, with the effects drawn live on top.
+
+## Pull reveal
+
+This hasn't been mocked up. River judges it in Play.
+
+- **One pack:** the wrapper tears open and 3 cards fan out face down. The player flips each one, and rarer cards build for longer before turning.
+- **Zero-Day:** the world dims, and the card's ring and foil take over the screen.
+- **Open All and Auto Open:** a quick list of what arrived, stopping for rare pulls.
+
+The cards can be inspected in 3D like any other.
+
+## Income display
+
+A small line in the Outpost HUD, top left, shows Credits and income, like `+3.4 CR/S`. It uses `ratePerSecond` from the card snapshot.
+
+## Saves
+
+The save moves to a new version with `packs`, a count for each rarity, and `rebirths`, both starting at 0.
+
+## What this changes elsewhere
+
+- **Fusion** keeps its Credit fee, as a way to take Credits out of the game.
+- **Variant odds:** `cards.md` says only fusion rolls a variant. Packs now do too.
+- **Income:** 60 cards a minute is possible, so the rule that halves income past 10 copies matters far more. It may need tuning.
+- **Serials:** `card-art.md` gives every copy its own save record, which can't survive 60 cards a minute. That has to change before serials are built. One likely fix is giving serials only to rarer cards or variants.
+
+## Order of work
+
+1. This spec: rolling, opening, the packs menu, pack art, the reveal, purchases, rebirths and the income display.
+2. Serial numbers, with the change above.
+3. The player market, in its own spec. It needs trades that can't duplicate or lose cards, and listings shared across servers.
+
+River creates the gamepass and developer product on Creator Hub, and opens the group.
+
+## Tests
+
+Pack and card odds, luck, the Zero-Day guarantee, the roll timer, rebirth prices, and what a rebirth keeps are pure rules tested in Lune. River judges the look and the reveal in Play.
