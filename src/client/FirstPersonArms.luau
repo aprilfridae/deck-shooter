@@ -1,4 +1,4 @@
--- The soldier's own arms, hands and fingers in first person. Uses the SoldierArms model in
+-- The soldier's own arms, hands and fingers in first person. Uses the FirstPersonArms model in
 -- ReplicatedStorage.GunModels: the exported pieces, each a MeshPart named <Part>_<material> (SoldierRig lists them).
 -- Each piece rides its arm part or finger: camera * pose * the piece's offset from that part.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -6,7 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BodyStyle = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("BodyStyle"))
 local SoldierRig = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("SoldierRig"))
 
-local SoldierArms = {}
+local FirstPersonArms = {}
 
 local model: Model? = nil
 local pieces: { BasePart } = {}
@@ -17,11 +17,11 @@ local moved: { BasePart } = {}
 
 local function source(): Instance?
 	local folder = ReplicatedStorage:FindFirstChild("GunModels")
-	return folder and folder:FindFirstChild("SoldierArms")
+	return folder and folder:FindFirstChild("FirstPersonArms")
 end
 
--- True once the SoldierArms model has been imported.
-function SoldierArms.ready(): boolean
+-- True once the FirstPersonArms model has been imported.
+function FirstPersonArms.ready(): boolean
 	return source() ~= nil
 end
 
@@ -35,7 +35,7 @@ local function build(): Model?
 		return nil
 	end
 	local copy = Instance.new("Model")
-	copy.Name = "SoldierArms"
+	copy.Name = "FirstPersonArms"
 	from:Clone().Parent = copy
 	for _, part in copy:GetDescendants() do
 		if part:IsA("BasePart") then
@@ -63,7 +63,7 @@ local function build(): Model?
 end
 
 -- Shows the arms in one frame's pose. base is the camera (with any shake); bones are relative to it.
-function SoldierArms.place(camera: Camera, base: CFrame, bones: { [string]: { number } })
+function FirstPersonArms.place(camera: Camera, base: CFrame, bones: { [string]: { number } })
 	model = model or build()
 	if not model then
 		return
@@ -81,10 +81,10 @@ function SoldierArms.place(camera: Camera, base: CFrame, bones: { [string]: { nu
 	model.Parent = camera
 end
 
-function SoldierArms.hide()
+function FirstPersonArms.hide()
 	if model then
 		model.Parent = nil
 	end
 end
 
-return SoldierArms
+return FirstPersonArms

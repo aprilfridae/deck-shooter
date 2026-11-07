@@ -2,15 +2,15 @@ local harness = require("./harness")
 
 local describe, it, expect = harness.describe, harness.it, harness.expect
 
-local SoldierClip = require("../src/shared/Guns/SoldierClip")
+local FirstPersonClip = require("../src/shared/Guns/FirstPersonClip")
 
 local GUNS = {
-	M57 = require("../src/shared/Guns/SoldierClips/M57"),
-	B33 = require("../src/shared/Guns/SoldierClips/B33"),
-	SMG = require("../src/shared/Guns/SoldierClips/SMG"),
-	Longscope = require("../src/shared/Guns/SoldierClips/Longscope"),
-	Shotgun = require("../src/shared/Guns/SoldierClips/Shotgun"),
-	EnergyPistol = require("../src/shared/Guns/SoldierClips/EnergyPistol"),
+	M57 = require("../src/shared/Guns/FirstPersonClips/M57"),
+	B33 = require("../src/shared/Guns/FirstPersonClips/B33"),
+	SMG = require("../src/shared/Guns/FirstPersonClips/SMG"),
+	Longscope = require("../src/shared/Guns/FirstPersonClips/Longscope"),
+	Shotgun = require("../src/shared/Guns/FirstPersonClips/Shotgun"),
+	EnergyPistol = require("../src/shared/Guns/FirstPersonClips/EnergyPistol"),
 }
 local SoldierRig = require("../src/shared/Guns/SoldierRig")
 
@@ -46,30 +46,30 @@ local tiny = {
 	},
 }
 
-describe("SoldierClip", function()
+describe("FirstPersonClip", function()
 	it("blends between two poses", function()
-		local clips = SoldierClip.expand(tiny)
+		local clips = FirstPersonClip.expand(tiny)
 		expect(clips.one.frames[1].bones.Gun[1]).toBe(0)
 		expect(clips.one.frames[2].bones.Gun[1]).toBe(1)
 	end)
 
 	it("shares one table between frames that name the same thing", function()
-		local clips = SoldierClip.expand(tiny)
+		local clips = FirstPersonClip.expand(tiny)
 		expect(clips.one.frames[2] == clips.one.frames[3]).toBe(true)
 	end)
 
 	it("keeps the scaled flag and stretches a scaled clip to a time", function()
-		local clips = SoldierClip.expand(tiny)
+		local clips = FirstPersonClip.expand(tiny)
 		expect(clips.reload.scaled).toBe(true)
 		expect(clips.one.scaled).toBe(false)
-		expect(SoldierClip.fpsFor(clips.one, 0.5)).toBe(6)
+		expect(FirstPersonClip.fpsFor(clips.one, 0.5)).toBe(6)
 	end)
 end)
 
-describe("SoldierClips", function()
+describe("FirstPersonClips", function()
 	it("has every clip for every gun, and every clip expands", function()
 		for _, gun in GUNS do
-			local clips = SoldierClip.expand(gun)
+			local clips = FirstPersonClip.expand(gun)
 			for _, name in CLIPS do
 				expect(clips[name] ~= nil).toBe(true)
 				expect(#clips[name].frames > 0).toBe(true)

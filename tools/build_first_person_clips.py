@@ -1,15 +1,15 @@
 """Builds the first-person clips for the soldier's own arms from the JSON written by tools/export_body_poses.py.
 
-Run: python tools/build_view_clips.py <folder with M57.json, B33.json, ...> <soldier_manifest.json>
-Writes src/shared/Guns/SoldierClips/<Gun>.luau (+ init.luau) and src/shared/Guns/SoldierRig.luau.
+Run: python tools/build_first_person_clips.py <folder with M57.json, B33.json, ...> <soldier_manifest.json>
+Writes src/shared/Guns/FirstPersonClips/<Gun>.luau (+ init.luau) and src/shared/Guns/SoldierRig.luau.
 
 Every first-person pose is stored relative to the first-person camera, which sits at the centre of the red eye
 bar (FPView in the export): each arm, hand and finger part, the gun's handle (Gun), and the magazine and the
 charging handle or pump relative to the gun (Mag, Action). Clips only name poses: a frame is one pose, or two
-poses and how far to blend from the first to the second. SoldierClip.luau expands them in the game. Reload
+poses and how far to blend from the first to the second. FirstPersonClip.luau expands them in the game. Reload
 clips are marked scaled: the game stretches them to the gun's reload time from GunConfig.
 
-SoldierRig.luau holds, for every piece of the exported SoldierArms and SoldierBody models, the part (or finger)
+SoldierRig.luau holds, for every piece of the exported FirstPersonArms and SoldierBody models, the part (or finger)
 it belongs to and its offset from that part, plus the material colours.
 """
 import json
@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from build_body_poses import GUNS, cf, inv, mat, mul, num, translate  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, "src", "shared", "Guns", "SoldierClips")
+OUT = os.path.join(ROOT, "src", "shared", "Guns", "FirstPersonClips")
 RIG_OUT = os.path.join(ROOT, "src", "shared", "Guns", "SoldierRig.luau")
 
 SIDES = ("Right", "Left")
@@ -133,7 +133,7 @@ def build(gun, data):
     assert not missing, (gun, missing)
     display, module = GUNS[gun]
     lines = [
-        "-- Made by tools/build_view_clips.py from SplitDeck_Poses_%s. Don't edit by hand." % gun,
+        "-- Made by tools/build_first_person_clips.py from SplitDeck_Poses_%s. Don't edit by hand." % gun,
         "-- First-person poses on the soldier's own arms, relative to the camera at the centre of the red eye bar.",
         "-- Each value is { x, y, z, qx, qy, qz, qw }. Gun is the gun's handle; Mag and Action are from the gun.",
         "-- A clip frame is { pose } or { from, to, share }. Reload clips are stretched to the gun's reload time.",
@@ -176,16 +176,16 @@ def rig(manifest):
         return m
 
     lines = [
-        "-- Made by tools/build_view_clips.py from soldier_manifest.json. Don't edit by hand.",
+        "-- Made by tools/build_first_person_clips.py from soldier_manifest.json. Don't edit by hand.",
         "-- The soldier models' pieces (MeshParts named <Part>_<material>), each with the part or finger it",
-        "-- belongs to and its offset from that part. arms = SoldierArms (first person), body = SoldierBody.",
+        "-- belongs to and its offset from that part. arms = FirstPersonArms (first person), body = SoldierBody.",
         "return {",
         "\tcolors = {",
     ]
     for k, v in sorted(manifest["materialColors"].items()):
         lines.append("\t\t%s = { %d, %d, %d }," % (k[3:], v[0], v[1], v[2]))
     lines.append("\t},")
-    for key, fname in (("arms", "SoldierArms.fbx"), ("body", "SoldierBody.fbx")):
+    for key, fname in (("arms", "FirstPersonArms.fbx"), ("body", "SoldierBody.fbx")):
         lines.append("\t%s = {" % key)
         for name, piece in sorted(manifest[fname].items()):
             offset = mul(inv(rest(piece["part"])), translate(*piece["centre"]))
@@ -205,7 +205,7 @@ def main(folder, manifest_path):
             display, module = build(gun, json.load(fh))
         index.append('\t["%s"] = require(script.%s),' % (display, module))
     with open(os.path.join(OUT, "init.luau"), "w", encoding="utf8", newline="\n") as fh:
-        fh.write("-- First-person soldier clips, by the gun's display name. Made by tools/build_view_clips.py.\nreturn {\n"
+        fh.write("-- First-person soldier clips, by the gun's display name. Made by tools/build_first_person_clips.py.\nreturn {\n"
                  + "\n".join(index) + "\n}\n")
     with open(manifest_path, encoding="utf8") as fh:
         rig(json.load(fh))

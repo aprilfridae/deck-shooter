@@ -1,4 +1,4 @@
--- First-person soldier clips, by the gun's display name. Made by tools/build_view_clips.py.
+-- First-person soldier clips, by the gun's display name. Made by tools/build_first_person_clips.py.
 return {
 	["M57"] = require(script.M57),
 	["B33"] = require(script.B33),

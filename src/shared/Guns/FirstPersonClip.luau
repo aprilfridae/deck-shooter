@@ -1,14 +1,14 @@
--- Turns a gun's SoldierClips module into clips ArmClip can play. Each frame's bones are the soldier's arm parts,
+-- Turns a gun's FirstPersonClips module into clips ArmClip can play. Each frame's bones are the soldier's arm parts,
 -- fingers, Gun, Mag and Action, all as { x, y, z, qx, qy, qz, qw }. A frame that names two poses is blended
 -- between them. Frames that name the same thing share one table, so a frame can be found again with table.find.
 local ArmClip = require("./ArmClip")
 
-local SoldierClip = {}
+local FirstPersonClip = {}
 
 export type Frame = { bones: { [string]: { number } } }
 export type Clip = { fps: number, loop: boolean, scaled: boolean, frames: { Frame } }
 
-function SoldierClip.expand(data: any): { [string]: Clip }
+function FirstPersonClip.expand(data: any): { [string]: Clip }
 	local cache: { [string]: Frame } = {}
 	local function frameOf(ref: { any }): Frame
 		local key = table.concat({ ref[1], ref[2] or "", tostring(ref[3] or "") }, "|")
@@ -41,8 +41,8 @@ function SoldierClip.expand(data: any): { [string]: Clip }
 end
 
 -- The frames per second that make a scaled clip last the given seconds.
-function SoldierClip.fpsFor(clip: Clip, seconds: number): number
+function FirstPersonClip.fpsFor(clip: Clip, seconds: number): number
 	return #clip.frames / math.max(seconds, 0.05)
 end
 
-return SoldierClip
+return FirstPersonClip

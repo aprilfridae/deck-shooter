@@ -1,6 +1,6 @@
--- Made by tools/build_view_clips.py from soldier_manifest.json. Don't edit by hand.
+-- Made by tools/build_first_person_clips.py from soldier_manifest.json. Don't edit by hand.
 -- The soldier models' pieces (MeshParts named <Part>_<material>), each with the part or finger it
--- belongs to and its offset from that part. arms = SoldierArms (first person), body = SoldierBody.
+-- belongs to and its offset from that part. arms = FirstPersonArms (first person), body = SoldierBody.
 return {
 	colors = {
 		armor = { 31, 51, 88 },

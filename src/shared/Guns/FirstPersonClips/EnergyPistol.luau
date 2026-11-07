@@ -1,4 +1,4 @@
--- Made by tools/build_view_clips.py from SplitDeck_Poses_Pistol. Don't edit by hand.
+-- Made by tools/build_first_person_clips.py from SplitDeck_Poses_Pistol. Don't edit by hand.
 -- First-person poses on the soldier's own arms, relative to the camera at the centre of the red eye bar.
 -- Each value is { x, y, z, qx, qy, qz, qw }. Gun is the gun's handle; Mag and Action are from the gun.
 -- A clip frame is { pose } or { from, to, share }. Reload clips are stretched to the gun's reload time.

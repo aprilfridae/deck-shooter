@@ -2,7 +2,7 @@
 local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
 local BodyStyle = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("BodyStyle"))
 -- or a grey block if that model hasn't been imported.
--- Guns with SoldierClips are held in the soldier's own arms (SoldierArms) once that model is imported:
+-- Guns with FirstPersonClips are held in the soldier's own arms (FirstPersonArms) once that model is imported:
 -- every pose sits relative to the camera at the centre of the red eye bar, aiming down sights included.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -11,11 +11,11 @@ local ArmClips = require(ReplicatedStorage.Guns.ArmClips)
 local CardClip = require(ReplicatedStorage.Guns.ArmClips.Card)
 local ArmPose = require(ReplicatedStorage.Guns.ArmPose)
 local GunConfig = require(ReplicatedStorage.Guns.GunConfig)
-local SoldierClip = require(ReplicatedStorage.Guns.SoldierClip)
-local SoldierClips = require(ReplicatedStorage.Guns.SoldierClips)
+local FirstPersonClip = require(ReplicatedStorage.Guns.FirstPersonClip)
+local FirstPersonClips = require(ReplicatedStorage.Guns.FirstPersonClips)
 local CardView = require(script.Parent.CardView)
 local PoseGun = require(script.Parent.PoseGun)
-local SoldierArms = require(script.Parent.SoldierArms)
+local FirstPersonArms = require(script.Parent.FirstPersonArms)
 local ViewArms = require(script.Parent.ViewArms)
 
 local PRIMARY_LENGTH = 2.4
@@ -83,7 +83,7 @@ local shownBase: any = nil
 local shownSnap: any = nil
 local smears: { any } = {}
 local smearAt: number? = nil
--- The soldier's own arms and the posed gun, once SoldierArms is imported and the gun has SoldierClips.
+-- The soldier's own arms and the posed gun, once FirstPersonArms is imported and the gun has FirstPersonClips.
 local soldier: any = nil
 local aimedLast = false
 local aimChangedAt = -math.huge
@@ -231,14 +231,14 @@ function GunView.setGun(gunId: string, slot: string)
 		soldier.gun.model:Destroy()
 		soldier = nil
 	end
-	local data = SoldierClips[GunConfig.guns[gunId].name]
-	if data and SoldierArms.ready() then
+	local data = FirstPersonClips[GunConfig.guns[gunId].name]
+	if data and FirstPersonArms.ready() then
 		local idle = data.poses.Idle
 		local gun = PoseGun.build(GunConfig.guns[gunId].name, data.parts, PoseGun.frame(idle.Mag), PoseGun.frame(idle.Action))
 		if gun then
 			soldier = {
 				gun = gun,
-				clips = SoldierClip.expand(data),
+				clips = FirstPersonClip.expand(data),
 				muzzle = Vector3.new(table.unpack(data.muzzle)),
 				reload = GunConfig.guns[gunId].reload,
 				handle = nil,
@@ -353,7 +353,7 @@ local function soldierFrame(reloading: boolean, sprinting: boolean, aiming: bool
 	end
 	reloadAt = if reloading then reloadAt or now else nil
 	if reloadAt then
-		c.reload.fps = SoldierClip.fpsFor(c.reload, soldier.reload)
+		c.reload.fps = FirstPersonClip.fpsFor(c.reload, soldier.reload)
 		local frame = ArmClip.frameAt(c.reload, now - reloadAt)
 		if frame then
 			return frame
@@ -384,7 +384,7 @@ local function hideSoldier()
 	if soldier then
 		soldier.gun.model.Parent = nil
 	end
-	SoldierArms.hide()
+	FirstPersonArms.hide()
 end
 
 -- With a card out, the gun drops, then the arms play the card flying across and holding it.
@@ -458,7 +458,7 @@ function GunView.update(
 		local handle = base * PoseGun.frame(bones.Gun)
 		soldier.handle = handle
 		PoseGun.place(soldier.gun, handle, PoseGun.frame(bones.Mag), PoseGun.frame(bones.Action), camera)
-		SoldierArms.place(camera, base, bones)
+		FirstPersonArms.place(camera, base, bones)
 		if view then
 			view.Parent = nil
 		end
