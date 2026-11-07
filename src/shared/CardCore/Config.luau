@@ -17,6 +17,8 @@ local Config = {
 	VariantOdds = { Chromatic = 1 / 50, Redacted = 1 / 500, ZeroDay = 1 / 5000 },
 
 	GroupId = 237720778, -- Fridae Studios
+	OpenAllProduct = 0, -- the developer product, 0 until River creates it
+	AutoOpenPass = 0, -- the gamepass, 0 until River creates it
 	RebirthPrice = 25000,
 	RebirthGrowth = 2.5,
 	LuckPerRebirth = 0.15,
