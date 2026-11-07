@@ -222,7 +222,7 @@ showMain = function(content: Frame)
 	local unit = MenuPanel.unit()
 	local bar = hitBox(content, MARGIN, KEYBINDS_TOP, RIGHT - MARGIN, KEYBINDS_HEIGHT)
 	bar.BackgroundTransparency = 0
-	bar.BackgroundColor3 = Palette.DataCyan
+	bar.BackgroundColor3 = Palette.DeepNavy
 	bar.BorderSizePixel = 0
 	bar.Activated:Connect(function()
 		SettingsPanel.showKeys(content)
@@ -230,9 +230,11 @@ showMain = function(content: Frame)
 	local baseline = (KEYBINDS_HEIGHT + LABEL_SIZE) / 2 * unit
 	local name = label(bar, "LabelBold", LABEL_SIZE, 0, 0)
 	name:setPosition(UDim2.fromOffset(MARGIN * unit, baseline))
+	name:setColor(Palette.Bone)
 	name:set("KEYBINDS")
 	local arrow = label(bar, "LabelBold", LABEL_SIZE, 0, 0, true)
 	arrow:setPosition(UDim2.new(1, -MARGIN * unit, 0, baseline))
+	arrow:setColor(Palette.Bone)
 	arrow:set(">")
 end
 

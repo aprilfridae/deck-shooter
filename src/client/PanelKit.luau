@@ -102,8 +102,8 @@ function PanelKit.hitBox(parent: Instance, x: number, top: number, width: number
 end
 
 -- A labelled button that inverts under the mouse and dips when pressed.
--- active leaves it in Data Cyan, and disabled greys it out and stops clicks. quiet thickens the
--- border instead of inverting, for buttons with their own contents.
+-- active leaves it inverted, and disabled greys it out and stops clicks. quiet thickens the border
+-- instead of inverting, for buttons with their own contents, and active leaves it thick.
 function PanelKit.button(
 	parent: Instance,
 	text: string,
@@ -117,16 +117,20 @@ function PanelKit.button(
 	local unit = MenuPanel.unit()
 	local size = choice.size or PanelKit.LABEL_SIZE
 	local button = PanelKit.hitBox(parent, x, top, width, height)
+	local filled = choice.active and not choice.quiet
+	local ink = if filled then Palette.Bone else NAVY
+	local border = if choice.active and choice.quiet then QUIET_HOVER else 1
 	button.BackgroundTransparency = if choice.disabled then 0.9 else 0
-	button.BackgroundColor3 = if choice.disabled then NAVY elseif choice.active then Palette.DataCyan else Palette.Bone
+	button.BackgroundColor3 = if choice.disabled or filled then NAVY else Palette.Bone
 	local stroke = Instance.new("UIStroke")
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	stroke.Color = NAVY
+	stroke.Thickness = border
 	stroke.Transparency = if choice.disabled then 0.7 else 0
 	stroke.Parent = button
 	local scale = Instance.new("UIScale")
 	scale.Parent = button
-	local word = PanelKit.label(button, "LabelBold", size, 0, 0)
+	local word = PanelKit.label(button, "LabelBold", size, 0, 0, nil, ink)
 	word:setPosition(UDim2.new(0.5, 0, 0, (height + size) / 2 * unit))
 	word:set(text)
 	word:setPosition(UDim2.new(0.5, -word:width() / 2, 0, (height + size) / 2 * unit))
@@ -145,9 +149,9 @@ function PanelKit.button(
 		end
 	end)
 	button.MouseLeave:Connect(function()
-		stroke.Thickness = 1
+		stroke.Thickness = border
 		button.BackgroundColor3 = rest
-		word:setColor(NAVY)
+		word:setColor(ink)
 		scale.Scale = 1
 	end)
 	button.MouseButton1Down:Connect(function()

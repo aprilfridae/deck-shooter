@@ -107,7 +107,7 @@ function PlayPanel.fill(content: Frame)
 		end)
 	end
 
-	local block = PanelKit.block(content, MARGIN, 0, RIGHT - MARGIN, BLOCK_HEIGHT, Palette.DataCyan)
+	local block = PanelKit.block(content, MARGIN, 0, RIGHT - MARGIN, BLOCK_HEIGHT, PanelKit.NAVY)
 
 	-- Stacks the rows, each starting where the one above it ended.
 	local function stack()
@@ -146,7 +146,7 @@ function PlayPanel.fill(content: Frame)
 		stack()
 	end)
 
-	local word = PanelKit.label(block, "LabelBold", PanelKit.LABEL_SIZE, 0, 0)
+	local word = PanelKit.label(block, "LabelBold", PanelKit.LABEL_SIZE, 0, 0, nil, Palette.Bone)
 	word:setPosition(UDim2.fromOffset(MARGIN * unit, (BLOCK_HEIGHT + PanelKit.LABEL_SIZE) / 2 * unit))
 	word:set("MATCHES ARE ON THE WAY")
 end

@@ -1,4 +1,4 @@
--- One row of the Outpost nav. Colour wipes across it in stepped frames with fading copies behind
+-- One row of the Outpost nav. Navy wipes across it in stepped frames with fading copies behind
 -- and a glow ahead, the same way the panels move, and the name kicks right. Rows slide in one after
 -- another.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -51,7 +51,7 @@ end
 
 local function glowFrame(parent: Instance, fade: NumberSequence): Frame
 	local frame = Instance.new("Frame")
-	frame.BackgroundColor3 = Palette.DataCyan
+	frame.BackgroundColor3 = Palette.DeepNavy
 	frame.BorderSizePixel = 0
 	frame.Visible = false
 	frame.Parent = parent
@@ -70,7 +70,6 @@ function NavButton.new(options: Options): any
 	local self = setmetatable({}, NavButton)
 	self.active = false
 	self.hovering = false
-	self.pressed = false
 	self.share = 0
 	self.from = 0
 	self.elapsed = 0
@@ -93,7 +92,7 @@ function NavButton.new(options: Options): any
 
 	self.copies = {}
 	for _ = 1, PanelMotion.COPIES do
-		table.insert(self.copies, wipeFrame(self.button, Palette.DataCyan))
+		table.insert(self.copies, wipeFrame(self.button, Palette.DeepNavy))
 	end
 	self.wipe = wipeFrame(self.button, Palette.DeepNavy)
 	local fadeOut = NumberSequence.new(0, 1)
@@ -140,16 +139,7 @@ function NavButton.new(options: Options): any
 	end)
 	self.button.MouseLeave:Connect(function()
 		self.hovering = false
-		self.pressed = false
 		self:retarget()
-	end)
-	self.button.MouseButton1Down:Connect(function()
-		self.pressed = true
-		self:paint()
-	end)
-	self.button.MouseButton1Up:Connect(function()
-		self.pressed = false
-		self:paint()
 	end)
 	self.button.Activated:Connect(options.onClick)
 	self:paint()
@@ -161,16 +151,10 @@ function NavButton:target(): number
 end
 
 function NavButton:paint()
-	-- Data Cyan wants dark text, so only the plain hover wipe turns it light.
-	local onNavy = self.share > TEXT_SWAP and not self.active and not self.pressed
-	local ink = if onNavy then Palette.Bone else Palette.DeepNavy
+	local ink = if self.share > TEXT_SWAP then Palette.Bone else Palette.DeepNavy
 	self.text:setColor(ink)
 	self.mark:setColor(ink)
 	self.mark:set(if self:target() == 1 then ">" else self.number)
-	self.wipe.BackgroundColor3 = if self.pressed
-		then Palette.DataCyan
-		elseif self.active then Palette.DataCyan
-		else Palette.DeepNavy
 	self.wipe.Size = UDim2.fromScale(math.min(self.share, 1), 1)
 	self.text:setPosition(UDim2.fromOffset(self.left + self.kick * self.share, self.baseline))
 end
