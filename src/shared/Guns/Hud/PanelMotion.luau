@@ -4,6 +4,7 @@ local PanelMotion = {
 	FPS = 30,
 	DURATION = 0.5, -- seconds
 	COPIES = 3,
+	SHAKE_TIME = 7 / 30, -- seconds, in whole frames
 }
 
 local OVERSHOOT = 1.1 -- higher swings further past the mark
@@ -13,6 +14,15 @@ local CHARACTER_PLACE = 0.5 -- of the way from the screen's centre to its left e
 local BLUR_PER_TRAVEL = 70 -- blur size for each share of the panel crossed in one frame
 local MOST_BLUR = 18
 local LEAN_PER_TRAVEL = math.rad(7.5) -- tilt for each share of the panel crossed in one frame
+local GLOW_PER_TRAVEL = 5 -- glow for each share of the panel crossed in one frame
+local SMEAR_PER_TRAVEL = 1.6 -- longest bar, as a share of the screen, per share crossed in one frame
+local MOST_SMEAR = 0.45
+local SHORTEST_BAR = 0.15 -- of the longest bar
+local BAR_HEIGHTS = { 0.008, 0.04 } -- thinnest and thickest, as shares of the screen
+local BAR_GAPS = 0.35 -- how often a band of the screen gets no bar
+local SHAKE = 0.022 -- how far the landing throws the view, per unit of depth
+local SHAKE_HEIGHT = 0.6 -- of the sideways throw
+local SHAKE_LEAN = math.rad(0.6)
 
 -- How far through a move it is, from 0 to 1, stepped to whole frames.
 function PanelMotion.held(elapsed: number): number
@@ -63,6 +73,56 @@ end
 -- How far the view leans, in radians, for this much travel in one frame of the panel.
 function PanelMotion.viewLean(travel: number): number
 	return travel * LEAN_PER_TRAVEL
+end
+
+-- How strongly things glow for this much travel in one frame of the panel, from 0 to 1.
+function PanelMotion.glow(travel: number): number
+	return math.min(math.abs(travel) * GLOW_PER_TRAVEL, 1)
+end
+
+-- The bars dragged off the panel's edge for one frame. Top, height and length are shares of the
+-- screen. Tint is from 0 to 1. roll gives a random number from 0 to 1.
+function PanelMotion.smear(
+	travel: number,
+	roll: () -> number
+): { { top: number, height: number, length: number, tint: number } }
+	local rows = {}
+	if travel == 0 then
+		return rows
+	end
+	local reach = math.min(math.abs(travel) * SMEAR_PER_TRAVEL, MOST_SMEAR)
+	local top = 0
+	while true do
+		local height = BAR_HEIGHTS[1] + (BAR_HEIGHTS[2] - BAR_HEIGHTS[1]) * roll()
+		if top + height > 1 then
+			return rows
+		end
+		if roll() >= BAR_GAPS then
+			table.insert(rows, {
+				top = top,
+				height = height,
+				length = reach * (SHORTEST_BAR + (1 - SHORTEST_BAR) * roll()),
+				tint = roll(),
+			})
+		end
+		top += height
+	end
+end
+
+-- The view's throw this long after a closing panel lands: side to side, fading out in held frames.
+function PanelMotion.landShake(elapsed: number): { x: number, y: number, lean: number }
+	local frame = math.floor(elapsed * PanelMotion.FPS + 1e-6)
+	local frames = math.round(PanelMotion.SHAKE_TIME * PanelMotion.FPS)
+	if frame < 0 or frame >= frames then
+		return { x = 0, y = 0, lean = 0 }
+	end
+	local fade = 1 - frame / frames
+	local side = if frame % 2 == 0 then 1 else -1
+	return {
+		x = SHAKE * fade * side,
+		y = SHAKE * SHAKE_HEIGHT * fade * (if frame % 3 == 0 then 1 else -1),
+		lean = SHAKE_LEAN * fade * -side,
+	}
 end
 
 return PanelMotion

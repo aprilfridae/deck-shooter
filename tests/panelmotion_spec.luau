@@ -67,4 +67,45 @@ describe("PanelMotion", function()
 		expect(PanelMotion.viewLean(0.1) ~= 0).toBe(true)
 		expect(near(PanelMotion.viewLean(-0.1), -PanelMotion.viewLean(0.1))).toBe(true)
 	end)
+
+	it("glows while it travels, up to full", function()
+		expect(PanelMotion.glow(0)).toBe(0)
+		expect(PanelMotion.glow(0.05) > 0).toBe(true)
+		expect(PanelMotion.glow(-0.05)).toBe(PanelMotion.glow(0.05))
+		expect(PanelMotion.glow(5)).toBe(1)
+	end)
+
+	it("leaves no smear when the panel stayed put", function()
+		expect(#PanelMotion.smear(0, math.random)).toBe(0)
+	end)
+
+	it("keeps every smear row on the screen", function()
+		for _ = 1, 50 do
+			for _, row in PanelMotion.smear(0.27, math.random) do
+				expect(row.top >= 0 and row.top + row.height <= 1).toBe(true)
+				expect(row.length > 0 and row.length <= 1).toBe(true)
+			end
+		end
+	end)
+
+	it("smears further the faster the panel moves", function()
+		local function middle()
+			return 0.5
+		end
+		local slow = PanelMotion.smear(0.05, middle)
+		local fast = PanelMotion.smear(-0.2, middle)
+		expect(#fast > 0).toBe(true)
+		expect(fast[1].length > slow[1].length).toBe(true)
+	end)
+
+	it("shakes hardest on landing, then fades to nothing", function()
+		local first = PanelMotion.landShake(0)
+		local second = PanelMotion.landShake(1 / PanelMotion.FPS)
+		local late = PanelMotion.landShake(PanelMotion.SHAKE_TIME - 1 / PanelMotion.FPS)
+		expect(first.x ~= 0).toBe(true)
+		expect(first.x * second.x < 0).toBe(true)
+		expect(math.abs(late.x) < math.abs(first.x)).toBe(true)
+		expect(PanelMotion.landShake(PanelMotion.SHAKE_TIME).x).toBe(0)
+		expect(PanelMotion.landShake(-0.1).x).toBe(0)
+	end)
 end)

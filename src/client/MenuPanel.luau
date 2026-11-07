@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local Palette = require(Guns:WaitForChild("Palette"))
 local PanelMotion = require(Guns:WaitForChild("Hud"):WaitForChild("PanelMotion"))
+local PanelSmear = require(script.Parent.PanelSmear)
 
 local PANEL_WIDTH = 0.5 -- share of the screen
 local BLEED = 0.05 -- extra sheet off the right edge, so swinging past its mark shows no gap
@@ -42,6 +43,7 @@ function MenuPanel.new(parent: Instance): any
 	self.moving = false
 	self.share = 0 -- 0 is closed, 1 is open
 	self.travel = 0 -- how far the last frame of the move went, opening being positive
+	self.shake = PanelMotion.landShake(PanelMotion.SHAKE_TIME) -- none yet
 	self.from = 0
 	self.elapsed = 0
 
@@ -55,6 +57,8 @@ function MenuPanel.new(parent: Instance): any
 	for _ = 1, PanelMotion.COPIES do
 		table.insert(self.copies, sheet(self.clip))
 	end
+
+	self.smear = PanelSmear.new(self.clip)
 
 	self.frame = sheet(self.clip)
 	self.frame.Active = true -- clicks on the sheet stop here
@@ -97,11 +101,19 @@ function MenuPanel:step(dt: number)
 		self.travel = share - self.share
 		self.share = share
 		place(self.frame, share)
+		self.smear:show(1 - PANEL_WIDTH * share, self.travel)
 	end
 	-- The last frame is held too, so its copies get their moment.
-	if self.elapsed >= PanelMotion.DURATION + 1 / PanelMotion.FPS then
+	local held = self.elapsed >= PanelMotion.DURATION + 1 / PanelMotion.FPS
+	if held and self.travel ~= 0 then
 		self:showCopies(share, share)
+		self.smear:hide()
 		self.travel = 0
+	end
+	-- A closing sheet lands hard, so it runs on a little longer to shake the view.
+	local sinceLanding = self.elapsed - PanelMotion.DURATION
+	self.shake = PanelMotion.landShake(if self.opening then PanelMotion.SHAKE_TIME else sinceLanding)
+	if held and (self.opening or sinceLanding >= PanelMotion.SHAKE_TIME) then
 		self.frame.Visible = self.opening
 		self.moving = false
 		RunService:UnbindFromRenderStep(STEP_NAME)
