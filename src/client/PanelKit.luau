@@ -21,8 +21,8 @@ local PanelKit = {
 	RULE_LINE = 0.108,
 	CAP_HEIGHT = 0.7, -- of a font's size, for all three fonts
 	TITLE_INSET = 0.055, -- of the size: the blank space left of a Title letter
-	INK = Palette.Bone, -- text, rules and whatever is selected
-	PAPER = Palette.DeepNavy, -- the page behind them
+	INK = Palette.DeepNavy, -- text, rules and whatever is selected
+	PAPER = Palette.Bone, -- the page behind them
 }
 
 local INK, PAPER = PanelKit.INK, PanelKit.PAPER

@@ -26,7 +26,7 @@ end
 local function sheet(parent: Instance): Frame
 	local frame = Instance.new("Frame")
 	frame.BorderSizePixel = 0
-	frame.BackgroundColor3 = Palette.DeepNavy
+	frame.BackgroundColor3 = Palette.Bone
 	frame.Size = UDim2.fromScale(PANEL_WIDTH + BLEED, 1)
 	frame.Visible = false
 	frame.Parent = parent

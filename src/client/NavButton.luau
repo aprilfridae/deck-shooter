@@ -1,4 +1,4 @@
--- One row of the Outpost nav. Bone wipes across it in stepped frames with fading copies behind
+-- One row of the Outpost nav. Navy wipes across it in stepped frames with fading copies behind
 -- and a glow ahead, the same way the panels move, and the name kicks right. Rows slide in one after
 -- another.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -51,7 +51,7 @@ end
 
 local function glowFrame(parent: Instance, fade: NumberSequence): Frame
 	local frame = Instance.new("Frame")
-	frame.BackgroundColor3 = Palette.Bone
+	frame.BackgroundColor3 = Palette.DeepNavy
 	frame.BorderSizePixel = 0
 	frame.Visible = false
 	frame.Parent = parent
@@ -83,7 +83,7 @@ function NavButton.new(options: Options): any
 	self.ghosts = {} -- blur behind the row while it slides in
 	for _ = 1, PanelMotion.COPIES do
 		local ghost = Instance.new("Frame")
-		ghost.BackgroundColor3 = Palette.Bone
+		ghost.BackgroundColor3 = Palette.DeepNavy
 		ghost.BorderSizePixel = 0
 		ghost.Size = UDim2.fromOffset(options.width, options.height)
 		ghost.Visible = false
@@ -94,7 +94,7 @@ function NavButton.new(options: Options): any
 	self.button = Instance.new("TextButton")
 	self.button.Text = ""
 	self.button.AutoButtonColor = false
-	self.button.BackgroundColor3 = Palette.DeepNavy
+	self.button.BackgroundColor3 = Palette.Bone
 	self.button.BorderSizePixel = 0
 	self.button.ClipsDescendants = true
 	self.button.Position = UDim2.fromOffset(0, self.top)
@@ -103,9 +103,9 @@ function NavButton.new(options: Options): any
 
 	self.copies = {}
 	for _ = 1, PanelMotion.COPIES do
-		table.insert(self.copies, wipeFrame(self.button, Palette.Bone))
+		table.insert(self.copies, wipeFrame(self.button, Palette.DeepNavy))
 	end
-	self.wipe = wipeFrame(self.button, Palette.Bone)
+	self.wipe = wipeFrame(self.button, Palette.DeepNavy)
 	local fadeOut = NumberSequence.new(0, 1)
 	self.glow = glowFrame(self.button, fadeOut)
 	self.glow.Size = UDim2.new(0, GLOW_WIDTH * options.unit, 1, 0)
@@ -117,7 +117,7 @@ function NavButton.new(options: Options): any
 		style = "LabelBold",
 		size = options.textSize,
 		tracking = options.tracking,
-		color = Palette.Bone,
+		color = Palette.DeepNavy,
 		shadow = false,
 		position = UDim2.fromOffset(options.left, self.baseline),
 	})
@@ -126,7 +126,7 @@ function NavButton.new(options: Options): any
 		style = "Label",
 		size = options.textSize * NUMBER_SIZE,
 		tracking = options.tracking,
-		color = Palette.Bone,
+		color = Palette.DeepNavy,
 		right = true,
 		shadow = false,
 		position = UDim2.new(1, -options.padding, 0, self.baseline),
@@ -137,7 +137,7 @@ function NavButton.new(options: Options): any
 	if options.index > 1 then
 		local rule = Instance.new("Frame")
 		rule.BorderSizePixel = 0
-		rule.BackgroundColor3 = Palette.Bone
+		rule.BackgroundColor3 = Palette.DeepNavy
 		rule.BackgroundTransparency = RULE_FADE
 		rule.Size = UDim2.new(1, 0, 0, 1)
 		rule.Parent = self.button
@@ -162,7 +162,7 @@ function NavButton:target(): number
 end
 
 function NavButton:paint()
-	local ink = if self.share > TEXT_SWAP then Palette.DeepNavy else Palette.Bone
+	local ink = if self.share > TEXT_SWAP then Palette.Bone else Palette.DeepNavy
 	self.text:setColor(ink)
 	self.mark:setColor(ink)
 	self.mark:set(if self:target() == 1 then ">" else self.number)
