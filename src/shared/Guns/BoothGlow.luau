@@ -3,6 +3,8 @@ local BoothGlow = {
 	LIGHT_SHARE = 0.8, -- of a light's full brightness, when fully on
 	NEON_SHARE = 1, -- how solid the neon is when fully on
 	RANGE = 22, -- studs from a stall's centre that count as walking up
+	FADE_NEAR = 24, -- studs where a stall's lights start fading as you walk away
+	FADE_FAR = 42, -- studs where they're out, before Roblox would cut them off itself
 	FLICKER = 1, -- seconds of wavering
 	TOTAL = 3.6, -- seconds, including coming back on
 	REPEAT_LOW = 7, -- seconds between flickers while you stay close
@@ -23,6 +25,11 @@ end
 local function wavering(elapsed: number): number
 	local wave = 0.5 + 0.5 * math.sin(2 * math.pi * WAVES * elapsed / BoothGlow.FLICKER)
 	return 1 - smooth(elapsed / FADE_DOWN) * (DEEPEST + (SHALLOWEST - DEEPEST) * wave)
+end
+
+-- How much of a stall's light is left from this far away, from 1 to 0.
+function BoothGlow.distanceFade(distance: number): number
+	return 1 - smooth((distance - BoothGlow.FADE_NEAR) / (BoothGlow.FADE_FAR - BoothGlow.FADE_NEAR))
 end
 
 -- How bright the glow is this long into a flicker, from a low point up to 1.

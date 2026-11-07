@@ -14,7 +14,7 @@ Reference board: River's Pinterest board "the-outpost", downloaded to `H:\outpos
 
 - Amber is for world lights only. Signs and screens use the palette (`Palette.luau`).
 - Every sign in the Outpost is Deep Navy with Bone text and a Bone outline. No other colours.
-- The stalls glow at 80% of their lights' strength, with solid neon. Walking up to one makes its lights waver smoothly for a second and ease back on over 2.6s, and it repeats every 7 to 12s while you stay close. Each player sees this on their own.
+- The stalls glow at 80% of their lights' strength, with solid neon. Walking up to one makes its lights waver smoothly for a second and ease back on over 2.6s, and it repeats every 7 to 12s while you stay close. The lights fade out smoothly between 24 and 42 studs away. Each player sees this on their own.
 - Loadout and Credits will be HUD or GUI features, not places.
 - Rain around the camera was tried and removed, because the drops passing the camera looked wrong.
 

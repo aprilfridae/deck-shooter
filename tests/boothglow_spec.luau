@@ -26,6 +26,15 @@ describe("BoothGlow", function()
 		end
 	end)
 
+	it("fades the glow out smoothly with distance", function()
+		expect(BoothGlow.distanceFade(0)).toBe(1)
+		expect(BoothGlow.distanceFade(BoothGlow.FADE_NEAR)).toBe(1)
+		expect(BoothGlow.distanceFade(BoothGlow.FADE_FAR)).toBe(0)
+		expect(BoothGlow.distanceFade(BoothGlow.FADE_FAR + 50)).toBe(0)
+		local middle = BoothGlow.distanceFade((BoothGlow.FADE_NEAR + BoothGlow.FADE_FAR) / 2)
+		expect(middle > 0 and middle < 1).toBe(true)
+	end)
+
 	it("comes back on without dipping again", function()
 		local last = BoothGlow.level(BoothGlow.FLICKER)
 		for time = BoothGlow.FLICKER, BoothGlow.TOTAL, 0.05 do
