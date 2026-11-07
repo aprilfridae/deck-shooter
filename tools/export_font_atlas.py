@@ -26,6 +26,7 @@ STYLES = {
     "Title": ("KHInterference*-Bold.otf", string.ascii_uppercase + string.digits + "/_", 180),
     "Label": ("PPFraktionMono-Regular.otf", LABEL_CHARACTERS, 36),
     "LabelBold": ("PPFraktionMono-Bold.otf", LABEL_CHARACTERS, 36),
+    "LabelLarge": ("PPFraktionMono-Bold.otf", LABEL_CHARACTERS, 180),
 }
 
 

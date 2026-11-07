@@ -6,4 +6,5 @@ return {
 	Title = "rbxassetid://139262094797889",
 	Label = "rbxassetid://104232972611691",
 	LabelBold = "rbxassetid://95008852783039",
+	LabelLarge = "rbxassetid://109417535895183", -- LabelBold for big text, like a card's serial
 }

@@ -325,7 +325,7 @@ function CardFace.new(parent: Instance, options: Options): GuiObject
 	if look == "ZeroDay" then
 		crosshairFill(root, unit)
 		local size = BIG_SERIAL_SIZE * CardLook.bigSerialSize(serial)
-		bigSerial = text(root, unit, "LabelBold", size, style.ink, BLOCK_LEFT, BIG_SERIAL_LINE)
+		bigSerial = text(root, unit, "LabelLarge", size, style.ink, BLOCK_LEFT, BIG_SERIAL_LINE)
 		bigSerial:set(serial)
 	else
 		local area = Rect.new(BLOCK_LEFT, BLOCK_TOP, BLOCK_LEFT + BLOCK_WIDTH, BLOCK_TOP + BLOCK_HEIGHT)
@@ -427,7 +427,7 @@ end
 local function backStat(root: GuiObject, unit: number, ink: Color3, stat: any, left: number, labelLine: number, valueLine: number, size: number)
 	text(root, unit, "Label", TEXT_SIZE, ink, left, labelLine):set(stat.label)
 	local parts = string.split(stat.value, " ")
-	local value = text(root, unit, "LabelBold", size, ink, left, valueLine)
+	local value = text(root, unit, "LabelLarge", size, ink, left, valueLine)
 	value:set(parts[1])
 	local after = left + value:width() / unit + UNIT_GAP
 	text(root, unit, "Label", TEXT_SIZE, ink, after, valueLine):set(parts[2] or "")
