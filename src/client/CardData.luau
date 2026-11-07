@@ -6,11 +6,13 @@ local RETRY = 1 -- seconds
 local GIVE_UP = 15 -- seconds to wait for the server before a request fails
 
 local changedEvent = Instance.new("BindableEvent")
+local packEvent = Instance.new("BindableEvent")
 local current: any? = nil
 local deckWaiting = false -- a new deck hasn't reached the abilities yet
 
 local CardData = {
 	changed = changedEvent.Event,
+	packEvent = packEvent.Event, -- a pack rolled or opened
 }
 
 -- Looked up when needed, so requiring this module never waits for the server.
@@ -57,6 +59,9 @@ Players.LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 task.spawn(function()
+	remotes():WaitForChild("PackEvent").OnClientEvent:Connect(function(event: any)
+		packEvent:Fire(event)
+	end)
 	remotes():WaitForChild("Snapshot").OnClientEvent:Connect(store)
 	while not current do
 		local reply = CardData.ask("GetSnapshot")

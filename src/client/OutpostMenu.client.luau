@@ -1,5 +1,6 @@
--- The Outpost's menu: four buttons in the corner, each opening a page in the side panel.
+-- The Outpost's menu: five buttons in the corner, each opening a page in the side panel.
 local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
@@ -16,6 +17,7 @@ local MenuCamera = require(script.Parent.MenuCamera)
 local LoadoutPanel = require(script.Parent.LoadoutPanel)
 local MenuPanel = require(script.Parent.MenuPanel)
 local NavButton = require(script.Parent.NavButton)
+local PacksPanel = require(script.Parent.PacksPanel)
 local PlayerClick = require(script.Parent.PlayerClick)
 local PlayPanel = require(script.Parent.PlayPanel)
 local ProfilePanel = require(script.Parent.ProfilePanel)
@@ -35,7 +37,7 @@ local NAV_OUTLINE = 2 -- pixels
 local HOVER_PITCH = 1.6
 local HOVER_VOLUME = 0.25
 
-local BUTTONS = { "PLAY", "LOADOUT", "PROFILE", "SETTINGS" }
+local BUTTONS = { "PLAY", "PACKS", "LOADOUT", "PROFILE", "SETTINGS" }
 
 local player = Players.LocalPlayer
 
@@ -86,6 +88,8 @@ local function fillPage(name: string)
 		SettingsPanel.fill(page)
 	elseif name == "PLAY" then
 		PlayPanel.fill(page)
+	elseif name == "PACKS" then
+		PacksPanel.fill(page)
 	elseif name == "LOADOUT" then
 		LoadoutPanel.fill(page)
 	else
@@ -201,6 +205,16 @@ RunService.RenderStepped:Connect(function()
 		openPage = nil
 		panel:close()
 		paint()
+	end
+end)
+
+-- The Market stall opens the packs until the player market exists.
+ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt)
+	if prompt.Name == "MarketPrompt" and gui.Enabled then
+		clickSound:Play()
+		SettingsPanel.stop()
+		profileUser = player.UserId
+		show("PACKS")
 	end
 end)
 
