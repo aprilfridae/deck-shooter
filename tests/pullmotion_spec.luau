@@ -4,6 +4,21 @@ local PullMotion = require("../src/shared/CardCore/PullMotion")
 local describe, it, expect = harness.describe, harness.it, harness.expect
 
 describe("PullMotion", function()
+	it("builds longer for rarer cards", function()
+		local field = PullMotion.buildTime({ tier = "Field", variant = "Base" })
+		local redline = PullMotion.buildTime({ tier = "BlackSite", variant = "Base" })
+		local proto = PullMotion.buildTime({ tier = "Prototype", variant = "Base" })
+		local zero = PullMotion.buildTime({ tier = "Field", variant = "ZeroDay" })
+		expect(field < redline).toBe(true)
+		expect(redline < proto).toBe(true)
+		expect(proto < zero).toBe(true)
+	end)
+
+	it("adds to the build for a rare variant", function()
+		local plain = PullMotion.buildTime({ tier = "BlackSite", variant = "Base" })
+		expect(PullMotion.buildTime({ tier = "BlackSite", variant = "Redacted" }) > plain).toBe(true)
+	end)
+
 	it("fans the middle card straight and the others out evenly", function()
 		local leftX, leftTilt = PullMotion.fan(1)
 		local midX, midTilt = PullMotion.fan(2)
@@ -24,9 +39,9 @@ describe("PullMotion", function()
 		expect(times.rest > times.flip).toBe(true)
 	end)
 
-	it("shakes every pack the same before flipping", function()
+	it("shakes every pack for a Prototype's build before flipping", function()
 		local times = PullMotion.phases()
-		expect(times.flip - times.build).toBeCloseTo(0.9)
+		expect(times.flip - times.build).toBeCloseTo(PullMotion.buildTime({ tier = "Prototype", variant = "Base" }))
 		expect(times.rest).toBeCloseTo(3.35)
 	end)
 
@@ -36,6 +51,15 @@ describe("PullMotion", function()
 		expect(PullMotion.peel(0.2, 6, 6)).toBe(0)
 		expect(PullMotion.peel(1, 1, 6)).toBe(1)
 		expect(PullMotion.peel(1, 6, 6)).toBe(1)
+	end)
+
+	it("finds the best card", function()
+		local best = PullMotion.best({
+			{ tier = "Prototype", variant = "Base" },
+			{ tier = "Field", variant = "Chromatic" },
+			{ tier = "Field", variant = "Base" },
+		})
+		expect(best.variant).toBe("Chromatic")
 	end)
 
 	it("puts the best card in the middle", function()

@@ -9,9 +9,11 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
+local CardLook = require(CardCore:WaitForChild("CardLook"))
 local PackArt = require(CardCore:WaitForChild("PackArt"))
 local PullMotion = require(CardCore:WaitForChild("PullMotion"))
 local PullParticles = require(CardCore:WaitForChild("PullParticles"))
+local Variant = require(CardCore:WaitForChild("Variant"))
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local CardSpin = require(Guns:WaitForChild("Hud"):WaitForChild("CardSpin"))
 local Palette = require(Guns:WaitForChild("Palette"))
@@ -55,13 +57,17 @@ local LEAN = 0.18 -- radians each side card turns in
 local DROP_TIME = 0.35 -- seconds the empty pack takes to fall away
 local DROP_DISTANCE = 0.9
 local DIM_TIME = 0.3
+local ZERO_DAY_CLEAR = 0.12
 local FLASH_TIME = 0.45
 local POP_TIME = 0.25
 local POP_SIZE = 0.1
 
--- Every opening looks like a plain Prototype's, whatever the pack holds: its light, flash and burst.
-local LOOK_CARD = { tier = "Prototype", variant = "Base" }
-local LIGHT = Palette.SignalAcid
+local LIGHTS = {
+	Field = Palette.Bone,
+	Redline = Palette.HazardRed,
+	Prototype = Palette.SignalAcid,
+	ZeroDay = Palette.DataCyan,
+}
 
 local PullStage = {}
 
@@ -253,7 +259,7 @@ local function step(run: any, dt: number)
 	local centreX, centreY = view.X * CardInspect.SCREEN_X, view.Y * CardInspect.SCREEN_Y
 	run.dim.CFrame = CFrame.new(point(centreX, centreY, depth + CardInspect.DIM_DEPTH)) * facing
 	run.dimGui.Enabled = true
-	local clear = CardInspect.DIM_CLEAR
+	local clear = if run.deepDim then ZERO_DAY_CLEAR else CardInspect.DIM_CLEAR
 	run.dimFrame.BackgroundTransparency = 1 - (1 - clear) * math.min(time / DIM_TIME, 1)
 
 	local swayYaw, swayPitch = CardSpin.sway(time)
@@ -321,9 +327,10 @@ local function step(run: any, dt: number)
 	local cardX = {}
 	if turned >= 0.5 and not run.flashed then
 		run.flashed = true
-		flash(run, PullMotion.flash(LOOK_CARD))
+		run.deepDim = run.best.variant == Variant.ZeroDay
+		flash(run, PullMotion.flash(run.best))
 		local look = PackFace.look(run.pack)
-		PullFx.burst(run.frame, PullParticles.power(LOOK_CARD), { look.back, look.art }, centreX, centreY)
+		PullFx.burst(run.frame, PullParticles.power(run.best), { look.back, look.art }, centreX, centreY)
 	end
 	for _, slot in run.slots do
 		local steps, tilt = PullMotion.fan(slot.index)
@@ -361,19 +368,22 @@ end
 -- Runs until frame is destroyed. callbacks.rested(line) gets the screen line under the cards, and
 -- callbacks.inspect(card) is called when a landed card is clicked.
 function PullStage.play(frame: Frame, pack: string, cards: { any }, callbacks: any)
+	local best = PullMotion.best(cards)
 	runs += 1
 	local run: any = {
 		stepName = `{STEP_NAME}{runs}`,
 		frame = frame,
 		pack = pack,
 		cards = PullMotion.fanOrder(cards),
-		light = LIGHT,
+		best = best,
+		light = LIGHTS[CardLook.look(best.tier, best.variant)],
 		times = PullMotion.phases(),
 		callbacks = callbacks,
 		random = Random.new(),
 		elapsed = 0,
 		flashed = false,
 		settled = false,
+		deepDim = false,
 		instances = {},
 		surfaces = {},
 	}
