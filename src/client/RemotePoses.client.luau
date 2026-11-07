@@ -296,8 +296,11 @@ RunService.PreRender:Connect(function()
 		if body.soldier then
 			local visible = true
 			if body.player == Players.LocalPlayer and camera then
+				-- Locked first person always hides it: the slide pose moves the head away from the camera,
+				-- which follows the root, so the head distance alone let the gun show mid-slide.
 				local head = character:FindFirstChild("Head") :: BasePart?
-				visible = head == nil or (camera.CFrame.Position - head.Position).Magnitude > FIRST_PERSON
+				visible = body.player.CameraMode ~= Enum.CameraMode.LockFirstPerson
+					and (head == nil or (camera.CFrame.Position - head.Position).Magnitude > FIRST_PERSON)
 			end
 			HeldGuns.show(character, body.gunName, body.poses, body.pose, visible)
 		end
