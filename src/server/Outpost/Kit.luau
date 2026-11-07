@@ -10,7 +10,6 @@ local M = Enum.Material
 local SIGN_TAG = "OutpostSign"
 local SCREEN_TAG = "OutpostScreen"
 local SIGN_DEPTH = 0.3
-local OUTLINE_WIDTH = 0.16
 local CABLE_WIDTH = 0.12
 local CABLE_COLOR = Color3.fromRGB(22, 24, 26)
 local CABLE_SEGMENTS = 12
@@ -89,7 +88,6 @@ export type SignOptions = {
 	style: string?, -- a font style from GlyphData
 	back: Color3?,
 	fill: Color3?, -- a lit background, for lightboxes
-	outline: Color3?, -- an edge drawn on the face
 	light: Color3?, -- a glow cast forward
 	vertical: boolean?, -- one letter per line
 	scale: number?, -- text height as a share of the sign's
@@ -551,11 +549,6 @@ function Kit:sign(cframe: CFrame, width: number, height: number, options: SignOp
 	back:SetAttribute("SignScale", options.scale)
 	CollectionService:AddTag(back, SIGN_TAG)
 
-	if options.outline then
-		-- Drawn with the text, because a separate strip this close to the face gets buried by it from afar.
-		back:SetAttribute("SignOutline", options.outline)
-		back:SetAttribute("SignOutlineWidth", OUTLINE_WIDTH)
-	end
 	if options.light then
 		self:light(back, "SurfaceLight", {
 			Face = Enum.NormalId.Front,

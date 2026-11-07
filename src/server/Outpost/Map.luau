@@ -394,7 +394,6 @@ local function signLook(text: string, vertical: boolean?): any
 		color = Palette.Bone,
 		fill = Palette.DeepNavy,
 		back = Palette.DeepNavy,
-		outline = Palette.Bone,
 		light = Palette.Bone,
 		vertical = vertical,
 	}

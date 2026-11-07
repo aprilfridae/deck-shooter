@@ -165,23 +165,6 @@ local function line(frame: Frame, style: string, text: string, color: Color3, si
 	return label
 end
 
--- A border just inside the frame's edge.
-local function outlined(frame: Frame, color: Color3, thickness: number)
-	for _, side in {
-		{ UDim2.new(1, 0, 0, thickness), UDim2.fromScale(0, 0) },
-		{ UDim2.new(1, 0, 0, thickness), UDim2.new(0, 0, 1, -thickness) },
-		{ UDim2.new(0, thickness, 1, 0), UDim2.fromScale(0, 0) },
-		{ UDim2.new(0, thickness, 1, 0), UDim2.new(1, -thickness, 0, 0) },
-	} do
-		local bar = Instance.new("Frame")
-		bar.Size = side[1]
-		bar.Position = side[2]
-		bar.BorderSizePixel = 0
-		bar.BackgroundColor3 = color
-		bar.Parent = frame
-	end
-end
-
 local function decorateSign(part: Instance)
 	if not part:IsA("BasePart") or part:FindFirstChild("SignText") then
 		return
@@ -194,10 +177,6 @@ local function decorateSign(part: Instance)
 	local color = part:GetAttribute("SignColor") or Palette.Bone
 	local fill = part:GetAttribute("SignFill")
 	local frame, width, height = textLayer(part, "SignText", if typeof(fill) == "Color3" then fill else nil)
-	local outline = part:GetAttribute("SignOutline")
-	if typeof(outline) == "Color3" then
-		outlined(frame, outline, part:GetAttribute("SignOutlineWidth") * PIXELS_PER_STUD)
-	end
 	if part:GetAttribute("SignVertical") then
 		local count = #text
 		local size = math.min(width * VERTICAL_WIDTH, height * VERTICAL_FILL / count)
