@@ -60,7 +60,7 @@ All the work above is merged to `main`. Nothing is half built.
 **Known gaps:**
 - Other players' footsteps and shots can't be heard. Roblox's default footsteps are muted and ours play only for the local player, and only your own shots make a sound.
 - Sounds still to record and hook up are in `docs/sound-list.md`, among them landing, slide, parry and climb. The M57's reload hit isn't aligned to the new assault reload sound.
-- Full fonts: River will download them, then re-export, upload and update `FontImages.luau` (steps in `docs/specs/hud.md`).
+- Fonts: River has the Pro downloads in `Downloads`. KH Interference's file still names itself TRIAL, and the titles and card monograms use it, so River needs to confirm the licence before publishing.
 - If Studio says "We could not open the place [70756985983915]. Failed to fetch place info." again: it's a known 2026 Studio bug. Roblox staff suggest logging out of Studio, ending it in Task Manager and logging back in. River's group role is listed as "Member" (rank 1) and the group has no Owner role, which is worth checking in the group's settings if that doesn't work.
 - A lag issue was noticed earlier and never diagnosed.
 - The console shows `CardCoreRemotes.Snapshot` events with no listener. The likely cause is that the first snapshot fires before `Outpost.client.luau` connects its listener. Not verified.
@@ -69,4 +69,4 @@ All the work above is merged to `main`. Nothing is half built.
 - Players can only pick Assault with the M57, or Marksman, for now. The B33, Rusher and Breacher stay in the gun data.
 - Your own character leaves a faint glowing blur in the Outpost that only you can see.
 
-**Next up:** the 1v1 map, then the Outpost's Market (needs pack rolling) and the Credits HUD. Outpost ambient sounds wait on River's rain, sea and hum loops. Phase 4 Matches is parked until gameplay looks, sounds and feels good. River decides what's next.
+**Next up:** packs and rebirths, designed in `docs/specs/packs.md`, then serials, then the player market. The 1v1 map still waits. Outpost ambient sounds wait on River's rain, sea and hum loops. Phase 4 Matches is parked until gameplay looks, sounds and feels good. River decides what's next.

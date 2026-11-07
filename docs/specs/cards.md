@@ -8,7 +8,7 @@
 
 - The server owns every card, Credit and roll result. The client only displays them.
 - A loadout is 2 guns plus 3 different cards. A deck can't hold the same card twice.
-- Tiers run Field, Black-Site, Prototype. Each core stat rises 20 to 25% in total from Field to Prototype (`tests/cards_spec.luau` checks this). Perks are utility and never add damage.
+- Tiers run Field, Redline, Prototype. Redline's id stays `BlackSite`, so saves don't change. Each core stat rises 20 to 25% in total from Field to Prototype (`tests/cards_spec.luau` checks this). Perks are utility and never add damage.
 - Fusion turns copies into one card of the next tier. The resulting tier is never random, and duplicates can never be turned into currency.
 - Income pays only while the player is in the game.
 - Variants add income, never combat power.
@@ -20,13 +20,13 @@
 
 | Tier | Id | Colour | DPR points | Perk strength | Income per copy per second |
 | --- | --- | --- | --- | --- | --- |
-| Field | `Field` | Field Green | 100 | 80% | 0.1 Credits |
-| Black-Site | `BlackSite` | Data Cyan | 112 | 90% | 0.6 |
+| Field | `Field` | Deep Navy | 100 | 80% | 0.1 Credits |
+| Redline | `BlackSite` | Hazard Red | 112 | 90% | 0.6 |
 | Prototype | `Prototype` | Signal Acid | 125 | 100% | 3.5 |
 
 ## The cards
 
-All 4 are in set `set_01`. Stats are listed Field / Black-Site / Prototype.
+All 4 are in set `set_01`. Stats are listed Field / Redline / Prototype.
 
 | Card | Id | Stats | Cooldown | Perk |
 | --- | --- | --- | --- | --- |
@@ -100,7 +100,7 @@ Requests go through `Requests.luau`, which drops bad types, NaN, extra fields an
 
 ## Not built
 
-- Pack rolling and pity, the Market, Robux purchases, serialized seasonal cards.
+- Pack rolling, rebirths and Robux purchases, which are designed in `packs.md`. The Market and serialized seasonal cards.
 - A Credits HUD and a Loadout button (River: these are HUD or GUI features, not places).
 - Ways to get Catalysts, gun upgrades, teams.
 

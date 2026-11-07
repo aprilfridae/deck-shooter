@@ -44,10 +44,20 @@ local listed = {
 	panelmotion_spec = true,
 	cardindex_spec = true,
 	comments_spec = true,
+	cardlook_spec = true,
+	cardmotion_spec = true,
+	cardspin_spec = true,
+	cardtext_spec = true,
+	cardart_spec = true,
 }
 
 require("./tier_spec")
 require("./cards_spec")
+require("./cardlook_spec")
+require("./cardmotion_spec")
+require("./cardspin_spec")
+require("./cardtext_spec")
+require("./cardart_spec")
 require("./inventory_spec")
 require("./variant_spec")
 require("./deck_spec")

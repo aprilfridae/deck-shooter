@@ -2,15 +2,16 @@
 local Palette = {
 	DeepNavy = Color3.fromRGB(41, 50, 79), -- #29324F panels, backgrounds, dark surfaces
 	SignalAcid = Color3.fromRGB(194, 254, 11), -- #C2FE0B primary accent, Prototype tier
-	DataCyan = Color3.fromRGB(1, 255, 255), -- #01FFFF readouts, friendly things, Black-Site tier
+	DataCyan = Color3.fromRGB(1, 255, 255), -- #01FFFF readouts, friendly things, Zero-Day cards
 	FieldGreen = Color3.fromRGB(89, 180, 29), -- #59B41D Field tier, positive states
-	HazardRed = Color3.fromRGB(255, 13, 26), -- #FF0D1A enemies, damage, warnings
+	HazardRed = Color3.fromRGB(255, 13, 26), -- #FF0D1A enemies, damage, warnings, Redline cards
 	Bone = Color3.fromRGB(232, 230, 223), -- #E8E6DF text
+	ZeroDayBack = Color3.fromRGB(14, 16, 24), -- #0E1018 Zero-Day cards only
 }
 
 Palette.Tiers = {
-	Field = Palette.FieldGreen,
-	BlackSite = Palette.DataCyan,
+	Field = Palette.DeepNavy,
+	BlackSite = Palette.HazardRed,
 	Prototype = Palette.SignalAcid,
 }
 

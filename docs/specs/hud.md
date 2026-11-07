@@ -1,6 +1,6 @@
 # HUD and image fonts
 
-**Status:** built, with the trial and free font files. The full fonts are still to come. Checked against the code on 2026-11-05.
+**Status:** built. River has the Pro font downloads, and `LabelLarge` is made from them. The other sheets match their old metrics, so they weren't re-uploaded. KH Interference's Pro file still names itself `KH Interference TRIAL`, which River should check. Checked against the code on 2026-11-07.
 
 **Values live in:** the constants at the top of `src/client/Hud.client.luau`. Colours come from `src/shared/Guns/Palette.luau`.
 
@@ -18,6 +18,7 @@ Roblox can't import font files, so `TextLabel` can't use these fonts. Text is dr
 | `NumberThin` | KH Interference Light | `0-9 +` | 138 |
 | `Label` | PP Fraktion Mono Regular | `A-Z 0-9 / : . - > + _` | 36 |
 | `LabelBold` | PP Fraktion Mono Bold | `A-Z 0-9 / : . - > + _` | 36 |
+| `LabelLarge` | PP Fraktion Mono Bold, for big text on cards | `A-Z 0-9 / : . - > + _` | 180 |
 | `Title` | KH Interference Bold | `A-Z 0-9 / _` | 180 |
 
 - For the HUD styles, source sizes are about twice the size they show at on a 1080p screen. If small text looks soft or shimmers, the source size is the one number to change.
