@@ -8,6 +8,29 @@ local function near(a: number, b: number): boolean
 end
 
 describe("PanelMotion", function()
+	it("shakes gently while a closing panel is still leaving", function()
+		expect(PanelMotion.shakeStart() < PanelMotion.CLOSE_TIME / 2).toBe(true)
+		expect(math.abs(PanelMotion.landShake(0).x) <= 0.006).toBe(true)
+	end)
+
+	it("closes quicker than it opens", function()
+		expect(PanelMotion.moveTime(false) < PanelMotion.moveTime(true)).toBe(true)
+		expect(PanelMotion.moveTime(true)).toBe(PanelMotion.DURATION)
+	end)
+
+	it("closes on the opening curve, quick and then released", function()
+		expect(PanelMotion.sheet(0, 1, 0.3)).toBe(PanelMotion.share(0, 1, 0.3))
+		expect(near(PanelMotion.sheet(1, 0, 0.3), 1 - PanelMotion.share(0, 1, 0.3))).toBe(true)
+		expect(PanelMotion.sheet(1, 0, 0.1) < 1).toBe(true)
+		expect(PanelMotion.sheet(1, 0, 0.3) < 0.5).toBe(true)
+		expect(near(PanelMotion.sheet(1, 0, 1), 0)).toBe(true)
+	end)
+
+	it("eases the camera into a closing move", function()
+		expect(PanelMotion.viewShare(1, 0, 0) >= 1).toBe(true)
+		expect(1 - PanelMotion.viewShare(1, 0, 0.05) < (1 - PanelMotion.sheet(1, 0, 0.05)) / 5).toBe(true)
+	end)
+
 	it("opens a row smoothly and lands on 1", function()
 		expect(PanelMotion.expand(0)).toBe(0)
 		expect(PanelMotion.expand(0.001) > 0).toBe(true)
@@ -61,15 +84,15 @@ describe("PanelMotion", function()
 	end)
 
 	it("drops the camera away with the panel when closing", function()
-		expect(PanelMotion.viewShare(1, 0, 0.5)).toBe(PanelMotion.share(1, 0, 0.5))
+		expect(PanelMotion.viewShare(1, 0, 0.5)).toBe(PanelMotion.sheet(1, 0, 0.5))
 	end)
 
 	it("fades the blur out before a closing panel has left", function()
 		expect(PanelMotion.closeFade(0)).toBe(1)
-		expect(PanelMotion.closeFade(0.3)).toBe(1)
-		expect(PanelMotion.closeFade(0.8)).toBe(0)
+		expect(PanelMotion.closeFade(0.1)).toBe(1)
+		expect(PanelMotion.closeFade(0.4)).toBe(0)
 		expect(PanelMotion.closeFade(1)).toBe(0)
-		local middle = PanelMotion.closeFade(0.6)
+		local middle = PanelMotion.closeFade(0.3)
 		expect(middle > 0 and middle < 1).toBe(true)
 	end)
 
@@ -144,14 +167,18 @@ describe("PanelMotion", function()
 		expect(PanelMotion.glow(5)).toBe(1)
 	end)
 
-	it("shakes hardest on landing, then fades to nothing", function()
-		local first = PanelMotion.landShake(0)
-		local second = PanelMotion.landShake(1 / PanelMotion.FPS)
-		local late = PanelMotion.landShake(PanelMotion.SHAKE_TIME - 1 / PanelMotion.FPS)
-		expect(first.x ~= 0).toBe(true)
-		expect(first.x * second.x < 0).toBe(true)
-		expect(math.abs(late.x) < math.abs(first.x)).toBe(true)
+	it("wobbles smoothly from nothing back to nothing", function()
+		expect(near(PanelMotion.landShake(0).x, 0)).toBe(true)
 		expect(PanelMotion.landShake(PanelMotion.SHAKE_TIME).x).toBe(0)
 		expect(PanelMotion.landShake(-0.1).x).toBe(0)
+		local step = 1 / 120
+		local lowest, highest = 0, 0
+		for time = 0, PanelMotion.SHAKE_TIME, step do
+			local x = PanelMotion.landShake(time).x
+			expect(math.abs(PanelMotion.landShake(time + step).x - x) < 0.0015).toBe(true)
+			lowest = math.min(lowest, x)
+			highest = math.max(highest, x)
+		end
+		expect(lowest < 0 and highest > 0).toBe(true)
 	end)
 end)
