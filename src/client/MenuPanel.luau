@@ -122,7 +122,7 @@ function MenuPanel:step(dt: number)
 	-- A closing sheet shakes the view on its way out, once it's nearly gone.
 	local sinceShake = self.elapsed - PanelMotion.shakeStart()
 	self.shake = PanelMotion.landShake(if self.opening then PanelMotion.SHAKE_TIME else sinceShake)
-	if held then
+	if held and (self.opening or sinceShake >= PanelMotion.SHAKE_TIME) then
 		self.frame.Visible = self.opening
 		self.moving = false
 		RunService:UnbindFromRenderStep(STEP_NAME)

@@ -6,7 +6,7 @@ local PanelMotion = {
 	DURATION = 0.5, -- seconds to open
 	CLOSE_TIME = 0.3, -- seconds to close
 	COPIES = 8,
-	SHAKE_TIME = 6 / 40, -- seconds, in whole frames
+	SHAKE_TIME = 0.4, -- seconds
 	VIEW_SCALE = 0.75, -- the sheared camera is shrunk by this, which the picture doesn't show
 	EXPAND_TIME = 0.2, -- seconds for a row to open
 	MOST_SHIFT = 1.2, -- at that scale Roblox accepts up to 1.25 facing any way, measured in Play
@@ -26,6 +26,7 @@ local SHAKE = 0.006 -- how far a closing panel throws the view, per unit of dept
 local SHAKE_FROM = 0.35 -- of a closing move, when the shake starts: the sheet is nearly gone by then
 local SHAKE_HEIGHT = 0.6 -- of the sideways throw
 local SHAKE_LEAN = math.rad(0.18)
+local SHAKE_WAVES = 1.5 -- swings from side to side over the whole shake
 local VIEW_RAMP = 0.25 -- of an opening move, when the camera has caught up with the panel
 local FADE_FROM = 0.15 -- of a closing move, when its blur starts to fade
 local FADE_TO = 0.4 -- when it's gone, so the panel leaves clean
@@ -141,19 +142,18 @@ function PanelMotion.shakeStart(): number
 	return PanelMotion.CLOSE_TIME * SHAKE_FROM
 end
 
--- The view's throw this long after the shake starts: side to side, fading out in held frames.
+-- The view's sway this long after the shake starts: a smooth wave that swells and dies away.
 function PanelMotion.landShake(elapsed: number): { x: number, y: number, lean: number }
-	local frame = math.floor(elapsed * PanelMotion.FPS + 1e-6)
-	local frames = math.round(PanelMotion.SHAKE_TIME * PanelMotion.FPS)
-	if frame < 0 or frame >= frames then
+	local share = elapsed / PanelMotion.SHAKE_TIME
+	if share < 0 or share >= 1 then
 		return { x = 0, y = 0, lean = 0 }
 	end
-	local fade = 1 - frame / frames
-	local side = if frame % 2 == 0 then 1 else -1
+	local swell = math.sin(math.pi * share) ^ 2
+	local side = math.sin(2 * math.pi * SHAKE_WAVES * share)
 	return {
-		x = SHAKE * fade * side,
-		y = SHAKE * SHAKE_HEIGHT * fade * (if frame % 3 == 0 then 1 else -1),
-		lean = SHAKE_LEAN * fade * -side,
+		x = SHAKE * swell * side,
+		y = SHAKE * SHAKE_HEIGHT * swell * math.sin(math.pi * SHAKE_WAVES * share),
+		lean = -SHAKE_LEAN * swell * side,
 	}
 end
 

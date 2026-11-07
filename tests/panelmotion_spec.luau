@@ -11,7 +11,6 @@ describe("PanelMotion", function()
 	it("shakes gently while a closing panel is still leaving", function()
 		expect(PanelMotion.shakeStart() < PanelMotion.CLOSE_TIME / 2).toBe(true)
 		expect(math.abs(PanelMotion.landShake(0).x) <= 0.006).toBe(true)
-		expect(PanelMotion.SHAKE_TIME <= 6 / PanelMotion.FPS).toBe(true)
 	end)
 
 	it("closes quicker than it opens", function()
@@ -168,14 +167,18 @@ describe("PanelMotion", function()
 		expect(PanelMotion.glow(5)).toBe(1)
 	end)
 
-	it("shakes hardest on landing, then fades to nothing", function()
-		local first = PanelMotion.landShake(0)
-		local second = PanelMotion.landShake(1 / PanelMotion.FPS)
-		local late = PanelMotion.landShake(PanelMotion.SHAKE_TIME - 1 / PanelMotion.FPS)
-		expect(first.x ~= 0).toBe(true)
-		expect(first.x * second.x < 0).toBe(true)
-		expect(math.abs(late.x) < math.abs(first.x)).toBe(true)
+	it("wobbles smoothly from nothing back to nothing", function()
+		expect(near(PanelMotion.landShake(0).x, 0)).toBe(true)
 		expect(PanelMotion.landShake(PanelMotion.SHAKE_TIME).x).toBe(0)
 		expect(PanelMotion.landShake(-0.1).x).toBe(0)
+		local step = 1 / 120
+		local lowest, highest = 0, 0
+		for time = 0, PanelMotion.SHAKE_TIME, step do
+			local x = PanelMotion.landShake(time).x
+			expect(math.abs(PanelMotion.landShake(time + step).x - x) < 0.0006).toBe(true)
+			lowest = math.min(lowest, x)
+			highest = math.max(highest, x)
+		end
+		expect(lowest < 0 and highest > 0).toBe(true)
 	end)
 end)
