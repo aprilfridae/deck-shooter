@@ -7,8 +7,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Guns = ReplicatedStorage:WaitForChild("Guns")
-local ArmPose = require(Guns:WaitForChild("ArmPose"))
-local Zones = require(Guns:WaitForChild("Zones"))
 local GunConfig = require(Guns:WaitForChild("GunConfig"))
 local Movement = ReplicatedStorage:WaitForChild("Movement")
 local BodyPose = require(Movement:WaitForChild("BodyPose"))
@@ -19,7 +17,6 @@ local HeldGuns = require(script.Parent:WaitForChild("HeldGuns"))
 local shotsRemote = ReplicatedStorage:WaitForChild("GunRemotes"):WaitForChild("Shots") :: RemoteEvent
 
 local FORWARD_LEAN_AXIS = Vector3.xAxis
-local STILL_SPEED = 1
 local FEET_BELOW_ROOT = 3 -- the soldier's root sits this far above its feet
 local GROUND_REACH = 0.6 -- studs below the feet that still count as standing
 local FIRST_PERSON = 1.5 -- a camera this close to your own head is first person, so your held gun hides
@@ -57,8 +54,6 @@ type Body = {
 	base: { [string]: CFrame },
 	held: { [string]: CFrame },
 	frame: number,
-	seed: number,
-	idleJitter: number,
 	sliding: boolean,
 	slideAt: number,
 	slideFrom: number,
@@ -81,22 +76,37 @@ local function isJoint(joint: Instance): boolean
 	return joint:IsA("Motor6D") or joint:IsA("AnimationConstraint")
 end
 
+-- Another player's body arrives over the network a piece at a time, so wait as long as it exists.
+local function waitFor(character: Model, name: string): Instance?
+	while character.Parent do
+		local child = character:WaitForChild(name, 1)
+		if child then
+			return child
+		end
+	end
+	return nil
+end
+
 local function onCharacter(character: Model)
-	local humanoid = character:WaitForChild("Humanoid", 5) :: Humanoid?
-	local root = character:WaitForChild("HumanoidRootPart", 5) :: BasePart?
-	if not character:WaitForChild("LowerTorso", 5) or not humanoid or not root then
+	local humanoid = waitFor(character, "Humanoid") :: Humanoid?
+	local root = waitFor(character, "HumanoidRootPart") :: BasePart?
+	if not waitFor(character, "LowerTorso") or not humanoid or not root then
 		return
 	end
 
+	-- The joints can turn up after the parts do, so keep collecting them.
 	local joints = {}
 	for _, descendant in character:GetDescendants() do
 		if isJoint(descendant) then
 			joints[descendant.Name] = descendant
 		end
 	end
-	-- An avatar stands still. Only the game's body keeps twitching at rest.
+	character.DescendantAdded:Connect(function(descendant)
+		if isJoint(descendant) then
+			joints[descendant.Name] = descendant
+		end
+	end)
 	local player = Players:GetPlayerFromCharacter(character)
-	local avatar = player ~= nil and Zones.usesAvatar(Zones.of(player))
 	local body: Body = {
 		character = character,
 		root = root,
@@ -104,8 +114,6 @@ local function onCharacter(character: Model)
 		base = {},
 		held = {},
 		frame = -1,
-		seed = math.random(1, 10000), -- so bodies don't twitch in time with each other
-		idleJitter = if avatar then 0 else BodyPose.idleJitter,
 		sliding = false,
 		slideAt = -math.huge,
 		slideFrom = 0,
@@ -141,9 +149,10 @@ local function onCharacter(character: Model)
 	end)
 end
 
--- The gun a player holds, by the display name the pose files use, and its poses.
-local function gunOf(player: Player?): (string?, any)
-	local id = player and player:GetAttribute("GunId")
+-- The gun a body holds, by the display name the pose files use, and its poses. A body with no player,
+-- such as the soldier test dummy, names its gun with its own GunId attribute.
+local function gunOf(player: Player?, character: Model): (string?, any)
+	local id = if player then player:GetAttribute("GunId") else character:GetAttribute("GunId")
 	local gun = id and GunConfig.guns[id]
 	if not gun then
 		return nil, BodyPoses.Empty
@@ -163,18 +172,6 @@ local function onGround(body: Body): boolean
 	return workspace:Raycast(body.root.Position, Vector3.new(0, -reach, 0), params) ~= nil
 end
 
-local function jitter(body: Body, strength: number)
-	local seed = body.seed
-	for name, degrees in BodyPose.jitter do
-		seed += 1
-		if body.held[name] then
-			local _, _, _, pitch, yaw, roll = ArmPose.shake(body.frame, seed)
-			local turn = math.rad(degrees * BodyPose.jitterScale * strength)
-			body.held[name] *= CFrame.Angles(pitch * turn, yaw * turn, roll * turn)
-		end
-	end
-end
-
 -- A soldier body: one gun pose per held frame, legs mirrored on every other step.
 local function sampleStance(body: Body, now: number)
 	local velocity = body.root.AssemblyLinearVelocity
@@ -190,7 +187,7 @@ local function sampleStance(body: Body, now: number)
 	body.sampledAt = now
 
 	local player = body.player
-	local gunName, poses = gunOf(player)
+	local gunName, poses = gunOf(player, body.character)
 	local pick = GunStance.pick({
 		reloading = player ~= nil and player:GetAttribute("Reloading") == true,
 		pose = body.character:GetAttribute("MovePose"),
@@ -216,7 +213,6 @@ local function sampleStance(body: Body, now: number)
 			body.held[name] = HeldGuns.frame(value)
 		end
 	end
-	jitter(body, if flatSpeed < STILL_SPEED and not airborne then body.idleJitter else 1)
 end
 
 local function samplePose(body: Body, now: number)
@@ -261,7 +257,6 @@ local function samplePose(body: Body, now: number)
 		body.held[name] = frame
 	end
 
-	jitter(body, if flatSpeed < STILL_SPEED and settled == 0 then body.idleJitter else 1)
 
 	local drop = BodyPose.slideDrop * settled + BodyPose.crouchDrop * crouch
 	local tilt = BodyPose.slideLean * slide - lean
@@ -296,8 +291,11 @@ RunService.PreRender:Connect(function()
 		if body.soldier then
 			local visible = true
 			if body.player == Players.LocalPlayer and camera then
+				-- Locked first person always hides it: the slide pose moves the head away from the camera,
+				-- which follows the root, so the head distance alone let the gun show mid-slide.
 				local head = character:FindFirstChild("Head") :: BasePart?
-				visible = head == nil or (camera.CFrame.Position - head.Position).Magnitude > FIRST_PERSON
+				visible = body.player.CameraMode ~= Enum.CameraMode.LockFirstPerson
+					and (head == nil or (camera.CFrame.Position - head.Position).Magnitude > FIRST_PERSON)
 			end
 			HeldGuns.show(character, body.gunName, body.poses, body.pose, visible)
 		end
@@ -309,6 +307,13 @@ local function onPlayer(player: Player)
 	if player.Character then
 		task.spawn(onCharacter, player.Character)
 	end
+end
+
+-- Bodies with no player, such as the soldier test dummy.
+local CollectionService = game:GetService("CollectionService")
+CollectionService:GetInstanceAddedSignal("PosedBody"):Connect(onCharacter)
+for _, model in CollectionService:GetTagged("PosedBody") do
+	task.spawn(onCharacter, model)
 end
 
 Players.PlayerAdded:Connect(onPlayer)

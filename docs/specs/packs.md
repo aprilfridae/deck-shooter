@@ -79,7 +79,7 @@ A pack gives mostly its own rarity, with a small chance of each card being highe
 
 ## The packs menu
 
-A new `PACKS` row joins the nav. The Market stall's prompt opens the same menu until the player market exists.
+`PACKS` is the second row of the nav (`PacksPanel.luau`). The Market stall's prompt opens the same menu until the player market exists.
 
 From top to bottom:
 
@@ -104,12 +104,13 @@ Each has a large `S1` reading up the wrapper, an outline and a strip of hazard s
 
 ## Pull reveal
 
-This hasn't been mocked up. River judges it in Play. A rare pull is a Prototype or any variant.
+This hasn't been mocked up. River judges it in Play. A rare pull is a Prototype or any variant. `PullReveal.luau` runs the reveals, `PullStage.luau` plays the 3D opening, `PullFx.luau` draws the burst, and the timings and burst sizes are pure rules in `src/shared/CardCore/PullMotion.luau` and `PullParticles.luau`.
 
 - **One pack:** clicking a pack plays the whole opening by itself, held up in 3D beside the menu, where an inspected card sits. The nav and income line fade out first, and fade back after `DONE`. The pack spins in and shakes, the strip down its right side peels off, light in the colour of the best card shows at the tear, and the cards slide out of the side. They spread out face down on the pack's own back design, with the best card in the middle, and shake for as long as the best card needs. All 3 then turn over at once. The menu stays usable, and opening another pack once this one has finished moves straight on to it.
-- **Rare cards:** a Redline or better flashes the screen in the best card's colour when the cards turn.
+- **Rare cards:** a Redline, a Prototype or any variant flashes the screen in the best card's colour when the cards turn. A plain Field pull doesn't flash.
 - **Zero-Day:** the world dims further and the flash is brightest.
-- **Burst:** when the cards turn, two rings and a spray of wrapper shards burst from the middle of the fan in the pack's two colours. The best card sets how far and how hard it goes.
+- **Burst:** when the cards turn, two rings and a spray of wrapper shards burst from the middle of the fan in the pack's two colours. The best card sets how far and how hard it goes, so it grows with rarity.
+- **Sound:** none yet. The tear, the flip and the burst have no sounds (`docs/sound-list.md`).
 - **Open All:** each rare stack shows until clicked, with `SKIP` to pass the rest, then a list of everything that arrived.
 - **Auto Open:** a rare pull plays by itself beside the middle of the screen and leaves after 4 seconds. The world stays usable, so an idle player's screen never blocks. Only 3 can wait at once and the rest aren't shown, except a Zero-Day, which always is. A pack the player opens goes first.
 
@@ -121,18 +122,17 @@ A small line in the Outpost HUD, top left, shows Credits and income, like `+3.4 
 
 ## Saves
 
-The save moves to a new version with `packs`, a count for each rarity, and `rebirths`, both starting at 0.
+Save version 4 adds `packs`, a count for each rarity, and `rebirths`, both starting at 0. It also holds `openAllCredits` and `receipts`, the last 50 purchase receipts, so a repeated receipt opens nothing.
 
 ## What this changes elsewhere
 
 - **Fusion** keeps its Credit fee, as a way to take Credits out of the game.
-- **Variant odds:** `cards.md` says only fusion rolls a variant. Packs now do too.
 - **Income:** 60 cards a minute is possible, so the rule that halves income past 10 copies matters far more. It may need tuning.
 - **Serials:** `card-art.md` gives every copy its own save record, which can't survive 60 cards a minute. That has to change before serials are built. One likely fix is giving serials only to rarer cards or variants.
 
 ## Order of work
 
-1. This spec: rolling, opening, the packs menu, pack art, the reveal, purchases, rebirths and the income display.
+1. This spec: rolling, opening, the packs menu, pack art, the reveal, purchases, rebirths and the income display. Built.
 2. Serial numbers, with the change above.
 3. The player market, in its own spec. It needs trades that can't duplicate or lose cards, and listings shared across servers.
 

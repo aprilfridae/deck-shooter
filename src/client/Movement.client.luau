@@ -23,7 +23,7 @@ local pushRemote = abilityRemotes:WaitForChild("Push") :: RemoteEvent
 local FIELD_OF_VIEW = 80
 local SLIDE_CAMERA_DROP = Vector3.new(0, -2, 0)
 -- The player rig has auto scaling off, so Roblox puts the camera 2 studs over the root, not 1.5.
-local BODY_CAMERA = Vector3.new(0, -0.5, 0)
+local BODY_CAMERA = Vector3.new(0, 0.94, -0.5) -- level with the eye bar, from the default spot 2 above the root
 local CAMERA_EASE = 15
 local SLIDE_FOV = 88
 local JUMP_FOV = 84

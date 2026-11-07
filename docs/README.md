@@ -9,8 +9,8 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 | Doc | Covers | Status |
 | --- | --- | --- |
 | [`HANDOFF.md`](HANDOFF.md) | Working with River, tools and setup, what's built, known gaps, what's next | Kept current every session |
-| [`specs/movement.md`](specs/movement.md) | Moves, camera, keys, movement cheat checks | Built |
-| [`specs/guns.md`](specs/guns.md) | Classes, gun stats, recoil, ammo, hit checking, health | Built |
+| [`specs/movement.md`](specs/movement.md) | Moves, camera, keys, movement cheat checks, the soldier body's third-person poses | Built; the soldier swap waits on River's check in Play |
+| [`specs/guns.md`](specs/guns.md) | Classes, gun stats, recoil, ammo, hit checking, health, first-person arms, test dummies | Built |
 | [`specs/cards.md`](specs/cards.md) | The 4 ability cards, tiers, fusion, variants, income, Deck Power Rating, saves, card remotes | Built |
 | [`specs/card-art.md`](specs/card-art.md) | How cards look, rarities, variants, inspecting a card, serial numbers | Menus and inspect built; card in hand and serials aren't |
 | [`specs/packs.md`](specs/packs.md) | Rolling, opening, auto roll, Robux purchases, rebirths, luck and the packs menu | Built, waiting on River's check in Play |
@@ -67,8 +67,9 @@ The specs explain the design. The code holds the actual values, so check it befo
 | Fusion | Turning 5 copies (4 with a Catalyst) into 1 copy of the next tier |
 | DPR | Deck Power Rating, from the deck's tiers and gun levels only |
 | Credits | The currency cards earn while you play |
+| Soldier | The player body (attribute `SoldierRig`), which replaced the old low poly body and arms |
 | Zone | Where a player is: `Outpost` (safe, no combat) or `TestRoom` |
-| Test room | The grey room for trying guns and cards, with a target dummy. Reached from the Outpost. |
+| Test room | The grey room for trying guns and cards, with a grey dummy and a soldier dummy. Reached from the Outpost. |
 | Palette | Deep Navy, Signal Acid, Data Cyan, Field Green, Hazard Red and Bone. Red is for threats and purchases only. |
 | Group | Fridae Studios (group 237720778), which owns the experience and every asset |
 

@@ -159,7 +159,7 @@ local function startSmear(from: any, to: any)
 	for _, smear in smears do
 		smear.pose = from.gun:Lerp(to.gun, smear.share)
 		if smear.arms then
-			ViewArms.poseGhost(smear.arms, ArmClip.blendBones(from.bones, to.bones, smear.share))
+			ViewArms.poseGhost(smear.arms, clips.meshOffset, ArmClip.blendBones(from.bones, to.bones, smear.share))
 		end
 	end
 	smearAt = os.clock()
@@ -184,7 +184,7 @@ local function drawSmear(camera: Camera)
 		smear.gun:PivotTo(hold * smear.pose)
 		smear.gun.Parent = camera
 		if smear.arms then
-			ViewArms.placeGhost(smear.arms, camera, clips.meshOffset, transparency)
+			ViewArms.placeGhost(smear.arms, camera, transparency)
 		end
 	end
 end

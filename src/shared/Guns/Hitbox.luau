@@ -1,16 +1,21 @@
 -- Ray tests against a character's rewound position: a sphere for the head and
 -- a vertical cylinder for the body. Plain numbers, measured from the root part.
-local HEAD_HEIGHT = 2
 local HEAD_RADIUS = 0.8
 local BODY_RADIUS = 1.1
-local BODY_TOP = 1.2
-local BODY_BOTTOM = -3
+
+export type Shape = { headHeight: number, bodyTop: number, bodyBottom: number }
 
 local POSE_DROP = { Normal = 0, Crouch = 1.5, Slide = 2.5 }
 
 type Point = { x: number, y: number, z: number }
 
 local Hitbox = {}
+
+-- The soldier (attribute SoldierRig) stands taller than a plain Roblox body, such as the test dummy.
+Hitbox.shapes = {
+	soldier = { headHeight = 2.9, bodyTop = 2.1, bodyBottom = -3.3 } :: Shape,
+	plain = { headHeight = 2, bodyTop = 1.2, bodyBottom = -3 } :: Shape,
+}
 
 -- Returns the distance along the ray to a sphere, or nil.
 local function raySphere(origin: Point, direction: Point, cx: number, cy: number, cz: number): number?
@@ -62,17 +67,19 @@ local function rayCylinder(origin: Point, direction: Point, cx: number, cz: numb
 	return math.max(enter, 0)
 end
 
--- direction must be unit length. Returns "Head" or "Body" and the distance, or nil.
-function Hitbox.test(origin: Point, direction: Point, target: any): (string?, number?)
+-- direction must be unit length. shape defaults to the soldier's.
+-- Returns "Head" or "Body" and the distance, or nil.
+function Hitbox.test(origin: Point, direction: Point, target: any, shape: Shape?): (string?, number?)
+	local size = shape or Hitbox.shapes.soldier
 	local drop = POSE_DROP[target.pose] or 0
-	local head = raySphere(origin, direction, target.x, target.y + HEAD_HEIGHT - drop, target.z)
+	local head = raySphere(origin, direction, target.x, target.y + size.headHeight - drop, target.z)
 	local body = rayCylinder(
 		origin,
 		direction,
 		target.x,
 		target.z,
-		target.y + BODY_BOTTOM,
-		target.y + BODY_TOP - drop
+		target.y + size.bodyBottom,
+		target.y + size.bodyTop - drop
 	)
 	if head and (not body or head <= body) then
 		return "Head", head

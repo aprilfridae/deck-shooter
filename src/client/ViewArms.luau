@@ -1,120 +1,54 @@
--- The first-person arms. Bends the arm bones so each hand reaches its spot on the held gun.
+-- The first-person arms: the soldier's own arms and jointed hands, placed part by part from SoldierPose.
 local BodyStyle = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("BodyStyle"))
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local ArmClips = require(ReplicatedStorage.Guns.ArmClips)
 local ArmPose = require(ReplicatedStorage.Guns.ArmPose)
+local SoldierArmsData = require(ReplicatedStorage.Guns.SoldierArmsData)
+local SoldierPose = require(ReplicatedStorage.Guns.SoldierPose)
 
-local ARM_SCALE = 0.7
-local OFFSET = CFrame.new(0.3, -1.9, 0.1) -- from the camera, puts the shoulders below the view
-local RIGHT_ELBOW = Vector3.new(0.6, -1, 0.2)
-local LEFT_ELBOW = Vector3.new(-0.6, -1, 0.2)
-local FINGER_CURL = math.rad(40)
-local THUMB_CURL = math.rad(20)
-local FOREARM_TWIST = 0.7 -- share of the hand's turn the forearm takes, so the wrist doesn't pinch
-local FINGERS = { "Indice", "DedoMedio", "Anular", "Menique" }
 local FINGER_JITTER = 1.2 -- degrees at every finger and thumb joint
--- Each bone twitches on its own, by up to this many degrees. They add up down the arm.
-local JITTER_BONES = {
-	{ name = "R.Brazo", degrees = 0.4 },
-	{ name = "L.Brazo", degrees = 0.4 },
-	{ name = "R.Antebrazo", degrees = 0.4 },
-	{ name = "L.Antebrazo", degrees = 0.4 },
-	{ name = "R.Palma", degrees = 1 },
-	{ name = "L.Palma", degrees = 1 },
-}
+local ARM_JITTER = 0.4
+local HAND_JITTER = 1
 
-for _, side in { "R.", "L." } do
-	for _, digit in { "Pulgar", table.unpack(FINGERS) } do
-		for _, joint in { "", "2", "3" } do
-			table.insert(JITTER_BONES, { name = side .. digit .. joint, degrees = FINGER_JITTER })
-		end
-	end
+export type Grip = SoldierPose.Grip
+
+local solver = SoldierPose.new(ArmClips.M57.idle.frames[1].bones)
+local jitterDegrees: { [string]: number } = {}
+for name in SoldierArmsData.frames do
+	local isHand = string.find(name, "Hand", 1, true) ~= nil
+	local isArm = string.find(name, "Arm", 1, true) ~= nil
+	jitterDegrees[name] = if isHand then HAND_JITTER elseif isArm then ARM_JITTER else FINGER_JITTER
 end
-
-export type Grip = { wrist: Vector3, along: Vector3, thumb: Vector3 }
 
 local rig: any = nil
-local meshOffset = OFFSET
 local jitterStep = -1
 
-local function rotationBetween(from: Vector3, to: Vector3): CFrame
-	local axis = from:Cross(to)
-	if axis.Magnitude < 1e-5 then
-		return CFrame.identity
-	end
-	return CFrame.fromAxisAngle(axis.Unit, math.acos(math.clamp(from:Dot(to), -1, 1)))
-end
-
-local function restOf(mesh: BasePart, bone: Bone): CFrame
-	return mesh.CFrame:ToObjectSpace(bone.WorldCFrame)
-end
-
-local function makeSide(mesh: BasePart, prefix: string, curlSign: number, pole: Vector3)
-	local function bone(name: string): Bone
-		return mesh:FindFirstChild(prefix .. name, true) :: Bone
-	end
-	local upper, fore, palm = bone("Brazo"), bone("Antebrazo"), bone("Palma")
-	local side: any = {
-		upper = upper,
-		fore = fore,
-		palm = palm,
-		upperRest = restOf(mesh, upper),
-		foreRest = restOf(mesh, fore),
-		palmRest = restOf(mesh, palm),
-		pole = pole,
-		digits = {},
-	}
-	side.upperLength = (side.foreRest.Position - side.upperRest.Position).Magnitude
-	side.foreLength = (side.palmRest.Position - side.foreRest.Position).Magnitude
-
-	local function addDigit(name: string, curl: number)
-		local root = bone(name)
-		local joints = {}
-		for _, suffix in { "2", "3" } do
-			local joint = bone(name .. suffix)
-			table.insert(joints, { bone = joint, rest = joint.CFrame })
-		end
-		local turn = CFrame.Angles(0, 0, curl * curlSign)
-		table.insert(side.digits, { root = root, rest = restOf(mesh, root), joints = joints, turn = turn })
-	end
-	for _, name in FINGERS do
-		addDigit(name, FINGER_CURL)
-	end
-	addDigit("Pulgar", THUMB_CURL)
-	return side
+-- The part a mesh belongs to, from a name like RightIndex1_seg.001_metal.
+local function partOf(meshName: string): string
+	return string.match(meshName, "^[^_]+") or meshName
 end
 
 local function makeRig(lit: boolean?): any
 	local folder = ReplicatedStorage:FindFirstChild("GunModels")
-	local source = folder and folder:FindFirstChild("Arms")
+	local source = folder and folder:FindFirstChild("SoldierArms")
 	if not source then
 		return nil
 	end
 	local model = source:Clone()
 	model.Name = "ViewArms"
-	local mesh = model:FindFirstChildWhichIsA("MeshPart", true)
-	if not mesh then
-		return nil
-	end
-	model.PrimaryPart = mesh
-	model:ScaleTo(ARM_SCALE)
-	mesh.Anchored = true
-	mesh.CanCollide = false
-	mesh.CanQuery = false
-	mesh.CanTouch = false
-	mesh.CastShadow = false
-	-- Plain colour for now, until the arms get their texture.
-	local skin = mesh:FindFirstChildWhichIsA("SurfaceAppearance")
-	if skin then
-		skin:Destroy()
-	end
-	mesh.TextureID = ""
-	mesh.Material = BodyStyle.material
-	mesh.Color = BodyStyle.skin
-	local bones = {}
-	for _, bone in mesh:GetDescendants() do
-		if bone:IsA("Bone") then
-			bones[bone.Name] = bone
+	local meshes, groups, offsets = {}, {}, {}
+	for _, mesh in model:GetChildren() do
+		local rest = SoldierArmsData.frames[partOf(mesh.Name)]
+		if mesh:IsA("BasePart") and rest then
+			mesh.Anchored = true
+			mesh.CanCollide = false
+			mesh.CanQuery = false
+			mesh.CanTouch = false
+			mesh.CastShadow = false
+			table.insert(meshes, mesh)
+			table.insert(groups, partOf(mesh.Name))
+			table.insert(offsets, CFrame.new(table.unpack(rest)):ToObjectSpace(mesh.CFrame))
 		end
 	end
 	if lit then
@@ -128,59 +62,23 @@ local function makeRig(lit: boolean?): any
 	end
 	return {
 		model = model,
-		mesh = mesh,
-		bones = bones,
-		right = makeSide(mesh, "R.", -1, RIGHT_ELBOW),
-		left = makeSide(mesh, "L.", 1, LEFT_ELBOW),
+		meshes = meshes,
+		groups = groups,
+		offsets = offsets,
+		frames = table.create(#meshes),
+		jitter = {},
+		parts = nil,
 	}
 end
 
--- Aims a bone between two points, keeping its resting twist.
-local function aimed(rest: CFrame, restEnd: Vector3, from: Vector3, to: Vector3): CFrame
-	local turn = rotationBetween((restEnd - rest.Position).Unit, (to - from).Unit)
-	return CFrame.new(from) * turn * rest.Rotation
-end
-
--- A direction with the part along an axis removed.
-local function flat(direction: Vector3, axis: Vector3): Vector3
-	return direction - axis * direction:Dot(axis)
-end
-
-local function poseSide(side: any, gun: CFrame, grip: Grip)
-	local shoulder = side.upperRest.Position
-	local toWrist = gun:PointToWorldSpace(grip.wrist) - shoulder
-	local reach = toWrist.Magnitude
-	local direction = toWrist.Unit
-	local along, out = ArmPose.elbow(side.upperLength, side.foreLength, reach)
-	local bend = side.pole - direction * side.pole:Dot(direction)
-	local elbow = shoulder + direction * along + bend.Unit * out
-	local hand = shoulder + direction * math.min(reach, side.upperLength + side.foreLength)
-
-	local upper = aimed(side.upperRest, side.foreRest.Position, shoulder, elbow)
-	local fore = aimed(side.foreRest, side.palmRest.Position, elbow, hand)
-
-	local y = gun:VectorToWorldSpace(grip.along).Unit
-	local thumb = gun:VectorToWorldSpace(grip.thumb)
-	local z = -(thumb - y * thumb:Dot(y)).Unit
-	local palm = CFrame.fromMatrix(hand, y:Cross(z), y, z)
-
-	local forearm = (hand - elbow).Unit
-	local fromRight = flat(fore.RightVector, forearm)
-	local toRight = flat(palm.RightVector, forearm)
-	local twist = math.atan2(fromRight:Cross(toRight):Dot(forearm), fromRight:Dot(toRight))
-	fore = CFrame.new(fore.Position) * CFrame.fromAxisAngle(forearm, twist * FOREARM_TWIST) * fore.Rotation
-
-	side.upper.CFrame = upper
-	side.fore.CFrame = upper:ToObjectSpace(fore)
-	side.palm.CFrame = fore:ToObjectSpace(palm)
-
-	local carry = palm * side.palmRest:Inverse()
-	for _, digit in side.digits do
-		digit.root.CFrame = carry * digit.rest * digit.turn
-		for _, joint in digit.joints do
-			joint.bone.CFrame = joint.rest * digit.turn
-		end
+local function placeRig(target: any, camera: Camera)
+	local view = camera.CFrame
+	for index, group in target.groups do
+		local shake = target.jitter[group] or CFrame.identity
+		target.frames[index] = view * target.parts[group] * shake * target.offsets[index]
 	end
+	target.model.Parent = camera
+	workspace:BulkMoveTo(target.meshes, target.frames, Enum.BulkMoveMode.FireCFrameChanged)
 end
 
 local ViewArms = {}
@@ -189,18 +87,7 @@ local ViewArms = {}
 function ViewArms.pose(gun: CFrame, right: Grip, left: Grip)
 	rig = rig or makeRig(true)
 	if rig then
-		meshOffset = OFFSET
-		local inMesh = OFFSET:ToObjectSpace(gun)
-		poseSide(rig.right, inMesh, right)
-		poseSide(rig.left, inMesh, left)
-	end
-end
-
--- Each bone is { x, y, z, qx, qy, qz, qw } relative to its parent, at full model size.
-local function setBones(target: any, bones: { [string]: { number } })
-	for name, b in bones do
-		target.bones[name].CFrame =
-			CFrame.new(b[1] * ARM_SCALE, b[2] * ARM_SCALE, b[3] * ARM_SCALE, b[4], b[5], b[6], b[7])
+		rig.parts = SoldierPose.fromPalms(solver, SoldierPose.palm(gun, right), SoldierPose.palm(gun, left))
 	end
 end
 
@@ -208,8 +95,7 @@ end
 function ViewArms.showFrame(offset: CFrame, bones: { [string]: { number } })
 	rig = rig or makeRig(true)
 	if rig then
-		meshOffset = offset
-		setBones(rig, bones)
+		rig.parts = SoldierPose.fromBones(solver, offset, bones)
 	end
 end
 
@@ -218,14 +104,15 @@ function ViewArms.makeGhost(): any
 	return makeRig()
 end
 
-function ViewArms.poseGhost(ghost: any, bones: { [string]: { number } })
-	setBones(ghost, bones)
+function ViewArms.poseGhost(ghost: any, offset: CFrame, bones: { [string]: { number } })
+	ghost.parts = SoldierPose.fromBones(solver, offset, bones)
 end
 
-function ViewArms.placeGhost(ghost: any, camera: Camera, offset: CFrame, transparency: number)
-	ghost.mesh.Transparency = transparency
-	ghost.mesh.CFrame = camera.CFrame * offset
-	ghost.model.Parent = camera
+function ViewArms.placeGhost(ghost: any, camera: Camera, transparency: number)
+	for _, mesh in ghost.meshes do
+		mesh.Transparency = transparency
+	end
+	placeRig(ghost, camera)
 end
 
 function ViewArms.hideGhost(ghost: any)
@@ -248,15 +135,16 @@ function ViewArms.jitter(step: number, strength: number)
 		return
 	end
 	jitterStep = step
-	for seed, joint in JITTER_BONES do
-		rig.bones[joint.name].Transform = ViewArms.shaken(step, seed, 0, math.rad(joint.degrees) * strength)
+	local seed = 0
+	for name, degrees in jitterDegrees do
+		seed += 1
+		rig.jitter[name] = ViewArms.shaken(step, seed, 0, math.rad(degrees) * strength)
 	end
 end
 
 function ViewArms.place(camera: Camera)
-	if rig then
-		rig.mesh.CFrame = camera.CFrame * meshOffset
-		rig.model.Parent = camera
+	if rig and rig.parts then
+		placeRig(rig, camera)
 	end
 end
 

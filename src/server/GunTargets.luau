@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local Combat = require(Guns:WaitForChild("Combat"))
 local History = require(Guns:WaitForChild("History"))
+local Hitbox = require(Guns:WaitForChild("Hitbox"))
 
 local MAX_HEALTH = 100
 
@@ -13,6 +14,7 @@ export type Target = {
 	humanoid: Humanoid,
 	player: Player?,
 	history: History.History,
+	shape: Hitbox.Shape,
 	health: number,
 	shield: { hp: number, onBreak: () -> () }?,
 }
@@ -40,6 +42,7 @@ function GunTargets.add(model: Model, player: Player?): Target?
 		humanoid = humanoid,
 		player = player,
 		history = History.new(),
+		shape = if model:GetAttribute("SoldierRig") then Hitbox.shapes.soldier else Hitbox.shapes.plain,
 		health = MAX_HEALTH,
 	}
 	targets[model] = target

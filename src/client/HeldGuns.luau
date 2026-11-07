@@ -152,7 +152,9 @@ local function build(name: string, poses: Poses): Held?
 	end
 	for _, entry in boxes do
 		if isStandIn(entry.name) and entry.bone ~= "GunMount" then
-			local block = Instance.new("Part")
+			local models = ReplicatedStorage:FindFirstChild("GunModels")
+			local source = models and models:FindFirstChild(entry.name)
+			local block: BasePart = if source then source:Clone() else Instance.new("Part")
 			block.Name = entry.name
 			quiet(block)
 			block.CastShadow = false

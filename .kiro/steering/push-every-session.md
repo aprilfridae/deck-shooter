@@ -5,7 +5,7 @@ River's rule: every coding session ends with its work merged through a pull requ
 ## Pull request
 
 - Work on a `feature/<topic>` branch. Never push to `main` directly.
-- Run the tests (`lune run tests/run.luau`). If they fail, fix them or tell River before merging.
+- Run the tests (`lune run tests/run.luau`). If they fail, fix them or tell River before merging. The tests don't load client or server scripts, so also compile everything under `src/` (see `docs/HANDOFF.md`).
 - Before merging, bring in the latest `main` (`git fetch` then `git merge origin/main`), fix any conflicts and rerun the tests.
 - Push the branch, open a pull request into `main` with `gh pr create`, and merge it with `gh pr merge --merge`.
 - Update local `main` (`git checkout main` then `git pull`), and confirm it matches `origin/main` and `git status` is clean.
@@ -17,6 +17,8 @@ River's rule: every coding session ends with its work merged through a pull requ
   - `lune run tools/build-place build/base.rbxl`
 - Without a key, `lune run tools/build-place` builds from the local exports in `assets/models/` instead. Say so in the release notes.
 - Both write `build/SplitDeck.rbxl`.
+- Roblox can keep serving an old copy right after a publish, so pass the place version (`game.PlaceVersion`) to `download-place.py` and check `StarterPlayer.StarterCharacter` is in the file before releasing.
+- Use `set -e` in release scripts, so a failed step stops the release.
 - Publish it as a GitHub release on `main`, tagged `build-YYYY-MM-DD-HHMM`, with the place file attached: `gh release create <tag> build/SplitDeck.rbxl --target main --title "<tag>" --notes "<what changed>"`.
 - The place file goes in the release, never in a commit.
 

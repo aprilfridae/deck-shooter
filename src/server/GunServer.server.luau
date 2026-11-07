@@ -96,7 +96,7 @@ local function nearestHit(shooter: GunTargets.Target, shot: any, direction: any,
 		if target ~= shooter and GunTargets.isAlive(target) then
 			local past = History.at(target.history, viewAt)
 			if past then
-				local zone, distance = Hitbox.test(shot.origin, direction, past)
+				local zone, distance = Hitbox.test(shot.origin, direction, past, target.shape)
 				if zone and distance < nearest then
 					found, foundZone, nearest = target, zone, distance
 				end

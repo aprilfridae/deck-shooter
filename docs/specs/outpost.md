@@ -1,6 +1,6 @@
 # The Outpost
 
-**Status:** step 1, the place itself, is built. River confirmed the floors, textures and lamp shadows in Play on 2026-11-05. The Market stall opens the packs menu, and the Credits line is in the Outpost menu. The Loadout button isn't built. Checked against the code on 2026-11-07.
+**Status:** step 1, the place itself, is built. River confirmed the floors, textures and lamp shadows in Play on 2026-11-05. The Market stall opens the packs menu, and the Credits line and the Loadout page are in the Outpost menu (`outpost-ui.md`). Checked against the code on 2026-11-07.
 
 **Code:** `src/server/Outpost/` builds it when the server starts: `Kit.luau` has the building helpers, `Map.luau` the layout, and `Outpost.server.luau` the zones and travel. `src/client/Outpost.client.luau` applies the lighting and draws the sign and screen text.
 
@@ -15,7 +15,7 @@ Reference board: River's Pinterest board "the-outpost", downloaded to `H:\outpos
 - Amber is for world lights only. Signs and screens use the palette (`Palette.luau`).
 - Every sign in the Outpost is Deep Navy with Bone text and no outline. No other colours.
 - The stalls have no neon. Their strips and signs are matte, lit by ordinary lights that stay steady. A walk-up flicker and a distance fade were tried and removed. Anything laid over a sign's face has to be drawn with its text: thin strips 0.08 studs off the face vanished into it at a distance, which was the real cause of the glow cutting off.
-- Loadout and Credits will be HUD or GUI features, not places.
+- Loadout and Credits are GUI features, not places: the Loadout page and the Credits line in the Outpost menu.
 - Rain around the camera was tried and removed, because the drops passing the camera looked wrong.
 
 ## Look
@@ -50,7 +50,7 @@ Movement matters here too: low walls to vault, a catwalk overhead.
 - Each zone has a spawn, and a player respawns in their current zone. A new character more than 60 studs from its zone's spawn is moved there.
 - The lift doors lead to the test room. A Deep Navy terminal 9 studs from the test room's spawn, with an `OUTPOST` sign, leads back.
 - Travel has a 1s cooldown. The server gives the movement check 1s of grace first, then reloads the character at the other spawn.
-- You wear your own Roblox avatar in the Outpost and the game's body everywhere else. The server moves `StarterCharacter` to `ServerStorage` at startup, turns off `CharacterAutoLoads`, and puts it back in `StarterPlayer` only while loading a character outside the Outpost. It also handles respawns.
+- You wear your own Roblox avatar in the Outpost and the game's soldier body (attribute `SoldierRig`) everywhere else. The server moves `StarterCharacter` to `ServerStorage` at startup, turns off `CharacterAutoLoads`, and puts it back in `StarterPlayer` only while loading a character outside the Outpost. It also handles respawns.
 - You leave a soft glowing blur in the Outpost that only you can see: up to 24 barely visible neon copies of your whole body, one every frame at 60 fps while you move, each nudged up to 0.12 studs so their edges melt together, fading from Deep Navy to Bone over 0.22s.
 - Getting below the floors or more than 320 studs out sends the player back to the spawn. The server checks every 0.25s.
 
@@ -82,6 +82,6 @@ Everything works as normal in the test room.
 
 ## Not built
 
-- The player market and the Loadout button.
+- The player market.
 - Ambient sound: waits on River's hum loops.
 - Blender props, seating, and matches.

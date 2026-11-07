@@ -1,6 +1,6 @@
 # Title screen
 
-**Status:** built. River confirmed it in Play on 2026-11-05. Checked against the code on 2026-11-05.
+**Status:** built. River confirmed it in Play on 2026-11-05. Checked against the code on 2026-11-07.
 
 **Values live in:** the constants at the top of `src/client/TitleScreen.client.luau`. The menu state is `src/shared/Guns/MenuState.luau` and the visualizer maths is `src/shared/Guns/MusicBars.luau`.
 
@@ -54,7 +54,7 @@ Sizes are shares of a **unit**, which is the screen's width, or 16/9 of its heig
 
 1. A player joins. The title screen covers everything and the mouse is free.
 2. While it shows, the character can't move, shoot, reload or use cards, and the HUD is hidden. `MenuState` blocks every key read in `Input.luau`. W, A, S and D are blocked by turning off Roblox's default controls.
-3. `PLAY` hides the screen, turns the controls back on and locks the mouse to first person. The player is already standing on the Outpost dock behind the screen.
+3. `PLAY` hides the screen and turns the controls back on. The player is already standing in the Outpost's East Hall behind the screen, with the Outpost's third-person camera (`CameraMode.client.luau`).
 
 The screen shows once per join. Dying or respawning doesn't bring it back.
 
@@ -65,4 +65,4 @@ The screen shows once per join. Dying or respawning doesn't bring it back.
 
 ## Not built
 
-The loadout and settings screens, a pause menu, and renaming the repo (`aprilfridae/deck-shooter`) and the Rojo project (`DeckShooter`), which still use the old name.
+Live `LOADOUT` and `SETTINGS` buttons here (both pages exist in the Outpost menu, see `outpost-ui.md`), a pause menu, and renaming the repo (`aprilfridae/deck-shooter`) and the Rojo project (`DeckShooter`), which still use the old name.
