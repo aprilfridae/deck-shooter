@@ -16,7 +16,10 @@ local Config = {
 	VariantIncome = { Base = 1, Chromatic = 1.5, Redacted = 2.5, ZeroDay = 5 },
 	VariantOdds = { Chromatic = 1 / 50, Redacted = 1 / 500, ZeroDay = 1 / 5000 },
 
+	RebirthPrice = 25000,
+	RebirthGrowth = 2.5,
 	LuckPerRebirth = 0.15,
+	ReceiptMemory = 50, -- purchases each save remembers, so a repeated receipt opens nothing
 	PackOdds = { BlackSite = 0.16, Prototype = 0.0398, ZeroDay = 0.0002 }, -- Field takes the rest
 	-- Tier chances, commonest first. A Zero-Day pack's first card differs from its other two.
 	PackTierOdds = {

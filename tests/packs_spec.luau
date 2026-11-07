@@ -1,6 +1,8 @@
 local harness = require("./harness")
 local Cards = require("../src/shared/CardCore/Cards")
+local Config = require("../src/shared/CardCore/Config")
 local Packs = require("../src/shared/CardCore/Packs")
+local SaveData = require("../src/shared/CardCore/SaveData")
 
 local describe, it, expect = harness.describe, harness.it, harness.expect
 
@@ -115,5 +117,148 @@ describe("Pack odds", function()
 		expect(Packs.isRare({ tier = "BlackSite", variant = "Base" })).toBe(false)
 		expect(Packs.isRare({ tier = "Prototype", variant = "Base" })).toBe(true)
 		expect(Packs.isRare({ tier = "Field", variant = "Chromatic" })).toBe(true)
+	end)
+end)
+
+local function owned(data: any): number
+	local sum = 0
+	for _, count in data.stacks do
+		sum += count
+	end
+	return sum
+end
+
+describe("The pile", function()
+	it("waits 3 seconds between rolls", function()
+		expect(Packs.canRoll(nil, 0)).toBe(true)
+		expect(Packs.canRoll(10, 12.99)).toBe(false)
+		expect(Packs.canRoll(10, 13)).toBe(true)
+	end)
+
+	it("adds a rolled pack to the pile", function()
+		local data = SaveData.new()
+		local ok, pack = Packs.roll(data, at(0.99))
+		expect(ok).toBe(true)
+		expect(pack).toBe("Field")
+		expect(data.packs.Field).toBe(1)
+	end)
+
+	it("uses the player's luck for a roll", function()
+		local data = SaveData.new()
+		data.rebirths = 5
+		local _, pack = Packs.roll(data, at(0.3)) -- the rare total is 0.35 at luck 1.75
+		expect(pack ~= "Field").toBe(true)
+	end)
+
+	it("stops rolling a rarity at the limit", function()
+		local data = SaveData.new()
+		data.packs.Field = Config.MaxStackCount
+		local ok, code = Packs.roll(data, at(0.99))
+		expect(ok).toBe(false)
+		expect(code).toBe("PileFull")
+		expect(data.packs.Field).toBe(Config.MaxStackCount)
+	end)
+
+	it("opens a pack into 3 cards and spends it", function()
+		local data = SaveData.new()
+		data.packs.BlackSite = 1
+		local before = owned(data)
+		local ok, cards = Packs.open(data, "BlackSite", math.random)
+		expect(ok).toBe(true)
+		expect(#cards).toBe(3)
+		expect(data.packs.BlackSite).toBe(0)
+		expect(owned(data)).toBe(before + 3)
+	end)
+
+	it("refuses a pack the player doesn't have", function()
+		local ok, code = Packs.open(SaveData.new(), "ZeroDay", math.random)
+		expect(ok).toBe(false)
+		expect(code).toBe("NoPacks")
+	end)
+
+	it("opens the commonest first", function()
+		local data = SaveData.new()
+		data.packs.Prototype = 1
+		data.packs.BlackSite = 1
+		expect(Packs.nextToOpen(data)).toBe("BlackSite")
+		expect(Packs.nextToOpen(SaveData.new())).toBe(nil)
+	end)
+
+	it("opens a whole pile into counts", function()
+		local data = SaveData.new()
+		data.packs.Field = 1000
+		data.packs.ZeroDay = 2
+		local before = owned(data)
+		local result = Packs.openAll(data, math.random)
+		expect(result.opened).toBe(1002)
+		expect(Packs.pile(data)).toBe(0)
+		local sum = 0
+		for _, count in result.cards do
+			sum += count
+		end
+		expect(sum).toBe(3006)
+		expect(owned(data)).toBe(before + 3006)
+	end)
+
+	it("gives a Zero-Day pack its Zero-Day card in a whole pile too", function()
+		local data = SaveData.new()
+		data.packs.ZeroDay = 50
+		local zeroDays = 0
+		for key, count in Packs.openAll(data, math.random).cards do
+			if string.find(key, "ZeroDay", 1, true) then
+				zeroDays += count
+			end
+		end
+		expect(zeroDays >= 50).toBe(true)
+	end)
+
+	it("keeps a million-pack result small", function()
+		local data = SaveData.new()
+		data.packs.Field = Config.MaxStackCount
+		local keys = 0
+		for _ in Packs.openAll(data, math.random).cards do
+			keys += 1
+		end
+		expect(keys <= 48).toBe(true) -- 4 cards, 3 tiers, 4 variants
+	end)
+end)
+
+describe("Receipts", function()
+	it("never opens twice for the same receipt", function()
+		local data = SaveData.new()
+		data.packs.Field = 5
+		expect((Packs.redeem(data, "a", math.random))).toBe("Opened")
+		data.packs.Field = 5
+		expect((Packs.redeem(data, "a", math.random))).toBe("Repeat")
+		expect(data.packs.Field).toBe(5)
+	end)
+
+	it("banks a purchase made with an empty pile", function()
+		local data = SaveData.new()
+		expect((Packs.redeem(data, "a", math.random))).toBe("Banked")
+		expect(data.openAllCredits).toBe(1)
+		expect((Packs.redeem(data, "a", math.random))).toBe("Repeat")
+		expect(data.openAllCredits).toBe(1)
+	end)
+
+	it("spends a banked purchase on a pile", function()
+		local data = SaveData.new()
+		expect(select(2, Packs.useCredit(data, math.random))).toBe("NoCredit")
+		data.openAllCredits = 1
+		expect(select(2, Packs.useCredit(data, math.random))).toBe("NoPacks")
+		expect(data.openAllCredits).toBe(1)
+		data.packs.Field = 2
+		expect((Packs.useCredit(data, math.random))).toBe(true)
+		expect(data.openAllCredits).toBe(0)
+		expect(data.packs.Field).toBe(0)
+	end)
+
+	it("remembers only the newest receipts", function()
+		local data = SaveData.new()
+		for index = 1, Config.ReceiptMemory + 5 do
+			Packs.redeem(data, `r{index}`, math.random)
+		end
+		expect(#data.receipts).toBe(Config.ReceiptMemory)
+		expect(data.receipts[#data.receipts]).toBe(`r{Config.ReceiptMemory + 5}`)
 	end)
 end)
