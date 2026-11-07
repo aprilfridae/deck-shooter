@@ -10,7 +10,7 @@ local BoothGlow = {
 	TAG = "OutpostFlicker",
 }
 
-local FADE_DOWN = 0.25 -- seconds to sink into the wavering
+local FADE_DOWN = 0.4 -- seconds to sink into the wavering
 local WAVES = 2.5 -- a whole number and a half, so it ends halfway up a wave
 local DEEPEST = 0.85 -- how far it sinks at the bottom of a wave
 local SHALLOWEST = 0.4
