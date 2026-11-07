@@ -23,7 +23,6 @@ local MenuCamera = require(script.Parent.MenuCamera)
 local PackCardBack = require(script.Parent.PackCardBack)
 local PackFace = require(script.Parent.PackFace)
 local PullFx = require(script.Parent.PullFx)
-local TypeLabel = require(script.Parent.TypeLabel)
 
 local STEP_NAME = "PullStage"
 local runs = 0 -- each gets its own step, since the last one's clean-up can land after the next starts
@@ -49,8 +48,6 @@ local STRIP_TURN = 2 -- radians
 local PACK_SHARE = 0.62
 local CARD_WIDTH_SHARE = 0.26
 local CARD_WIDTH_MOST = 0.15 -- of the screen's width
-local LABEL_SPACE = 0.014
-local LABEL_SIZE = 0.075 -- of a card's width
 local BUTTON_SPACE = 0.05
 local CARD_SHAPE = 240 / 150
 local CANVAS_CARD_WIDTH = 500
@@ -64,9 +61,11 @@ local ZERO_DAY_CLEAR = 0.12
 local FLASH_TIME = 0.45
 local POP_TIME = 0.25
 local POP_SIZE = 0.1
-local RIP_BURST = 0.3 -- of the rarity's particles, with the rest saved for the flip
-local LINGER_BURST = 0.15
-local LINGER_EVERY = 0.4 -- seconds
+-- Shares of the rarity's full burst.
+local RIP_BURST = 0.5
+local FLIP_BURST = 0.6 -- from each card
+local LINGER_BURST = 0.2
+local LINGER_EVERY = 0.3 -- seconds
 
 local LIGHTS = {
 	Field = Palette.Bone,
@@ -216,7 +215,7 @@ local function flash(run: any, strength: number)
 	fading:Play()
 end
 
--- Click areas and rarity names, once everything has landed. They sit where the cards do on screen.
+-- Click areas once everything has landed. They sit where the cards do on screen.
 local function settle(run: any, cardX: { number }, cardY: number, cardWidth: number, view: Vector2)
 	local height = cardWidth * CARD_SHAPE
 	for _, slot in run.slots do
@@ -231,18 +230,6 @@ local function settle(run: any, cardX: { number }, cardY: number, cardWidth: num
 		hit.Activated:Connect(function()
 			run.callbacks.inspect(slot.card)
 		end)
-		if PullMotion.flash(slot.card) > 0 then
-			local line = cardY + height / 2 + LABEL_SPACE * view.Y
-			local name = TypeLabel.new(run.frame, {
-				style = "LabelBold",
-				size = cardWidth * LABEL_SIZE,
-				tracking = 0,
-				color = Palette.Bone,
-				position = UDim2.new(),
-			})
-			name:set(CardLook.rarityText(slot.card.tier, slot.card.variant))
-			name:setPosition(UDim2.fromOffset(x - name:width() / 2, line))
-		end
 	end
 	run.callbacks.rested(cardY + height / 2 + BUTTON_SPACE * view.Y)
 end
@@ -355,7 +342,9 @@ local function step(run: any, dt: number)
 		run.flashed = true
 		run.deepDim = run.best.variant == Variant.ZeroDay
 		flash(run, PullMotion.flash(run.best))
-		burst(run, 1, centreX, centreY)
+		for index = 1, #run.slots do
+			burst(run, FLIP_BURST, centreX + (PullMotion.fan(index)) * fullWidth, centreY)
+		end
 	end
 	for _, slot in run.slots do
 		local steps, tilt = PullMotion.fan(slot.index)
@@ -379,9 +368,9 @@ local function step(run: any, dt: number)
 		settle(run, cardX, cardY, fullWidth, view)
 		run.nextLinger = time
 	end
-	if run.nextLinger and run.style.linger and time >= run.nextLinger then
+	if run.nextLinger and time >= run.nextLinger then
 		run.nextLinger = time + LINGER_EVERY
-		burst(run, LINGER_BURST, centreX, centreY)
+		burst(run, LINGER_BURST, cardX[run.random:NextInteger(1, #run.slots)], centreY)
 	end
 end
 

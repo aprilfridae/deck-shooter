@@ -8,7 +8,7 @@ local PullParticles = {}
 
 local STYLES = {
 	Field = {
-		count = 14,
+		count = 40,
 		colours = { "Bone" },
 		speed = { 0.03, 0.12 },
 		gravity = -0.05,
@@ -18,7 +18,7 @@ local STYLES = {
 		spread = { 0.12, 0.2 },
 	},
 	BlackSite = {
-		count = 30,
+		count = 90,
 		colours = { "HazardRed", "HazardRed", "Bone" },
 		speed = { 0.5, 1.3 },
 		gravity = 1.1,
@@ -28,7 +28,7 @@ local STYLES = {
 		alongTravel = true,
 	},
 	Prototype = {
-		count = 28,
+		count = 80,
 		colours = { "SignalAcid", "SignalAcid", "Bone" },
 		speed = { 0.15, 0.5 },
 		gravity = 0,
@@ -39,7 +39,7 @@ local STYLES = {
 		stepped = true,
 	},
 	Chromatic = {
-		count = 40,
+		count = 110,
 		colours = { "HazardRed", "SignalAcid", "DataCyan", "Bone" },
 		speed = { 0.35, 0.9 },
 		gravity = 0.7,
@@ -49,7 +49,7 @@ local STYLES = {
 		spin = 9,
 	},
 	Redacted = {
-		count = 16,
+		count = 36,
 		colours = { "DeepNavy", "DeepNavy", "Bone" },
 		speed = { 0.4, 1 },
 		gravity = 0,
@@ -61,7 +61,7 @@ local STYLES = {
 		stepped = true,
 	},
 	ZeroDay = {
-		count = 60,
+		count = 140,
 		colours = { "DataCyan", "DataCyan", "Bone" },
 		speed = { 0.4, 0.9 },
 		gravity = 0.2,
@@ -72,7 +72,6 @@ local STYLES = {
 		start = -0.45, -- above the middle of the screen, so it rains down past the cards
 		angles = { math.pi / 2 },
 		stepped = true,
-		linger = true,
 	},
 }
 
