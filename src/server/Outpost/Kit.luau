@@ -2,6 +2,7 @@
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local BoothGlow = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("BoothGlow"))
 local OutpostAssets = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("OutpostAssets"))
 local LightShaft = require(script.Parent.LightShaft)
 
@@ -451,8 +452,18 @@ function Kit:ball(position: Vector3, diameter: number, color: Color3, material: 
 	return self:place(part, Vector3.one * diameter, CFrame.new(position), color, material)
 end
 
+-- Marks a neon part or light as part of the stall being built, if there is one.
+local function flickers(self: any, thing: Instance)
+	if self.flickerStall then
+		thing:SetAttribute("FlickerStall", self.flickerStall)
+		CollectionService:AddTag(thing, BoothGlow.TAG)
+	end
+end
+
 function Kit:neon(size: Vector3, cframe: CFrame, color: Color3): BasePart
-	return Kit.decor(self:block(size, cframe, color, Enum.Material.Neon))
+	local part = Kit.decor(self:block(size, cframe, color, Enum.Material.Neon))
+	flickers(self, part)
+	return part
 end
 
 function Kit:light(part: BasePart, className: string, props: { [string]: any }): Instance
@@ -461,6 +472,7 @@ function Kit:light(part: BasePart, className: string, props: { [string]: any }):
 		(light :: any)[key] = value
 	end
 	light.Parent = part
+	flickers(self, light)
 	return light
 end
 
