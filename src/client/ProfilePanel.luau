@@ -88,7 +88,7 @@ local function cardGrid(page: Frame, profile: any)
 				local y = firstLine + (line - 1) * NAME_STEP
 				PanelKit.cardLabel(cell, "LabelBold", NAME_SIZE_SMALL, CELL_MARGIN, y, ink):set(word)
 			end
-			local tierLine = firstLine + #words * NAME_STEP + 0.002
+			local tierLine = firstLine + 2 * NAME_STEP + 0.002 -- under two lines, so tiers line up across cards
 			PanelKit.cardLabel(cell, "Label", TIER_SIZE, CELL_MARGIN, tierLine, ink):set(TIER_NAMES[entry.tier])
 			if owned then
 				PanelKit.cardLabel(cell, "Title", COPIES_SIZE, CELL_MARGIN, CELL_HEIGHT - CELL_MARGIN):set(`X{entry.count}`)
