@@ -331,6 +331,13 @@ local function onPlayer(player: Player)
 	end
 end
 
+-- Bodies with no player, such as the soldier test dummy.
+local CollectionService = game:GetService("CollectionService")
+CollectionService:GetInstanceAddedSignal("PosedBody"):Connect(onCharacter)
+for _, model in CollectionService:GetTagged("PosedBody") do
+	task.spawn(onCharacter, model)
+end
+
 Players.PlayerAdded:Connect(onPlayer)
 for _, player in Players:GetPlayers() do
 	task.spawn(onPlayer, player)

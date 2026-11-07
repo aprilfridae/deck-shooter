@@ -2,7 +2,7 @@
 
 **Status:** built for the test room. Checked against the code on 2026-11-05.
 
-**Values live in:** `src/shared/Guns/GunConfig.luau` for gun stats and classes. Ammo and reload rules are in `Weapon.luau`, damage in `Damage.luau`, spread in `Spread.luau` and recoil in `src/client/Recoil.luau`. Hit checking uses `ShotRequest.luau` (rewind and origin limits), `Hitbox.luau` (hitbox sizes) and `History.luau` (position history), and `src/server/GunServer.server.luau` holds the respawn time, range and request limit.
+**Values live in:** `src/shared/Guns/GunConfig.luau` for gun stats and classes. Ammo and reload rules are in `Weapon.luau`, damage in `Damage.luau`, spread in `Spread.luau` and recoil in `src/client/Recoil.luau`. Hit checking uses `ShotRequest.luau` (rewind and origin limits), `Hitbox.luau` (hitbox sizes: one for the soldier, one for plain Roblox bodies such as the test dummy) and `History.luau` (position history), and `src/server/GunServer.server.luau` holds the respawn time, range and request limit.
 
 ## Classes
 

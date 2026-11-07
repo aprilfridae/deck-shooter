@@ -84,6 +84,11 @@ describe("Hitbox", function()
 		expect((Hitbox.test({ x = -20, y = 3.4, z = 0 }, east, target("Slide")))).toBe("Head")
 	end)
 
+	it("puts a plain body's head lower than the soldier's", function()
+		expect((Hitbox.test({ x = -20, y = 5, z = 0 }, east, target(), Hitbox.shapes.plain))).toBe("Head")
+		expect((Hitbox.test({ x = -20, y = 5, z = 0 }, east, target(), Hitbox.shapes.soldier))).toBe("Body")
+	end)
+
 	it("ignores a target behind the shooter", function()
 		expect((Hitbox.test({ x = 20, y = 3, z = 0 }, east, target()))).toBeNil()
 	end)
