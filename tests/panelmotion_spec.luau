@@ -8,8 +8,8 @@ local function near(a: number, b: number): boolean
 end
 
 describe("PanelMotion", function()
-	it("steps through a move at 30 frames a second", function()
-		expect(PanelMotion.FPS).toBe(30)
+	it("steps through a move at 40 frames a second", function()
+		expect(PanelMotion.FPS).toBe(40)
 		expect(PanelMotion.held(0)).toBe(0)
 		expect(PanelMotion.held(0.01)).toBe(0)
 		expect(PanelMotion.held(PanelMotion.DURATION)).toBe(1)
@@ -53,6 +53,15 @@ describe("PanelMotion", function()
 		local frame = 3 / PanelMotion.FPS
 		local text = string.rep("X", 30)
 		expect(PanelMotion.decode(text, frame)).toBe(PanelMotion.decode(text, frame + 0.01))
+	end)
+
+	it("fades the blur out before a closing panel has left", function()
+		expect(PanelMotion.closeFade(0)).toBe(1)
+		expect(PanelMotion.closeFade(0.3)).toBe(1)
+		expect(PanelMotion.closeFade(0.8)).toBe(0)
+		expect(PanelMotion.closeFade(1)).toBe(0)
+		local middle = PanelMotion.closeFade(0.6)
+		expect(middle > 0 and middle < 1).toBe(true)
 	end)
 
 	it("smears further back than the last frame travelled", function()

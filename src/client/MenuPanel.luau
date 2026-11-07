@@ -43,6 +43,7 @@ function MenuPanel.new(parent: Instance): any
 	self.moving = false
 	self.share = 0 -- 0 is closed, 1 is open
 	self.travel = 0 -- how far the last frame of the move went, opening being positive
+	self.blurLeft = 1 -- how much of the blur shows, which a closing panel fades early
 	self.shake = PanelMotion.landShake(PanelMotion.SHAKE_TIME) -- none yet
 	self.from = 0
 	self.elapsed = 0
@@ -87,7 +88,7 @@ function MenuPanel:showCopies(from: number, to: number)
 		copy.Visible = step ~= nil
 		if step then
 			place(copy, step.share)
-			copy.BackgroundTransparency = step.transparency
+			copy.BackgroundTransparency = 1 - (1 - step.transparency) * self.blurLeft
 		end
 	end
 end
@@ -95,13 +96,15 @@ end
 function MenuPanel:step(dt: number)
 	self.elapsed += dt
 	local target = if self.opening then 1 else 0
-	local share = PanelMotion.share(self.from, target, PanelMotion.held(self.elapsed))
+	local progress = PanelMotion.held(self.elapsed)
+	local share = PanelMotion.share(self.from, target, progress)
+	self.blurLeft = if self.opening then 1 else PanelMotion.closeFade(progress)
 	if share ~= self.share then
 		self:showCopies(self.share, share)
 		self.travel = share - self.share
 		self.share = share
 		place(self.frame, share)
-		self.glow:show(1 - PANEL_WIDTH * share, self.travel)
+		self.glow:show(1 - PANEL_WIDTH * share, self.travel * self.blurLeft)
 	end
 	-- The last frame is held too, so its copies get their moment.
 	local held = self.elapsed >= PanelMotion.DURATION + 1 / PanelMotion.FPS

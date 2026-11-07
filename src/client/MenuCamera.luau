@@ -58,11 +58,12 @@ RunService:BindToRenderStep("OutpostMenuCamera", Enum.RenderPriority.Camera.Valu
 	local amount = if panel then panel.share else 0
 	local travel = if panel then panel.travel else 0
 	local shake = if panel then panel.shake else { x = 0, y = 0, lean = 0 }
+	local blurLeft = if panel then panel.blurLeft else 1
 	blur.Parent = Workspace.CurrentCamera
-	blur.Size = PanelMotion.viewBlur(travel)
+	blur.Size = PanelMotion.viewBlur(travel) * blurLeft
 	blur.Enabled = travel ~= 0
 	bloom.Parent = Workspace.CurrentCamera
-	bloom.Intensity = PanelMotion.glow(travel) * MOST_BLOOM
+	bloom.Intensity = PanelMotion.glow(travel) * blurLeft * MOST_BLOOM
 	bloom.Enabled = travel ~= 0
 	if amount < 0.001 and shake.x == 0 then
 		across = 0
