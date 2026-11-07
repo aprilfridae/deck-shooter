@@ -81,19 +81,36 @@ local function isJoint(joint: Instance): boolean
 	return joint:IsA("Motor6D") or joint:IsA("AnimationConstraint")
 end
 
+-- Another player's body arrives over the network a piece at a time, so wait as long as it exists.
+local function waitFor(character: Model, name: string): Instance?
+	while character.Parent do
+		local child = character:WaitForChild(name, 1)
+		if child then
+			return child
+		end
+	end
+	return nil
+end
+
 local function onCharacter(character: Model)
-	local humanoid = character:WaitForChild("Humanoid", 5) :: Humanoid?
-	local root = character:WaitForChild("HumanoidRootPart", 5) :: BasePart?
-	if not character:WaitForChild("LowerTorso", 5) or not humanoid or not root then
+	local humanoid = waitFor(character, "Humanoid") :: Humanoid?
+	local root = waitFor(character, "HumanoidRootPart") :: BasePart?
+	if not waitFor(character, "LowerTorso") or not humanoid or not root then
 		return
 	end
 
+	-- The joints can turn up after the parts do, so keep collecting them.
 	local joints = {}
 	for _, descendant in character:GetDescendants() do
 		if isJoint(descendant) then
 			joints[descendant.Name] = descendant
 		end
 	end
+	character.DescendantAdded:Connect(function(descendant)
+		if isJoint(descendant) then
+			joints[descendant.Name] = descendant
+		end
+	end)
 	-- An avatar stands still. Only the game's body keeps twitching at rest.
 	local player = Players:GetPlayerFromCharacter(character)
 	local avatar = player ~= nil and Zones.usesAvatar(Zones.of(player))
