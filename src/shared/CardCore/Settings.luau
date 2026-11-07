@@ -37,8 +37,8 @@ local RANGES = {
 	fieldOfView = { 60, 100, 80 },
 }
 
--- Roblox moves the player with W, A, S and D, and B, N, T and Y are test keys.
-local RESERVED = { W = true, A = true, S = true, D = true, B = true, N = true, T = true, Y = true }
+-- Roblox moves the player with W, A, S and D, and B, N, T and Y are test keys. Slash opens chat.
+local RESERVED = { W = true, A = true, S = true, D = true, B = true, N = true, T = true, Y = true, Slash = true }
 
 local DIGITS = {
 	Zero = "0",
@@ -64,9 +64,17 @@ local LABELS = {
 	MouseButton2 = "MOUSE 2",
 }
 
-local BINDABLE: { [string]: boolean } = { Space = true, Tab = true, Return = true }
+local BINDABLE: { [string]: boolean } = {}
+for _, name in {
+	"Space", "Tab", "Return", "BackSpace", "CapsLock", "Up", "Down", "Left", "Right", "Insert", "Delete",
+	"Home", "End", "PageUp", "PageDown", "Comma", "Period", "Semicolon", "Quote", "Minus", "Equals",
+	"LeftBracket", "RightBracket", "BackSlash", "Backquote",
+} do
+	BINDABLE[name] = true
+end
 for name in DIGITS do
 	BINDABLE[name] = true
+	BINDABLE[`Keypad{name}`] = true
 end
 for name in LABELS do
 	BINDABLE[name] = true
@@ -134,6 +142,15 @@ function Settings.clean(raw: any): Settings
 	end
 	settings.keys = cleanKeys(raw.keys)
 	return settings
+end
+
+-- Lays changes made before the save arrived over the saved settings.
+function Settings.merge(saved: Settings, changes: { [string]: any }): Settings
+	local merged = table.clone(saved)
+	for field, value in changes do
+		merged[field] = value
+	end
+	return Settings.clean(merged)
 end
 
 function Settings.range(field: string): (number, number)

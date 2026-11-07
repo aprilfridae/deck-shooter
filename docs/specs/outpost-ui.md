@@ -76,7 +76,8 @@ Sizes use the title screen's **unit**: the screen's width, or 16/9 of its height
 - Settings apply at once and save to the player's profile.
 - Sprint, jump and slide widen the view as they do now, kept the same amount above the chosen base. Scoping in ignores the setting.
 - `KEYBINDS` opens a list of actions, including `CROUCH 2` so C and Left Control both stay. Clicking one waits for the next key. A key already in use swaps with the other action. `RESET` restores the defaults.
-- W, A, S and D can't be bound, because Roblox moves the player with them. Nor can the test keys B, N, T and Y.
+- W, A, S and D can't be bound, because Roblox moves the player with them. Nor can the test keys B, N, T and Y, or `/`, which opens chat.
+- Space is only a default: Roblox's own jump is switched off, and the game jumps from the player's binding.
 - Keys stay in `Input.luau`, which reads them from the settings. The B, N and Studio test keys aren't listed.
 - Sounds move into three new `SoundGroup`s, one per volume.
 

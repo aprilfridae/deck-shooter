@@ -1,4 +1,5 @@
 -- First-person movement: runs the rules each frame and applies them to the Humanoid.
+local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -72,6 +73,12 @@ local function poseFor(mode: string): string
 	end
 	return "Normal"
 end
+
+-- Space is only the default jump key, so Roblox's own jump is switched off. Jumping comes from
+-- the player's binding, in the step below.
+ContextActionService:BindActionAtPriority("BlockDefaultJump", function()
+	return Enum.ContextActionResult.Sink
+end, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.Space)
 
 local function movementFieldOfView(): number
 	if state.mode == "Slide" then
@@ -264,6 +271,9 @@ local function onFrame(dt: number)
 	local now = os.clock()
 	local jumpPressed = keys.jump and not jumpHeld
 	jumpHeld = keys.jump
+	if keys.jump then
+		humanoid.Jump = true
+	end
 
 	if keys.jump and state.mode ~= "Climb" then
 		tryLedge(jumpPressed, direction, now)

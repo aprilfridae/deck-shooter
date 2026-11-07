@@ -9,7 +9,8 @@ local LOAD_RETRY = 1 -- seconds
 local changedEvent = Instance.new("BindableEvent")
 
 local current = Settings.new()
-local touched = false -- the player changed something before the save arrived
+local loaded = false
+local early: { [string]: any } = {} -- changes made before the save arrived
 local lastSent = -SEND_EVERY
 local queued = false
 
@@ -27,9 +28,11 @@ function PlayerSettings.get(): Settings.Settings
 end
 
 function PlayerSettings.set(change: { [string]: any })
-	touched = true
 	for field, value in change do
 		current[field] = value
+		if not loaded then
+			early[field] = value
+		end
 	end
 	changedEvent:Fire()
 end
@@ -38,12 +41,17 @@ local function push()
 	queued = false
 	lastSent = os.clock()
 	task.spawn(function()
-		remote("SetSettings"):InvokeServer(current)
+		local sent, reply = pcall(function()
+			return remote("SetSettings"):InvokeServer(current)
+		end)
+		if not (sent and reply.ok) then
+			PlayerSettings.send()
+		end
 	end)
 end
 
 function PlayerSettings.send()
-	if queued then
+	if queued or not loaded then -- changes made before the save arrives go out when it does
 		return
 	end
 	local wait = lastSent + SEND_EVERY - os.clock()
@@ -59,9 +67,11 @@ task.spawn(function()
 	while true do
 		local reply = remote("GetSettings"):InvokeServer()
 		if reply.ok then
-			if not touched then
-				current = Settings.clean(reply.result)
-				changedEvent:Fire()
+			loaded = true
+			current = Settings.merge(Settings.clean(reply.result), early)
+			changedEvent:Fire()
+			if next(early) then
+				PlayerSettings.send()
 			end
 			return
 		end

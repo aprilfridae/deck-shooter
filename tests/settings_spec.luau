@@ -58,6 +58,26 @@ describe("Settings", function()
 		expect(Settings.keyLabel("Q")).toBe("Q")
 	end)
 
+	it("binds arrows, punctuation and the number pad", function()
+		local defaults = Settings.new().keys
+		expect(Settings.rebind(defaults, "jump", "Up").jump).toBe("Up")
+		expect(Settings.rebind(defaults, "jump", "Comma").jump).toBe("Comma")
+		expect(Settings.rebind(defaults, "jump", "KeypadOne").jump).toBe("KeypadOne")
+		expect(Settings.rebind(defaults, "jump", "CapsLock").jump).toBe("CapsLock")
+	end)
+
+	it("won't bind the chat key", function()
+		expect(Settings.rebind(Settings.new().keys, "jump", "Slash")).toBeNil()
+	end)
+
+	it("keeps saved settings when only one field changed before the save arrived", function()
+		local saved = Settings.clean({ music = 0.2, keys = { jump = "Q" } })
+		local merged = Settings.merge(saved, { game = 0.5 })
+		expect(merged.music).toBe(0.2)
+		expect(merged.keys.jump).toBe("Q")
+		expect(merged.game).toBe(0.5)
+	end)
+
 	it("gives each slider its range", function()
 		local low, high = Settings.range("fieldOfView")
 		expect(low).toBe(60)
