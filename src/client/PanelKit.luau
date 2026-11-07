@@ -8,7 +8,6 @@ local TypeLabel = require(script.Parent.TypeLabel)
 local TRACKING = 0.002
 local TITLE_SIZE = 0.085
 local TITLE_LINE = 0.095
-local RULE_LINE = 0.108
 local RULE_FADE = 0.5
 local PRESSED_SHRINK = 0.97
 local QUIET_HOVER = 3 -- pixels
@@ -19,6 +18,9 @@ local PanelKit = {
 	LABEL_SIZE = 0.0125,
 	HEADING_SIZE = 0.011,
 	SMALL_SIZE = 0.0105,
+	RULE_LINE = 0.108,
+	CAP_HEIGHT = 0.7, -- of a font's size, for all three fonts
+	TITLE_INSET = 0.055, -- of the size: the blank space left of a Title letter
 	NAVY = Palette.DeepNavy,
 }
 
@@ -69,10 +71,10 @@ function PanelKit.title(parent: Instance, text: string)
 		tracking = 0,
 		color = NAVY,
 		shadow = false,
-		position = UDim2.fromOffset(PanelKit.MARGIN * unit, TITLE_LINE * unit),
+		position = UDim2.fromOffset((PanelKit.MARGIN - TITLE_SIZE * PanelKit.TITLE_INSET) * unit, TITLE_LINE * unit),
 	})
 	big:set(text)
-	PanelKit.rule(parent, PanelKit.MARGIN, RULE_LINE, PanelKit.RIGHT - PanelKit.MARGIN)
+	PanelKit.rule(parent, PanelKit.MARGIN, PanelKit.RULE_LINE, PanelKit.RIGHT - PanelKit.MARGIN)
 end
 
 function PanelKit.block(parent: Instance, x: number, top: number, width: number, height: number, color: Color3): Frame

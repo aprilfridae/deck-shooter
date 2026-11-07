@@ -12,10 +12,12 @@ local QUEUES = {
 	{ mode = "TOWER", size = "5V5" },
 }
 
-local LIST_TOP = 0.145
-local ROW_STEP = 0.062
+local ROW_HEIGHT = 0.062
 local SIZE_TEXT = 0.04
 local TICK_WIDTH = 0.006
+local TEXT_GAP = 0.01 -- from the tick to the size
+local MODE_LEFT = 0.2
+local BLOCK_GAP = 0.02
 local BLOCK_HEIGHT = 0.05
 
 local PlayPanel = {}
@@ -24,15 +26,21 @@ function PlayPanel.fill(content: Frame)
 	local MARGIN, RIGHT = PanelKit.MARGIN, PanelKit.RIGHT
 	PanelKit.title(content, "PLAY")
 	for index, queue in QUEUES do
-		local base = LIST_TOP + (index - 1) * ROW_STEP
-		PanelKit.block(content, MARGIN, base - SIZE_TEXT, TICK_WIDTH, SIZE_TEXT, PanelKit.NAVY)
-		PanelKit.label(content, "Title", SIZE_TEXT, MARGIN + 0.016, base):set(queue.size)
-		PanelKit.line(content, queue.mode, 0.2, base - 0.002)
-		PanelKit.line(content, "SOON", RIGHT, base - 0.002, true)
-		PanelKit.rule(content, MARGIN, base + (ROW_STEP - SIZE_TEXT) / 2, RIGHT - MARGIN)
+		-- Everything in a row is centred on the same line, halfway between its two rules.
+		local rowTop = PanelKit.RULE_LINE + (index - 1) * ROW_HEIGHT
+		local middle = rowTop + ROW_HEIGHT / 2
+		local capHeight = SIZE_TEXT * PanelKit.CAP_HEIGHT
+		local base = middle + capHeight / 2
+		local labelBase = middle + PanelKit.LABEL_SIZE * PanelKit.CAP_HEIGHT / 2
+		local textLeft = MARGIN + TICK_WIDTH + TEXT_GAP - SIZE_TEXT * PanelKit.TITLE_INSET
+		PanelKit.block(content, MARGIN, base - capHeight, TICK_WIDTH, capHeight, PanelKit.NAVY)
+		PanelKit.label(content, "Title", SIZE_TEXT, textLeft, base):set(queue.size)
+		PanelKit.line(content, queue.mode, MODE_LEFT, labelBase)
+		PanelKit.line(content, "SOON", RIGHT, labelBase, true)
+		PanelKit.rule(content, MARGIN, rowTop + ROW_HEIGHT, RIGHT - MARGIN)
 	end
 
-	local top = LIST_TOP + #QUEUES * ROW_STEP - 0.01
+	local top = PanelKit.RULE_LINE + #QUEUES * ROW_HEIGHT + BLOCK_GAP
 	local unit = MenuPanel.unit()
 	local block = PanelKit.block(content, MARGIN, top, RIGHT - MARGIN, BLOCK_HEIGHT, Palette.SignalAcid)
 	local word = PanelKit.label(block, "LabelBold", PanelKit.LABEL_SIZE, 0, 0)
