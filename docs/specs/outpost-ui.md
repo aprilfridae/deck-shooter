@@ -17,7 +17,7 @@ Taken from River's poster references.
 - One loud block per panel. Barcodes, tick marks and simple circles and squares are the decoration.
 - **Colour:** Deep Navy is the paper, Bone is the ink, and whatever is selected or under the mouse inverts to Bone with navy text. A solid Bone block is the loud element. Signal Acid and Data Cyan are kept off the menus and HUD; Signal Acid is reserved for later. Cards are blank for now, with no tier colours, until River's custom card art is made. Hazard Red stays for threats and purchases.
 - **Truth:** every number on a panel is real, or the panel leaves it out. No made-up serials or stats, as on the title screen.
-- **Motion:** panels move at 40 frames a second over 0.5s and feel heavy. Opening, a panel swings a little past its mark and settles. Closing, it pulls back a touch and then drops away. Roblox UI has no blur, so each frame leaves eight fading copies of the panel, stretching back past the last frame, like the smear on the guns. The nav's wipes and its rows sliding in leave the same copies. The copies are gone once the panel stops. Closing, the blur, copies and glow fade from 40% of the way through and are gone by 80%, so the panel leaves clean.
+- **Motion:** panels move at the full frame rate over 0.5s and feel heavy. Opening, a panel swings a little past its mark and settles. Closing, it pulls back a touch and then drops away. Roblox UI has no blur, so each frame leaves eight fading copies of the panel, stretching back past the last frame, like the smear on the guns. The nav's wipes and its rows sliding in leave the same copies. The copies are gone once the panel stops. Closing, the blur, copies and glow fade from 40% of the way through and are gone by 80%, so the panel leaves clean.
 
 ## Layout
 
@@ -38,7 +38,7 @@ Sizes use the title screen's **unit**: the screen's width, or 16/9 of its height
 
 ### Play
 
-`PLAY` in full size, then the launch queues from `matches.md`: Elimination 1V1, 2V2 and 3V3, and Tower 5V5. Each says `SOON` and does nothing until matches exist. Under the mouse a row opens downward in 40 fps steps, pushing the rows below it, and two lines of small `Label` text saying how the queue plays decode in from left to right, with a front of random characters ahead of the settled text. Its tick grows to run alongside them. Only one row is open at a time, and its text clears as soon as the mouse leaves.
+`PLAY` in full size, then the launch queues from `matches.md`: Elimination 1V1, 2V2 and 3V3, and Tower 5V5. Each says `SOON` and does nothing until matches exist. Under the mouse a row opens downward smoothly, pushing the rows below it, and two lines of small `Label` text saying how the queue plays decode in from left to right at 20 fps, with a front of random characters ahead of the settled text. Its tick grows to run alongside them. Only one row is open at a time, and its text clears as soon as the mouse leaves.
 
 ### Loadout
 

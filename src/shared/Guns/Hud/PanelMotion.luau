@@ -1,12 +1,13 @@
 -- How the Outpost panels move. A heavy sheet: it swings past its mark on the way in and settles,
 -- and pulls back a touch before it drops away. Fading copies between frames give it motion blur.
 local PanelMotion = {
-	FPS = 40,
+	FPS = 40, -- of the nav, and the length of a frame of travel for the panel's blur
+	DECODE_FPS = 20, -- of text typing out
 	DURATION = 0.5, -- seconds
 	COPIES = 8,
 	SHAKE_TIME = 9 / 40, -- seconds, in whole frames
 	VIEW_SCALE = 0.75, -- the sheared camera is shrunk by this, which the picture doesn't show
-	EXPAND_TIME = 8 / 40, -- seconds, in whole frames, for a row to open
+	EXPAND_TIME = 0.2, -- seconds for a row to open
 	MOST_SHIFT = 1.2, -- at that scale Roblox accepts up to 1.25 facing any way, measured in Play
 }
 
@@ -26,27 +27,20 @@ local SHAKE_LEAN = math.rad(0.35)
 local VIEW_RAMP = 0.25 -- of an opening move, when the camera has caught up with the panel
 local FADE_FROM = 0.4 -- of a closing move, when its blur starts to fade
 local FADE_TO = 0.8 -- when it's gone, so the panel leaves clean
-local DECODE_STEP = 2 -- characters the text gains each frame
+local DECODE_STEP = 4 -- characters the text gains each frame
 local DECODE_FRONT = 8 -- characters of noise at its leading edge
 local NOISE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/:.-+_>" -- all drawn by the Label font
 
--- How far through a move it is, from 0 to 1, stepped to whole frames.
-function PanelMotion.held(elapsed: number): number
-	local frame = math.floor(elapsed * PanelMotion.FPS + 1e-6)
-	return math.min(frame / PanelMotion.FPS / PanelMotion.DURATION, 1)
-end
-
--- How open a row is, from 0 to 1, stepped to whole frames and easing out.
+-- How open a row is, from 0 to 1, easing out.
 function PanelMotion.expand(elapsed: number): number
-	local frame = math.floor(elapsed * PanelMotion.FPS + 1e-6)
-	local progress = math.min(frame / PanelMotion.FPS / PanelMotion.EXPAND_TIME, 1)
+	local progress = math.min(elapsed / PanelMotion.EXPAND_TIME, 1)
 	return 1 - (1 - progress) ^ 3
 end
 
 -- The text as it stands this long into typing out: settled letters with a front of noise ahead of
 -- them. The noise comes from the frame number, so it holds still for a whole frame.
 function PanelMotion.decode(text: string, elapsed: number): string
-	local frame = math.floor(elapsed * PanelMotion.FPS + 1e-6)
+	local frame = math.floor(elapsed * PanelMotion.DECODE_FPS + 1e-6)
 	local reached = frame * DECODE_STEP
 	local shown = {}
 	for index = 1, math.min(reached, #text) do

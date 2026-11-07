@@ -8,19 +8,17 @@ local function near(a: number, b: number): boolean
 end
 
 describe("PanelMotion", function()
-	it("steps through a move at 40 frames a second", function()
-		expect(PanelMotion.FPS).toBe(40)
-		expect(PanelMotion.held(0)).toBe(0)
-		expect(PanelMotion.held(0.01)).toBe(0)
-		expect(PanelMotion.held(PanelMotion.DURATION)).toBe(1)
-		expect(PanelMotion.held(10)).toBe(1)
-	end)
-
-	it("opens a row in stepped frames and lands on 1", function()
+	it("opens a row smoothly and lands on 1", function()
 		expect(PanelMotion.expand(0)).toBe(0)
-		expect(PanelMotion.expand(0.001)).toBe(0)
+		expect(PanelMotion.expand(0.001) > 0).toBe(true)
 		expect(near(PanelMotion.expand(PanelMotion.EXPAND_TIME), 1)).toBe(true)
 		expect(near(PanelMotion.expand(10), 1)).toBe(true)
+	end)
+
+	it("decodes at a low frame rate", function()
+		expect(PanelMotion.DECODE_FPS < PanelMotion.FPS).toBe(true)
+		local held = 0.5 / PanelMotion.DECODE_FPS
+		expect(PanelMotion.decode("HELLO", held)).toBe("")
 	end)
 
 	it("starts a decode with nothing on screen", function()
@@ -28,7 +26,7 @@ describe("PanelMotion", function()
 	end)
 
 	it("runs noise out in front of the text", function()
-		local shown = PanelMotion.decode("AAAAAAAAAAAAAAAAAAAA", 2 / PanelMotion.FPS)
+		local shown = PanelMotion.decode("AAAAAAAAAAAAAAAAAAAA", 2 / PanelMotion.DECODE_FPS)
 		expect(#shown > 0).toBe(true)
 		expect(#shown < 20).toBe(true)
 		expect(string.find(shown, "[^A]") ~= nil).toBe(true)
@@ -40,7 +38,7 @@ describe("PanelMotion", function()
 	end)
 
 	it("keeps spaces and line breaks in place while decoding", function()
-		local shown = PanelMotion.decode("AB CD\nEF GH", 2 / PanelMotion.FPS)
+		local shown = PanelMotion.decode("AB CD\nEF GH", 2 / PanelMotion.DECODE_FPS)
 		for index = 1, #shown do
 			local letter = string.sub("AB CD\nEF GH", index, index)
 			if letter == " " or letter == "\n" then
@@ -50,7 +48,7 @@ describe("PanelMotion", function()
 	end)
 
 	it("holds the same noise for a whole frame", function()
-		local frame = 3 / PanelMotion.FPS
+		local frame = 3 / PanelMotion.DECODE_FPS
 		local text = string.rep("X", 30)
 		expect(PanelMotion.decode(text, frame)).toBe(PanelMotion.decode(text, frame + 0.01))
 	end)

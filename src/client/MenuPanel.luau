@@ -42,7 +42,7 @@ function MenuPanel.new(parent: Instance): any
 	self.opening = false
 	self.moving = false
 	self.share = 0 -- 0 is closed, 1 is open
-	self.travel = 0 -- how far the last frame of the move went, opening being positive
+	self.travel = 0 -- how far the panel went over one blur frame, opening being positive
 	self.blurLeft = 1 -- how much of the blur shows, which a closing panel fades early
 	self.view = 0 -- where the camera is, which moves smoothly while the panel steps
 	self.viewTravel = 0 -- how far the camera went over the length of one panel frame
@@ -99,28 +99,25 @@ end
 function MenuPanel:step(dt: number)
 	self.elapsed += dt
 	local target = if self.opening then 1 else 0
-	local progress = PanelMotion.held(self.elapsed)
-	local share = PanelMotion.share(self.from, target, progress)
+	local function shareAt(elapsed: number): number
+		return PanelMotion.share(self.from, target, math.clamp(elapsed / PanelMotion.DURATION, 0, 1))
+	end
+	local share = shareAt(self.elapsed)
+	-- Blur is measured over a fixed stretch of time, so it looks the same at any frame rate.
+	local before = shareAt(self.elapsed - 1 / PanelMotion.FPS)
+	local progress = math.min(self.elapsed / PanelMotion.DURATION, 1)
 	self.blurLeft = if self.opening then 1 else PanelMotion.closeFade(progress)
 	local function viewAt(elapsed: number): number
 		return PanelMotion.viewShare(self.viewFrom, target, math.clamp(elapsed / PanelMotion.DURATION, 0, 1))
 	end
 	self.view = viewAt(self.elapsed)
 	self.viewTravel = self.view - viewAt(self.elapsed - 1 / PanelMotion.FPS)
-	if share ~= self.share then
-		self:showCopies(self.share, share)
-		self.travel = share - self.share
-		self.share = share
-		place(self.frame, share)
-		self.glow:show(1 - PANEL_WIDTH * share, self.travel * self.blurLeft)
-	end
-	-- The last frame is held too, so its copies get their moment.
+	self.travel = share - before
+	self.share = share
+	place(self.frame, share)
+	self:showCopies(before, share)
+	self.glow:show(1 - PANEL_WIDTH * share, self.travel * self.blurLeft)
 	local held = self.elapsed >= PanelMotion.DURATION + 1 / PanelMotion.FPS
-	if held and self.travel ~= 0 then
-		self:showCopies(share, share)
-		self.glow:hide()
-		self.travel = 0
-	end
 	-- A closing sheet lands hard, so it runs on a little longer to shake the view.
 	local sinceLanding = self.elapsed - PanelMotion.DURATION
 	self.shake = PanelMotion.landShake(if self.opening then PanelMotion.SHAKE_TIME else sinceLanding)

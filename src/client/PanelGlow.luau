@@ -36,8 +36,4 @@ function PanelGlow:show(edge: number, travel: number)
 	self.frame.BackgroundTransparency = 1 - GLOW_STRENGTH * glow
 end
 
-function PanelGlow:hide()
-	self.frame.Visible = false
-end
-
 return PanelGlow
