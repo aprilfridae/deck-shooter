@@ -64,6 +64,18 @@ Tiers and variants are separate: a card has one of each, so any tier can be Zero
 - Signal Acid, Data Cyan and Hazard Red may appear on cards. The menus and HUD stay navy and Bone, so this is an exception to the rules in `outpost-ui.md`, which needs updating when this is built.
 - `Palette.Tiers` changes to match the table above, and `#0E1018` joins the palette as the Zero-Day background.
 
+## Inspecting a card
+
+Clicking a card in the Profile index holds it up in the 3D world. `CardInspect.luau` draws it, and `CardSpin.luau` holds the motion rules.
+
+- **Arrival:** the card spins once into place in the space beside the panel, at 70% of the screen's height. The panel stays open, the nav hides and the world dims to Deep Navy.
+- **Spinning:** dragging turns the card freely, and tips it up to 0.6 radians. Let go and it eases to whichever side is nearest, then sways gently.
+- **Shine:** while the card is turned, the shine and foil follow its angle. At rest they go back to the timed sweep.
+- **The back:** a click without a drag flips the card. The back shows the name, rarity, a one-line description, the stats at that tier, the copies owned or `NOT OWNED`, and the set code. `CardText.luau` holds the words, which are limited to the menu font's characters, so percentages read `PCT`.
+- **Unowned cards** open too, faded and still.
+- **Closing:** a click off the card closes it, as does anything that closes the menu. Esc can't be used, because Roblox keeps it for its own menu.
+- The part is clear with a `SurfaceGui` on each side, so the card keeps its rounded corners.
+
 ## Serial numbers
 
 - Every copy of a card has a serial, given when it's created. The first copy made is `01`, the second `02`.

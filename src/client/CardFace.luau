@@ -6,6 +6,7 @@ local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local CardArt = require(CardCore:WaitForChild("CardArt"))
 local CardLook = require(CardCore:WaitForChild("CardLook"))
 local Cards = require(CardCore:WaitForChild("Cards"))
+local CardText = require(CardCore:WaitForChild("CardText"))
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local CardMotion = require(Guns:WaitForChild("Hud"):WaitForChild("CardMotion"))
 local Palette = require(Guns:WaitForChild("Palette"))
@@ -36,6 +37,18 @@ local CROSSHAIR = Vector2.new(130, 42)
 local CROSSHAIR_FILL = 6.4 -- radius, inside the baked ring
 local RING_THICKNESS = 1.2
 local OUTLINE_THICKNESS = 2
+
+local BACK_NAME_LINE = 28
+local BACK_NAME_SIZE = 13
+local BACK_RARITY_LINE = 44
+local BACK_TOP_RULE = 54
+local BACK_BOTTOM_RULE = 204
+local BACK_RULE_THICKNESS = 0.8
+local BLURB_LINE = 72
+local BLURB_STEP = 13
+local BLURB_WIDTH = 20 -- letters
+local STATS_LINE = 128
+local STATS_STEP = 16
 
 local SET_CODES = { set_01 = "S01" }
 local GHOST_TRANSPARENCY = 0.75
@@ -82,6 +95,7 @@ export type Options = {
 	serial: number?,
 	corner: string?, -- shown where the small serial goes
 	ghost: boolean?, -- an unowned card: faded and still
+	shineAt: (() -> number?)?, -- where to hold the shine, or nil for its timed sweep
 }
 
 -- Every moving face, walked by one connection that only exists while there are any.
@@ -270,7 +284,7 @@ end
 
 local CardFace = {}
 
-function CardFace.new(parent: GuiObject, options: Options): GuiObject
+function CardFace.new(parent: Instance, options: Options): GuiObject
 	local card = Cards.byId[options.cardId]
 	local look = CardLook.look(options.tier, options.variant)
 	local style = LOOKS[look]
@@ -345,7 +359,8 @@ function CardFace.new(parent: GuiObject, options: Options): GuiObject
 	end
 
 	animate(root, function(elapsed: number)
-		local offset = Vector2.new(CardMotion.shineOffset(elapsed), 0)
+		local held = options.shineAt and options.shineAt()
+		local offset = Vector2.new(held or CardMotion.shineOffset(elapsed), 0)
 		shine.Offset = offset
 		if foil then
 			foil.Offset = offset
@@ -354,6 +369,49 @@ function CardFace.new(parent: GuiObject, options: Options): GuiObject
 			part(elapsed)
 		end
 	end)
+	return root
+end
+
+-- The card's reverse, drawn the same size as its face.
+function CardFace.back(parent: Instance, options: Options, count: number): GuiObject
+	local card = Cards.byId[options.cardId]
+	local style = LOOKS[CardLook.look(options.tier, options.variant)]
+	local unit = options.width / WIDTH
+	local root = Instance.new("Frame")
+	root.Name = "CardBack"
+	root.BackgroundColor3 = style.back
+	root.BorderSizePixel = 0
+	root.Size = UDim2.fromOffset(options.width, HEIGHT * unit)
+	rounded(root, UDim.new(0, CORNER * unit))
+	if style.outline then
+		outline(root, unit, style.outline)
+	end
+
+	local function rule(y: number)
+		local line = Instance.new("Frame")
+		line.BackgroundColor3 = style.ink
+		line.BorderSizePixel = 0
+		line.Position = UDim2.fromOffset(LEFT * unit, y * unit)
+		line.Size = UDim2.fromOffset((RIGHT - LEFT) * unit, BACK_RULE_THICKNESS * unit)
+		line.Parent = root
+	end
+
+	text(root, unit, "LabelBold", BACK_NAME_SIZE, style.ink, LEFT, BACK_NAME_LINE):set(string.upper(card.name))
+	text(root, unit, "Label", TEXT_SIZE, style.rarity, LEFT, BACK_RARITY_LINE)
+		:set(CardLook.rarityText(options.tier, options.variant))
+	rule(BACK_TOP_RULE)
+	for index, line in CardText.wrap(CardText.blurb(options.cardId), BLURB_WIDTH) do
+		text(root, unit, "Label", TEXT_SIZE, style.ink, LEFT, BLURB_LINE + (index - 1) * BLURB_STEP):set(line)
+	end
+	for index, stat in CardText.stats(options.cardId, options.tier) do
+		local y = STATS_LINE + (index - 1) * STATS_STEP
+		text(root, unit, "LabelBold", TEXT_SIZE, style.ink, LEFT, y):set(stat.label)
+		text(root, unit, "Label", TEXT_SIZE, style.ink, RIGHT, y, true):set(stat.value)
+	end
+	rule(BACK_BOTTOM_RULE)
+	text(root, unit, "LabelBold", TEXT_SIZE, style.ink, LEFT, RARITY_LINE):set(CardText.copies(count))
+	text(root, unit, "Label", TEXT_SIZE, style.ink, RIGHT, RARITY_LINE, true):set(SET_CODES[card.set] or "")
+	root.Parent = parent
 	return root
 end
 

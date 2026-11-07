@@ -8,6 +8,7 @@ local CardIndex = require(CardCore:WaitForChild("CardIndex"))
 local Variant = require(CardCore:WaitForChild("Variant"))
 local CardData = require(script.Parent.CardData)
 local CardFace = require(script.Parent.CardFace)
+local CardInspect = require(script.Parent.CardInspect)
 local CommentsPanel = require(script.Parent.CommentsPanel)
 local MenuPanel = require(script.Parent.MenuPanel)
 local PanelKit = require(script.Parent.PanelKit)
@@ -28,6 +29,7 @@ local GRID_TOP = 0.176
 local GRID_GAP = 0.006
 local CELL_WIDTH = 0.0661 -- a card's shape, with CELL_HEIGHT
 local CELL_HEIGHT = 0.1057
+local CELL_BUTTON_LAYER = 6 -- above the card's shine
 local PAGE_TOP = 0.172
 
 local ProfilePanel = {}
@@ -62,7 +64,12 @@ local function cell(grid: ScrollingFrame, column: number, row: number, options: 
 	local top = (row - 1) * (CELL_HEIGHT + GRID_GAP)
 	options.width = CELL_WIDTH * unit
 	options.position = UDim2.fromOffset(x * unit, top * unit)
-	CardFace.new(grid, options)
+	local face = CardFace.new(grid, options)
+	local button = PanelKit.hitBox(face, 0, 0, CELL_WIDTH, CELL_HEIGHT)
+	button.ZIndex = CELL_BUTTON_LAYER
+	button.Activated:Connect(function()
+		CardInspect.open(options)
+	end)
 end
 
 -- Scrolls once there are more rows than fit on the page.
@@ -84,7 +91,7 @@ end
 -- Nobody can own a Zero-Day yet, so Studio shows each card as one in a row of its own.
 local function zeroDayPreviews(grid: ScrollingFrame, cards: { any }, row: number)
 	for column, card in cards do
-		cell(grid, column, row, { cardId = card.cardId, tier = "Field", variant = Variant.ZeroDay, serial = 1 })
+		cell(grid, column, row, { cardId = card.cardId, tier = "Field", variant = Variant.ZeroDay, count = 0, serial = 1 })
 	end
 end
 
@@ -104,6 +111,7 @@ local function cardGrid(page: Frame, profile: any)
 				cardId = card.cardId,
 				tier = entry.tier,
 				variant = entry.variant,
+				count = entry.count,
 				corner = if owned then `X{entry.count}` else nil,
 				ghost = not owned,
 			})
