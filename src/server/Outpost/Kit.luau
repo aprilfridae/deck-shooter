@@ -10,7 +10,6 @@ local M = Enum.Material
 local SIGN_TAG = "OutpostSign"
 local SCREEN_TAG = "OutpostScreen"
 local SIGN_DEPTH = 0.3
-local OUTLINE_WIDTH = 0.16
 local CABLE_WIDTH = 0.12
 local CABLE_COLOR = Color3.fromRGB(22, 24, 26)
 local CABLE_SEGMENTS = 12
@@ -89,7 +88,6 @@ export type SignOptions = {
 	style: string?, -- a font style from GlyphData
 	back: Color3?,
 	fill: Color3?, -- a lit background, for lightboxes
-	outline: Color3?, -- a neon edge
 	light: Color3?, -- a glow cast forward
 	vertical: boolean?, -- one letter per line
 	scale: number?, -- text height as a share of the sign's
@@ -451,8 +449,10 @@ function Kit:ball(position: Vector3, diameter: number, color: Color3, material: 
 	return self:place(part, Vector3.one * diameter, CFrame.new(position), color, material)
 end
 
+-- A lit strip, or a plain matte one while a group has `noNeon` set.
 function Kit:neon(size: Vector3, cframe: CFrame, color: Color3): BasePart
-	return Kit.decor(self:block(size, cframe, color, Enum.Material.Neon))
+	local material = if self.noNeon then Enum.Material.SmoothPlastic else Enum.Material.Neon
+	return Kit.decor(self:block(size, cframe, color, material))
 end
 
 function Kit:light(part: BasePart, className: string, props: { [string]: any }): Instance
@@ -549,18 +549,6 @@ function Kit:sign(cframe: CFrame, width: number, height: number, options: SignOp
 	back:SetAttribute("SignScale", options.scale)
 	CollectionService:AddTag(back, SIGN_TAG)
 
-	if options.outline then
-		local front = -SIGN_DEPTH / 2 - 0.04
-		local edge = OUTLINE_WIDTH
-		for _, strip in {
-			{ 0, height / 2 - edge / 2, width, edge },
-			{ 0, -height / 2 + edge / 2, width, edge },
-			{ -width / 2 + edge / 2, 0, edge, height },
-			{ width / 2 - edge / 2, 0, edge, height },
-		} do
-			self:neon(Vector3.new(strip[3], strip[4], 0.08), cframe * CFrame.new(strip[1], strip[2], front), options.outline)
-		end
-	end
 	if options.light then
 		self:light(back, "SurfaceLight", {
 			Face = Enum.NormalId.Front,
