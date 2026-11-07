@@ -10,6 +10,7 @@ local PullMotion = {
 	SLIDE_TIME = 0.45,
 	SPREAD_TIME = 0.35,
 	TURN_TIME = 0.35,
+	SHAKE_TIME = 0.9, -- every pack's cards shake this long, a Prototype's build, whatever they hold
 	FLIP_TIME = 0.28,
 	QUICK_ROW = 0.05, -- seconds between rows of a quick list
 	RARE_QUEUE = 3, -- Auto Open pulls that can wait to be shown
@@ -29,7 +30,7 @@ local function rank(entry: any): number
 	return table.find(Variant.order, entry.variant) * 10 + table.find(Tier.order, entry.tier)
 end
 
--- Seconds a face-down card shakes before turning. A longer shake means a better card.
+-- Seconds an Auto Open rare card shakes before turning. A longer shake means a better card.
 function PullMotion.buildTime(card: any): number
 	if card.variant == Variant.ZeroDay then
 		return ZERO_DAY_BUILD
@@ -43,16 +44,13 @@ function PullMotion.keepsRare(waiting: number, card: any): boolean
 end
 
 -- When each step of the opening starts, in seconds from the pack appearing.
-function PullMotion.phases(cards: { any }): any
-	local wait = 0
-	for _, card in cards do
-		wait = math.max(wait, PullMotion.buildTime(card))
-	end
+-- Every opening takes the same time.
+function PullMotion.phases(): any
 	local rip = PullMotion.ARRIVE_TIME
 	local slide = rip + PullMotion.RIP_TIME
 	local spread = slide + PullMotion.SLIDE_TIME
 	local build = spread + PullMotion.SPREAD_TIME
-	local flip = build + wait
+	local flip = build + PullMotion.SHAKE_TIME
 	return { rip = rip, slide = slide, spread = spread, build = build, flip = flip, rest = flip + PullMotion.TURN_TIME }
 end
 

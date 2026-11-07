@@ -377,7 +377,7 @@ function PullStage.play(frame: Frame, pack: string, cards: { any }, callbacks: a
 		cards = PullMotion.fanOrder(cards),
 		best = best,
 		light = LIGHTS[CardLook.look(best.tier, best.variant)],
-		times = PullMotion.phases(cards),
+		times = PullMotion.phases(),
 		callbacks = callbacks,
 		random = Random.new(),
 		elapsed = 0,
