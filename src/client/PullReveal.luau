@@ -212,7 +212,7 @@ local function cardSlot(parent: Frame, pack: string, card: any, width: number, x
 		state = "building"
 		task.spawn(function()
 			local random = Random.new()
-			local build = PullMotion.buildTime(card)
+			local build = PullMotion.SHAKE_TIME
 			local started = os.clock()
 			while holder.Parent and os.clock() - started < build do
 				local strength = SHAKE * unit * (os.clock() - started) / build
