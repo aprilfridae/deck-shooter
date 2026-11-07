@@ -6,11 +6,13 @@ local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local Workspace = game:GetService("Workspace")
 
+local Packs = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Packs"))
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local GunSounds = require(Guns:WaitForChild("GunSounds"))
 local MenuState = require(Guns:WaitForChild("MenuState"))
 local Palette = require(Guns:WaitForChild("Palette"))
 local Zones = require(Guns:WaitForChild("Zones"))
+local CardData = require(script.Parent.CardData)
 local CardInspect = require(script.Parent.CardInspect)
 local IncomeLine = require(script.Parent.IncomeLine)
 local MenuCamera = require(script.Parent.MenuCamera)
@@ -21,6 +23,7 @@ local PacksPanel = require(script.Parent.PacksPanel)
 local PlayerClick = require(script.Parent.PlayerClick)
 local PlayPanel = require(script.Parent.PlayPanel)
 local ProfilePanel = require(script.Parent.ProfilePanel)
+local PullReveal = require(script.Parent.PullReveal)
 local SettingsPanel = require(script.Parent.SettingsPanel)
 local SoundGroups = require(script.Parent.SoundGroups)
 
@@ -202,9 +205,24 @@ RunService.RenderStepped:Connect(function()
 	else
 		SettingsPanel.stop()
 		CardInspect.close()
+		PullReveal.close()
 		openPage = nil
 		panel:close()
 		paint()
+	end
+end)
+
+CardData.packEvent:Connect(function(event: any)
+	if event.kind == "OpenedAll" then
+		PullReveal.summary(event.result)
+	elseif event.kind == "Opened" and not event.auto then
+		PullReveal.pack(event.pack, event.cards)
+	elseif event.kind == "Opened" then
+		for _, card in event.cards do
+			if Packs.isRare(card) then
+				PullReveal.rare(event.pack, card)
+			end
+		end
 	end
 end)
 

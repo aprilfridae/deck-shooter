@@ -53,6 +53,7 @@ local listed = {
 	rebirth_spec = true,
 	packtext_spec = true,
 	packart_spec = true,
+	pullmotion_spec = true,
 }
 
 require("./tier_spec")
@@ -66,6 +67,7 @@ require("./packs_spec")
 require("./rebirth_spec")
 require("./packtext_spec")
 require("./packart_spec")
+require("./pullmotion_spec")
 require("./inventory_spec")
 require("./variant_spec")
 require("./deck_spec")

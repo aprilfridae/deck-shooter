@@ -28,10 +28,10 @@ local FOIL_STRENGTH = 0.55
 local FOIL_BLUE = Color3.fromRGB(10, 34, 245)
 
 local LOOKS = {
-	Field = { ink = Palette.Bone, stripes = Palette.Bone, shine = 0.28 },
-	BlackSite = { ink = Palette.DeepNavy, stripes = Palette.HazardRed, shine = 0.7 },
-	Prototype = { ink = Palette.DeepNavy, stripes = Palette.DeepNavy, shine = 0.5 },
-	ZeroDay = { ink = Palette.Bone, stripes = Palette.DataCyan, shine = 0.6 },
+	Field = { back = Palette.DeepNavy, art = Palette.Bone, ink = Palette.Bone, shine = 0.28 },
+	BlackSite = { back = Palette.Bone, art = Palette.HazardRed, ink = Palette.DeepNavy, shine = 0.7 },
+	Prototype = { back = Palette.SignalAcid, art = Palette.DeepNavy, ink = Palette.DeepNavy, shine = 0.5 },
+	ZeroDay = { back = Palette.ZeroDayBack, art = Palette.DataCyan, ink = Palette.Bone, shine = 0.6 },
 }
 
 export type Options = {
@@ -44,6 +44,11 @@ local PackFace = {
 	WIDTH = WIDTH,
 	HEIGHT = HEIGHT,
 }
+
+-- The pack's colours, for what's drawn to match it.
+function PackFace.look(pack: string): any
+	return LOOKS[pack]
+end
 
 -- A red line round the wrapper that swells and fades.
 local function pulsingEdge(body: GuiObject, unit: number): (number) -> ()
@@ -73,7 +78,7 @@ function PackFace.new(parent: Instance, options: Options): GuiObject
 	art.Image = PackArt.image(options.pack) or ""
 	art.Parent = root
 
-	local stripes = CardEffects.stripes(root, unit, look.stripes, STRIPE_AREA)
+	local stripes = CardEffects.stripes(root, unit, look.art, STRIPE_AREA)
 	local name = TypeLabel.new(root, {
 		style = "LabelBold",
 		size = NAME_SIZE * unit,
