@@ -53,7 +53,38 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 
 ## Where we are now
 
-All the work above is merged to `main`. Nothing is half built.
+Everything above is merged to `main` except the soldier swap, which is half done (below).
+
+**In progress: the soldier swap (2026-11-07).** Start here. River asked to replace their old body and arms with the new soldier.
+
+- **State:** `feature/soldier-first-person` holds the first-person work and is not merged. `main` has the pack opening rework, the third-person gun poses and the soldier docs. Nothing from the soldier swap has been checked in Play.
+- **Next steps, in order:**
+  1. River stops Play and plays with Rojo connected to this branch. They check that hands sit on all six guns, that elbows and forearms don't cross the screen in reloads, and that the taller view doesn't clip low ceilings or doorways. Fix what they find.
+  2. Out of Play, set `StarterPlayer.StarterCharacter`'s Humanoid `HipHeight` to about 2.3 in Studio. The soldier's root is 3.315 above its feet and the Humanoid still has 2, so the feet probably sink about 0.3.
+  3. River publishes the place (File > Publish to Roblox). **The soldier exists only as unsaved changes in River's open Studio.** The group place is still version 52, without it, so a build made now has no soldier. If Studio closes unsaved, redo the import below.
+  4. Merge the branch through a pull request, then build from the published place. `tools/download-place.py` takes a version number. Find the newest version and check `StarterCharacter` has the `SoldierRig` attribute before releasing.
+  5. Once River is happy, ask whether to delete `GunModels.Arms` and `ServerStorage.StarterCharacterOld`, the backups.
+- **In Studio, unsaved:** `StarterCharacter` is the soldier: `SoldierRig` attribute, the old HRP (PivotOffset reset), Humanoid and Animate, 15 invisible parts named after the R15 parts, 15 Motor6Ds built from `BodyPoses/Empty.luau`'s `rig` (Root C0 raised by rootDrop 2.009), and SoldierBody's 65 meshes welded on, eye Neon, the rest SmoothPlastic. `GunModels` gained `SoldierArms` (84 anchored meshes at their rest root-space positions), `PistolMagStandIn` and `ShellStandIn`.
+- **Importing again:** the source files are in River's `Downloads`: `soldier_manifest.json`, `ShellStandIn.fbx`, `PistolMagStandIn.fbx`. SoldierBody and SoldierArms are group assets; their ids are above under the player body. FBX meshes arrive baked turned 180 degrees about Y and raised 5.009, so the rest position is `(-x, y - 5.009, -z)` with `CFrame.Angles(0, math.pi, 0)`. SoldierBody's plain hands exported at the origin and were moved onto the wrists by hand.
+- **How first person works:** `SoldierPose.luau` lines the soldier's hand up with the old clips' palm using the knuckles (the hands are the same size), copies each finger bone's direction, and bends the arm to reach. Guns without a clip (B33, SMG, Longscope, Shotgun) use `SoldierPose.palm` from their grips and the M57's idle fingers. Shoulders sit at `SHOULDERS` in camera space and slide forward if a hand is out of reach, so that's the tuning point if the arms look wrong. The soldier's meshes still get the cyan glow Highlight, as the old arms did.
+- **Not done on purpose:** first-person clips were not rebuilt from the new poses. `charactermodelandposes.blend` in `Downloads` has `FP_*` poses for the pistol only and no finger bones, and the `SplitDeck_Poses_<Gun>.blend` files `tools/export_body_poses.py` needs have never turned up. Its embedded `posekit_*.py` scripts are the pose generator, should someone want the rest. Gun size in first person stays as it was, since the clips were posed for it, so the Blender scale (4.2) is third person only.
+- **Unused:** `ShellStandIn`. The shotgun reload shows no shell and `HeldGuns.luau` doesn't read the poses' `shell`.
+- **Camera:** `BODY_CAMERA` is (0, 0.94, -0.5), the eye bar's height. The manifest's `firstPersonCameraFromHead` was not used, because it lands on top of the head rather than the eye bar (centre at root space 0.934, -0.991). The camera is 0.5 forward rather than 0.99 to stay out of walls.
+
+**This session's other work:**
+- The pack opening was reworked and River said it looks great: nav fades out and back, the 3D pack tears down its side, three cards flip in 3D, and a burst in the pack's colours scales with rarity (`PullStage.luau`, `PullMotion.luau`, `PullParticles.luau`, `PullFx.luau`). Tear and flip sounds don't exist yet; River's `E:\sound effects for game\` has none.
+- Third-person gun poses came from the other agent's `feature/gun-stances`, merged as PR 39 from `feature/gun-stances-merge`. That agent's GitHub account keeps getting banned, which hides its pull requests: `gh pr create` then says one already exists. Push the same commits under a new branch name and open the pull request from there.
+- Release `build-2026-11-07-0232` was a mistake and its notes say so. `build-2026-11-07-0233` is the latest good one: packs and gun pose code, no soldier.
+
+**Practical notes:**
+- The working copy is `H:\SplitDeck`. `H:\rblxgame` is retired, though shells may start there, so `cd` first.
+- `lune run tests/run.luau` is at 546 passing on the branch. A new `*_spec.luau` goes in the `listed` table (`name_spec = true,`) and gets a `require` line in `tests/run.luau`. Specs for modules using `CFrame` load them through `@lune/luau` with Lune's roblox types; see `tests/soldierpose_spec.luau`. Compiling doesn't catch undefined globals, so check requires by hand.
+- Rojo crashes on some branch switches and can't connect during Play: stop Play, Connect, then Play. A running server misses new mappings, so put new files in folders already mapped.
+- River does all Play testing. Don't start Play from tools, don't edit scripts through Studio MCP, and don't touch `Marathon guns V3.blend`. Studio's Edit data model is unavailable during Play, but Server and Client can still be read.
+- Use `set -e` in release scripts. A failed pull request step once carried on and published the wrong release.
+- Use `--repo aprilfridae/deck-shooter` with `gh`. Blender is `H:/blener/blender.exe`. Open downloaded blends with `--disable-autoexec`.
+
+**Smaller loose ends from packs:** a full pile lets auto roll skip the wait on other rarities; a receipt during a rejoin may wait for the next join; the receipt is recorded before the payout; Auto Open runs behind the title screen; a reveal can land in the test room; the group check after leaving; `OPEN ALL` isn't blocked until the policy check; and the auto loop has no pcall.
 
 **Confirmed in Play by River (2026-11-05):** the Outpost floor, textures and lamp shadows, the title screen (no stray menu copy, visualizer, parallax, music levels, PLAY `>`), the selection sound on click, and the jump sounds. All work.
 
