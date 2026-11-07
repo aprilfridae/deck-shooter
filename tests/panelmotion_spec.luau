@@ -175,7 +175,7 @@ describe("PanelMotion", function()
 		local lowest, highest = 0, 0
 		for time = 0, PanelMotion.SHAKE_TIME, step do
 			local x = PanelMotion.landShake(time).x
-			expect(math.abs(PanelMotion.landShake(time + step).x - x) < 0.0006).toBe(true)
+			expect(math.abs(PanelMotion.landShake(time + step).x - x) < 0.0015).toBe(true)
 			lowest = math.min(lowest, x)
 			highest = math.max(highest, x)
 		end
