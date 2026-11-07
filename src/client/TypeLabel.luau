@@ -16,6 +16,7 @@ export type Options = {
 	tracking: number,
 	color: Color3,
 	right: boolean?,
+	shadow: boolean?, -- false for dark text on a light page
 	position: UDim2,
 }
 
@@ -41,6 +42,7 @@ function TypeLabel.new(parent: GuiObject, options: Options): any
 	self.tracking = options.tracking
 	self.color = options.color
 	self.right = options.right
+	self.shadow = options.shadow ~= false
 	self.text = ""
 	self.textWidth = 0
 	self.pieces = {}
@@ -82,6 +84,7 @@ function TypeLabel:set(text: string)
 			image.Size = UDim2.fromOffset(glyph.rectW, glyph.rectH)
 			image.Visible = true
 		end
+		pair.shadow.Visible = self.shadow
 		pair.glyph.Position = UDim2.fromOffset(x, y)
 		pair.shadow.Position = UDim2.fromOffset(x + shadowX, y + shadowY)
 	end

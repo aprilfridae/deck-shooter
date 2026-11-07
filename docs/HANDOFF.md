@@ -65,4 +65,6 @@ All the work above is merged to `main`. Nothing is half built.
 - A lag issue was noticed earlier and never diagnosed.
 - The console shows `CardCoreRemotes.Snapshot` events with no listener. The likely cause is that the first snapshot fires before `Outpost.client.luau` connects its listener. Not verified.
 
-**Next up:** the 1v1 map, then the Outpost's Market (needs pack rolling), the Loadout button and the Credits HUD. Outpost ambient sounds wait on River's rain, sea and hum loops. Phase 4 Matches is parked until gameplay looks, sounds and feels good. River decides what's next.
+- Outpost UI stage 1: the nav, the sliding panel and Settings (`docs/specs/outpost-ui.md`). River still has to check it in Play.
+
+**Next up:** stages 2 to 4 of the Outpost UI, the 1v1 map, then the Outpost's Market (needs pack rolling), the Loadout button and the Credits HUD. Outpost ambient sounds wait on River's rain, sea and hum loops. Phase 4 Matches is parked until gameplay looks, sounds and feels good. River decides what's next.

@@ -1,6 +1,6 @@
 # Outpost UI
 
-**Status:** planned, not built. River approved the layout and mockups on 2026-11-06.
+**Status:** stage 1 is built: the nav, the panel and Settings. Play, Loadout and Profile are placeholders. Not yet checked in Play. Layout and mockups approved by River on 2026-11-06.
 
 **Values will live in:** the constants at the top of each panel's script, and `src/shared/CardCore/Settings.luau` for setting ranges. Colours come from `src/shared/Guns/Palette.luau`.
 
