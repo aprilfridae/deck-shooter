@@ -105,6 +105,10 @@ The SMG and Shotgun are playable. The machine pistol, revolver and auto-pistol a
 | Revolver | `gun-revolver-1` and up | 400ms | `reload-revolver`, 2.2s |
 | Auto-pistol | `gun-autopistol-1` and up | 109ms | `reload-autopistol`, 1.5s |
 
+## Packs
+
+The packs menu and pull reveal have no sounds of their own yet: rolling, the wrapper tearing, the cards shaking, the cards turning over and a Zero-Day pull.
+
 ## Later, with matches
 
 Round start, countdown, round win and loss, tower capture and match end. See `docs/specs/matches.md`.

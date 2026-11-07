@@ -3,6 +3,7 @@ local Cards = require("./Cards")
 local Config = require("./Config")
 local Deck = require("./Deck")
 local Inventory = require("./Inventory")
+local Packs = require("./Packs")
 local Settings = require("./Settings")
 local Tier = require("./Tier")
 local Variant = require("./Variant")
@@ -22,10 +23,14 @@ export type SaveData = {
 	rifle: string,
 	settings: Settings.Settings,
 	commentsOff: boolean,
+	packs: { [string]: number },
+	rebirths: number,
+	openAllCredits: number, -- Open All purchases waiting for a pile
+	receipts: { string },
 }
 
 local SaveData = {
-	CURRENT_VERSION = 3,
+	CURRENT_VERSION = 4,
 }
 
 function SaveData.new(): SaveData
@@ -41,7 +46,14 @@ function SaveData.new(): SaveData
 		rifle = Config.DefaultRifle,
 		settings = Settings.new(),
 		commentsOff = false,
+		packs = {},
+		rebirths = 0,
+		openAllCredits = 0,
+		receipts = {},
 	}
+	for _, pack in Packs.ids do
+		data.packs[pack] = 0
+	end
 	for _, cardId in Config.StarterDeck do
 		Inventory.add(data, cardId, "Field", "Base", 1)
 		table.insert(data.deck, { cardId = cardId, tier = "Field" })
@@ -68,6 +80,33 @@ local function cleanStacks(raw: any): { [string]: number }
 		end
 	end
 	return stacks
+end
+
+local function cleanPacks(data: SaveData, raw: any)
+	if type(raw) ~= "table" then
+		return
+	end
+	for _, pack in Packs.ids do
+		if isCount(raw[pack], Config.MaxStackCount) then
+			data.packs[pack] = raw[pack]
+		end
+	end
+end
+
+local function cleanReceipts(raw: any): { string }
+	local receipts = {}
+	if type(raw) ~= "table" then
+		return receipts
+	end
+	for _, receipt in raw do
+		if type(receipt) == "string" then
+			table.insert(receipts, receipt)
+		end
+	end
+	while #receipts > Config.ReceiptMemory do
+		table.remove(receipts, 1)
+	end
+	return receipts
 end
 
 local function bestOwnedTier(data: SaveData, cardId: string): string?
@@ -160,6 +199,14 @@ function SaveData.load(raw: any): (SaveData?, string?)
 	end
 	data.settings = Settings.clean(raw.settings)
 	data.commentsOff = raw.commentsOff == true
+	cleanPacks(data, raw.packs)
+	if isCount(raw.rebirths, Config.MaxStackCount) then
+		data.rebirths = raw.rebirths
+	end
+	if isCount(raw.openAllCredits, Config.MaxStackCount) then
+		data.openAllCredits = raw.openAllCredits
+	end
+	data.receipts = cleanReceipts(raw.receipts)
 	data.deck = cleanDeck(data, raw.deck)
 	return data, nil
 end

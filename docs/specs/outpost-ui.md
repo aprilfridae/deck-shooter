@@ -40,6 +40,10 @@ Sizes use the title screen's **unit**: the screen's width, or 16/9 of its height
 
 `PLAY` in full size, then the launch queues from `matches.md`: Elimination 1V1, 2V2 and 3V3, and Tower 5V5. Each says `SOON` and does nothing until matches exist. Under the mouse a row opens downward smoothly, pushing the rows below it, and two lines of small `Label` text saying how the queue plays decode in from left to right at 20 fps, with a front of random characters ahead of the settled text. Its tick grows to run alongside them. Only one row is open at a time, and its text clears as soon as the mouse leaves.
 
+### Packs
+
+Rolling, opening, rebirths and the odds. `specs/packs.md` has the page and how it works. The Market stall's prompt opens it too. The top left corner shows Credits and income whenever the menu is up.
+
 ### Loadout
 
 - `LOAD OUT`, with the player's real Deck Power Rating in the navy block beside the card slots.
@@ -108,7 +112,7 @@ Pure rules go in shared modules with Lune tests: setting ranges and repair, key 
 ## Not in this spec
 
 - Working queues, which need `matches.md` built.
-- Fusion, the Market and a Credits HUD.
+- Fusion and the player market.
 - A tool for reading reports.
 - Touch and controller support.
 - Viewing players who aren't in the server.

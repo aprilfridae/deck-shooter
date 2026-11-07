@@ -10,7 +10,9 @@ local Fusion = require(CardCore.Fusion)
 local Income = require(CardCore.Income)
 local Requests = require(CardCore.Requests)
 local Settings = require(CardCore.Settings)
+local PackServer = require(script.Parent.PackServer)
 local PlayerCards = require(script.Parent.PlayerCards)
+local Purchases = require(script.Parent.Purchases)
 local ProfileComments = require(script.Parent.ProfileComments)
 
 local MAX_REQUESTS_PER_SECOND = 5
@@ -162,6 +164,8 @@ Players.PlayerRemoving:Connect(function(player)
 	requestWindows[player] = nil
 end)
 
+PackServer.start(remote, rng)
+Purchases.start(remote, rng)
 PlayerCards.start()
 
 task.spawn(function()

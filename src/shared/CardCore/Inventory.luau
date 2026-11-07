@@ -1,4 +1,6 @@
 -- Card stacks in save data, keyed "cardId:tier:variant".
+local Config = require("./Config")
+
 local Inventory = {}
 
 function Inventory.key(cardId: string, tier: string, variant: string): string
@@ -26,7 +28,8 @@ end
 
 function Inventory.add(data: any, cardId: string, tier: string, variant: string, n: number)
 	local key = Inventory.key(cardId, tier, variant)
-	data.stacks[key] = (data.stacks[key] or 0) + n
+	-- A save with a stack past the limit counts as corrupt, so a stack stops there.
+	data.stacks[key] = math.min((data.stacks[key] or 0) + n, Config.MaxStackCount)
 end
 
 function Inventory.remove(data: any, cardId: string, tier: string, variant: string, n: number): boolean
