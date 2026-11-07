@@ -1,6 +1,6 @@
 # Outpost UI
 
-**Status:** all four stages are built. Stages 2 to 4 are not yet checked in Play. Layout and mockups approved by River on 2026-11-06.
+**Status:** all four stages are built, and River approved them in Play on 2026-11-06. Comments haven't been tested with two players or on a live server. Layout and mockups approved by River on 2026-11-06.
 
 **Values will live in:** the constants at the top of each panel's script, and `src/shared/CardCore/Settings.luau` for setting ranges. Colours come from `src/shared/Guns/Palette.luau`.
 
