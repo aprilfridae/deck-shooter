@@ -7,7 +7,7 @@ local Workspace = game:GetService("Workspace")
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local Palette = require(Guns:WaitForChild("Palette"))
 local PanelMotion = require(Guns:WaitForChild("Hud"):WaitForChild("PanelMotion"))
-local PanelSmear = require(script.Parent.PanelSmear)
+local PanelGlow = require(script.Parent.PanelGlow)
 
 local PANEL_WIDTH = 0.5 -- share of the screen
 local BLEED = 0.05 -- extra sheet off the right edge, so swinging past its mark shows no gap
@@ -58,7 +58,7 @@ function MenuPanel.new(parent: Instance): any
 		table.insert(self.copies, sheet(self.clip))
 	end
 
-	self.smear = PanelSmear.new(self.clip)
+	self.glow = PanelGlow.new(self.clip)
 
 	self.frame = sheet(self.clip)
 	self.frame.Active = true -- clicks on the sheet stop here
@@ -101,13 +101,13 @@ function MenuPanel:step(dt: number)
 		self.travel = share - self.share
 		self.share = share
 		place(self.frame, share)
-		self.smear:show(1 - PANEL_WIDTH * share, self.travel)
+		self.glow:show(1 - PANEL_WIDTH * share, self.travel)
 	end
 	-- The last frame is held too, so its copies get their moment.
 	local held = self.elapsed >= PanelMotion.DURATION + 1 / PanelMotion.FPS
 	if held and self.travel ~= 0 then
 		self:showCopies(share, share)
-		self.smear:hide()
+		self.glow:hide()
 		self.travel = 0
 	end
 	-- A closing sheet lands hard, so it runs on a little longer to shake the view.

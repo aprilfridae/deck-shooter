@@ -40,8 +40,9 @@ RunService:BindToRenderStep("OutpostMenuCameraRestore", Enum.RenderPriority.Firs
 	end
 end)
 
--- Runs just after the panel steps, so the two land on every frame together.
-RunService:BindToRenderStep("OutpostMenuCamera", Enum.RenderPriority.Camera.Value + 1, function()
+-- Runs after the panel steps, so the two land on every frame together, and after the guns' recoil,
+-- so nothing else writes to the camera once it's sheared.
+RunService:BindToRenderStep("OutpostMenuCamera", Enum.RenderPriority.Camera.Value + 2, function()
 	local amount = if panel then panel.share else 0
 	local travel = if panel then panel.travel else 0
 	local shake = if panel then panel.shake else { x = 0, y = 0, lean = 0 }

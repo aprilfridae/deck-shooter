@@ -75,29 +75,6 @@ describe("PanelMotion", function()
 		expect(PanelMotion.glow(5)).toBe(1)
 	end)
 
-	it("leaves no smear when the panel stayed put", function()
-		expect(#PanelMotion.smear(0, math.random)).toBe(0)
-	end)
-
-	it("keeps every smear row on the screen", function()
-		for _ = 1, 50 do
-			for _, row in PanelMotion.smear(0.27, math.random) do
-				expect(row.top >= 0 and row.top + row.height <= 1).toBe(true)
-				expect(row.length > 0 and row.length <= 1).toBe(true)
-			end
-		end
-	end)
-
-	it("smears further the faster the panel moves", function()
-		local function middle()
-			return 0.5
-		end
-		local slow = PanelMotion.smear(0.05, middle)
-		local fast = PanelMotion.smear(-0.2, middle)
-		expect(#fast > 0).toBe(true)
-		expect(fast[1].length > slow[1].length).toBe(true)
-	end)
-
 	it("shakes hardest on landing, then fades to nothing", function()
 		local first = PanelMotion.landShake(0)
 		local second = PanelMotion.landShake(1 / PanelMotion.FPS)
