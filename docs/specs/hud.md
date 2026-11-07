@@ -64,7 +64,7 @@ Each ability row is 220 wide, starting 34 from the left, with tracking 2 through
 
 - The key (3, 4 or 5) in `LabelBold` 12, in Bone.
 - The card name, 18 from the row's left edge, in `Label` 12.
-- The tier on the right edge in `Label` 10, in its tier colour: Field Green, Data Cyan or Signal Acid.
+- The tier on the right edge in `Label` 10, in Bone.
 - 5 below the baseline, a cooldown bar of 10 segments, 2 tall and 2 apart. Filled segments are Bone, empty ones Deep Navy.
 - An empty slot shows nothing.
 

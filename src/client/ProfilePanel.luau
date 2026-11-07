@@ -73,7 +73,7 @@ local function cardGrid(page: Frame, profile: any)
 		for row, entry in card.tiers do
 			local top = GRID_TOP + (row - 1) * (CELL_HEIGHT + GRID_GAP)
 			local owned = entry.count > 0
-			local cell = PanelKit.block(page, x, top, width, CELL_HEIGHT, Palette.Tiers[entry.tier])
+			local cell = PanelKit.block(page, x, top, width, CELL_HEIGHT, Palette.Bone)
 			cell.BackgroundTransparency = if owned then 0 else 1
 			local stroke = Instance.new("UIStroke")
 			stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border

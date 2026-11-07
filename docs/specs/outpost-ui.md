@@ -15,7 +15,7 @@ Taken from River's poster references.
 - One huge word or number leads each panel, with small labels around it.
 - Thin rules and strict columns, with small blocks of data in the corners.
 - One loud block per panel. Barcodes, tick marks and simple circles and squares are the decoration.
-- **Colour:** Bone is the paper, Deep Navy is the ink, and a solid Deep Navy block is the loud element. Signal Acid and Data Cyan are kept off the menus and HUD; Signal Acid is reserved for later. Tier colours appear only on cards. Hazard Red stays for threats and purchases.
+- **Colour:** Bone is the paper, Deep Navy is the ink, and a solid Deep Navy block is the loud element. Signal Acid and Data Cyan are kept off the menus and HUD; Signal Acid is reserved for later. Cards are blank for now, with no tier colours, until River's custom card art is made. Hazard Red stays for threats and purchases.
 - **Truth:** every number on a panel is real, or the panel leaves it out. No made-up serials or stats, as on the title screen.
 - **Motion:** panels move at 30 frames a second over 0.5s and feel heavy. Opening, a panel swings a little past its mark and settles. Closing, it pulls back a touch and then drops away. Roblox UI has no blur, so each frame leaves fading copies of the panel between it and the last frame, like the smear on the guns. The copies are gone once the panel stops.
 
@@ -43,14 +43,14 @@ Sizes use the title screen's **unit**: the screen's width, or 16/9 of its height
 ### Loadout
 
 - `LOAD OUT`, with the player's real Deck Power Rating in the navy block beside the card slots.
-- Three card slots shaped like playing cards, each with its number, name and tier colour. Clicking a slot lists the owned cards and tiers. Choosing one calls the existing `SetDeck`. A deck can't hold the same card twice, so cards already in the deck are greyed out.
+- Three card slots shaped like playing cards, each with its number, name and tier. Clicking a slot lists the owned cards and tiers. Choosing one calls the existing `SetDeck`. A deck can't hold the same card twice, so cards already in the deck are greyed out.
 - Class sits below the slots, with the guns it gives, and a rifle choice shows if the class has more than one. Changing them sends the same loadout message as the B and N test keys, and follows the same rule for when the change applies.
 - A deck change reaches abilities on the next respawn, as `cards.md` says, so the panel shows `NEXT RESPAWN` after a change until then.
 
 ### Profile
 
 - Roblox headshot, name, Credits and DPR, then two tabs: `CARD INDEX` and `COMMENTS`.
-- **Card index:** a grid of playing card shapes, one for every card at every tier, 4 cards by 3 tiers for now. Owned ones show their copy count and tier colour, and the rest are ghosted. A large `04/12` shows how many are owned.
+- **Card index:** a grid of playing card shapes, one for every card at every tier, 4 cards by 3 tiers for now. Owned ones show their copy count in full ink, and the rest are ghosted. A large `04/12` shows how many are owned.
 - **Other players:** left clicking a player in the Outpost, the player included, opens this page for them, within 40 studs. The click uses the cursor, or the screen's centre if the mouse is locked. Fusion and any other editing stay out of Profile.
 - The server sends another player's public data on request, through a new `GetProfile` function. Only players in the same server can be viewed.
 

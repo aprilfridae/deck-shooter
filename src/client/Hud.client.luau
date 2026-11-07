@@ -199,7 +199,6 @@ local function showRow(index: number, now: number)
 	row.name:set(card.name)
 	local tier = player:GetAttribute(`Ability{index}Tier`)
 	row.tier:set(tostring(tier))
-	row.tier:setColor(Palette.Tiers[tier] or BONE)
 	local left = player:GetAttribute(`Ability{index}ReadyAt`) - now
 	local filled = HudText.filled(left, player:GetAttribute(`Ability{index}Cooldown`), #row.segments)
 	for i, segment in row.segments do
