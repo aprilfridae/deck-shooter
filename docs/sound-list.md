@@ -29,7 +29,7 @@ What the game already plays and what it still needs. Checked against the code on
 | Footsteps | `step-1` to `10` | Every 9 studs while walking or sprinting |
 | Jumps | `jump-1` to `14` | A jump with Space (walking off an edge plays nothing). Each take opens with 0.1s of silence, which the game skips. |
 | Menu music | `menu-music-v2.mp3` | Loops from joining. Quieter and thinner after PLAY. |
-| Menu selection | `menu-select` | Clicking PLAY, and clicks in the Outpost menu. Hovering a nav row plays it quieter and higher. |
+| Menu selection | `menu-select` | Clicking PLAY, clicks in the Outpost menu, and with each pack's opening sound. Hovering a nav row plays it quieter and higher. |
 | Landings | `move-land-soft`, `move-land-hard` | Landing after at least 0.15s in the air. Hard if the fall reached 60 studs per second (a fast fall or long drop), else soft. |
 | Slide start | `move-slide-start` | Every slide as it begins, including one started by landing |
 | Pack open | `pack-open-common`, `-rarer`, `-rarest` | Once as a pack spins in, in the Menu volume group. Common for Field, rarer for Redline and Prototype, rarest for Zero-Day. |

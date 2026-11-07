@@ -75,6 +75,12 @@ for pack, soundId in GunSounds.packOpens do
 	openSound.Parent = SoundService
 	openSounds[pack] = openSound
 end
+-- The opening sounds have no click of their own, so the menu's select plays with them.
+local selectSound = Instance.new("Sound")
+selectSound.Name = "PackSelect"
+selectSound.SoundId = GunSounds.menuSelect
+selectSound.SoundGroup = SoundGroups.menu
+selectSound.Parent = SoundService
 
 local queue: { { run: (Frame, () -> (), boolean) -> (), auto: boolean } } = {}
 local stage: Frame? = nil
@@ -260,6 +266,7 @@ function PullReveal.pack(pack: string, cards: { any })
 				return
 			end
 			openSounds[pack]:Play()
+			selectSound:Play()
 			PullStage.play(frame, pack, cards, {
 				inspect = inspect,
 				rested = function(line: number)
