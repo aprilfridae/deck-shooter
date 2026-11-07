@@ -118,6 +118,11 @@ function MoveState.fallVelocity(state: State, velocityY: number, dt: number): nu
 	return math.max(velocityY - MoveConfig.FastFallAcceleration * dt, -MoveConfig.FastFallMaxSpeed)
 end
 
+-- A landing is hard after a fast fall or a long drop, and soft after an ordinary jump.
+function MoveState.hardLanding(fallSpeed: number): boolean
+	return fallSpeed >= MoveConfig.HardLandSpeed
+end
+
 -- Adds the ground just covered and says whether a footstep lands.
 function MoveState.stepTravel(travel: number, distance: number, mode: Mode): (number, boolean)
 	if mode ~= "Walk" and mode ~= "Sprint" then
