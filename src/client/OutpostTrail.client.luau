@@ -10,11 +10,13 @@ local Palette = require(Guns:WaitForChild("Palette"))
 local Zones = require(Guns:WaitForChild("Zones"))
 
 local BODY_GROUP = "BodyMesh" -- from CharacterBody.server.luau; it never touches the world
-local COPIES = 6
-local STAMP_EVERY = 0.08 -- seconds
-local LIFETIME = 0.5 -- seconds
-local MIN_MOVE = 1 -- studs a player must move for a new copy
-local START_FADE = 0.55 -- how see-through a copy is when it's left
+local COPIES = 24 -- for your own body
+local OTHERS_SHARE = 0.5 -- other players get this share of the copies, twice as far apart in time
+local STAMP_EVERY = 0.025 -- seconds
+local LIFETIME = 0.6 -- seconds
+local FADE_EVERY = 1 / 30 -- seconds
+local MIN_MOVE = 0.35 -- studs a player must move for a new copy
+local START_FADE = 0.78 -- how see-through a copy is when it's left, kept high as they stack up
 local RANGE = 90 -- studs from the camera; players further off leave no trail
 local SETTLE = 0.5 -- seconds; the rest of the body is still arriving
 local APPEARANCE_WAIT = 5 -- seconds
@@ -50,7 +52,10 @@ type Trail = {
 	root: BasePart,
 	sources: { BasePart },
 	copies: { Copy },
+	size: number,
+	gap: number, -- seconds between copies
 	nextCopy: number,
+	nextStamp: number,
 	stampedAt: Vector3?,
 }
 
@@ -142,18 +147,22 @@ local function onCharacter(player: Player, character: Model)
 	local folder = Instance.new("Folder")
 	folder.Name = `OutpostTrail_{player.UserId}`
 	folder.Parent = Workspace.CurrentCamera
+	local mine = player == Players.LocalPlayer
 	local trail: Trail = {
 		player = player,
 		folder = folder,
 		root = root,
 		sources = sources,
 		copies = {},
+		size = if mine then COPIES else math.ceil(COPIES * OTHERS_SHARE),
+		gap = if mine then STAMP_EVERY else STAMP_EVERY / OTHERS_SHARE,
 		nextCopy = 1,
+		nextStamp = 0,
 		stampedAt = nil,
 	}
 	trails[player] = trail
 	-- One at a time, so a player joining doesn't stall the frame.
-	for _ = 1, COPIES do
+	for _ = 1, trail.size do
 		if player.Character ~= character or trails[player] ~= trail then
 			return
 		end
@@ -174,12 +183,22 @@ local function watch(player: Player)
 	end
 end
 
+local function dressAge(copy: Copy, age: number)
+	local transparency = START_FADE + (1 - START_FADE) * age
+	local color = Palette.SignalAcid:Lerp(Palette.DataCyan, age)
+	for _, part in copy.shown do
+		part.Transparency = transparency
+		part.Color = color
+	end
+end
+
 local function stamp(trail: Trail, now: number)
 	local copy = trail.copies[trail.nextCopy]
 	if not copy then
 		return
 	end
-	trail.nextCopy = trail.nextCopy % COPIES + 1
+	trail.nextCopy = trail.nextCopy % trail.size + 1
+	trail.nextStamp = now + trail.gap
 	copy.bornAt = now
 	for index, part in copy.parts do
 		local source = trail.sources[index]
@@ -187,6 +206,7 @@ local function stamp(trail: Trail, now: number)
 			part.CFrame = source.CFrame
 		end
 	end
+	dressAge(copy, 0)
 	copy.model.Parent = trail.folder
 	trail.stampedAt = trail.root.Position
 end
@@ -197,12 +217,7 @@ local function fade(copy: Copy, now: number)
 		copy.model.Parent = nil
 		return
 	end
-	local transparency = START_FADE + (1 - START_FADE) * age
-	local color = Palette.SignalAcid:Lerp(Palette.DataCyan, age)
-	for _, part in copy.shown do
-		part.Transparency = transparency
-		part.Color = color
-	end
+	dressAge(copy, age)
 end
 
 for _, player in Players:GetPlayers() do
@@ -211,24 +226,26 @@ end
 Players.PlayerAdded:Connect(watch)
 Players.PlayerRemoving:Connect(stop)
 
-local nextStamp = 0
+local nextFade = 0
 RunService.RenderStepped:Connect(function()
 	local now = os.clock()
-	local stamping = now >= nextStamp
-	if stamping then
-		nextStamp = now + STAMP_EVERY
+	local fading = now >= nextFade
+	if fading then
+		nextFade = now + FADE_EVERY
 	end
 	local eye = Workspace.CurrentCamera.CFrame.Position
 	for player, trail in trails do
-		if stamping and Zones.of(player) == Zones.Outpost and (trail.root.Position - eye).Magnitude <= RANGE then
+		if now >= trail.nextStamp and Zones.of(player) == Zones.Outpost and (trail.root.Position - eye).Magnitude <= RANGE then
 			local last = trail.stampedAt
 			if not last or (trail.root.Position - last).Magnitude >= MIN_MOVE then
 				stamp(trail, now)
 			end
 		end
-		for _, copy in trail.copies do
-			if copy.model.Parent then
-				fade(copy, now)
+		if fading then
+			for _, copy in trail.copies do
+				if copy.model.Parent then
+					fade(copy, now)
+				end
 			end
 		end
 	end
