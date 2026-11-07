@@ -1,5 +1,7 @@
 -- Draws every body in stop-motion. Whatever the Animator plays is sampled once per held frame,
 -- then the crouch, slide, landing and run lean go on top, as on the first-person arms.
+-- A soldier body (the character has the SoldierRig attribute) shows the gun poses from the pose files
+-- instead: GunStance picks one per held frame from what every client can see, and HeldGuns puts the gun in its hand.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -7,10 +9,35 @@ local RunService = game:GetService("RunService")
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local ArmPose = require(Guns:WaitForChild("ArmPose"))
 local Zones = require(Guns:WaitForChild("Zones"))
-local BodyPose = require(ReplicatedStorage:WaitForChild("Movement"):WaitForChild("BodyPose"))
+local GunConfig = require(Guns:WaitForChild("GunConfig"))
+local Movement = ReplicatedStorage:WaitForChild("Movement")
+local BodyPose = require(Movement:WaitForChild("BodyPose"))
+local BodyPoses = require(Movement:WaitForChild("BodyPoses"))
+local GunStance = require(Movement:WaitForChild("GunStance"))
+local HeldGuns = require(script.Parent:WaitForChild("HeldGuns"))
+
+local shotsRemote = ReplicatedStorage:WaitForChild("GunRemotes"):WaitForChild("Shots") :: RemoteEvent
 
 local FORWARD_LEAN_AXIS = Vector3.xAxis
 local STILL_SPEED = 1
+local FEET_BELOW_ROOT = 3 -- the soldier's root sits this far above its feet
+local GROUND_REACH = 0.6 -- studs below the feet that still count as standing
+local FIRST_PERSON = 1.5 -- a camera this close to your own head is first person, so your held gun hides
+
+-- Sidearms without poses of their own borrow the Energy Pistol's.
+local POSES_OF = {
+	["Machine pistol"] = "Energy Pistol",
+	["Revolver"] = "Energy Pistol",
+	["Auto-pistol"] = "Energy Pistol",
+}
+
+local lastShot: { [Player]: number } = {}
+shotsRemote.OnClientEvent:Connect(function(shooter: Player)
+	lastShot[shooter] = os.clock()
+end)
+Players.PlayerRemoving:Connect(function(player)
+	lastShot[player] = nil
+end)
 
 local function turns(pose: { [string]: BodyPose.Angles }): { [string]: CFrame }
 	local result = {}
@@ -38,6 +65,15 @@ type Body = {
 	slideWeight: number,
 	crouch: number,
 	landedAt: number,
+	-- Soldier bodies only.
+	player: Player?,
+	soldier: boolean,
+	airborne: boolean,
+	travel: number,
+	sampledAt: number,
+	gunName: string?,
+	poses: any,
+	pose: any,
 }
 local bodies: { [Model]: Body } = {}
 
@@ -76,6 +112,14 @@ local function onCharacter(character: Model)
 		slideWeight = 0,
 		crouch = 0,
 		landedAt = -math.huge,
+		player = player,
+		soldier = character:GetAttribute("SoldierRig") == true,
+		airborne = false,
+		travel = 0,
+		sampledAt = os.clock(),
+		gunName = nil,
+		poses = nil,
+		pose = nil,
 	}
 	bodies[character] = body
 	humanoid.StateChanged:Connect(function(_, new)
@@ -83,12 +127,103 @@ local function onCharacter(character: Model)
 			body.landedAt = os.clock()
 		end
 	end)
+	character:GetAttributeChangedSignal("SoldierRig"):Connect(function()
+		body.soldier = character:GetAttribute("SoldierRig") == true
+		table.clear(body.held)
+		table.clear(body.base)
+		if not body.soldier then
+			HeldGuns.remove(character)
+		end
+	end)
 	character.Destroying:Once(function()
 		bodies[character] = nil
+		HeldGuns.remove(character)
 	end)
 end
 
+-- The gun a player holds, by the display name the pose files use, and its poses.
+local function gunOf(player: Player?): (string?, any)
+	local id = player and player:GetAttribute("GunId")
+	local gun = id and GunConfig.guns[id]
+	if not gun then
+		return nil, BodyPoses.Empty
+	end
+	local poses = BodyPoses[gun.name] or BodyPoses[POSES_OF[gun.name] or ""]
+	if not poses then
+		return nil, BodyPoses.Empty
+	end
+	return gun.name, poses
+end
+
+local function onGround(body: Body): boolean
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { body.character }
+	local reach = FEET_BELOW_ROOT + GROUND_REACH
+	return workspace:Raycast(body.root.Position, Vector3.new(0, -reach, 0), params) ~= nil
+end
+
+local function jitter(body: Body, strength: number)
+	local seed = body.seed
+	for name, degrees in BodyPose.jitter do
+		seed += 1
+		if body.held[name] then
+			local _, _, _, pitch, yaw, roll = ArmPose.shake(body.frame, seed)
+			local turn = math.rad(degrees * BodyPose.jitterScale * strength)
+			body.held[name] *= CFrame.Angles(pitch * turn, yaw * turn, roll * turn)
+		end
+	end
+end
+
+-- A soldier body: one gun pose per held frame, legs mirrored on every other step.
+local function sampleStance(body: Body, now: number)
+	local velocity = body.root.AssemblyLinearVelocity
+	local flatSpeed = Vector2.new(velocity.X, velocity.Z).Magnitude
+	local airborne = not onGround(body)
+	if body.airborne and not airborne then
+		body.landedAt = now
+	end
+	body.airborne = airborne
+	if not airborne then
+		body.travel += flatSpeed * (now - body.sampledAt)
+	end
+	body.sampledAt = now
+
+	local player = body.player
+	local gunName, poses = gunOf(player)
+	local pick = GunStance.pick({
+		reloading = player ~= nil and player:GetAttribute("Reloading") == true,
+		pose = body.character:GetAttribute("MovePose"),
+		airborne = airborne,
+		verticalSpeed = velocity.Y,
+		flatSpeed = flatSpeed,
+		sinceLanded = now - body.landedAt,
+		sinceShot = now - (player and lastShot[player] or -math.huge),
+		travel = body.travel,
+	})
+	local pose = poses.poses[pick.name] or poses.poses.Stand
+	body.gunName = gunName
+	body.poses = poses
+	body.pose = pose
+
+	for name in body.joints do
+		local value = pose.joints[name]
+		if pick.mirrored and GunStance.legSwap[name] then
+			local other = pose.joints[GunStance.legSwap[name]]
+			value = other and GunStance.mirror(other)
+		end
+		if value then
+			body.held[name] = HeldGuns.frame(value)
+		end
+	end
+	jitter(body, if flatSpeed < STILL_SPEED and not airborne then body.idleJitter else 1)
+end
+
 local function samplePose(body: Body, now: number)
+	if body.soldier then
+		sampleStance(body, now)
+		return
+	end
 	local pose = body.character:GetAttribute("MovePose")
 	local sliding = pose == "Slide"
 	if sliding ~= body.sliding then
@@ -126,16 +261,7 @@ local function samplePose(body: Body, now: number)
 		body.held[name] = frame
 	end
 
-	local strength = if flatSpeed < STILL_SPEED and settled == 0 then body.idleJitter else 1
-	local seed = body.seed
-	for name, degrees in BodyPose.jitter do
-		seed += 1
-		if body.held[name] then
-			local _, _, _, pitch, yaw, roll = ArmPose.shake(body.frame, seed)
-			local turn = math.rad(degrees * BodyPose.jitterScale * strength)
-			body.held[name] *= CFrame.Angles(pitch * turn, yaw * turn, roll * turn)
-		end
-	end
+	jitter(body, if flatSpeed < STILL_SPEED and settled == 0 then body.idleJitter else 1)
 
 	local drop = BodyPose.slideDrop * settled + BodyPose.crouchDrop * crouch
 	local tilt = BodyPose.slideLean * slide - lean
@@ -159,6 +285,21 @@ RunService.PreSimulation:Connect(function()
 			if held then
 				joint.Transform = held
 			end
+		end
+	end
+end)
+
+-- Guns go in the hands once the bodies have moved this frame.
+RunService.PreRender:Connect(function()
+	local camera = workspace.CurrentCamera
+	for character, body in bodies do
+		if body.soldier then
+			local visible = true
+			if body.player == Players.LocalPlayer and camera then
+				local head = character:FindFirstChild("Head") :: BasePart?
+				visible = head == nil or (camera.CFrame.Position - head.Position).Magnitude > FIRST_PERSON
+			end
+			HeldGuns.show(character, body.gunName, body.poses, body.pose, visible)
 		end
 	end
 end)

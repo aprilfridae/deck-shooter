@@ -6,3 +6,4 @@ sourcemap.json
 # Sounds, images and models live with the Fridae Studios group on Roblox, not in the repo.
 # Local working copies (exports, sounds before upload) can sit here without being committed.
 assets/
+__pycache__/

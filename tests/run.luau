@@ -17,6 +17,8 @@ local listed = {
 	movestate_spec = true,
 	speedlimit_spec = true,
 	parry_spec = true,
+	gunstance_spec = true,
+	bodyposes_spec = true,
 	damage_spec = true,
 	weapon_spec = true,
 	shots_spec = true,
@@ -81,6 +83,8 @@ require("./requests_spec")
 require("./movestate_spec")
 require("./speedlimit_spec")
 require("./parry_spec")
+require("./gunstance_spec")
+require("./bodyposes_spec")
 require("./damage_spec")
 require("./weapon_spec")
 require("./shots_spec")
