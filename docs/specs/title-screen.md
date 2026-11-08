@@ -48,7 +48,7 @@ Sizes are shares of a **unit**, which is the screen's width, or 16/9 of its heig
 
 - The menu music (`menu-music-v2.mp3`) loops from the moment the player joins.
 - Clicking `PLAY` plays the selection sound (`menu-select.wav`). River confirmed on click, not hover.
-- After `PLAY` the music keeps playing, fading over 0.6s to volume 0.224 with the lows cut 12 dB and the mids 1 dB. It plays in the Outpost and the test room too.
+- After `PLAY` the music fades out over 0.6s and stops. It plays on the title screen only (River, 2026-11-07).
 
 ## Flow
 

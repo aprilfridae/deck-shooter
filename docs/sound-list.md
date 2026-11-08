@@ -28,7 +28,8 @@ What the game already plays and what it still needs. Checked against the code on
 | Low health | `hurt` | Damage leaves you at 20 health or less |
 | Footsteps | `step-1` to `10` | Every 9 studs while walking or sprinting |
 | Jumps | `jump-1` to `14` | A jump with Space (walking off an edge plays nothing). Each take opens with 0.1s of silence, which the game skips. |
-| Menu music | `menu-music-v2.mp3` | Loops from joining. Quieter and thinner after PLAY. |
+| Menu music | `menu-music-v2.mp3` | Loops on the title screen only, and fades out over 0.6s after PLAY. |
+| Outpost ambience | `outpost-ambience.ogg` | Loops while you're in the Outpost after PLAY, fading in and out over 1.5s. Game volume group. |
 | Menu selection | `menu-select` | Clicking PLAY, clicks in the Outpost menu, and with each pack's opening sound. Hovering a nav row plays it quieter and higher. |
 | Landings | `move-land-soft`, `move-land-hard` | Landing after at least 0.15s in the air. Hard if the fall reached 60 studs per second (a fast fall or long drop), else soft. |
 | Slide start | `move-slide-start` | Every slide as it begins, including one started by landing |
@@ -93,7 +94,7 @@ These need to be recognisable, because they tell other players what you just did
 
 ### 4. Outpost ambience
 
-River's rain, sea and hum loops. Each must loop with no click. Suggested names: `outpost-rain`, `outpost-sea`, `outpost-hum`.
+In the game as one loop, `outpost-ambience.ogg` (121s). Whether it loops with no click is checked in Play.
 
 ## Only if those guns come back
 

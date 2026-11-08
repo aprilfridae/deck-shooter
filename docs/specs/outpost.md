@@ -65,6 +65,11 @@ In the Outpost, guns and cards are off:
 
 Everything works as normal in the test room.
 
+## Sound
+
+- `outpost-ambience.ogg` loops while you're in the Outpost after `PLAY`, fading in and out over 1.5s when you arrive or leave. It's in the Game volume group. `src/client/OutpostAmbience.client.luau`.
+- The menu music plays on the title screen only.
+
 ## How it's built
 
 - **Map:** parts and terrain, built by a server script at startup, like the test room.
@@ -83,5 +88,4 @@ Everything works as normal in the test room.
 ## Not built
 
 - The player market.
-- Ambient sound: waits on River's hum loops.
 - Blender props, seating, and matches.

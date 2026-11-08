@@ -44,10 +44,6 @@ local RULE_TRANSPARENCY = 0.65
 local DIM_SHARE = 0.6 -- how far unbuilt buttons fade toward the navy
 local PLAY_HIT_WIDTH = 0.16
 local MUSIC_FADE_SECONDS = 0.6
--- In game the music stays on, quiet and thin.
-local MUSIC_GAME_VOLUME = 0.224
-local MUSIC_LOW_CUT = -12 -- decibels
-local MUSIC_MID_CUT = -1
 local VISUALIZER_WIDTH = 0.3
 local VISUALIZER_HEIGHT = 0.13
 local VISUALIZER_GAP = 0.02 -- below the barcode
@@ -81,12 +77,6 @@ music.Looped = true
 music.SoundGroup = SoundGroups.music
 music.Parent = SoundService
 music:Play()
-
-local highPass = Instance.new("EqualizerSoundEffect")
-highPass.LowGain = 0
-highPass.MidGain = 0
-highPass.HighGain = 0
-highPass.Parent = music
 
 local selectSound = Instance.new("Sound")
 selectSound.Name = "MenuSelect"
@@ -216,9 +206,12 @@ local function play()
 	frameLoop:Disconnect()
 	gui:Destroy()
 	selectSound:Play()
-	local fade = TweenInfo.new(MUSIC_FADE_SECONDS)
-	TweenService:Create(music, fade, { Volume = MUSIC_GAME_VOLUME }):Play()
-	TweenService:Create(highPass, fade, { LowGain = MUSIC_LOW_CUT, MidGain = MUSIC_MID_CUT }):Play()
+	-- The music belongs to the title screen only.
+	local fading = TweenService:Create(music, TweenInfo.new(MUSIC_FADE_SECONDS), { Volume = 0 })
+	fading.Completed:Once(function()
+		music:Destroy()
+	end)
+	fading:Play()
 end
 
 local function addMenu(parent: Frame, unit: number)
