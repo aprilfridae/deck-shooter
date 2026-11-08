@@ -62,6 +62,9 @@ local GunSounds = {
 	menuSelect = sound("menu-select.wav"),
 	steps = numbered("step", 10),
 	jumps = numbered("jump", 14),
+	-- Bullets flying close past you. Each take's whizz peaks this far in.
+	whizzes = numbered("bullet-whizz", 16),
+	whizzPeakSeconds = 0.07,
 	-- Every jump take opens with this much silence.
 	jumpLeadSeconds = 0.1,
 	lands = {

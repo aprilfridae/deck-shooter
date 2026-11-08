@@ -32,6 +32,7 @@ What the game already plays and what it still needs. Checked against the code on
 | Outpost ambience | `outpost-ambience.ogg` | Loops while you're in the Outpost after PLAY, fading in and out over 1.5s. Game volume group. |
 | Menu selection | `menu-select` | Clicking PLAY, clicks in the Outpost menu, and with each pack's opening sound. Hovering a nav row plays it quieter and higher. |
 | Landings | `move-land-soft`, `move-land-hard` | Landing after at least 0.15s in the air. Hard if the fall reached 60 studs per second (a fast fall or long drop), else soft. |
+| Bullet flybys | `bullet-whizz-1` to `16` | Someone else's bullet passes within 6 studs of your head and misses. Mono, played in 3D along the bullet's path (`docs/specs/guns.md`). River's takes were trimmed to 0.5s and folded to mono. |
 | Slide start | `move-slide-start` | Every slide as it begins, including one started by landing |
 | Pack open | `pack-open-common`, `-rarer`, `-rarest` | Once as a pack spins in, in the Menu volume group. Common for Field, rarer for Redline and Prototype, rarest for Zero-Day. |
 
@@ -63,7 +64,6 @@ Other players' footsteps can't be heard either, because Roblox's default footste
 | `gun-shotgun-pump` | Pumping between shotgun shots | Mono | 1 | Under 0.8s | |
 | `gun-dry-fire` | Pulling the trigger on an empty gun | Mono | 1 | 0.1s | An empty gun starts reloading instead today, so this rarely gets a moment |
 | `bullet-impact` | A shot hits a wall or floor. Keep it neutral until arenas have real materials | Mono | 3 | 0.2s | |
-| `bullet-whizz` | A shot flies past your head | Mono | 2 | 0.2s | |
 | `death` | You die | Stereo | 1 | 0.8s | |
 
 Also open: the M57's reload hit isn't aligned to `reload-assault-v2`.

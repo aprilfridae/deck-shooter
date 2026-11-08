@@ -4,7 +4,10 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local GunAudio = require(script.Parent.GunAudio)
+local GunSounds = require(ReplicatedStorage.Guns.GunSounds)
 local GunView = require(script.Parent.GunView)
+local Flyby = require(ReplicatedStorage.Guns.Flyby)
 local Tracer = require(ReplicatedStorage.Guns.Tracer)
 local Collision = require(ReplicatedStorage.Guns.Collision)
 
@@ -149,6 +152,26 @@ local function bleed(shot: any)
 	splatter(shot.to, shot.direction, shot.hit)
 end
 
+-- Someone else's bullet that misses you close by whizzes past, once per shot, from its closest
+-- pellet, timed to the tracer reaching you.
+local function whizz(origin: Vector3, shots: { any })
+	local listener = workspace.CurrentCamera.CFrame.Position
+	local nearest, nearestAlong, nearestDistance = nil, 0, math.huge
+	for _, shot in shots do
+		if shot.hit ~= player.Character then
+			local along, distance = Flyby.pass(origin, shot.to, listener)
+			if along and distance and distance < nearestDistance then
+				nearest, nearestAlong, nearestDistance = shot, along, distance
+			end
+		end
+	end
+	if nearest then
+		local direction = (nearest.to - origin).Unit
+		local wait = math.max(nearestAlong / TRACER_SPEED - GunSounds.whizzPeakSeconds, 0)
+		task.delay(wait, GunAudio.playWhizz, origin + direction * nearestAlong, direction)
+	end
+end
+
 shotsRemote.OnClientEvent:Connect(function(shooter: Player, origin: Vector3, shots: { any })
 	local from = if shooter == player then GunView.muzzle() or origin else origin
 	for _, shot in shots do
@@ -156,6 +179,9 @@ shotsRemote.OnClientEvent:Connect(function(shooter: Player, origin: Vector3, sho
 		if shot.hit then
 			bleed(shot)
 		end
+	end
+	if shooter ~= player then
+		whizz(origin, shots)
 	end
 end)
 
