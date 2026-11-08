@@ -2,12 +2,18 @@
 local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
+local TweenService = game:GetService("TweenService")
 
 local GunSounds = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("GunSounds"))
 
 local SoundGroups = require(script.Parent.SoundGroups)
 
 local GunAudio = {}
+
+-- A flyby sounds from the bullet's path and travels along it past your head.
+local WHIZZ_SPEED = 60 -- studs a second
+local WHIZZ_NEAR = 2
+local WHIZZ_FAR = 40
 
 local allSounds: { Sound } = {}
 
@@ -49,6 +55,14 @@ end
 local steps: { Sound } = {}
 for _, soundId in GunSounds.steps do
 	table.insert(steps, newSound(soundId))
+end
+local whizzes: { Sound } = {}
+for _, soundId in GunSounds.whizzes do
+	local whizz = newSound(soundId)
+	whizz.RollOffMode = Enum.RollOffMode.InverseTapered
+	whizz.RollOffMinDistance = WHIZZ_NEAR
+	whizz.RollOffMaxDistance = WHIZZ_FAR
+	table.insert(whizzes, whizz)
 end
 local jumps: { Sound } = {}
 for _, soundId in GunSounds.jumps do
@@ -115,6 +129,25 @@ end
 
 function GunAudio.playSlideStart()
 	playCopy(others[GunSounds.slideStart], 0)
+end
+
+-- closest is the point on the bullet's path nearest your head, direction its unit direction.
+function GunAudio.playWhizz(closest: Vector3, direction: Vector3)
+	local take = whizzes[pickTake("whizz", #whizzes)]
+	local anchor = Instance.new("Attachment")
+	anchor.Name = "Whizz"
+	anchor.WorldPosition = closest - direction * WHIZZ_SPEED * GunSounds.whizzPeakSeconds
+	anchor.Parent = workspace.Terrain
+	local copy = take:Clone()
+	copy.Parent = anchor
+	copy.Ended:Once(function()
+		anchor:Destroy()
+	end)
+	local seconds = take.TimeLength > 0 and take.TimeLength or 0.5
+	TweenService:Create(anchor, TweenInfo.new(seconds, Enum.EasingStyle.Linear), {
+		WorldPosition = anchor.WorldPosition + direction * WHIZZ_SPEED * seconds,
+	}):Play()
+	copy:Play()
 end
 
 function GunAudio.playHurt()

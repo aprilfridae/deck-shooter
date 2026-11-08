@@ -1,6 +1,22 @@
 -- Roblox asset ids for the game's sounds, uploaded as Fridae Studios group assets.
 -- After uploading a new or changed sound to the group, add its file name and id here.
 return {
+	["bullet-whizz-1.wav"] = 80751258933345,
+	["bullet-whizz-10.wav"] = 98664168769458,
+	["bullet-whizz-11.wav"] = 121035498097277,
+	["bullet-whizz-12.wav"] = 87752127126755,
+	["bullet-whizz-13.wav"] = 75575890495530,
+	["bullet-whizz-14.wav"] = 91791693274250,
+	["bullet-whizz-15.wav"] = 74425790504441,
+	["bullet-whizz-16.wav"] = 85857340737394,
+	["bullet-whizz-2.wav"] = 103126912710878,
+	["bullet-whizz-3.wav"] = 97444896667639,
+	["bullet-whizz-4.wav"] = 83353227921734,
+	["bullet-whizz-5.wav"] = 112187387174877,
+	["bullet-whizz-6.wav"] = 76481577028634,
+	["bullet-whizz-7.wav"] = 114317690072830,
+	["bullet-whizz-8.wav"] = 72384848559256,
+	["bullet-whizz-9.wav"] = 75831919748528,
 	["gun-ak47-1.wav"] = 73264294240650,
 	["gun-ak47-10.wav"] = 139912128266601,
 	["gun-ak47-11.wav"] = 102883612954152,
