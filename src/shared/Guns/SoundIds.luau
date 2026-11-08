@@ -202,6 +202,7 @@ return {
 	["move-land-hard.wav"] = 98116720262368,
 	["move-land-soft.wav"] = 96933311947856,
 	["move-slide-start.wav"] = 83935278282401,
+	["outpost-ambience.ogg"] = 116852725695834,
 	["pack-open-common.wav"] = 134793303117894,
 	["pack-open-rarer.wav"] = 110475239048405,
 	["pack-open-rarest.wav"] = 73910368376565,

@@ -58,6 +58,7 @@ local GunSounds = {
 	},
 	hurt = sound("hurt.wav"),
 	menuMusic = sound("menu-music-v2.mp3"),
+	outpostAmbience = sound("outpost-ambience.ogg"),
 	menuSelect = sound("menu-select.wav"),
 	steps = numbered("step", 10),
 	jumps = numbered("jump", 14),

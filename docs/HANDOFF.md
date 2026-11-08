@@ -104,7 +104,7 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 
 ## Next up
 
-Serials, then the player market. River checks the Relay map in Play: fog, lights, stairs, parries and sightlines (`docs/specs/relay.md`, "Not done"). Outpost ambient sounds wait on River's rain, sea and hum loops. Matches are parked until gameplay looks, sounds and feels good. River decides what's next.
+Serials, then the player market. River checks the Relay map in Play: fog, lights, stairs, parries and sightlines (`docs/specs/relay.md`, "Not done"). The Outpost ambience is in (`OutpostAmbience.client.luau`); River checks it loops cleanly. Matches are parked until gameplay looks, sounds and feels good. River decides what's next.
 
 ## Practical notes
 
