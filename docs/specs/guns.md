@@ -22,7 +22,7 @@ The code and saves use internal ids, and players see display names: `M4` is the 
 ## Decided by River
 
 - All guns are hip fire only, except the Longscope, which can aim down sights. The base and firing gun pose always points straight.
-- The M57 has almost no recoil and does 2x headshot damage. The B33 has high recoil and kills on any headshot. The Longscope kills on any headshot. These replace the parent spec's single headshot multiplier.
+- The M57 does 2x headshot damage. The B33 kills on any headshot. The Longscope kills on any headshot. These replace the parent spec's single headshot multiplier.
 - Every class uses the Energy Pistol as its sidearm for now. The machine pistol, revolver and auto-pistol stay in the gun data, unused, until River brings them back.
 - Guns add 0 to Deck Power Rating. Gun upgrades wait until after launch.
 
@@ -35,7 +35,7 @@ Damage falls off in a straight line between the two distances, then stays flat. 
 | M57 | 24 | 2x | 600 | 30 | 0.985s | Auto | 0.2 | 100% to 90 studs, 70% by 180 |
 | B33 | 24 | Kill | 540 | 30 | 0.985s | Auto | 0.4 | 100% to 90 studs, 70% by 180 |
 | SMG | 17 | 2x | 800 | 32 | 2.0s | Auto | 0.8 | 100% to 40 studs, 60% by 90 |
-| Longscope | 85 | Kill | 50 | 5 | 1.714s | Single | 0 aimed, 7 from the hip | No falloff |
+| Longscope | 85 | Kill | 50 | 5 | 1.714s | Single | 0, hipfired or scoped | No falloff |
 | Shotgun | 8 pellets of 14 | 2x per pellet | 75 | 6 | 0.5s per shell | Single | 4 per pellet | 100% to 15 studs, 0% by 45 |
 | Energy Pistol | 20 | 2x | 400 | 12 | 0.964s | Single | 0.4 | 100% to 40 studs, 70% by 90 |
 
@@ -46,10 +46,9 @@ Damage falls off in a straight line between the two distances, then stays flat. 
 
 ## Recoil
 
-- Each gun has a fixed spray pattern, so sprays can be learned. A pattern is a list of points (shots fired, degrees up, degrees sideways) joined by straight lines. Automatics climb nearly straight for a third of the magazine, then sweep side to side.
-- Bullets land on the pattern. The camera follows 45% of the way.
-- 0.12s after the last shot, the spray recovers at the gun's `recovery` rate (shots forgiven per second) and the camera drifts straight back.
-- The client applies recoil, so a no-recoil cheat is an accepted risk. The server rolls spread, so a client can't remove it.
+- Recoil is like Call of Duty's: almost none. Bullets always go where the crosshair is, with no spray pattern to learn.
+- Each shot nudges the view up by the gun's `kick` (degrees), plus up to 30% of that to either side, and it settles straight back. M57 0.12, B33 0.15, SMG 0.08, Longscope 0.8, Shotgun 0.6, Energy Pistol 0.25. A full M57 magazine climbs under 1 degree.
+- The client applies the kick, so a no-recoil cheat is an accepted risk, and with this little recoil there's not much to gain. The server rolls spread, so a client can't remove it.
 
 ## Keys
 
@@ -80,7 +79,7 @@ A class or rifle change applies at once if the player is at full health and both
 
 Shots are instant. The server alone decides damage, health and ammo (`src/server/GunServer.server.luau`).
 
-- The client sends each shot's origin, direction (with recoil applied), firing time and whether it was aiming.
+- The client sends each shot's origin, direction (where the crosshair points), firing time and whether it was aiming.
 - The firing time is clamped to between 0.2s ago and now.
 - The origin must be within 6 studs of where the server had the shooter at the firing time plus ping (or now), with no wall between their body and the origin.
 - The fire rate is checked against the firing time, with 5% tolerance for network timing.
@@ -100,6 +99,7 @@ Shots are instant. The server alone decides damage, health and ammo (`src/server
 
 - Gun models come from `ReplicatedStorage.GunModels` in the group's place, found by display name. A gun with no model shows a grey block. A local export in `assets/models/GunModels.rbxm` had the M57, B33, SMG, Longscope, Energy Pistol, `Arms` and `Card`, with no Shotgun model. That hasn't been checked against the group's place.
 - First person shows the soldier's arms (`GunModels.SoldierArms`), not the old `Arms` model. `src/shared/Guns/SoldierPose.luau` lines the soldier's hands up with the arm clips' palms and bends the arms to reach from shoulders kept out of view (`SHOULDERS`, the tuning point if the arms look wrong), so clip timing is unchanged. Guns without a clip (B33, SMG, Longscope, Shotgun) use their grips and the M57's idle fingers. Only the first-person arms jitter.
+- The arms move at full framerate: the clips' key frames are blended every frame (`ArmClip.sampleAt`), with no jitter or motion blur.
 - Arm animations exported from Blender exist for the M57, the Energy Pistol and the card (`src/shared/Guns/ArmClips/`). The M57 and Energy Pistol each have 3 reload takes (`reload`, `reload2`, `reload3`) that differ only in position, and one is picked at random. Other guns use arms posed in code. `docs/HANDOFF.md` has the export steps.
 - The test room has two targets with real health that respawn after 3s (`src/server/TargetDummy.server.luau`): a plain grey Roblox body and a soldier copied from the first player to spawn as one, which holds the M57 in its standing pose.
 - Tracers, impacts and bullet holes: `ShotEffects.client.luau` and `BulletHoles.client.luau`.

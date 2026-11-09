@@ -1,7 +1,8 @@
--- Draws every body in stop-motion. Whatever the Animator plays is sampled once per held frame,
--- then the crouch, slide, landing and run lean go on top, as on the first-person arms.
--- A soldier body (the character has the SoldierRig attribute) shows the gun poses from the pose files
--- instead: GunStance picks one per held frame from what every client can see, and HeldGuns puts the gun in its hand.
+-- Draws every body. A soldier body (the character has the SoldierRig attribute) shows the gun poses from the
+-- pose files: GunStance picks one every frame from what every client can see, the joints ease toward it at full
+-- framerate, and HeldGuns puts the gun in its hand.
+-- Any other body samples whatever the Animator plays once per held frame, then the crouch, slide, landing and
+-- run lean go on top.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -20,6 +21,7 @@ local FORWARD_LEAN_AXIS = Vector3.xAxis
 local FEET_BELOW_ROOT = 3 -- the soldier's root sits this far above its feet
 local GROUND_REACH = 0.6 -- studs below the feet that still count as standing
 local FIRST_PERSON = 1.5 -- a camera this close to your own head is first person, so your held gun hides
+local POSE_EASE = 18 -- how fast a soldier's joints catch up with the picked pose, per second
 
 -- Sidearms without poses of their own borrow the Energy Pistol's.
 local POSES_OF = {
@@ -53,6 +55,7 @@ type Body = {
 	joints: { [string]: any },
 	base: { [string]: CFrame },
 	held: { [string]: CFrame },
+	shown: { [string]: CFrame }, -- soldier bodies: where each joint is on its way to held
 	frame: number,
 	sliding: boolean,
 	slideAt: number,
@@ -113,6 +116,7 @@ local function onCharacter(character: Model)
 		joints = joints,
 		base = {},
 		held = {},
+		shown = {},
 		frame = -1,
 		sliding = false,
 		slideAt = -math.huge,
@@ -138,6 +142,7 @@ local function onCharacter(character: Model)
 	character:GetAttributeChangedSignal("SoldierRig"):Connect(function()
 		body.soldier = character:GetAttribute("SoldierRig") == true
 		table.clear(body.held)
+		table.clear(body.shown)
 		table.clear(body.base)
 		if not body.soldier then
 			HeldGuns.remove(character)
@@ -172,7 +177,7 @@ local function onGround(body: Body): boolean
 	return workspace:Raycast(body.root.Position, Vector3.new(0, -reach, 0), params) ~= nil
 end
 
--- A soldier body: one gun pose per held frame, legs mirrored on every other step.
+-- A soldier body: the gun pose to ease toward, legs mirrored on every other step.
 local function sampleStance(body: Body, now: number)
 	local velocity = body.root.AssemblyLinearVelocity
 	local flatSpeed = Vector2.new(velocity.X, velocity.Z).Magnitude
@@ -216,10 +221,6 @@ local function sampleStance(body: Body, now: number)
 end
 
 local function samplePose(body: Body, now: number)
-	if body.soldier then
-		sampleStance(body, now)
-		return
-	end
 	local pose = body.character:GetAttribute("MovePose")
 	local sliding = pose == "Slide"
 	if sliding ~= body.sliding then
@@ -267,10 +268,24 @@ local function samplePose(body: Body, now: number)
 end
 
 -- Runs after the Animator has written its frame, so these poses win.
-RunService.PreSimulation:Connect(function()
+RunService.PreSimulation:Connect(function(dt: number)
 	local now = os.clock()
 	local frame = BodyPose.frame(now)
+	local ease = 1 - math.exp(-dt * POSE_EASE)
 	for _, body in bodies do
+		if body.soldier then
+			sampleStance(body, now)
+			for name, joint in body.joints do
+				local target = body.held[name]
+				if target then
+					local shown = body.shown[name]
+					shown = if shown then shown:Lerp(target, ease) else target
+					body.shown[name] = shown
+					joint.Transform = shown
+				end
+			end
+			continue
+		end
 		if frame ~= body.frame then
 			body.frame = frame
 			samplePose(body, now)

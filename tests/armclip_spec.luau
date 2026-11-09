@@ -25,6 +25,28 @@ describe("ArmClip.frameAt", function()
 	end)
 end)
 
+describe("ArmClip.sampleAt", function()
+	local function numbers(loop: boolean): any
+		return { fps = 10, loop = loop, frames = { { t = 0, tag = "a" }, { t = 10, tag = "b" }, { t = 20, tag = "c" } } }
+	end
+
+	it("moves smoothly between key frames", function()
+		local frame = ArmClip.sampleAt(numbers(false), 0.05)
+		expect(frame.t).toBeCloseTo(5)
+		expect(frame.tag).toBe("a")
+		expect(ArmClip.sampleAt(numbers(false), 0.175).t).toBeCloseTo(17.5)
+	end)
+
+	it("blends the last frame of a loop back into the first", function()
+		expect(ArmClip.sampleAt(numbers(true), 0.25).t).toBeCloseTo(10)
+	end)
+
+	it("holds the last frame of a one-shot clip, then ends", function()
+		expect(ArmClip.sampleAt(numbers(false), 0.25).t).toBe(20)
+		expect(ArmClip.sampleAt(numbers(false), 0.31)).toBe(nil)
+	end)
+end)
+
 describe("ArmClip.blendBones", function()
 	local half = math.sqrt(0.5)
 

@@ -18,16 +18,16 @@ describe("Spread", function()
 		expect(Spread.angle(m4, true)).toBe(0.2)
 	end)
 
-	it("keeps the Longscope inaccurate unless scoped", function()
+	it("makes the Longscope dead accurate hipfired and scoped", function()
 		local sniper = GunConfig.guns.Sniper
-		expect(Spread.angle(sniper, false)).toBe(7)
+		expect(Spread.angle(sniper, false)).toBe(0)
 		expect(Spread.angle(sniper, true)).toBe(0)
 	end)
 
 	it("lets only the Longscope aim", function()
 		for id, gun in GunConfig.guns do
 			expect(type(gun.spread)).toBe("number")
-			expect(gun.hipSpread == nil).toBe(id ~= "Sniper")
+			expect(gun.hipSpread).toBe(nil)
 			expect(gun.aimFov == nil).toBe(id ~= "Sniper")
 		end
 	end)
