@@ -59,9 +59,12 @@ local EASE = 11
 local CLIP_BLEND = 0.25
 local RELOAD_BLEND = 0.8 -- the end of a reload settles into the next clip slowly, with weight
 local SNAP_BLEND = 0.12 -- a shot fired while the gun is still settling catches up this fast
--- Reload clips that ran ahead of their sound: the start plays slower, by up to this many seconds behind, and
--- the end catches up, so the clip still finishes with the reload.
-local RELOAD_LAG: { [string]: number } = { M57 = 0.08 }
+-- Times a reload clip to its sound: pairs of seconds into the sound and the clip time that should show then. In
+-- reload-assault-v2.wav the mag clicks out at 0.37s, slams in at 0.67s and the charge is slapped at 0.85s; the
+-- clip's hand jerks the mag out at 0.43s, drives the new one home at 0.68s and slaps at 0.85s.
+local RELOAD_SYNC: { [string]: { { number } } } = {
+	M57 = { { 0, 0 }, { 0.37, 0.43 }, { 0.67, 0.68 }, { 0.85, 0.85 } },
+}
 -- Motion blur: Roblox can't blur one object, so faded copies of the gun and arms trail behind them,
 -- spread between where they were SMEAR_TIME ago and where they are now. Only while the gun moves fast enough.
 local SMEAR_COPIES = 4
@@ -587,10 +590,15 @@ local function clipFrame(reloading: boolean, sprinting: boolean): (any, string)
 	reloadAt = if reloading then reloadAt or os.clock() else nil
 	if reloadAt then
 		local elapsed = os.clock() - reloadAt
-		local lag = RELOAD_LAG[GunConfig.guns[shownGun :: string].name]
-		local clipLength = #reloadClip.frames / reloadClip.fps
-		if lag and elapsed < clipLength then
-			elapsed -= lag * math.sin(math.pi * elapsed / clipLength)
+		local sync = RELOAD_SYNC[GunConfig.guns[shownGun :: string].name]
+		if sync and elapsed < sync[#sync][1] then
+			for index = 2, #sync do
+				local from, to = sync[index - 1], sync[index]
+				if elapsed < to[1] then
+					elapsed = from[2] + (elapsed - from[1]) / (to[1] - from[1]) * (to[2] - from[2])
+					break
+				end
+			end
 		end
 		local frame = ArmClip.sampleAt(reloadClip, elapsed)
 		if frame then
