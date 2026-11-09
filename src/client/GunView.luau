@@ -33,12 +33,17 @@ local SNAPPY = { fire = true, holster = true }
 -- Guns posed in code move like this when they fire: pushed back (studs), dropped (studs), barrel up and
 -- rolled (degrees), settling at ease per second. The Longscope slams back hard and is home in about 0.15s.
 local VIEW_KICKS: { [string]: any } = {
-	Longscope = { back = 0.6, drop = 0.15, up = 14, roll = -8, ease = 16, bolt = true },
+	Longscope = { back = 0.6, drop = 0.15, up = 14, roll = -8, ease = 16, slap = true },
 }
-local DEFAULT_KICK = { back = 0.25, drop = 0, up = 0, roll = 0, ease = 14, bolt = false }
--- Working the bolt, between these shares of the time between shots: the gun dips and rolls toward the hand.
-local BOLT_FROM, BOLT_TO = 0.3, 0.8
-local BOLT_DROP, BOLT_PITCH, BOLT_ROLL = 0.12, -6, 18
+local DEFAULT_KICK = { back = 0.25, drop = 0, up = 0, roll = 0, ease = 14, slap = false }
+-- Recharging an energy gun: after the kick, the left hand comes off, then slaps the side of the gun,
+-- which jolts right and rolls. Seconds after the shot.
+local SLAP_LEAVE = 0.18 -- the hand starts to pull away
+local SLAP_HIT = 0.42 -- and lands back on the gun
+local SLAP_HAND = Vector3.new(-0.4, -0.2, 0.15) -- how far the hand pulls away, in the gun's space
+local SLAP_SHOVE = Vector3.new(0.07, 0.03, 0) -- the gun's jolt
+local SLAP_ROLL = -12 -- degrees
+local SLAP_SETTLE = 14 -- how fast the jolt dies away, per second
 -- Equipping a gun posed in code: it swings in from below and to the right.
 local EQUIP_TIME = 0.4
 local EQUIP_FROM = CFrame.new(0.6, -1.2, 0.3) * CFrame.Angles(math.rad(-40), math.rad(25), math.rad(-30))
@@ -404,19 +409,27 @@ function GunView.update(
 				equipAt = nil
 			end
 		end
-		local bolt = CFrame.identity
-		if viewKick.bolt and firedAt and config then
-			local phase = (now - firedAt) / (60 / config.rpm)
-			if phase >= BOLT_FROM and phase <= BOLT_TO then
-				local weight = math.sin(math.pi * (phase - BOLT_FROM) / (BOLT_TO - BOLT_FROM))
-				bolt = CFrame.new(0, -BOLT_DROP * weight, 0)
-					* CFrame.Angles(math.rad(BOLT_PITCH * weight), 0, math.rad(BOLT_ROLL * weight))
+		local slap = CFrame.identity
+		local handAway = 0
+		if viewKick.slap and firedAt then
+			local since = now - firedAt
+			if since >= SLAP_LEAVE and since < SLAP_HIT then
+				-- Eases out, then snaps back in for the hit.
+				local t = (since - SLAP_LEAVE) / (SLAP_HIT - SLAP_LEAVE)
+				handAway = if t < 0.7 then math.sin(t / 0.7 * math.pi / 2) else 1 - ((t - 0.7) / 0.3) ^ 2
+			elseif since >= SLAP_HIT then
+				local jolt = math.exp(-(since - SLAP_HIT) * SLAP_SETTLE)
+				slap = CFrame.new(SLAP_SHOVE * jolt) * CFrame.Angles(0, 0, math.rad(SLAP_ROLL * jolt))
 			end
 		end
 		local recoil = CFrame.new(0, -viewKick.drop * kick, viewKick.back * kick)
 			* CFrame.Angles(math.rad(viewKick.up * kick), 0, math.rad(viewKick.roll * kick))
-		shown = held * equip * recoil * bolt * (turn or CFrame.identity)
+		shown = held * equip * recoil * slap * (turn or CFrame.identity)
 		local right, left = grips()
+		if handAway > 0 then
+			left = table.clone(left)
+			left.wrist += SLAP_HAND * handAway
+		end
 		ViewArms.pose(shown, right, left)
 	end
 	view:PivotTo(camera.CFrame * shown)
