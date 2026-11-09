@@ -515,14 +515,14 @@ local function makeFlash(): Model
 		table.insert(flashParts, piece)
 		return piece
 	end
-	part(Enum.PartType.Ball, 0).Color = Color3.new(1, 1, 1)
+	part(Enum.PartType.Ball, 0.25).Color = Color3.new(1, 1, 1)
 	for _ = 1, 3 do
-		part(Enum.PartType.Block, 0.15)
+		part(Enum.PartType.Block, 0.4)
 	end
-	part(Enum.PartType.Ball, 0.55) -- a soft glow round it all
+	part(Enum.PartType.Ball, 0.8) -- a soft glow round it all
 	local light = Instance.new("PointLight")
 	light.Color = FLASH_COLOR
-	light.Range = 12
+	light.Range = 4 -- just the arms and gun, not the room
 	light.Shadows = false
 	light.Parent = flashParts[1]
 	flashLight = light
@@ -554,7 +554,7 @@ local function showFlash(camera: Camera, muzzle: CFrame)
 	glow.Size = Vector3.one * size * 0.8
 	glow.CFrame = at * CFrame.new(0, 0, -size * 0.25)
 	if flashLight then
-		flashLight.Brightness = 8 * (1 - t)
+		flashLight.Brightness = 0.8 * (1 - t) -- soft: rapid fire mustn't strobe
 	end
 	flashModel.Parent = camera
 end
