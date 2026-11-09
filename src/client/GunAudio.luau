@@ -117,7 +117,9 @@ function GunAudio.playShot(gunId: string, lateness: number)
 end
 
 function GunAudio.playHit(headshot: boolean, killed: boolean)
-	task.delay(GunSounds.hitDelaySeconds, playCopy, others[GunSounds.hitSound(headshot, killed)], 0)
+	for _, soundId in GunSounds.hitSounds(headshot, killed) do
+		task.delay(GunSounds.hitDelaySeconds, playCopy, others[soundId], 0)
+	end
 end
 
 function GunAudio.playReload(gunId: string)

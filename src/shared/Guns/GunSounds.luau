@@ -96,11 +96,12 @@ function GunSounds.startOffset(lateness: number): number
 	return math.clamp(lateness, 0, GunSounds.paddingSeconds)
 end
 
-function GunSounds.hitSound(headshot: boolean, killed: boolean): string
+-- The sounds a hit plays together. A headshot kill plays the headshot sound with the kill sound.
+function GunSounds.hitSounds(headshot: boolean, killed: boolean): { string }
 	if killed then
-		return GunSounds.hits.kill
+		return if headshot then { GunSounds.hits.head, GunSounds.hits.kill } else { GunSounds.hits.kill }
 	end
-	return if headshot then GunSounds.hits.head else GunSounds.hits.body
+	return { if headshot then GunSounds.hits.head else GunSounds.hits.body }
 end
 
 -- A warning that you're nearly dead, not a sound for every hit.
