@@ -112,8 +112,11 @@ local RELOADS: { [string]: any } = {
 			key(0.7, tilt(12, -5, 8, -0.03, 0.06, 0), Vector3.zero, "out"), -- mag in: bumps up hard
 			key(0.78, tilt(15, -6, 3, -0.03, 0.01, 0), Vector3.zero),
 			key(0.84, tilt(17, -7, 2, -0.04, 0, 0), Vector3.zero, "in"),
-			key(0.9, tilt(-4, 2, 2, 0.01, 0.02, 0), Vector3.zero, "out"), -- charge: snaps back to ready, a little past
-			key(0.985, CFrame.identity, Vector3.zero),
+			key(0.9, tilt(-4, 2, 3, 0.01, 0.03, 0), Vector3.zero, "out"), -- charge: snaps back up to ready, a little past
+			-- and takes its time settling, after the reload itself is done
+			key(1.02, tilt(-2.5, 1.2, 1.8, 0.006, 0.018, 0), Vector3.zero),
+			key(1.15, tilt(0.6, -0.3, -0.3, 0, -0.004, 0), Vector3.zero),
+			key(1.28, CFrame.identity, Vector3.zero),
 		},
 	},
 	-- reload-sniper.wav: a rising whine to 0.95s, a click at 0.94s and a clunk at 1.06s. The gun spins once
@@ -630,7 +633,8 @@ function GunView.update(
 			layerAt = os.clock()
 		end
 		local elapsed = if layerAt then os.clock() - layerAt else math.huge
-		if elapsed < config.reload then
+		local layerLength = keyedReload.keys[#keyedReload.keys].at * config.reload / keyedReload.length
+		if elapsed < layerLength then
 			local turnBy = reloadPose(keyedReload, elapsed, config.reload)
 			layer = CFrame.new(HIP.Position) * turnBy * CFrame.new(-HIP.Position)
 		elseif not reloading then
