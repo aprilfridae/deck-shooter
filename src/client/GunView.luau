@@ -103,16 +103,17 @@ local RELOADS: { [string]: any } = {
 			key(0.81, tilt(8, -3, -3, -0.04, -0.04, 0.02), Vector3.new(0, -0.04, 0), "out"), -- and gives with the weight
 			-- CLICK: the gun tips to show the cell slot, the hand pulls back to load up, then drives the cell in on
 			-- the sound and the gun bumps up off the hit and settles.
-			key(0.86, tilt(18, -6, 2, -0.06, 0, 0.03), Vector3.new(0, -0.38, 0.26)),
-			key(0.94, tilt(18, -6, 2, -0.06, 0, 0.03), Vector3.new(0.02, -0.02, 0.24), "in"),
-			key(0.98, tilt(16, -6, 9, -0.06, 0.09, 0.03), Vector3.new(0.02, 0.05, 0.24), "out"),
-			key(1.02, tilt(20, -7, 1, -0.07, -0.01, 0.03), Vector3.new(0.02, -0.01, 0.24)),
-			-- CLICK release: a small wind-up further into the tilt, then a beat after the clunk the gun snaps back to ready,
-			-- swings a little past and settles, the hand riding back onto its grip.
-			key(1.16, tilt(23, -8, 0, -0.08, -0.02, 0.03), Vector3.new(0.02, -0.02, 0.22), "in"),
-			key(1.25, tilt(-6, 2, 3, 0.01, 0.03, 0), Vector3.zero, "out"),
-			key(1.4, tilt(2, -1, -1, 0, -0.01, 0), Vector3.zero),
-			key(1.55, CFrame.identity, Vector3.zero),
+			key(0.85, tilt(18, -6, 2, -0.06, 0, 0.03), Vector3.new(0, -0.38, 0.26)),
+			key(0.97, tilt(19, -6, 1, -0.06, -0.01, 0.03), Vector3.new(0, -0.4, 0.26)), -- holds there, loaded
+			key(1.03, tilt(18, -6, 2, -0.06, 0, 0.03), Vector3.new(0.02, -0.02, 0.24), "in"),
+			key(1.07, tilt(16, -6, 9, -0.06, 0.09, 0.03), Vector3.new(0.02, 0.05, 0.24), "out"),
+			key(1.11, tilt(20, -7, 1, -0.07, -0.01, 0.03), Vector3.new(0.02, -0.01, 0.24)),
+			-- CLICK release: a small wind-up further into the tilt, then a beat after the clunk the gun snaps back to
+			-- ready, swings a little past and settles, the hand riding back onto its grip.
+			key(1.24, tilt(23, -8, 0, -0.08, -0.02, 0.03), Vector3.new(0.02, -0.02, 0.22), "in"),
+			key(1.33, tilt(-6, 2, 3, 0.01, 0.03, 0), Vector3.zero, "out"),
+			key(1.48, tilt(2, -1, -1, 0, -0.01, 0), Vector3.zero),
+			key(1.63, CFrame.identity, Vector3.zero),
 			key(1.714, CFrame.identity, Vector3.zero),
 		},
 	},
