@@ -85,7 +85,6 @@ end
 local function tilt(roll: number, yaw: number, pitch: number, x: number, y: number, z: number): CFrame
 	return CFrame.new(x, y, z) * CFrame.Angles(math.rad(pitch), math.rad(yaw), math.rad(roll))
 end
-local TILTED = tilt(30, -10, 6, -0.12, 0.06, 0.05)
 local RELOADS: { [string]: any } = {
 	-- reload-sniper.wav: a rising whine to 0.95s, a click at 0.94s and a clunk at 1.06s. The gun spins once
 	-- backwards round the trigger finger during the whine, then the left hand clicks the cell home and locks it.
@@ -102,14 +101,18 @@ local RELOADS: { [string]: any } = {
 			key(0.68, tilt(0, 0, 0, 0, 0.06, 0), Vector3.new(-0.05, -0.3, 0.08)), -- comes up under it
 			key(0.76, tilt(4, -2, 2, -0.02, 0.03, 0.01), Vector3.zero, "out"), -- catches it
 			key(0.81, tilt(8, -3, -3, -0.04, -0.04, 0.02), Vector3.new(0, -0.04, 0), "out"), -- and gives with the weight
-			key(0.83, TILTED, Vector3.new(0, -0.3, 0.26)),
-			key(0.94, TILTED, Vector3.new(0.02, -0.1, 0.24)), -- pushes it home, slower and smooth
-			key(0.98, tilt(27, -9, 9, -0.12, 0.1, 0.05), Vector3.new(0.02, -0.06, 0.24), "out"), -- click
-			key(1.02, TILTED, Vector3.new(0.02, -0.16, 0.24)),
-			key(1.06, tilt(25, -8, 10, -0.11, 0.12, 0.05), Vector3.new(0.02, -0.02, 0.22), "in"), -- the heel of the hand locks it
-			key(1.14, TILTED, Vector3.new(0.02, -0.04, 0.22)), -- holds it a moment
-			key(1.26, TILTED, Vector3.zero, "out"), -- then lets go
-			key(1.5, tilt(-4, 2, -2, 0, -0.01, 0), Vector3.zero), -- turns back, a little past
+			-- CLICK: the gun tips to show the cell slot, the hand pulls back to load up, then drives the cell in on
+			-- the sound and the gun bumps up off the hit and settles.
+			key(0.86, tilt(18, -6, 2, -0.06, 0, 0.03), Vector3.new(0, -0.38, 0.26)),
+			key(0.94, tilt(18, -6, 2, -0.06, 0, 0.03), Vector3.new(0.02, -0.02, 0.24), "in"),
+			key(0.98, tilt(16, -6, 9, -0.06, 0.09, 0.03), Vector3.new(0.02, 0.05, 0.24), "out"),
+			key(1.02, tilt(20, -7, 1, -0.07, -0.01, 0.03), Vector3.new(0.02, -0.01, 0.24)),
+			-- CLICK release: a small wind-up further into the tilt, then on the clunk the gun snaps back to ready,
+			-- swings a little past and settles, the hand riding back onto its grip.
+			key(1.06, tilt(23, -8, 0, -0.08, -0.02, 0.03), Vector3.new(0.02, -0.02, 0.22), "in"),
+			key(1.15, tilt(-6, 2, 3, 0.01, 0.03, 0), Vector3.zero, "out"),
+			key(1.3, tilt(2, -1, -1, 0, -0.01, 0), Vector3.zero),
+			key(1.45, CFrame.identity, Vector3.zero),
 			key(1.714, CFrame.identity, Vector3.zero),
 		},
 	},
