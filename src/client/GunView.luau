@@ -139,9 +139,9 @@ local RELOADS: { [string]: any } = {
 		spin = { from = 0, to = 0.88, launch = 1.8 },
 		keys = {
 			key(0, CFrame.identity, Vector3.zero),
-			key(0.07, tilt(-7, 0, 0, 0, 0.02, 0.7), Vector3.new(0, 0.05, -0.45), "out"), -- slams back, knocking the hand off
-			key(0.22, tilt(-3, 0, 0, 0, 0.08, 0.28), Vector3.new(-0.12, -0.2, -0.05)), -- it comes forward again, still turning
-			key(0.57, tilt(0, 0, 0, 0, 0.1, 0), Vector3.new(-0.3, -0.7, 0.3)), -- the hand drops away while it whips round
+			key(0.07, tilt(-7, 0, 0, 0, 0.11, 0.7), Vector3.new(0, 0.05, -0.45), "out"), -- slams back, knocking the hand off
+			key(0.22, tilt(-3, 0, 0, 0, 0.19, 0.28), Vector3.new(-0.12, -0.2, -0.05)), -- it comes forward again, still turning
+			key(0.57, tilt(0, 0, 0, 0, 0.13, 0), Vector3.new(-0.3, -0.7, 0.3)), -- the hand drops away while it whips round
 			key(0.8, tilt(0, 0, 0, 0, 0.06, 0), Vector3.new(-0.05, -0.3, 0.08)), -- comes up under it
 			key(0.88, tilt(4, -2, 2, -0.02, 0.03, 0.01), Vector3.zero, "out"), -- catches it
 			key(0.93, tilt(8, -3, -3, -0.04, -0.04, 0.02), Vector3.new(0, -0.04, 0), "out"), -- and gives with the weight
