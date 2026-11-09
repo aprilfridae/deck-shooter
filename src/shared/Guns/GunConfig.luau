@@ -66,6 +66,7 @@ GunConfig.guns = {
 		headshot = "Kill",
 		rpm = 50,
 		mag = 1, -- one in the chamber: every shot needs a reload
+		autoReload = true, -- starts reloading by itself right after the shot
 		reload = 1.714,
 		fullTo = math.huge,
 		lowTo = math.huge,

@@ -27,6 +27,8 @@ local ammo = 0
 local serverAmmo = 0
 local reloading = false
 local lastFire = -math.huge
+local AUTO_RELOAD_DELAY = 0.12 -- lets the shot's kick land before an auto reload starts
+local autoReloadAsked = false
 local previous = { fire = false, reload = false, primary = false, sidearm = false, nextClass = false, nextRifle = false }
 
 -- The local count runs ahead while firing. A refused shot is corrected once firing stops.
@@ -152,6 +154,16 @@ local function onFrame(dt: number)
 		elseif pressed and gun and ammo <= 0 and not reloading then
 			reloadRemote:FireServer()
 		end
+	end
+
+	-- A gun that reloads itself asks once, just after the shot that emptied it.
+	if gun and gun.autoReload and ammo <= 0 and not reloading and now - lastFire >= AUTO_RELOAD_DELAY then
+		if not autoReloadAsked then
+			autoReloadAsked = true
+			reloadRemote:FireServer()
+		end
+	elseif reloading or ammo > 0 then
+		autoReloadAsked = false
 	end
 
 	previous.fire = keys.fire
