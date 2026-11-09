@@ -29,6 +29,12 @@ local reloading = false
 local lastFire = -math.huge
 local AUTO_RELOAD_DELAY = 0.12 -- lets the shot's kick land before an auto reload starts
 local autoReloadAsked = false
+-- Swaps show at once, before the server answers: the gun last seen in each slot, and the slot asked for.
+local SWAP_WAIT = 1 -- seconds to wait for the server before showing its gun again
+local slotGuns: { [string]: string } = {}
+local pendingSlot: string? = nil
+local pendingAt = 0
+local shownGunId: string? = nil
 local previous = { fire = false, reload = false, primary = false, sidearm = false, nextClass = false, nextRifle = false }
 
 -- The local count runs ahead while firing. A refused shot is corrected once firing stops.
@@ -43,7 +49,31 @@ local function syncGun(now: number)
 	if reloading and not wasReloading then
 		GunAudio.playReload(gunId)
 	end
-	GunView.setGun(gunId, player:GetAttribute("GunSlot"))
+	local serverSlot = player:GetAttribute("GunSlot")
+	local class = player:GetAttribute("Class") or ""
+	if serverSlot then
+		slotGuns[class .. serverSlot] = gunId
+	end
+	local showId, showSlot = gunId, serverSlot
+	if pendingSlot then
+		if serverSlot == pendingSlot or now - pendingAt > SWAP_WAIT then
+			pendingSlot = nil
+		else
+			local classInfo = GunConfig.classes[class]
+			local guess = slotGuns[class .. pendingSlot]
+				or (pendingSlot == "sidearm" and classInfo and classInfo.sidearm)
+				or nil
+			if guess then
+				showId, showSlot = guess, pendingSlot
+			end
+		end
+	end
+	if showId ~= shownGunId then
+		-- The old gun's shots and reload fade out, so they don't ring on over the new one.
+		GunAudio.fadeGuns(showId)
+		shownGunId = showId
+	end
+	GunView.setGun(showId, showSlot)
 	local latest = player:GetAttribute("Ammo")
 	if latest ~= serverAmmo or now - lastFire > AMMO_RESYNC_SECONDS then
 		ammo = latest
@@ -77,7 +107,8 @@ local function fire(camera: Camera, aiming: boolean, shotTime: number)
 end
 
 local function canShoot(): boolean
-	return gun ~= nil and ammo > 0 and not (reloading and not gun.perShell)
+	-- Not mid-swap: the server still has the old gun out.
+	return gun ~= nil and ammo > 0 and not (reloading and not gun.perShell) and pendingSlot == nil
 end
 
 local function nextShot(pressed: boolean, held: boolean, now: number): number?
@@ -133,7 +164,9 @@ local function onFrame(dt: number)
 			CardHand.putAway(CardInHand)
 			swapRemote:FireServer(slot)
 			if player:GetAttribute("GunSlot") ~= slot then
-				GunView.holster()
+				pendingSlot, pendingAt = slot, now
+			else
+				pendingSlot = nil
 			end
 		end
 	end

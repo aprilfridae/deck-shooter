@@ -762,9 +762,6 @@ function GunView.setGun(gunId: string, slot: string)
 	table.clear(history) -- or the motion blur would streak from the old gun's spot
 end
 
--- Swapping has no lowering animation, so the gun stays up until the server swaps it.
-function GunView.holster() end
-
 -- Snaps the fingers of the free hand, on guns that leave one free. True if it snapped.
 function GunView.snap(): boolean
 	if clips and clips.snap then

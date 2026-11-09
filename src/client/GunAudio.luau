@@ -94,25 +94,47 @@ local function pickTake(gunId: string, count: number): number
 	return take
 end
 
--- Each play gets its own copy, so every sound rings out under the ones after it.
-local function playCopy(template: Sound, startAt: number)
+-- Sounds still ringing from each gun, so a swap can fade them.
+local SWAP_FADE = 0.15
+local gunSounds: { [Sound]: string } = {}
+
+-- Each play gets its own copy, so every sound rings out under the ones after it. gunId tags a gun's own sounds.
+local function playCopy(template: Sound, startAt: number, gunId: string?)
 	local copy = template:Clone()
 	copy.Parent = SoundService
+	if gunId then
+		gunSounds[copy] = gunId
+	end
 	copy.Ended:Once(function()
+		gunSounds[copy] = nil
 		copy:Destroy()
 	end)
 	copy.TimePosition = startAt
 	copy:Play()
 end
 
+-- Fades out every gun sound still playing that isn't keep's.
+function GunAudio.fadeGuns(keep: string)
+	for copy, gunId in gunSounds do
+		if gunId ~= keep then
+			gunSounds[copy] = nil
+			local fade = TweenService:Create(copy, TweenInfo.new(SWAP_FADE), { Volume = 0 })
+			fade.Completed:Once(function()
+				copy:Destroy()
+			end)
+			fade:Play()
+		end
+	end
+end
+
 function GunAudio.playShot(gunId: string, lateness: number)
 	local takes = shots[gunId]
 	if takes then
-		playCopy(takes[pickTake(gunId, #takes)], GunSounds.startOffset(lateness))
+		playCopy(takes[pickTake(gunId, #takes)], GunSounds.startOffset(lateness), gunId)
 	end
 	local base = GunSounds.shotBases[gunId]
 	if base then
-		playCopy(others[base], GunSounds.startOffset(lateness))
+		playCopy(others[base], GunSounds.startOffset(lateness), gunId)
 	end
 end
 
@@ -125,7 +147,7 @@ end
 function GunAudio.playReload(gunId: string)
 	local soundId = GunSounds.reloads[gunId]
 	if soundId then
-		playCopy(others[soundId], 0)
+		playCopy(others[soundId], 0, gunId)
 	end
 end
 
