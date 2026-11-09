@@ -115,7 +115,13 @@ function Weapon.swap(loadout: Loadout, slotName: string, now: number): boolean
 		return false
 	end
 	Weapon.update(loadout, now)
-	activeSlot(loadout).reloadDoneAt = nil
+	local leaving = activeSlot(loadout)
+	leaving.reloadDoneAt = nil
+	-- A gun that reloads itself after every shot (the Longscope) is put away loaded, so it's always ready when it
+	-- comes back out.
+	if leaving.gun.autoReload then
+		leaving.ammo = leaving.gun.mag
+	end
 	loadout.active = slotName
 	return true
 end

@@ -45,7 +45,7 @@ Damage falls off in a straight line between the two distances, then stays flat. 
 
 **In the data, unused:** Machine pistol (13 damage, 900 RPM, 20 rounds, 1.6s, auto, spread 1), Revolver (45, 150, 6, 2.2s, single, 0.3) and Auto-pistol (16, 550, 15, 1.5s, single, 0.6). All three do 2x on headshots and use the Energy Pistol's falloff.
 
-- The Longscope holds one round and starts reloading by itself 0.12s after each shot (`autoReload`). Other guns don't reload on their own when they run dry: pressing fire on an empty gun, or the reload key, starts one.
+- The Longscope holds one round and starts reloading by itself 0.12s after each shot (`autoReload`). Swapping off it puts it away loaded, so it never reloads when you switch back to it. Other guns don't reload on their own when they run dry: pressing fire on an empty gun, or the reload key, starts one.
 - A 2x headshot applies after falloff, so the M57 does 48 to the head only within 90 studs.
 - The M57, B33, Longscope and Energy Pistol reload times match their reload sounds (`GunSounds.luau`). The SMG and Shotgun have no reload sound yet.
 
