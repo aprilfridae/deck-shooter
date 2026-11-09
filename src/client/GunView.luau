@@ -920,7 +920,8 @@ function GunView.update(
 	view = view or makeBlock()
 	local goal = if aiming then scopeAim or AIMED else HIP
 	local keyedReload = if shownGun then RELOADS[GunConfig.guns[shownGun].name] else nil
-	if reloading and not clips and not keyedReload then
+	local shotKeyed = keyedReload ~= nil and keyedReload.lead ~= nil
+	if reloading and not clips and (not keyedReload or (shotKeyed and not keyedReloadAt)) then
 		goal *= RELOAD_DIP
 	end
 	local config = if shownGun then GunConfig.guns[shownGun] else nil
@@ -1050,7 +1051,9 @@ function GunView.update(
 		elseif not keyedReload then
 			keyedReloadAt = nil
 		end
-		if reloading and keyedReload and not keyedReloadAt then
+		-- A reload keyed from the shot (the Longscope's flip) only plays after a shot, not when the gun comes out
+		-- empty and reloads.
+		if reloading and keyedReload and not keyedReload.lead and not keyedReloadAt then
 			keyedReloadAt = now
 		end
 		if keyedReloadAt and keyedReload and config then
