@@ -76,11 +76,11 @@ local DEFAULT_KICK = { back = 0.15, drop = 0.02, up = 4, roll = 1.5, rise = 0.03
 -- An automatic's shove, as a multiple of its spring's speed, so one shot alone peaks at about the full kick.
 local AUTO_SHOVE = 2.3
 -- Reloads for guns posed in code, as keys: seconds into the reload, the gun's turn and shift from its hold, where
--- the left hand is from its grip (in the space of the gun before any spin, so it can let go and catch), how the move into that key eases, and how far the gun has
--- spun backwards round the trigger (degrees). Timed to the sound, and stretched if the gun's reload time differs
+-- the left hand is from its grip (in the space of the gun before any spin, so it can let go and catch), and how the move into that key eases. A reload with
+-- a spin turns the gun once backwards round the trigger between those times. Timed to the sound, and stretched if the gun's reload time differs
 -- from length.
-local function key(at: number, gun: CFrame, hand: Vector3, ease: string?, spin: number?): any
-	return { at = at, gun = gun, hand = hand, ease = ease or "inOut", spin = spin or 360 }
+local function key(at: number, gun: CFrame, hand: Vector3, ease: string?): any
+	return { at = at, gun = gun, hand = hand, ease = ease or "inOut" }
 end
 local function tilt(roll: number, yaw: number, pitch: number, x: number, y: number, z: number): CFrame
 	return CFrame.new(x, y, z) * CFrame.Angles(math.rad(pitch), math.rad(yaw), math.rad(roll))
@@ -91,15 +91,17 @@ local RELOADS: { [string]: any } = {
 	-- backwards round the trigger finger during the whine, then the left hand clicks the cell home and locks it.
 	Longscope = {
 		length = 1.714,
+		-- One smooth spin from the shove to the catch, so it never slows between keys.
+		spin = { from = 0.13, to = 0.76 },
 		keys = {
-			key(0, CFrame.identity, Vector3.zero, nil, 0),
-			key(0.12, tilt(0, 0, -10, 0, -0.05, 0.03), Vector3.zero, nil, 0), -- dips to wind up
-			key(0.2, tilt(0, 0, -4, 0, -0.02, 0.03), Vector3.new(0, 0.22, -0.12), "in", 35), -- the left hand shoves it up
-			key(0.27, tilt(0, 0, 0, 0, 0.04, 0.02), Vector3.new(-0.05, 0.38, -0.05), "out", 85), -- and follows through
-			key(0.45, tilt(0, 0, 0, 0, 0.1, 0), Vector3.new(-0.3, -0.7, 0.3), nil, 190), -- drops away while it whips round
-			key(0.68, tilt(0, 0, 0, 0, 0.06, 0), Vector3.new(-0.05, -0.3, 0.08), nil, 330), -- comes up under it
-			key(0.76, tilt(4, -2, 2, -0.02, 0.03, 0.01), Vector3.zero, "out", 360), -- catches it
-			key(0.81, tilt(8, -3, -3, -0.04, -0.04, 0.02), Vector3.new(0, -0.04, 0), "out", 360), -- and gives with the weight
+			key(0, CFrame.identity, Vector3.zero),
+			key(0.12, tilt(0, 0, -10, 0, -0.05, 0.03), Vector3.zero), -- dips to wind up
+			key(0.2, tilt(0, 0, -4, 0, -0.02, 0.03), Vector3.new(0, 0.22, -0.12), "in"), -- the left hand shoves it up
+			key(0.27, tilt(0, 0, 0, 0, 0.04, 0.02), Vector3.new(-0.05, 0.38, -0.05), "out"), -- and follows through
+			key(0.45, tilt(0, 0, 0, 0, 0.1, 0), Vector3.new(-0.3, -0.7, 0.3)), -- drops away while it whips round
+			key(0.68, tilt(0, 0, 0, 0, 0.06, 0), Vector3.new(-0.05, -0.3, 0.08)), -- comes up under it
+			key(0.76, tilt(4, -2, 2, -0.02, 0.03, 0.01), Vector3.zero, "out"), -- catches it
+			key(0.81, tilt(8, -3, -3, -0.04, -0.04, 0.02), Vector3.new(0, -0.04, 0), "out"), -- and gives with the weight
 			key(0.84, TILTED, Vector3.new(0, -0.3, 0.26)),
 			key(0.94, TILTED, Vector3.new(0.02, -0.1, 0.24), "in"), -- pushes it home
 			key(0.98, tilt(27, -9, 9, -0.12, 0.1, 0.05), Vector3.new(0.02, -0.06, 0.24), "out"), -- click
@@ -121,6 +123,20 @@ local function eased(ease: string, u: number): number
 	return u * u * (3 - 2 * u)
 end
 
+-- How far a reload's spin has turned, in radians, on one smooth curve from the shove to the catch.
+local function spinAt(reload: any, at: number): number
+	local spin = reload.spin
+	if not spin or at <= spin.from then
+		return 0
+	elseif at >= spin.to then
+		return 0 -- a full turn is back where it started
+	end
+	local u = (at - spin.from) / (spin.to - spin.from)
+	-- Leaves the shove already moving, peaks a quarter of the way round, and slows to a stop in the hand.
+	local eased = 1.2 * u + 0.6 * u * u - 0.8 * u * u * u
+	return eased * 2 * math.pi
+end
+
 -- The gun's offset, the left hand's, and the gun's backward spin in radians, elapsed seconds into a keyed reload.
 local function reloadPose(reload: any, elapsed: number, reloadTime: number): (CFrame, Vector3, number)
 	local at = elapsed * reload.length / reloadTime
@@ -130,7 +146,7 @@ local function reloadPose(reload: any, elapsed: number, reloadTime: number): (CF
 		if at < to.at then
 			local from = keys[index - 1]
 			local u = eased(to.ease, (at - from.at) / (to.at - from.at))
-			return from.gun:Lerp(to.gun, u), from.hand:Lerp(to.hand, u), math.rad(from.spin + (to.spin - from.spin) * u)
+			return from.gun:Lerp(to.gun, u), from.hand:Lerp(to.hand, u), spinAt(reload, at)
 		end
 	end
 	return CFrame.identity, Vector3.zero, 0
