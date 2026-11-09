@@ -143,11 +143,11 @@ local RELOADS: { [string]: any } = {
 			-- The shot heaves it back and up, slowly enough to feel the hit, knocking the left hand off; then it sinks
 			-- back down slowly while it spins.
 			key(0.15, tilt(-9, 0, 0, 0, 0.55, 0.6), Vector3.new(0, 0.05, -0.4), "out"),
-			key(0.3, tilt(-5, 0, 0, 0, 0.5, 0.25), Vector3.new(-0.15, -0.3, 0)),
-			key(0.44, tilt(-2, 0, 0, 0, 0.32, 0.06), Vector3.new(-0.3, -0.7, 0.3)), -- the hand drops away while it whips round
-			key(0.56, tilt(0, 0, 0, 0, 0.18, 0), Vector3.new(-0.05, -0.3, 0.08)), -- comes up under it
-			key(0.62, tilt(4, -2, 2, -0.02, 0.12, 0.01), Vector3.zero, "out"), -- catches it
-			key(0.7, tilt(8, -3, -3, -0.04, 0.02, 0.02), Vector3.new(0, -0.04, 0), "out"), -- and gives with the weight, still sinking
+			key(0.3, tilt(-5, 0, 0, 0, 0.5, 0.25), Vector3.new(-0.15, -0.3, 0), "flow"),
+			key(0.44, tilt(-2, 0, 0, 0, 0.32, 0.06), Vector3.new(-0.3, -0.7, 0.3), "flow"), -- the hand drops away while it whips round
+			key(0.56, tilt(0, 0, 0, 0, 0.18, 0), Vector3.new(-0.05, -0.3, 0.08), "flow"), -- comes up under it
+			key(0.62, tilt(4, -2, 2, -0.02, 0.12, 0.01), Vector3.zero, "flow"), -- catches it
+			key(0.7, tilt(8, -3, -3, -0.04, 0.02, 0.02), Vector3.new(0, -0.04, 0), "flow"), -- and gives with the weight, still sinking
 			-- CLICK: the gun tips to show the cell slot, the hand pulls back to load up, then drives the cell in on
 			-- the sound and the gun bumps up off the hit and settles.
 			key(0.97, tilt(18, -6, 2, -0.06, 0, 0.03), Vector3.new(0, -0.38, 0.26)),
@@ -164,6 +164,8 @@ local RELOADS: { [string]: any } = {
 	},
 }
 
+local flowHand: (any, number, number) -> Vector3
+local flowing: (any, number, number) -> CFrame
 local function eased(ease: string, u: number): number
 	if ease == "in" then
 		return u * u * u
@@ -189,6 +191,39 @@ local function spinAt(reload: any, at: number): number
 end
 
 -- The gun's offset, the left hand's, and the gun's backward spin in radians, elapsed seconds into a keyed reload.
+-- "flow" keys run through each other on one smooth curve instead of stopping at each one: a key between two flow
+-- moves is passed through at speed, and one next to any other ease is stopped at, as that ease expects.
+local function tangent(keys: any, index: number, value: (any) -> any): any
+	local before, key, after = keys[index - 1], keys[index], keys[index + 1]
+	if not before or not after or key.ease ~= "flow" or after.ease ~= "flow" then
+		return value(key) * 0
+	end
+	return (value(after) - value(before)) / (after.at - before.at)
+end
+local function hermite(keys: any, index: number, u: number, value: (any) -> any): any
+	local from, to = keys[index - 1], keys[index]
+	local span = to.at - from.at
+	local u2, u3 = u * u, u * u * u
+	return value(from) * (2 * u3 - 3 * u2 + 1)
+		+ tangent(keys, index - 1, value) * (span * (u3 - 2 * u2 + u))
+		+ value(to) * (-2 * u3 + 3 * u2)
+		+ tangent(keys, index, value) * (span * (u3 - u2))
+end
+local function handOf(key: any): Vector3
+	return key.hand
+end
+local function placeOf(key: any): Vector3
+	return key.gun.Position
+end
+function flowHand(keys: any, index: number, u: number): Vector3
+	return hermite(keys, index, u, handOf)
+end
+function flowing(keys: any, index: number, u: number): CFrame
+	local from, to = keys[index - 1], keys[index]
+	local turn = from.gun.Rotation:Lerp(to.gun.Rotation, u * u * (3 - 2 * u) * 0.5 + u * 0.5)
+	return CFrame.new(hermite(keys, index, u, placeOf)) * turn
+end
+
 -- A reload with a lead counts from the shot before it, and only the part after the lead stretches.
 local function reloadPose(reload: any, elapsed: number, reloadTime: number): (CFrame, Vector3, number)
 	local lead = reload.lead or 0
@@ -198,7 +233,11 @@ local function reloadPose(reload: any, elapsed: number, reloadTime: number): (CF
 		local to = keys[index]
 		if at < to.at then
 			local from = keys[index - 1]
-			local u = eased(to.ease, (at - from.at) / (to.at - from.at))
+			local u = (at - from.at) / (to.at - from.at)
+			if to.ease == "flow" then
+				return flowing(keys, index, u), flowHand(keys, index, u), spinAt(reload, at)
+			end
+			u = eased(to.ease, u)
 			return from.gun:Lerp(to.gun, u), from.hand:Lerp(to.hand, u), spinAt(reload, at)
 		end
 	end
