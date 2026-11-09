@@ -14,6 +14,9 @@ local GunAudio = {}
 local WHIZZ_SPEED = 60 -- studs a second
 local WHIZZ_NEAR = 2
 local WHIZZ_FAR = 40
+-- Coin bursts sound from the body, loud close by and gone past this far.
+local COIN_NEAR = 8
+local COIN_FAR = 150
 
 local allSounds: { Sound } = {}
 
@@ -45,6 +48,7 @@ for _, soundId in {
 	GunSounds.lands.soft,
 	GunSounds.lands.hard,
 	GunSounds.slideStart,
+	GunSounds.coinBurst,
 } do
 	others[soundId] = newSound(soundId)
 end
@@ -154,6 +158,22 @@ function GunAudio.playWhizz(closest: Vector3, direction: Vector3)
 	TweenService:Create(anchor, TweenInfo.new(seconds, Enum.EasingStyle.Linear), {
 		WorldPosition = anchor.WorldPosition + direction * WHIZZ_SPEED * seconds,
 	}):Play()
+	copy:Play()
+end
+
+function GunAudio.playCoins(position: Vector3)
+	local anchor = Instance.new("Attachment")
+	anchor.Name = "Coins"
+	anchor.WorldPosition = position
+	anchor.Parent = workspace.Terrain
+	local copy = others[GunSounds.coinBurst]:Clone()
+	copy.RollOffMode = Enum.RollOffMode.InverseTapered
+	copy.RollOffMinDistance = COIN_NEAR
+	copy.RollOffMaxDistance = COIN_FAR
+	copy.Parent = anchor
+	copy.Ended:Once(function()
+		anchor:Destroy()
+	end)
 	copy:Play()
 end
 

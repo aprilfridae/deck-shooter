@@ -185,6 +185,7 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 local function burstCoins(position: Vector3)
+	GunAudio.playCoins(position)
 	for _ = 1, COINS do
 		local coin = Instance.new("Part")
 		coin.Name = "Coin"

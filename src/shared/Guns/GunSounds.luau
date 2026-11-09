@@ -76,6 +76,8 @@ local GunSounds = {
 		hard = sound("move-land-hard.wav"),
 	},
 	slideStart = sound("move-slide-start.wav"),
+	-- The coins a body bursts into when it dies.
+	coinBurst = sound("coin-burst.wav"),
 	-- Each pack rarity's opening sound.
 	packOpens = {
 		Field = sound("pack-open-common.wav"),
