@@ -48,6 +48,9 @@ for _, soundId in {
 } do
 	others[soundId] = newSound(soundId)
 end
+for _, soundId in GunSounds.shotBases do
+	others[soundId] = others[soundId] or newSound(soundId)
+end
 for _, soundId in GunSounds.reloads do
 	others[soundId] = others[soundId] or newSound(soundId)
 end
@@ -101,6 +104,10 @@ function GunAudio.playShot(gunId: string, lateness: number)
 	local takes = shots[gunId]
 	if takes then
 		playCopy(takes[pickTake(gunId, #takes)], GunSounds.startOffset(lateness))
+	end
+	local base = GunSounds.shotBases[gunId]
+	if base then
+		playCopy(others[base], GunSounds.startOffset(lateness))
 	end
 end
 

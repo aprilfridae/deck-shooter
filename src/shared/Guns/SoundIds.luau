@@ -167,6 +167,7 @@ return {
 	["gun-smg-8.wav"] = 128009070908568,
 	["gun-smg-9.wav"] = 129666786231160,
 	["gun-sniper-1.wav"] = 80989143421566,
+	["gun-sniper-base.wav"] = 85501932585829,
 	["gun-sniper-10.wav"] = 101900741207161,
 	["gun-sniper-11.wav"] = 140397677856460,
 	["gun-sniper-13.wav"] = 112806676400124,

@@ -44,11 +44,15 @@ local GunSounds = {
 		Shotgun = takes("shotgun", 30),
 		Pistol = takes("pistol", 30),
 	},
-	-- Each gun's reload time in GunConfig matches the length of its sound here.
+	-- Played under every take of that gun's shot.
+	shotBases = {
+		Sniper = sound("gun-sniper-base.wav"),
+	},
+	-- Each gun's reload time in GunConfig matches the length of its sound here. The Sniper has none: its base
+	-- shot sound covers it.
 	reloads = {
 		M4 = sound("reload-assault-v2.wav"),
 		AK47 = sound("reload-assault-v2.wav"),
-		Sniper = sound("reload-sniper.wav"),
 		Pistol = sound("reload-pistol-v4.wav"),
 	},
 	hits = {

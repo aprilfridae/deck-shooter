@@ -22,7 +22,7 @@ What the game already plays and what it still needs. Checked against the code on
 | Shotgun shots | `gun-shotgun-1` to `30` | Each shot, 0.8s apart |
 | Energy Pistol shots | `gun-pistol-1` to `30` | Each shot, 150ms apart |
 | Assault reload | `reload-assault-v2` | M57 and B33 reloads (0.985s) |
-| Longscope reload | `reload-sniper` | Reload (1.714s) |
+| Longscope shot base | `gun-sniper-base` | Every Longscope shot, under the take (the Longscope has no reload sound) |
 | Energy Pistol reload | `reload-pistol-v4` | Reload (0.964s) |
 | Hits | `hit-body`, `hit-head`, `hit-kill` | Your shot hits a body, a head, or gets a kill |
 | Low health | `hurt` | Damage leaves you at 20 health or less |
