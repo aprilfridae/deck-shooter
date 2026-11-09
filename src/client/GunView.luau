@@ -1,6 +1,7 @@
 -- The gun held in view, with the arms holding it. Uses the model in ReplicatedStorage.GunModels named after the gun,
 local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
 -- or a grey block if that model hasn't been imported.
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ArmClip = require(ReplicatedStorage.Guns.ArmClip)
@@ -29,6 +30,21 @@ local BARREL_RISE = 0.26 -- how far above the model's middle the barrel sits, as
 local HIP = CFrame.new(0.9, -0.8, -2)
 local AIMED = CFrame.new(0, -0.55, -2)
 local RELOAD_DIP = CFrame.new(0, -0.7, 0) * CFrame.Angles(math.rad(-25), 0, 0)
+-- Sprinting with a gun posed in code: lowered and turned across the body. Guns with clips have run clips.
+local SPRINT = CFrame.new(-0.25, -0.3, 0.15) * CFrame.Angles(math.rad(-12), math.rad(38), math.rad(18))
+-- Sway: the gun and arms lag behind the mouse, then swing back on a spring.
+local SWAY_TURN = 0.025 -- how far they turn per radian per second the camera turns
+local SWAY_MOVE = 0.3 -- and how far they slide, in studs per radian they turn
+local SWAY_MAX = math.rad(5)
+local SWAY_STIFF = 180 -- spring strength
+local SWAY_DAMP = 20 -- spring damping, a little under critical, so it swings past once
+local SWAY_AIMED = 0.25 -- the share of sway left while scoped
+-- Bob: the gun rides the steps. Height and side to side in studs, at walking speed.
+local BOB_HEIGHT = 0.03
+local BOB_SIDE = 0.035
+local BOB_RATE = 0.62 -- radians of the step cycle per stud travelled
+local BOB_SPRINT = 2.2 -- how much bigger the bob is while sprinting
+local WALK_SPEED = 16
 local EASE = 14
 -- A new clip fades in from the last pose over this long, so the end of a reload doesn't cut to idle.
 -- A shot and a swap start at once, so they keep their snap.
@@ -52,11 +68,11 @@ local DEFAULT_KICK = { back = 0.25, drop = 0, up = 0, roll = 0, ease = 14, slap 
 local SLAP_LEAVE = 0.18 -- the hand starts to pull away
 local SLAP_HIT = 0.42 -- and lands back on the gun
 local SLAP_HAND = Vector3.new(-0.4, -0.2, 0.15) -- how far the hand pulls away, in the gun's space
-local SLAP_SHOVE = Vector3.new(0.07, 0.03, 0) -- the gun's jolt
-local SLAP_ROLL = -12 -- degrees
+local SLAP_SHOVE = Vector3.new(0.045, 0.02, 0) -- the gun's jolt
+local SLAP_ROLL = -7 -- degrees
 -- The jolt rings like a spring: it shoves out, swings past the rest pose, and settles.
 local SLAP_RING = 2 * math.pi * 3.2 -- radians per second, about 3 swings a second
-local SLAP_SETTLE = 7 -- how fast the swinging dies away, per second
+local SLAP_SETTLE = 11 -- how fast the swinging dies away, per second
 local SLAP_SNAP = 0.1 -- the hand's last stretch in, as a share of the move, where it speeds into the hit
 -- Equipping a gun posed in code: it swings in from below and to the right.
 local EQUIP_TIME = 0.4
@@ -192,7 +208,7 @@ end
 
 -- Remembers this frame's pose and trails the copies from the oldest remembered one up to it,
 -- the copies nearest the gun the strongest.
-local function drawSmear(camera: Camera, whole: any)
+local function drawSmear(camera: Camera, whole: any, base: CFrame)
 	local now = os.clock()
 	table.insert(history, { at = now, frame = whole })
 	while #history > 1 and history[2].at <= now - SMEAR_TIME do
@@ -211,7 +227,7 @@ local function drawSmear(camera: Camera, whole: any)
 		makeSmears()
 	end
 	smearShown = true
-	local hold = camera.CFrame * held * HIP:Inverse()
+	local hold = base * held * HIP:Inverse()
 	for _, smear in smears do
 		local transparency = 1 - SMEAR_OPACITY * smear.share
 		for _, part in smear.parts do
@@ -221,9 +237,53 @@ local function drawSmear(camera: Camera, whole: any)
 		smear.gun.Parent = camera
 		if smear.arms then
 			ViewArms.poseGhost(smear.arms, clips.meshOffset, ArmClip.blendBones(from.bones, whole.bones, smear.share))
-			ViewArms.placeGhost(smear.arms, camera, transparency)
+			ViewArms.placeGhost(smear.arms, camera, transparency, base)
 		end
 	end
+end
+
+local swayAngles = Vector2.zero -- pitch, yaw, in radians
+local swaySpeed = Vector2.zero
+local lastLook: CFrame? = nil
+local bobPhase = 0
+local bobWeight = 0
+
+-- Lags the gun behind the camera's turning, and bobs it with the player's steps.
+local function swayAndBob(dt: number, camera: Camera, aiming: boolean, sprinting: boolean): CFrame
+	local look = camera.CFrame.Rotation
+	local turn = Vector2.zero
+	if lastLook and dt > 0 then
+		local pitch, yaw = lastLook:ToObjectSpace(look):ToEulerAnglesYXZ()
+		turn = Vector2.new(pitch, yaw) / dt
+	end
+	lastLook = look
+	local share = if aiming then SWAY_AIMED else 1
+	local goal = -turn * SWAY_TURN * share
+	goal = Vector2.new(math.clamp(goal.X, -SWAY_MAX, SWAY_MAX), math.clamp(goal.Y, -SWAY_MAX, SWAY_MAX))
+	local step = math.min(dt, 1 / 30)
+	swaySpeed += ((goal - swayAngles) * SWAY_STIFF - swaySpeed * SWAY_DAMP) * step
+	swayAngles += swaySpeed * step
+
+	local character = Players.LocalPlayer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local speed = 0
+	if root and humanoid and humanoid.FloorMaterial ~= Enum.Material.Air then
+		local velocity = root.AssemblyLinearVelocity
+		speed = Vector2.new(velocity.X, velocity.Z).Magnitude
+	end
+	bobPhase += speed * BOB_RATE * dt
+	local bobGoal = math.min(speed / WALK_SPEED, 1) * (if sprinting then BOB_SPRINT else 1) * share
+	bobWeight += (bobGoal - bobWeight) * (1 - math.exp(-dt * 8))
+	local bob = CFrame.new(
+		math.sin(bobPhase) * BOB_SIDE * bobWeight,
+		-math.abs(math.cos(bobPhase)) * BOB_HEIGHT * bobWeight,
+		0
+	) * CFrame.Angles(0, 0, math.sin(bobPhase) * math.rad(1.5) * bobWeight)
+
+	return CFrame.new(swayAngles.Y * SWAY_MOVE, swayAngles.X * SWAY_MOVE, 0)
+		* CFrame.Angles(swayAngles.X, swayAngles.Y, swayAngles.Y * 0.6)
+		* bob
 end
 
 local GunView = {}
@@ -339,7 +399,7 @@ end
 
 -- With a card out, the gun drops, then the arms play the card flying across and holding it.
 -- Returns true while the card has the screen.
-local function showCard(camera: Camera, cardOut: boolean): boolean
+local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boolean
 	if not cardOut then
 		if cardAt then
 			cardAt, shownCard, holsterAt = nil, nil, nil
@@ -366,8 +426,8 @@ local function showCard(camera: Camera, cardOut: boolean): boolean
 	local frame = ArmClip.sampleAt(CardClip.draw, elapsed) or ArmClip.sampleAt(CardClip.hold, os.clock())
 	shownCard = frame
 	ViewArms.showFrame(CardClip.meshOffset, frame.bones)
-	CardView.show(camera, frame, CFrame.identity)
-	ViewArms.place(camera)
+	CardView.show(camera, frame, cardSway)
+	ViewArms.place(camera, camera.CFrame * cardSway)
 	return true
 end
 
@@ -380,7 +440,7 @@ function GunView.update(
 	cardOut: boolean
 )
 	view = view or makeBlock()
-	local goal = if aiming then AIMED else HIP
+	local goal = if aiming then AIMED elseif sprinting and not clips and not reloading then HIP * SPRINT else HIP
 	if reloading and not clips then
 		goal *= RELOAD_DIP
 	end
@@ -390,7 +450,9 @@ function GunView.update(
 	held = held:Lerp(goal, ease)
 	kick *= math.exp(-dt * viewKick.ease)
 	local turn = if shownGun then TURNS[GunConfig.guns[shownGun].name] else nil
-	if showCard(camera, cardOut) then
+	local sway = swayAndBob(dt, camera, aiming, sprinting)
+	local base = camera.CFrame * sway
+	if showCard(camera, cardOut, sway) then
 		return
 	end
 	if clips then
@@ -444,7 +506,7 @@ function GunView.update(
 			elseif since >= SLAP_HIT then
 				-- Follow-through: shoves out, overshoots back past rest, and settles.
 				local after = since - SLAP_HIT
-				local jolt = math.exp(-after * SLAP_SETTLE) * math.sin(after * SLAP_RING) * 1.6
+				local jolt = math.exp(-after * SLAP_SETTLE) * math.sin(after * SLAP_RING) * 1.3
 				if math.abs(jolt) > 1e-3 or after < 0.1 then
 					slap = CFrame.new(SLAP_SHOVE * jolt) * CFrame.Angles(0, 0, math.rad(SLAP_ROLL * jolt))
 				end
@@ -462,11 +524,11 @@ function GunView.update(
 		end
 		ViewArms.pose(shown, right, left, config and SHOULDERS[config.name], config and THUMB_WRAPS[config.name])
 	end
-	view:PivotTo(camera.CFrame * shown)
+	view:PivotTo(base * shown)
 	view.Parent = camera
-	ViewArms.place(camera)
+	ViewArms.place(camera, base)
 	if clips and shownFrame then
-		drawSmear(camera, shownFrame)
+		drawSmear(camera, shownFrame, base)
 	elseif smearShown then
 		hideSmears()
 	end

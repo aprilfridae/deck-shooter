@@ -84,9 +84,9 @@ function CardView.show(camera: Camera, frame: any, jitter: CFrame)
 	end
 	deck = deck or makeDeck()
 	local part = card :: BasePart
-	part.CFrame = camera.CFrame * frame.card * jitter
+	part.CFrame = camera.CFrame * jitter * frame.card
 	local held = deck :: BasePart
-	held.CFrame = camera.CFrame * frame.deck * jitter
+	held.CFrame = camera.CFrame * jitter * frame.deck
 	held.Parent = camera
 	-- The first bone stays put, and each one after it bows a little further.
 	for index = 2, #bones do

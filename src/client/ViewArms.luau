@@ -71,8 +71,9 @@ local function makeRig(lit: boolean?): any
 	}
 end
 
-local function placeRig(target: any, camera: Camera)
-	local view = camera.CFrame
+-- view is where the arms hang from: the camera, or the camera with the gun's sway on it.
+local function placeRig(target: any, camera: Camera, view: CFrame?)
+	view = view or camera.CFrame
 	for index, group in target.groups do
 		local shake = target.jitter[group] or CFrame.identity
 		target.frames[index] = view * target.parts[group] * shake * target.offsets[index]
@@ -108,11 +109,11 @@ function ViewArms.poseGhost(ghost: any, offset: CFrame, bones: { [string]: { num
 	ghost.parts = SoldierPose.fromBones(solver, offset, bones)
 end
 
-function ViewArms.placeGhost(ghost: any, camera: Camera, transparency: number)
+function ViewArms.placeGhost(ghost: any, camera: Camera, transparency: number, view: CFrame?)
 	for _, mesh in ghost.meshes do
 		mesh.Transparency = transparency
 	end
-	placeRig(ghost, camera)
+	placeRig(ghost, camera, view)
 end
 
 function ViewArms.hideGhost(ghost: any)
@@ -142,9 +143,9 @@ function ViewArms.jitter(step: number, strength: number)
 	end
 end
 
-function ViewArms.place(camera: Camera)
+function ViewArms.place(camera: Camera, view: CFrame?)
 	if rig and rig.parts then
-		placeRig(rig, camera)
+		placeRig(rig, camera, view)
 	end
 end
 
