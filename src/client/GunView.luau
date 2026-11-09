@@ -37,12 +37,17 @@ local SWAY_MAX = math.rad(5)
 local SWAY_STIFF = 180 -- spring strength
 local SWAY_DAMP = 20 -- spring damping, a little under critical, so it swings past once
 local SWAY_AIMED = 0.25 -- the share of sway left while scoped
--- Bob: the gun rides the steps. Height and side to side in studs, at walking speed.
+-- Bob: the gun rides the steps, dipping and nodding on each footfall and swinging side to side
+-- every two steps. Studs and degrees at walking speed.
 local BOB_HEIGHT = 0.03
 local BOB_SIDE = 0.035
-local BOB_RATE = 0.62 -- radians of the step cycle per stud travelled
-local BOB_SPRINT = 2.2 -- how much bigger the bob is while sprinting
+local BOB_NOD = 1.2
+local BOB_ROLL = 1.5
+local STEP_STUDS = 9 -- the footstep sounds play this far apart, so the dips land with them
+local BOB_SPRINT = 1.9 -- how much bigger the bob is while sprinting
 local WALK_SPEED = 16
+-- Sprinting: the gun settles a little lower and closer, tipped down. Small on purpose.
+local SPRINT_HOLD = CFrame.new(0.03, -0.08, 0.06) * CFrame.Angles(math.rad(-6), math.rad(4), math.rad(3))
 local EASE = 14
 -- A new clip fades in from the last pose over this long, so the end of a reload doesn't cut to idle.
 -- A shot and a swap start at once, so they keep their snap.
@@ -55,25 +60,21 @@ local SMEAR_OPACITY = 0.5
 local SMEAR_MIN_MOVE = 0.04 -- studs the gun must travel in SMEAR_TIME to blur
 local SMEAR_MIN_TURN = math.rad(4)
 local SNAPPY = { fire = true, holster = true }
--- Guns posed in code move like this when they fire: pushed back (studs), dropped (studs), barrel up and
--- rolled (degrees), settling at ease per second. The Longscope slams back hard and is home in about 0.15s.
+-- How each gun moves when it fires: pushed back and dropped (studs), barrel up and rolled (degrees).
+-- A single shot pushes out over rise seconds, fast then easing into the peak. An automatic gets a shove each
+-- shot that stacks a little while spraying. Either way the gun comes home on a spring (stiff, damp) that swings
+-- a little past. Guns with clips (M57, Energy Pistol) move the whole view, arms and all, on top of the clip.
 local VIEW_KICKS: { [string]: any } = {
-	-- The Longscope pushes back over rise seconds, fast then easing into the peak, then comes home slowly on a
-	-- spring that swings a little past.
-	Longscope = { back = 0.85, drop = 0.22, up = 19, roll = -11, ease = 16, rise = 0.09, stiff = 55, damp = 10, slap = true },
+	M57 = { back = 0.06, drop = 0.01, up = 1.4, roll = 0.8, stiff = 420, damp = 32, auto = true },
+	B33 = { back = 0.14, drop = 0.02, up = 3, roll = 1.4, stiff = 360, damp = 28, auto = true },
+	SMG = { back = 0.09, drop = 0.01, up = 2, roll = 1.2, stiff = 480, damp = 34, auto = true },
+	["Energy Pistol"] = { back = 0.12, drop = 0.03, up = 7, roll = 2, rise = 0.035, stiff = 220, damp = 22 },
+	Shotgun = { back = 0.55, drop = 0.12, up = 13, roll = -6, rise = 0.07, stiff = 70, damp = 12 },
+	Longscope = { back = 0.85, drop = 0.22, up = 19, roll = -11, rise = 0.09, stiff = 55, damp = 10 },
 }
-local DEFAULT_KICK = { back = 0.25, drop = 0, up = 0, roll = 0, ease = 14, slap = false }
--- Recharging an energy gun: after the kick, the left hand comes off, then slaps the side of the gun,
--- which jolts right and rolls. Seconds after the shot.
-local SLAP_LEAVE = 0.18 -- the hand starts to pull away
-local SLAP_HIT = 0.42 -- and lands back on the gun
-local SLAP_HAND = Vector3.new(-0.4, -0.2, 0.15) -- how far the hand pulls away, in the gun's space
-local SLAP_SHOVE = Vector3.new(0.045, 0.02, 0) -- the gun's jolt
-local SLAP_ROLL = -7 -- degrees
--- The jolt rings like a spring: it shoves out, swings past the rest pose, and settles.
-local SLAP_RING = 2 * math.pi * 3.2 -- radians per second, about 3 swings a second
-local SLAP_SETTLE = 11 -- how fast the swinging dies away, per second
-local SLAP_SNAP = 0.1 -- the hand's last stretch in, as a share of the move, where it speeds into the hit
+local DEFAULT_KICK = { back = 0.15, drop = 0.02, up = 4, roll = 1.5, rise = 0.03, stiff = 250, damp = 24 }
+-- An automatic's shove, as a multiple of its spring's speed, so one shot alone peaks at about the full kick.
+local AUTO_SHOVE = 2.3
 -- Equipping a gun posed in code: it swings in from below and to the right.
 local EQUIP_TIME = 0.4
 local EQUIP_FROM = CFrame.new(0.6, -1.2, 0.3) * CFrame.Angles(math.rad(-40), math.rad(25), math.rad(-30))
@@ -109,6 +110,7 @@ local viewScale = 1
 local held = HIP
 local kick = 0
 local kickSpeed = 0
+local kickRoll = 1 -- which way this shot rolls
 local shown = HIP
 local clips: any = nil
 local firedAt: number? = nil
@@ -248,6 +250,7 @@ local swaySpeed = Vector2.zero
 local lastLook: CFrame? = nil
 local bobPhase = 0
 local bobWeight = 0
+local sprintWeight = 0
 
 -- Lags the gun behind the camera's turning, and bobs it with the player's steps.
 local function swayAndBob(dt: number, camera: Camera, aiming: boolean, sprinting: boolean): CFrame
@@ -273,14 +276,20 @@ local function swayAndBob(dt: number, camera: Camera, aiming: boolean, sprinting
 		local velocity = root.AssemblyLinearVelocity
 		speed = Vector2.new(velocity.X, velocity.Z).Magnitude
 	end
-	bobPhase += speed * BOB_RATE * dt
-	local bobGoal = math.min(speed / WALK_SPEED, 1) * (if sprinting then BOB_SPRINT else 1) * share
+	bobPhase += speed * dt * math.pi / STEP_STUDS
+	local running = sprinting and speed > 1
+	local bobGoal = math.min(speed / WALK_SPEED, 1) * (if running then BOB_SPRINT else 1) * share
 	bobWeight += (bobGoal - bobWeight) * (1 - math.exp(-dt * 8))
-	local bob = CFrame.new(
-		math.sin(bobPhase) * BOB_SIDE * bobWeight,
-		-math.abs(math.cos(bobPhase)) * BOB_HEIGHT * bobWeight,
-		0
-	) * CFrame.Angles(0, 0, math.sin(bobPhase) * math.rad(1.5) * bobWeight)
+	sprintWeight += ((if running and not aiming then 1 else 0) - sprintWeight) * (1 - math.exp(-dt * 7))
+	local side = math.sin(bobPhase)
+	local dip = math.abs(math.cos(bobPhase)) -- 1 on each footfall
+	local bob = CFrame.new(side * BOB_SIDE * bobWeight, -dip * BOB_HEIGHT * bobWeight, 0)
+		* CFrame.Angles(
+			math.rad(-dip * BOB_NOD * bobWeight),
+			math.rad(side * BOB_ROLL * 0.6 * bobWeight),
+			math.rad(side * BOB_ROLL * bobWeight)
+		)
+	bob = CFrame.identity:Lerp(SPRINT_HOLD, sprintWeight) * bob
 
 	return CFrame.new(swayAngles.Y * SWAY_MOVE, swayAngles.X * SWAY_MOVE, 0)
 		* CFrame.Angles(swayAngles.X, swayAngles.Y, swayAngles.Y * 0.6)
@@ -347,8 +356,16 @@ function GunView.muzzle(): Vector3?
 end
 
 function GunView.kick()
-	kick = 1
-	kickSpeed = 0
+	local config = if shownGun then GunConfig.guns[shownGun] else nil
+	local viewKick = (config and VIEW_KICKS[config.name]) or DEFAULT_KICK
+	if viewKick.auto then
+		kickSpeed += AUTO_SHOVE * math.sqrt(viewKick.stiff)
+		kickRoll = if math.random() < 0.5 then -1 else 1
+	else
+		kick = 0
+		kickSpeed = 0
+		kickRoll = 1
+	end
 	firedAt = os.clock()
 end
 
@@ -455,16 +472,16 @@ function GunView.update(
 		local u = (os.clock() - (firedAt :: number)) / viewKick.rise
 		kick = 1 - (1 - u) ^ 3
 		kickSpeed = 0
-	elseif viewKick.stiff then
+	else
 		local step = math.min(dt, 1 / 30)
 		kickSpeed += (-kick * viewKick.stiff - kickSpeed * viewKick.damp) * step
 		kick += kickSpeed * step
-	else
-		kick *= math.exp(-dt * viewKick.ease)
 	end
-	local turn = if shownGun then TURNS[GunConfig.guns[shownGun].name] else nil
+	local recoil = CFrame.new(0, -viewKick.drop * kick, viewKick.back * kick)
+		* CFrame.Angles(math.rad(viewKick.up * kick), 0, math.rad(viewKick.roll * kickRoll * kick))
 	local sway = swayAndBob(dt, camera, aiming, sprinting)
-	local base = camera.CFrame * sway
+	-- A gun with clips kicks the whole view, so the arms holding it go too.
+	local base = camera.CFrame * sway * (if clips then recoil else CFrame.identity)
 	if showCard(camera, cardOut, sway) then
 		return
 	end
@@ -501,40 +518,10 @@ function GunView.update(
 				equipAt = nil
 			end
 		end
-		local slap = CFrame.identity
-		local handAway = 0
-		if viewKick.slap and firedAt then
-			local since = now - firedAt
-			if since >= SLAP_LEAVE and since < SLAP_HIT then
-				-- Anticipation: the hand eases out and hangs a moment, then snaps in for the hit.
-				local t = (since - SLAP_LEAVE) / (SLAP_HIT - SLAP_LEAVE)
-				local out = 1 - SLAP_SNAP * 3
-				if t < out then
-					local u = t / out
-					handAway = u * u * (3 - 2 * u)
-				else
-					local u = (t - out) / (1 - out)
-					handAway = 1 - u * u * u
-				end
-			elseif since >= SLAP_HIT then
-				-- Follow-through: shoves out, overshoots back past rest, and settles.
-				local after = since - SLAP_HIT
-				local jolt = math.exp(-after * SLAP_SETTLE) * math.sin(after * SLAP_RING) * 1.3
-				if math.abs(jolt) > 1e-3 or after < 0.1 then
-					slap = CFrame.new(SLAP_SHOVE * jolt) * CFrame.Angles(0, 0, math.rad(SLAP_ROLL * jolt))
-				end
-			end
-		end
-		local recoil = CFrame.new(0, -viewKick.drop * kick, viewKick.back * kick)
-			* CFrame.Angles(math.rad(viewKick.up * kick), 0, math.rad(viewKick.roll * kick))
 		-- A gun drawn bigger moves forward by its extra length, so its stock stays clear of the camera.
 		local forward = CFrame.new(0, 0, -length * (1 - 1 / viewScale) / 2)
-		shown = held * forward * equip * recoil * slap * (turn or CFrame.identity)
+		shown = held * forward * equip * recoil * (turn or CFrame.identity)
 		local right, left = grips()
-		if handAway > 0 then
-			left = table.clone(left)
-			left.wrist += SLAP_HAND * handAway
-		end
 		ViewArms.pose(shown, right, left, config and SHOULDERS[config.name], config and THUMB_WRAPS[config.name])
 	end
 	view:PivotTo(base * shown)
