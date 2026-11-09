@@ -156,12 +156,16 @@ local RELOADS: { [string]: any } = {
 			-- The shot heaves it back and up, slowly enough to feel the hit, knocking the left hand off; then it sinks
 			-- back down slowly while it spins.
 			key(0.15, tilt(-9, 0, 0, 0, 0.55, 0.6), Vector3.new(0, 0.05, -0.4), "out"),
+			-- The left hand drives the gun up into the flip and stops there, held up in the air; the gun turns over above
+			-- it and drops back down into it (each key's gun and hand add up to the same spot), then hand and gun sink
+			-- back down together.
 			key(0.2, tilt(-7, 0, 0, 0, 0.54, 0.45), Vector3.new(0, -0.18, -0.05), "flow"), -- the hand gets under it
-			key(0.28, tilt(-4, 0, 0, 0, 0.62, 0.2), Vector3.new(0.02, 0.55, -0.18), "flow"), -- and shoves it hard round
-			key(0.44, tilt(-2, 0, 0, 0, 0.32, 0.06), Vector3.new(-0.3, -0.7, 0.3), "flow"), -- the hand drops away while it whips round
-			key(0.56, tilt(0, 0, 0, 0, 0.18, 0), Vector3.new(-0.05, -0.3, 0.08), "flow"), -- comes up under it
-			key(0.62, tilt(4, -2, 2, -0.02, 0.12, 0.01), Vector3.zero, "flow"), -- catches it
-			key(0.7, tilt(8, -3, -3, -0.04, 0.02, 0.02), Vector3.new(0, -0.04, 0), "flow"), -- and gives with the weight, still sinking
+			key(0.28, tilt(-4, 0, 0, 0, 0.55, 0.2), Vector3.new(0.02, 0.2, -0.18), "out"), -- shoves it up and stops
+			key(0.44, tilt(-2, 0, 0, 0, 0.85, 0.05), Vector3.new(0.02, -0.1, -0.03), "flow"), -- it flips up above the hand
+			key(0.56, tilt(1, -1, 1, 0.01, 0.8, 0.02), Vector3.new(0.01, -0.05, 0), "flow"), -- and comes back down
+			key(0.62, tilt(4, -2, 2, 0.02, 0.75, 0.02), Vector3.zero, "flow"), -- landing in the waiting hand
+			key(0.7, tilt(8, -3, -3, -0.01, 0.62, 0.02), Vector3.new(0, -0.04, 0), "flow"), -- gives with the weight
+			key(0.79, tilt(14, -5, 0, -0.04, 0.28, 0.03), Vector3.new(0, -0.2, 0.15)), -- then sinks back down
 			-- CLICK: the gun tips to show the cell slot, the hand pulls back to load up, then drives the cell in on
 			-- the sound and the gun bumps up off the hit and settles.
 			key(0.86, tilt(18, -6, 2, -0.06, 0, 0.03), Vector3.new(0, -0.4, 0.32)),
