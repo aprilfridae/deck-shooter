@@ -143,14 +143,20 @@ local RELOADS: { [string]: any } = {
 		-- The kick throws the barrel up and that same turn carries on into the backward spin, one throw from the
 		-- shot to the catch, with no stop or change of direction between them.
 		lead = 0.12,
-		spin = { from = 0, to = 0.62, launch = 1.5 },
+		-- The kick starts the turn, it slows, then the left hand shoves it round much faster to the catch.
+		spin = {
+			from = 0,
+			to = 0.62,
+			points = { { 0, 0, 2.2 }, { 0.17, 0.2, 0.8 }, { 0.27, 0.5, 4 }, { 0.62, 1, 0 } },
+		},
 		smoothFrom = 1.31, -- seconds in: only the return to ready is smoothed
 		keys = {
 			key(0, CFrame.identity, Vector3.zero),
 			-- The shot heaves it back and up, slowly enough to feel the hit, knocking the left hand off; then it sinks
 			-- back down slowly while it spins.
 			key(0.15, tilt(-9, 0, 0, 0, 0.55, 0.6), Vector3.new(0, 0.05, -0.4), "out"),
-			key(0.3, tilt(-5, 0, 0, 0, 0.5, 0.25), Vector3.new(-0.15, -0.3, 0), "flow"),
+			key(0.2, tilt(-7, 0, 0, 0, 0.54, 0.45), Vector3.new(0, -0.18, -0.05), "in"), -- the hand gets under it
+			key(0.28, tilt(-4, 0, 0, 0, 0.62, 0.2), Vector3.new(0.02, 0.55, -0.18), "out"), -- and shoves it hard round
 			key(0.44, tilt(-2, 0, 0, 0, 0.32, 0.06), Vector3.new(-0.3, -0.7, 0.3), "flow"), -- the hand drops away while it whips round
 			key(0.56, tilt(0, 0, 0, 0, 0.18, 0), Vector3.new(-0.05, -0.3, 0.08), "flow"), -- comes up under it
 			key(0.62, tilt(4, -2, 2, -0.02, 0.12, 0.01), Vector3.zero, "flow"), -- catches it
@@ -191,6 +197,25 @@ local function spinAt(reload: any, at: number): number
 		return 0
 	elseif at >= spin.to then
 		return 0 -- a full turn is back where it started
+	end
+	local points = spin.points
+	if points then
+		-- Points of { seconds, share of the turn, turns a second } joined by smooth curves, so the turn can slow
+		-- and then be shoved faster again.
+		for index = 2, #points do
+			local a, b = points[index - 1], points[index]
+			if at < b[1] then
+				local span = b[1] - a[1]
+				local u = (at - a[1]) / span
+				local u2, u3 = u * u, u * u * u
+				local turned = a[2] * (2 * u3 - 3 * u2 + 1)
+					+ a[3] * span * (u3 - 2 * u2 + u)
+					+ b[2] * (-2 * u3 + 3 * u2)
+					+ b[3] * span * (u3 - u2)
+				return turned * 2 * math.pi
+			end
+		end
+		return 0
 	end
 	local u = (at - spin.from) / (spin.to - spin.from)
 	-- Leaves already moving at launch times its average speed, and slows to a stop in the hand.
