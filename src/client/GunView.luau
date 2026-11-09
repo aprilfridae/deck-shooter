@@ -22,6 +22,8 @@ local leftGrip = LEFT_GRIP_Z
 -- Shoulders moved for a gun, in camera space. The Longscope's left arm comes up from below instead of
 -- reaching across the screen.
 local SHOULDERS: { [string]: { [string]: Vector3 } } = { Longscope = { Left = Vector3.new(-0.55, -1.8, 0.2) } }
+-- How far a thumb curls around the gun, in radians at the tip.
+local THUMB_WRAPS: { [string]: { [string]: number } } = { Longscope = { Left = math.rad(70) } }
 local BLOCK_SECTION = Vector2.new(0.3, 0.4)
 local BARREL_RISE = 0.26 -- how far above the model's middle the barrel sits, as a share of its height
 local HIP = CFrame.new(0.9, -0.8, -2)
@@ -52,7 +54,10 @@ local SLAP_HIT = 0.42 -- and lands back on the gun
 local SLAP_HAND = Vector3.new(-0.4, -0.2, 0.15) -- how far the hand pulls away, in the gun's space
 local SLAP_SHOVE = Vector3.new(0.07, 0.03, 0) -- the gun's jolt
 local SLAP_ROLL = -12 -- degrees
-local SLAP_SETTLE = 14 -- how fast the jolt dies away, per second
+-- The jolt rings like a spring: it shoves out, swings past the rest pose, and settles.
+local SLAP_RING = 2 * math.pi * 3.2 -- radians per second, about 3 swings a second
+local SLAP_SETTLE = 7 -- how fast the swinging dies away, per second
+local SLAP_SNAP = 0.1 -- the hand's last stretch in, as a share of the move, where it speeds into the hit
 -- Equipping a gun posed in code: it swings in from below and to the right.
 local EQUIP_TIME = 0.4
 local EQUIP_FROM = CFrame.new(0.6, -1.2, 0.3) * CFrame.Angles(math.rad(-40), math.rad(25), math.rad(-30))
@@ -426,12 +431,23 @@ function GunView.update(
 		if viewKick.slap and firedAt then
 			local since = now - firedAt
 			if since >= SLAP_LEAVE and since < SLAP_HIT then
-				-- Eases out, then snaps back in for the hit.
+				-- Anticipation: the hand eases out and hangs a moment, then snaps in for the hit.
 				local t = (since - SLAP_LEAVE) / (SLAP_HIT - SLAP_LEAVE)
-				handAway = if t < 0.7 then math.sin(t / 0.7 * math.pi / 2) else 1 - ((t - 0.7) / 0.3) ^ 2
+				local out = 1 - SLAP_SNAP * 3
+				if t < out then
+					local u = t / out
+					handAway = u * u * (3 - 2 * u)
+				else
+					local u = (t - out) / (1 - out)
+					handAway = 1 - u * u * u
+				end
 			elseif since >= SLAP_HIT then
-				local jolt = math.exp(-(since - SLAP_HIT) * SLAP_SETTLE)
-				slap = CFrame.new(SLAP_SHOVE * jolt) * CFrame.Angles(0, 0, math.rad(SLAP_ROLL * jolt))
+				-- Follow-through: shoves out, overshoots back past rest, and settles.
+				local after = since - SLAP_HIT
+				local jolt = math.exp(-after * SLAP_SETTLE) * math.sin(after * SLAP_RING) * 1.6
+				if math.abs(jolt) > 1e-3 or after < 0.1 then
+					slap = CFrame.new(SLAP_SHOVE * jolt) * CFrame.Angles(0, 0, math.rad(SLAP_ROLL * jolt))
+				end
 			end
 		end
 		local recoil = CFrame.new(0, -viewKick.drop * kick, viewKick.back * kick)
@@ -444,7 +460,7 @@ function GunView.update(
 			left = table.clone(left)
 			left.wrist += SLAP_HAND * handAway
 		end
-		ViewArms.pose(shown, right, left, config and SHOULDERS[config.name])
+		ViewArms.pose(shown, right, left, config and SHOULDERS[config.name], config and THUMB_WRAPS[config.name])
 	end
 	view:PivotTo(camera.CFrame * shown)
 	view.Parent = camera

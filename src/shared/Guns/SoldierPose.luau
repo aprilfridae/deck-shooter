@@ -199,8 +199,34 @@ function SoldierPose.fromBones(pose: any, offset: CFrame, bones: any): { [string
 end
 
 -- Both hands on a gun that has no clip.
+-- Turns a thumb's segments toward the gun's middle line, more at each joint out to the tip, so it wraps the gun.
+local function wrapThumb(aims: { Vector3 }, palm: CFrame, gun: CFrame, amount: number)
+	local local_ = gun:PointToObjectSpace(palm.Position)
+	local toward = gun:PointToWorldSpace(Vector3.new(0, 0, local_.Z)) - palm.Position
+	if toward.Magnitude < 1e-3 then
+		return
+	end
+	toward = toward.Unit
+	for index, aim in aims do
+		local axis = aim:Cross(toward)
+		if axis.Magnitude > 1e-3 then
+			local most = math.acos(math.clamp(aim:Dot(toward), -1, 1))
+			local angle = math.min(amount * index / #aims, most)
+			aims[index] = CFrame.fromAxisAngle(axis.Unit, angle) * aim
+		end
+	end
+end
+
 -- shoulders moves either shoulder from its usual place, in camera space, for a gun held differently.
-function SoldierPose.fromPalms(pose: any, right: CFrame, left: CFrame, shoulders: { [string]: Vector3 }?): { [string]: CFrame }
+-- wraps curls either thumb around the gun by up to that many radians at the tip; it needs gun.
+function SoldierPose.fromPalms(
+	pose: any,
+	right: CFrame,
+	left: CFrame,
+	shoulders: { [string]: Vector3 }?,
+	gun: CFrame?,
+	wraps: { [string]: number }?
+): { [string]: CFrame }
 	local parts = {}
 	for side, palm in { [pose.right] = right, [pose.left] = left } do
 		local hand = palm * side.handOnPalm
@@ -209,6 +235,10 @@ function SoldierPose.fromPalms(pose: any, right: CFrame, left: CFrame, shoulders
 			local aims = {}
 			for index, aim in digit.grip do
 				aims[index] = palm:VectorToWorldSpace(aim)
+			end
+			local wrap = wraps and wraps[side.name]
+			if wrap and gun and digit.bone == "Pulgar" then
+				wrapThumb(aims, palm, gun, wrap)
 			end
 			poseDigit(digit.segments, hand, aims, parts)
 		end
