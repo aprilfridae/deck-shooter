@@ -30,7 +30,8 @@ local JUMP_FOV = 84
 local SLIDE_JUMP_FOV = 96
 local CHAIN_JUMP_FOV = 104
 local FOV_EASE = 7
-local SCOPE_FOV_EASE = 30 -- scoping in and out snaps
+local SCOPE_FOV_EASE = 30 -- scoping out snaps
+local SCOPE_IN_EASE = 13 -- scoping in takes a moment, about a quarter of a second
 local LAND_CAMERA_DIP = Vector3.new(0, -0.9, 0)
 local MIN_AIR_FOR_DIP = 0.15
 local EFFECT_EASE = 7
@@ -317,7 +318,7 @@ local function onFrame(dt: number)
 	if scopeEasing and math.abs(targetFov - fieldOfView) < 1 then
 		scopeEasing = false
 	end
-	fieldOfView += (targetFov - fieldOfView) * (1 - math.exp(-dt * (if scopeEasing then SCOPE_FOV_EASE else FOV_EASE)))
+	fieldOfView += (targetFov - fieldOfView) * (1 - math.exp(-dt * (if scopeEasing then (if scoped then SCOPE_IN_EASE else SCOPE_FOV_EASE) else FOV_EASE)))
 	workspace.CurrentCamera.FieldOfView = fieldOfView
 
 	local target = BODY_CAMERA + (if sliding then SLIDE_CAMERA_DROP else Vector3.zero) + LAND_CAMERA_DIP * landDip

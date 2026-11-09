@@ -287,7 +287,8 @@ end
 local EQUIP_TIME = 0.45
 local EQUIP_FROM = CFrame.new(0.6, -1.2, 0.3) * CFrame.Angles(math.rad(-40), math.rad(25), math.rad(-30))
 -- Scoping in and out is quick on a gun that can scope.
-local AIM_EASE = 24
+local AIM_EASE = 24 -- lowering a scoped gun
+local SCOPE_IN_EASE = 13 -- raising it to the eye, about a quarter of a second
 local HOLSTER_WAIT = 0.3 -- how long the gun stays down waiting for the server to swap it
 
 -- Where the hands sit. Primary wrists sit along the gun as a share of its length.
@@ -901,7 +902,7 @@ function GunView.update(
 	end
 	local config = if shownGun then GunConfig.guns[shownGun] else nil
 	local viewKick = (config and VIEW_KICKS[config.name]) or DEFAULT_KICK
-	local ease = 1 - math.exp(-dt * (if config and config.aimFov then AIM_EASE else EASE))
+	local ease = 1 - math.exp(-dt * (if config and config.aimFov then (if aiming then SCOPE_IN_EASE else AIM_EASE) else EASE))
 	held = held:Lerp(goal, ease)
 	if scopeAim then
 		local whole = (HIP.Position - scopeAim.Position).Magnitude
