@@ -540,7 +540,9 @@ local function clipFrame(reloading: boolean, sprinting: boolean): (any, string)
 		end
 		firedAt = nil
 	end
-	return ArmClip.sampleAt(if sprinting then clips.run else clips.idle, os.clock()), if sprinting then "run" else "idle"
+	-- Sprinting holds the idle clip and lets the code bob carry it, the same as the Longscope, instead of the
+	-- Blender run clip.
+	return ArmClip.sampleAt(clips.idle, os.clock()), "idle"
 end
 
 -- The snap frame to lay over the clip, if one is playing.
