@@ -53,6 +53,7 @@ local EASE = 11
 -- A shot and a swap start at once, so they keep their snap.
 local CLIP_BLEND = 0.25
 local RELOAD_BLEND = 0.8 -- the end of a reload settles into the next clip slowly, with weight
+local SNAP_BLEND = 0.12 -- a shot fired while the gun is still settling catches up this fast
 -- Reload clips that ran ahead of their sound: the start plays slower, by up to this many seconds behind, and
 -- the end catches up, so the clip still finishes with the reload.
 local RELOAD_LAG: { [string]: number } = { M57 = 0.08 }
@@ -114,10 +115,11 @@ local RELOADS: { [string]: any } = {
 			key(0.78, tilt(15, -6, 3, -0.03, 0.01, 0), Vector3.zero),
 			key(0.84, tilt(17, -7, 2, -0.04, 0, 0), Vector3.zero, "in"),
 			key(0.95, tilt(-6, 2.5, 4, 0.015, 0.04, 0), Vector3.zero, "out"), -- charge: heaves back up past ready
-			-- and comes back down slowly under its own weight, long after the reload itself is done
-			key(1.15, tilt(-5.2, 2.2, 3.5, 0.013, 0.035, 0), Vector3.zero, "out"),
-			key(1.6, tilt(-2, 0.9, 1.3, 0.005, 0.013, 0), Vector3.zero),
-			key(2.0, tilt(0.3, -0.1, -0.2, 0, -0.002, 0), Vector3.zero),
+			-- then its weight takes over: it sinks past ready, hangs low a moment, and is lifted back up slowly
+			key(1.08, tilt(-5, 2, 3.2, 0.012, 0.03, 0), Vector3.zero, "out"),
+			key(1.4, tilt(-1, 0.5, -5, 0.004, -0.09, 0.02), Vector3.zero),
+			key(1.6, tilt(0, 0.3, -5.5, 0.002, -0.1, 0.02), Vector3.zero),
+			key(2.0, tilt(0.5, -0.1, 0.8, 0, 0.008, 0), Vector3.zero),
 			key(2.3, CFrame.identity, Vector3.zero),
 		},
 	},
@@ -655,8 +657,11 @@ function GunView.update(
 	if clips then
 		local frame, kind = clipFrame(reloading, sprinting)
 		if kind ~= shownKind then
-			blendFrom = if shownBase and not SNAPPY[kind] then shownBase else nil
-			blendLength = if shownKind == "reload" then RELOAD_BLEND else CLIP_BLEND
+			-- A shot or swap starts at once, unless the gun is still settling from the last clip: then it blends
+			-- in quickly from where the gun is, so it can't jump.
+			local settling = blendFrom ~= nil
+			blendFrom = if shownBase and (not SNAPPY[kind] or settling) then shownBase else nil
+			blendLength = if SNAPPY[kind] then SNAP_BLEND elseif shownKind == "reload" then RELOAD_BLEND else CLIP_BLEND
 			blendAt = os.clock()
 			shownKind = kind
 		end
