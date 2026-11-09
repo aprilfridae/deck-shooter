@@ -13,6 +13,8 @@ local ViewArms = require(script.Parent.ViewArms)
 local PRIMARY_LENGTH = 2.4
 local SIDEARM_LENGTH = 1
 local MODEL_SCALE = 0.031
+-- Guns that looked too small in the soldier's hands are drawn bigger. The grips move with them.
+local VIEW_SCALES: { [string]: number } = { Longscope = 1.35 }
 local BLOCK_SECTION = Vector2.new(0.3, 0.4)
 local BARREL_RISE = 0.26 -- how far above the model's middle the barrel sits, as a share of its height
 local HIP = CFrame.new(0.9, -0.8, -2)
@@ -75,6 +77,7 @@ local shownGun: string? = nil
 local length = PRIMARY_LENGTH
 local barrelRise = 0
 local isSidearm = false
+local viewScale = 1
 local held = HIP
 local kick = 0
 local shown = HIP
@@ -129,7 +132,7 @@ local function makeModel(name: string): Model?
 			part.CastShadow = false
 		end
 	end
-	model:ScaleTo(MODEL_SCALE)
+	model:ScaleTo(MODEL_SCALE * viewScale)
 	model.WorldPivot = model:GetBoundingBox()
 	local size = model:GetExtentsSize()
 	length = size.Z
@@ -217,9 +220,9 @@ local function grips(): (any, any)
 	if isSidearm then
 		return SIDEARM_RIGHT, SIDEARM_LEFT
 	end
-	local right = { wrist = Vector3.new(PRIMARY_RIGHT.x, PRIMARY_RIGHT.y, length * RIGHT_GRIP_Z) }
+	local right = { wrist = Vector3.new(PRIMARY_RIGHT.x * viewScale, PRIMARY_RIGHT.y * viewScale, length * RIGHT_GRIP_Z) }
 	right.along, right.thumb = PRIMARY_RIGHT.along, PRIMARY_RIGHT.thumb
-	local left = { wrist = Vector3.new(PRIMARY_LEFT.x, PRIMARY_LEFT.y, length * LEFT_GRIP_Z) }
+	local left = { wrist = Vector3.new(PRIMARY_LEFT.x * viewScale, PRIMARY_LEFT.y * viewScale, length * LEFT_GRIP_Z) }
 	left.along, left.thumb = PRIMARY_LEFT.along, PRIMARY_LEFT.thumb
 	return right, left
 end
@@ -234,6 +237,7 @@ function GunView.setGun(gunId: string, slot: string)
 		view:Destroy()
 	end
 	isSidearm = slot == "sidearm"
+	viewScale = VIEW_SCALES[GunConfig.guns[gunId].name] or 1
 	length = if isSidearm then SIDEARM_LENGTH else PRIMARY_LENGTH
 	barrelRise = 0
 	view = makeModel(GunConfig.guns[gunId].name) or makeBlock()
@@ -424,7 +428,9 @@ function GunView.update(
 		end
 		local recoil = CFrame.new(0, -viewKick.drop * kick, viewKick.back * kick)
 			* CFrame.Angles(math.rad(viewKick.up * kick), 0, math.rad(viewKick.roll * kick))
-		shown = held * equip * recoil * slap * (turn or CFrame.identity)
+		-- A gun drawn bigger moves forward by its extra length, so its stock stays clear of the camera.
+		local forward = CFrame.new(0, 0, -length * (1 - 1 / viewScale) / 2)
+		shown = held * forward * equip * recoil * slap * (turn or CFrame.identity)
 		local right, left = grips()
 		if handAway > 0 then
 			left = table.clone(left)
