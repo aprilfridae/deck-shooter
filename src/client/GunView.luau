@@ -20,6 +20,10 @@ local AIMED = CFrame.new(0, -0.55, -2)
 local RELOAD_DIP = CFrame.new(0, -0.7, 0) * CFrame.Angles(math.rad(-25), 0, 0)
 local KICK_BACK = 0.25
 local EASE = 14
+-- A new clip fades in from the last pose over this long, so the end of a reload doesn't cut to idle.
+-- A shot and a swap start at once, so they keep their snap.
+local CLIP_BLEND = 0.2
+local SNAPPY = { fire = true, holster = true }
 local HOLSTER_WAIT = 0.3 -- how long the gun stays down waiting for the server to swap it
 
 -- Where the hands sit. Primary wrists sit along the gun as a share of its length.
@@ -61,6 +65,9 @@ local shownCard: any = nil
 local shownFrame: any = nil -- what's on screen, with any snap laid over it
 local shownBase: any = nil
 local shownSnap: any = nil
+local shownKind: string? = nil -- which clip is playing
+local blendFrom: any = nil -- the pose a clip change fades out of
+local blendAt = 0
 
 local function makeBlock(): Part
 	local part = Instance.new("Part")
@@ -164,20 +171,20 @@ function GunView.kick()
 end
 
 -- The frame to show. Swapping guns beats everything, then reloading, then a shot, then running, then idle.
-local function clipFrame(reloading: boolean, sprinting: boolean): any
+local function clipFrame(reloading: boolean, sprinting: boolean): (any, string)
 	if holsterAt then
 		local elapsed = os.clock() - holsterAt
 		local frames = clips.holster.frames
 		local frame = ArmClip.sampleAt(clips.holster, elapsed)
 		if frame or elapsed < HOLSTER_WAIT then
-			return frame or frames[#frames]
+			return frame or frames[#frames], "holster"
 		end
 		holsterAt = nil
 	end
 	if equipAt then
 		local frame = ArmClip.sampleAt(clips.equip, os.clock() - equipAt)
 		if frame then
-			return frame
+			return frame, "equip"
 		end
 		equipAt = nil
 	end
@@ -188,17 +195,17 @@ local function clipFrame(reloading: boolean, sprinting: boolean): any
 	if reloadAt then
 		local frame = ArmClip.sampleAt(reloadClip, os.clock() - reloadAt)
 		if frame then
-			return frame
+			return frame, "reload"
 		end
 	end
 	if firedAt then
 		local frame = ArmClip.sampleAt(clips.fire, os.clock() - firedAt)
 		if frame then
-			return frame
+			return frame, "fire"
 		end
 		firedAt = nil
 	end
-	return ArmClip.sampleAt(if sprinting then clips.run else clips.idle, os.clock())
+	return ArmClip.sampleAt(if sprinting then clips.run else clips.idle, os.clock()), if sprinting then "run" else "idle"
 end
 
 -- The snap frame to lay over the clip, if one is playing.
@@ -263,7 +270,20 @@ function GunView.update(
 		return
 	end
 	if clips then
-		local frame = clipFrame(reloading, sprinting)
+		local frame, kind = clipFrame(reloading, sprinting)
+		if kind ~= shownKind then
+			blendFrom = if shownBase and not SNAPPY[kind] then shownBase else nil
+			blendAt = os.clock()
+			shownKind = kind
+		end
+		if blendFrom then
+			local t = (os.clock() - blendAt) / CLIP_BLEND
+			if t >= 1 then
+				blendFrom = nil
+			else
+				frame = ArmClip.blendFrames(blendFrom, frame, t * t * (3 - 2 * t))
+			end
+		end
 		local snap = snapFrame()
 		local whole = if snap then ArmClip.overlay(frame, snap) else frame
 		shownFrame, shownBase, shownSnap = whole, frame, snap
