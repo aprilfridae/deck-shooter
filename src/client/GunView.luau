@@ -743,18 +743,27 @@ function GunView.setGun(gunId: string, slot: string)
 	firedAt = nil
 	keyedReloadAt = nil
 	reloadAt = nil
+	-- Swapping guns has no animation: the new gun is just there, in its hold, with nothing blending in.
 	holsterAt = nil
-	equipAt = os.clock()
+	equipAt = nil
 	snapAt = nil
 	shownFrame = nil
 	shownBase = nil
 	shownSnap = nil
+	blendFrom = nil
+	shownKind = nil
+	held = HIP
+	kick, kickSpeed = 0, 0
+	settle, settleSpeed, settleGoal = 0, 0, 0
+	layerAt = nil
+	layerShown = CFrame.identity
+	reloadShown, handShown = CFrame.identity, Vector3.zero
+	removeSmears()
+	table.clear(history) -- or the motion blur would streak from the old gun's spot
 end
 
--- Lowers the gun as soon as the swap key goes down, before the server has answered.
-function GunView.holster()
-	holsterAt = os.clock()
-end
+-- Swapping has no lowering animation, so the gun stays up until the server swaps it.
+function GunView.holster() end
 
 -- Snaps the fingers of the free hand, on guns that leave one free. True if it snapped.
 function GunView.snap(): boolean
