@@ -23,6 +23,13 @@ local EASE = 14
 -- A new clip fades in from the last pose over this long, so the end of a reload doesn't cut to idle.
 -- A shot and a swap start at once, so they keep their snap.
 local CLIP_BLEND = 0.2
+-- Motion blur: Roblox can't blur one object, so faded copies of the gun and arms trail behind them,
+-- spread between where they were SMEAR_TIME ago and where they are now. Only while the gun moves fast enough.
+local SMEAR_COPIES = 4
+local SMEAR_TIME = 0.06
+local SMEAR_OPACITY = 0.5
+local SMEAR_MIN_MOVE = 0.04 -- studs the gun must travel in SMEAR_TIME to blur
+local SMEAR_MIN_TURN = math.rad(4)
 local SNAPPY = { fire = true, holster = true }
 local HOLSTER_WAIT = 0.3 -- how long the gun stays down waiting for the server to swap it
 
@@ -65,6 +72,9 @@ local shownCard: any = nil
 local shownFrame: any = nil -- what's on screen, with any snap laid over it
 local shownBase: any = nil
 local shownSnap: any = nil
+local smears: { any } = {}
+local smearShown = false
+local history: { { at: number, frame: any } } = {} -- recent poses, oldest first
 local shownKind: string? = nil -- which clip is playing
 local blendFrom: any = nil -- the pose a clip change fades out of
 local blendAt = 0
@@ -109,6 +119,80 @@ local function makeModel(name: string): Model?
 	return model
 end
 
+local function hideSmears()
+	smearShown = false
+	for _, smear in smears do
+		smear.gun.Parent = nil
+		if smear.arms then
+			ViewArms.hideGhost(smear.arms)
+		end
+	end
+end
+
+local function removeSmears()
+	for _, smear in smears do
+		smear.gun:Destroy()
+		if smear.arms then
+			ViewArms.removeGhost(smear.arms)
+		end
+	end
+	table.clear(smears)
+	table.clear(history)
+	smearShown = false
+end
+
+local function makeSmears()
+	for i = 1, SMEAR_COPIES do
+		local gun = (view :: any):Clone()
+		local parts = {}
+		for _, part in gun:GetDescendants() do
+			if part:IsA("BasePart") then
+				table.insert(parts, part)
+			end
+		end
+		if gun:IsA("BasePart") then
+			table.insert(parts, gun)
+		end
+		smears[i] = { gun = gun, parts = parts, arms = ViewArms.makeGhost(), share = i / (SMEAR_COPIES + 1) }
+	end
+end
+
+-- Remembers this frame's pose and trails the copies from the oldest remembered one up to it,
+-- the copies nearest the gun the strongest.
+local function drawSmear(camera: Camera, whole: any)
+	local now = os.clock()
+	table.insert(history, { at = now, frame = whole })
+	while #history > 1 and history[2].at <= now - SMEAR_TIME do
+		table.remove(history, 1)
+	end
+	local from = history[1].frame
+	local moved = (from.gun.Position - whole.gun.Position).Magnitude
+	local _, turned = from.gun:ToObjectSpace(whole.gun):ToAxisAngle()
+	if moved < SMEAR_MIN_MOVE and math.abs(turned) < SMEAR_MIN_TURN then
+		if smearShown then
+			hideSmears()
+		end
+		return
+	end
+	if #smears == 0 then
+		makeSmears()
+	end
+	smearShown = true
+	local hold = camera.CFrame * held * HIP:Inverse()
+	for _, smear in smears do
+		local transparency = 1 - SMEAR_OPACITY * smear.share
+		for _, part in smear.parts do
+			part.Transparency = transparency
+		end
+		smear.gun:PivotTo(hold * from.gun:Lerp(whole.gun, smear.share))
+		smear.gun.Parent = camera
+		if smear.arms then
+			ViewArms.poseGhost(smear.arms, clips.meshOffset, ArmClip.blendBones(from.bones, whole.bones, smear.share))
+			ViewArms.placeGhost(smear.arms, camera, transparency)
+		end
+	end
+end
+
 local GunView = {}
 
 local function grips(): (any, any)
@@ -127,6 +211,7 @@ function GunView.setGun(gunId: string, slot: string)
 		return
 	end
 	shownGun = gunId
+	removeSmears()
 	if view then
 		view:Destroy()
 	end
@@ -240,6 +325,8 @@ local function showCard(camera: Camera, cardOut: boolean): boolean
 	end
 	if view and view.Parent then
 		view.Parent = nil
+		hideSmears()
+		table.clear(history)
 	end
 	local frame = ArmClip.sampleAt(CardClip.draw, elapsed) or ArmClip.sampleAt(CardClip.hold, os.clock())
 	shownCard = frame
@@ -298,9 +385,16 @@ function GunView.update(
 	view:PivotTo(camera.CFrame * shown)
 	view.Parent = camera
 	ViewArms.place(camera)
+	if clips and shownFrame then
+		drawSmear(camera, shownFrame)
+	elseif smearShown then
+		hideSmears()
+	end
 end
 
 function GunView.hide()
+	hideSmears()
+	table.clear(history)
 	if view then
 		view.Parent = nil
 	end
