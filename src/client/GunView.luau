@@ -102,13 +102,14 @@ local RELOADS: { [string]: any } = {
 			key(0.68, tilt(0, 0, 0, 0, 0.06, 0), Vector3.new(-0.05, -0.3, 0.08)), -- comes up under it
 			key(0.76, tilt(4, -2, 2, -0.02, 0.03, 0.01), Vector3.zero, "out"), -- catches it
 			key(0.81, tilt(8, -3, -3, -0.04, -0.04, 0.02), Vector3.new(0, -0.04, 0), "out"), -- and gives with the weight
-			key(0.84, TILTED, Vector3.new(0, -0.3, 0.26)),
-			key(0.94, TILTED, Vector3.new(0.02, -0.1, 0.24), "in"), -- pushes it home
+			key(0.83, TILTED, Vector3.new(0, -0.3, 0.26)),
+			key(0.94, TILTED, Vector3.new(0.02, -0.1, 0.24)), -- pushes it home, slower and smooth
 			key(0.98, tilt(27, -9, 9, -0.12, 0.1, 0.05), Vector3.new(0.02, -0.06, 0.24), "out"), -- click
 			key(1.02, TILTED, Vector3.new(0.02, -0.16, 0.24)),
 			key(1.06, tilt(25, -8, 10, -0.11, 0.12, 0.05), Vector3.new(0.02, -0.02, 0.22), "in"), -- the heel of the hand locks it
-			key(1.12, TILTED, Vector3.zero, "out"),
-			key(1.42, tilt(-4, 2, -2, 0, -0.01, 0), Vector3.zero), -- turns back, a little past
+			key(1.14, TILTED, Vector3.new(0.02, -0.04, 0.22)), -- holds it a moment
+			key(1.26, TILTED, Vector3.zero, "out"), -- then lets go
+			key(1.5, tilt(-4, 2, -2, 0, -0.01, 0), Vector3.zero), -- turns back, a little past
 			key(1.714, CFrame.identity, Vector3.zero),
 		},
 	},
