@@ -227,6 +227,8 @@ local reloadAt: number? = nil
 local reloadClip: any = nil
 local equipAt: number? = nil
 local keyedReloadAt: number? = nil -- when a keyed reload started
+local layerAt: number? = nil -- when a clip gun's reload layer started; it plays to its end even if the reload ends first
+local layerShown = CFrame.identity
 local holsterAt: number? = nil
 local snapAt: number? = nil
 local cardAt: number? = nil
@@ -432,6 +434,7 @@ function GunView.setGun(gunId: string, slot: string)
 		view:Destroy()
 	end
 	isSidearm = slot == "sidearm"
+	layerAt = nil
 	viewScale = VIEW_SCALES[GunConfig.guns[gunId].name] or 1
 	leftGrip = LEFT_GRIPS[GunConfig.guns[gunId].name] or LEFT_GRIP_Z
 	length = if isSidearm then SIDEARM_LENGTH else PRIMARY_LENGTH
@@ -613,11 +616,23 @@ function GunView.update(
 	-- A gun with clips kicks the whole view, so the arms holding it go too, and its reload layer turns it round
 	-- the gun's hold.
 	local layer = CFrame.identity
-	if clips and keyedReload and keyedReload.layer and reloading and reloadAt and config then
-		local turnBy = reloadPose(keyedReload, os.clock() - reloadAt, config.reload)
-		layer = CFrame.new(HIP.Position) * turnBy * CFrame.new(-HIP.Position)
+	if clips and keyedReload and keyedReload.layer and config then
+		if reloading and not layerAt then
+			layerAt = os.clock()
+		end
+		local elapsed = if layerAt then os.clock() - layerAt else math.huge
+		if elapsed < config.reload then
+			local turnBy = reloadPose(keyedReload, elapsed, config.reload)
+			layer = CFrame.new(HIP.Position) * turnBy * CFrame.new(-HIP.Position)
+		elseif not reloading then
+			layerAt = nil
+		end
+	else
+		layerAt = nil
 	end
-	local base = camera.CFrame * sway * (if clips then recoil * layer else CFrame.identity)
+	-- A touch of smoothing, so a corner between two keys never shows as a step.
+	layerShown = layerShown:Lerp(layer, 1 - math.exp(-dt * 30))
+	local base = camera.CFrame * sway * (if clips then recoil * layerShown else CFrame.identity)
 	if showCard(camera, cardOut, sway) then
 		return
 	end
