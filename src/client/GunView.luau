@@ -694,6 +694,12 @@ local function showFlash(camera: Camera, muzzle: CFrame)
 	flashModel.Parent = camera
 end
 
+-- Holds that sat too close to the eye: the whole gun and arms move out by this much, so they look as far off as the
+-- Longscope's.
+local VIEW_REACH: { [string]: CFrame } = {
+	["Energy Pistol"] = CFrame.new(0.04, -0.02, -0.3),
+}
+
 local GunView = {}
 
 local function grips(): (any, any)
@@ -978,7 +984,8 @@ function GunView.update(
 	end
 	-- A touch of smoothing, so a corner between two keys never shows as a step.
 	layerShown = layerShown:Lerp(layer, 1 - math.exp(-dt * 30))
-	local base = camera.CFrame * sway * (if clips then recoil * layerShown else CFrame.identity)
+	local reach = (config and VIEW_REACH[config.name]) or CFrame.identity
+	local base = camera.CFrame * reach * sway * (if clips then recoil * layerShown else CFrame.identity)
 	if showCard(camera, cardOut, sway) then
 		if flashModel then
 			flashModel.Parent = nil
