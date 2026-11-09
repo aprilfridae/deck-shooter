@@ -66,7 +66,6 @@ GunConfig.guns = {
 		headshot = "Kill",
 		rpm = 50,
 		mag = 1, -- one in the chamber: every shot needs a reload
-		manualReload = true, -- an empty trigger pull doesn't start one
 		reload = 1.714,
 		fullTo = math.huge,
 		lowTo = math.huge,
