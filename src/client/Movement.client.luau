@@ -30,6 +30,7 @@ local JUMP_FOV = 84
 local SLIDE_JUMP_FOV = 96
 local CHAIN_JUMP_FOV = 104
 local FOV_EASE = 7
+local SCOPE_FOV_EASE = 30 -- scoping in and out snaps
 local LAND_CAMERA_DIP = Vector3.new(0, -0.9, 0)
 local MIN_AIR_FOR_DIP = 0.15
 local EFFECT_EASE = 7
@@ -46,6 +47,8 @@ local slideDirection = Vector3.zero
 local airFromSlide = false
 local jumped = false
 local fieldOfView = FIELD_OF_VIEW
+local wasScoped = false
+local scopeEasing = false
 local landDip = 0
 local airStartedAt = 0
 local peakFall = 0 -- the fastest fall since leaving the ground
@@ -305,7 +308,16 @@ local function onFrame(dt: number)
 		peakFall = math.max(peakFall, -fallY)
 	end
 	landDip *= math.exp(-dt * EFFECT_EASE)
-	fieldOfView += (targetFieldOfView() - fieldOfView) * (1 - math.exp(-dt * FOV_EASE))
+	local scoped = player:GetAttribute("AimFov") ~= nil
+	if scoped ~= wasScoped then
+		wasScoped = scoped
+		scopeEasing = true
+	end
+	local targetFov = targetFieldOfView()
+	if scopeEasing and math.abs(targetFov - fieldOfView) < 1 then
+		scopeEasing = false
+	end
+	fieldOfView += (targetFov - fieldOfView) * (1 - math.exp(-dt * (if scopeEasing then SCOPE_FOV_EASE else FOV_EASE)))
 	workspace.CurrentCamera.FieldOfView = fieldOfView
 
 	local target = BODY_CAMERA + (if sliding then SLIDE_CAMERA_DROP else Vector3.zero) + LAND_CAMERA_DIP * landDip

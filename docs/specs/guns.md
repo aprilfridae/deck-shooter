@@ -21,7 +21,7 @@ The code and saves use internal ids, and players see display names: `M4` is the 
 
 ## Decided by River
 
-- All guns are hip fire only, except the Longscope, which can aim down sights. The base and firing gun pose always points straight.
+- All guns are hip fire only, except the Longscope, which can aim down sights. Scoping in and out takes about 0.1s. A scoped shot drops the scope until the bolt is worked (the time between shots), and holding aim scopes back in. In first person the Longscope slams back with its barrel up and is home in about 0.15s, then dips and rolls while the bolt is worked. Guns posed in code swing in from the bottom right over 0.4s when equipped. The base and firing gun pose always points straight.
 - The M57 does 2x headshot damage. The B33 kills on any headshot. The Longscope kills on any headshot. These replace the parent spec's single headshot multiplier.
 - Every class uses the Energy Pistol as its sidearm for now. The machine pistol, revolver and auto-pistol stay in the gun data, unused, until River brings them back.
 - Guns add 0 to Deck Power Rating. Gun upgrades wait until after launch.

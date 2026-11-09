@@ -18,7 +18,6 @@ local BARREL_RISE = 0.26 -- how far above the model's middle the barrel sits, as
 local HIP = CFrame.new(0.9, -0.8, -2)
 local AIMED = CFrame.new(0, -0.55, -2)
 local RELOAD_DIP = CFrame.new(0, -0.7, 0) * CFrame.Angles(math.rad(-25), 0, 0)
-local KICK_BACK = 0.25
 local EASE = 14
 -- A new clip fades in from the last pose over this long, so the end of a reload doesn't cut to idle.
 -- A shot and a swap start at once, so they keep their snap.
@@ -31,6 +30,20 @@ local SMEAR_OPACITY = 0.5
 local SMEAR_MIN_MOVE = 0.04 -- studs the gun must travel in SMEAR_TIME to blur
 local SMEAR_MIN_TURN = math.rad(4)
 local SNAPPY = { fire = true, holster = true }
+-- Guns posed in code move like this when they fire: pushed back (studs), dropped (studs), barrel up and
+-- rolled (degrees), settling at ease per second. The Longscope slams back hard and is home in about 0.15s.
+local VIEW_KICKS: { [string]: any } = {
+	Longscope = { back = 0.6, drop = 0.15, up = 14, roll = -8, ease = 16, bolt = true },
+}
+local DEFAULT_KICK = { back = 0.25, drop = 0, up = 0, roll = 0, ease = 14, bolt = false }
+-- Working the bolt, between these shares of the time between shots: the gun dips and rolls toward the hand.
+local BOLT_FROM, BOLT_TO = 0.3, 0.8
+local BOLT_DROP, BOLT_PITCH, BOLT_ROLL = 0.12, -6, 18
+-- Equipping a gun posed in code: it swings in from below and to the right.
+local EQUIP_TIME = 0.4
+local EQUIP_FROM = CFrame.new(0.6, -1.2, 0.3) * CFrame.Angles(math.rad(-40), math.rad(25), math.rad(-30))
+-- Scoping in and out is quick on a gun that can scope.
+local AIM_EASE = 30
 local HOLSTER_WAIT = 0.3 -- how long the gun stays down waiting for the server to swap it
 
 -- Where the hands sit. Primary wrists sit along the gun as a share of its length.
@@ -349,9 +362,11 @@ function GunView.update(
 	if reloading and not clips then
 		goal *= RELOAD_DIP
 	end
-	local ease = 1 - math.exp(-dt * EASE)
+	local config = if shownGun then GunConfig.guns[shownGun] else nil
+	local viewKick = (config and VIEW_KICKS[config.name]) or DEFAULT_KICK
+	local ease = 1 - math.exp(-dt * (if config and config.aimFov then AIM_EASE else EASE))
 	held = held:Lerp(goal, ease)
-	kick *= math.exp(-dt * EASE)
+	kick *= math.exp(-dt * viewKick.ease)
 	local turn = if shownGun then TURNS[GunConfig.guns[shownGun].name] else nil
 	if showCard(camera, cardOut) then
 		return
@@ -378,7 +393,29 @@ function GunView.update(
 		-- Reloading and scoping still move the whole hold, on top of the clip.
 		shown = held * HIP:Inverse() * frame.gun
 	else
-		shown = held * CFrame.new(0, 0, KICK_BACK * kick) * (turn or CFrame.identity)
+		local now = os.clock()
+		local equip = CFrame.identity
+		if equipAt then
+			local t = (now - equipAt) / EQUIP_TIME
+			if t < 1 then
+				local share = 1 - (1 - t) ^ 3
+				equip = EQUIP_FROM:Lerp(CFrame.identity, share)
+			else
+				equipAt = nil
+			end
+		end
+		local bolt = CFrame.identity
+		if viewKick.bolt and firedAt and config then
+			local phase = (now - firedAt) / (60 / config.rpm)
+			if phase >= BOLT_FROM and phase <= BOLT_TO then
+				local weight = math.sin(math.pi * (phase - BOLT_FROM) / (BOLT_TO - BOLT_FROM))
+				bolt = CFrame.new(0, -BOLT_DROP * weight, 0)
+					* CFrame.Angles(math.rad(BOLT_PITCH * weight), 0, math.rad(BOLT_ROLL * weight))
+			end
+		end
+		local recoil = CFrame.new(0, -viewKick.drop * kick, viewKick.back * kick)
+			* CFrame.Angles(math.rad(viewKick.up * kick), 0, math.rad(viewKick.roll * kick))
+		shown = held * equip * recoil * bolt * (turn or CFrame.identity)
 		local right, left = grips()
 		ViewArms.pose(shown, right, left)
 	end

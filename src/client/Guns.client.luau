@@ -121,7 +121,9 @@ local function onFrame(dt: number)
 	local now = workspace:GetServerTimeNow()
 	syncGun(now)
 	local cardOut = CardInHand.slot ~= nil
-	local aiming = keys.aim and gun ~= nil and gun.aimFov ~= nil and not reloading and not cardOut
+	-- A scoped shot drops the scope until the bolt is worked. Still holding aim scopes back in.
+	local cycling = gun ~= nil and now < lastFire + 60 / gun.rpm
+	local aiming = keys.aim and gun ~= nil and gun.aimFov ~= nil and not reloading and not cardOut and not cycling
 	player:SetAttribute("AimFov", if aiming then gun.aimFov else nil)
 
 	for _, slot in { "primary", "sidearm" } do
