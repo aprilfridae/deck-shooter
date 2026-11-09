@@ -65,7 +65,12 @@ local SNAPPY = { fire = true, holster = true }
 -- shot that stacks a little while spraying. Either way the gun comes home on a spring (stiff, damp) that swings
 -- a little past. Guns with clips (M57, Energy Pistol) move the whole view, arms and all, on top of the clip.
 local VIEW_KICKS: { [string]: any } = {
-	M57 = { back = 0.066, drop = 0.011, up = 1.5, roll = 0.9, stiff = 315, damp = 27.8, auto = true },
+	M57 = {
+		back = 0.066, drop = 0.011, up = 1.5, roll = 0.9, stiff = 315, damp = 27.8, auto = true,
+		-- A slower layer under the shot kicks: each shot pushes it further (up to 1), and once firing stops it
+		-- eases home on its own soft spring, so the gun takes its time getting back to its shooting position.
+		settle = { back = 0.08, drop = 0.035, up = 2.4, perShot = 0.3, stiff = 28, damp = 10.5 },
+	},
 	B33 = { back = 0.154, drop = 0.022, up = 3.3, roll = 1.5, stiff = 270, damp = 24.4, auto = true },
 	SMG = { back = 0.099, drop = 0.011, up = 2.2, roll = 1.3, stiff = 360, damp = 29.6, auto = true },
 	["Energy Pistol"] = { back = 0.132, drop = 0.033, up = 7.7, roll = 2.2, rise = 0.04, stiff = 165, damp = 19.1 },
@@ -192,6 +197,7 @@ local held = HIP
 local kick = 0
 local kickSpeed = 0
 local kickRoll = 1 -- which way this shot rolls
+local settle, settleSpeed, settleGoal = 0, 0, 0
 local shown = HIP
 local clips: any = nil
 local firedAt: number? = nil
@@ -443,6 +449,9 @@ end
 function GunView.kick()
 	local config = if shownGun then GunConfig.guns[shownGun] else nil
 	local viewKick = (config and VIEW_KICKS[config.name]) or DEFAULT_KICK
+	if viewKick.settle then
+		settleGoal = math.min(settleGoal + viewKick.settle.perShot, 1)
+	end
 	if viewKick.auto then
 		kickSpeed += AUTO_SHOVE * math.sqrt(viewKick.stiff)
 		kickRoll = if math.random() < 0.5 then -1 else 1
@@ -565,6 +574,19 @@ function GunView.update(
 	end
 	local recoil = CFrame.new(0, -viewKick.drop * kick, viewKick.back * kick)
 		* CFrame.Angles(math.rad(viewKick.up * kick), 0, math.rad(viewKick.roll * kickRoll * kick))
+	local slow = viewKick.settle
+	if slow and config then
+		-- Still spraying while the next shot is due; a beat after that the gun starts home.
+		if not firedAt or os.clock() - firedAt > 60 / config.rpm * 1.6 then
+			settleGoal = 0
+		end
+		local step = math.min(dt, 1 / 30)
+		settleSpeed += ((settleGoal - settle) * slow.stiff - settleSpeed * slow.damp) * step
+		settle += settleSpeed * step
+		recoil = CFrame.new(0, -slow.drop * settle, slow.back * settle) * CFrame.Angles(math.rad(slow.up * settle), 0, 0) * recoil
+	else
+		settle, settleSpeed, settleGoal = 0, 0, 0
+	end
 	local sway = swayAndBob(dt, camera, aiming, sprinting)
 	-- A gun with clips kicks the whole view, so the arms holding it go too.
 	local base = camera.CFrame * sway * (if clips then recoil else CFrame.identity)
