@@ -89,24 +89,27 @@ local function originValid(shooter: GunTargets.Target, shot: any, ping: number, 
 	return false
 end
 
--- The nearest living target this ray reaches before a wall, and the wall if there is one.
-local function nearestHit(shooter: GunTargets.Target, shot: any, direction: any, viewAt: number)
+-- Every living target this ray passes through before a wall, nearest first, and the wall if there is one.
+local function hitsAlong(shooter: GunTargets.Target, shot: any, direction: any, viewAt: number)
 	local origin = Vector3.new(shot.origin.x, shot.origin.y, shot.origin.z)
 	local wall = firstWall(origin, Vector3.new(direction.x, direction.y, direction.z) * MAX_RANGE)
-	local nearest = if wall then wall.Distance else MAX_RANGE
-	local found, foundZone = nil, nil
+	local reach = if wall then wall.Distance else MAX_RANGE
+	local hits = {}
 	for _, target in GunTargets.all() do
 		if target ~= shooter and GunTargets.isAlive(target) then
 			local past = History.at(target.history, viewAt)
 			if past then
 				local zone, distance = Hitbox.test(shot.origin, direction, past, target.shape)
-				if zone and distance < nearest then
-					found, foundZone, nearest = target, zone, distance
+				if zone and distance < reach then
+					table.insert(hits, { target = target, zone = zone, distance = distance })
 				end
 			end
 		end
 	end
-	return found, foundZone, nearest, wall
+	table.sort(hits, function(a, b)
+		return a.distance < b.distance
+	end)
+	return hits, reach, wall
 end
 
 local function onFire(player: Player, raw: any)
@@ -134,36 +137,62 @@ local function onFire(player: Player, raw: any)
 	local angle = Spread.angle(gun, shot.aiming)
 	local viewAt = ShotRequest.viewTime(shot.firedAt, ping, now)
 	local totals: { [GunTargets.Target]: number } = {}
+	-- A collateral, on guns that have them: a bullet that goes through two or more bodies kills every one of
+	-- them, however far apart.
+	local collaterals: { [GunTargets.Target]: boolean } = {}
 	local headshot = false
 	local impacts = {}
 	local shots = {}
 	local origin = Vector3.new(shot.origin.x, shot.origin.y, shot.origin.z)
 	for _ = 1, gun.pellets do
 		local direction = Spread.apply(shot.direction, angle, rng)
-		local target, zone, distance, wall = nearestHit(shooter, shot, direction, viewAt)
-		if target then
-			local isHead = zone == "Head"
-			totals[target] = (totals[target] or 0) + Damage.hit(gun, distance, isHead)
-			headshot = headshot or isHead
-		elseif wall then
-			table.insert(impacts, { position = wall.Position, normal = wall.Normal })
-		end
+		local hits, reach, wall = hitsAlong(shooter, shot, direction, viewAt)
 		local line = Vector3.new(direction.x, direction.y, direction.z)
-		table.insert(shots, {
-			to = origin + line * distance,
-			direction = line,
-			hit = if target then target.model else nil,
-			head = zone == "Head",
-		})
+		local first = hits[1]
+		if gun.collateral and #hits >= 2 then
+			-- It passes through them all, so the tracer runs on to whatever stops it, with blood on each body.
+			for _, hit in hits do
+				collaterals[hit.target] = true
+				headshot = headshot or hit.zone == "Head"
+				table.insert(shots, {
+					to = origin + line * hit.distance,
+					direction = line,
+					hit = hit.target.model,
+					head = hit.zone == "Head",
+					through = true,
+				})
+			end
+			if wall then
+				table.insert(impacts, { position = wall.Position, normal = wall.Normal })
+			end
+			table.insert(shots, { to = origin + line * reach, direction = line })
+		else
+			if first then
+				local isHead = first.zone == "Head"
+				totals[first.target] = (totals[first.target] or 0) + Damage.hit(gun, first.distance, isHead)
+				headshot = headshot or isHead
+			elseif wall then
+				table.insert(impacts, { position = wall.Position, normal = wall.Normal })
+			end
+			table.insert(shots, {
+				to = origin + line * (if first then first.distance else reach),
+				direction = line,
+				hit = if first then first.target.model else nil,
+				head = first ~= nil and first.zone == "Head",
+			})
+		end
 	end
 	shotsRemote:FireAllClients(player, origin, shots)
 	if #impacts > 0 then
 		impactRemote:FireAllClients(impacts)
 	end
 
+	for target in collaterals do
+		totals[target] = math.huge
+	end
 	for target, amount in totals do
 		if amount > 0 then
-			local killed = GunTargets.damage(target, amount)
+			local killed = if collaterals[target] then GunTargets.kill(target) else GunTargets.damage(target, amount)
 			if killed then
 				deathRemote:FireAllClients(target.root.Position)
 			end

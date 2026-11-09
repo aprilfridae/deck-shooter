@@ -68,6 +68,20 @@ function GunTargets.isAlive(target: Target): boolean
 	return target.health > 0 and target.humanoid.Health > 0 and target.root:IsDescendantOf(workspace)
 end
 
+-- Kills the target outright, through any shield. Returns true if it was alive.
+function GunTargets.kill(target: Target): boolean
+	if not GunTargets.isAlive(target) then
+		return false
+	end
+	local shield = target.shield
+	if shield then
+		target.shield = nil
+		target.model:SetAttribute("ShieldHp", 0)
+		shield.onBreak()
+	end
+	return GunTargets.damage(target, math.max(target.health, 1))
+end
+
 -- Returns true if this damage killed the target.
 function GunTargets.damage(target: Target, amount: number): boolean
 	if not GunTargets.isAlive(target) then

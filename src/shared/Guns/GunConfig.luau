@@ -11,6 +11,7 @@ local function gun(fields: { [string]: any }): { [string]: any }
 	fields.pellets = fields.pellets or 1
 	fields.perShell = fields.perShell == true
 	fields.automatic = fields.automatic == true
+	fields.collateral = fields.collateral == true -- a bullet through two or more bodies kills them all
 	fields.headshot = fields.headshot or "Double"
 	fields.fullTo = fields.fullTo or SIDEARM_FULL_TO
 	fields.lowTo = fields.lowTo or SIDEARM_LOW_TO
@@ -67,6 +68,7 @@ GunConfig.guns = {
 		rpm = 50,
 		mag = 1, -- one in the chamber: every shot needs a reload
 		autoReload = true, -- starts reloading by itself right after the shot
+		collateral = true,
 		reload = 1.714,
 		fullTo = math.huge,
 		lowTo = math.huge,

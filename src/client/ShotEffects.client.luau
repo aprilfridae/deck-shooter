@@ -189,7 +189,10 @@ end
 shotsRemote.OnClientEvent:Connect(function(shooter: Player, origin: Vector3, shots: { any })
 	local from = if shooter == player then GunView.muzzle() or origin else origin
 	for _, shot in shots do
-		addTracer(from, shot.to)
+		-- A collateral sends a blood mark for each body it went through and one tracer past them all.
+		if not shot.through then
+			addTracer(from, shot.to)
+		end
 		if shot.hit then
 			bleed(shot)
 		end
