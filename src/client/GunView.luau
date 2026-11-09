@@ -143,11 +143,12 @@ local RELOADS: { [string]: any } = {
 		-- The kick throws the barrel up and that same turn carries on into the backward spin, one throw from the
 		-- shot to the catch, with no stop or change of direction between them.
 		lead = 0.12,
-		-- The kick starts the turn, it slows, then the left hand shoves it round much faster to the catch.
+		-- The kick starts the turn, it eases off a little, then the left hand shoves it round faster, and it coasts into
+		-- the catch. Never close to a stop until the hand has it.
 		spin = {
 			from = 0,
 			to = 0.62,
-			points = { { 0, 0, 2.2 }, { 0.17, 0.2, 0.8 }, { 0.27, 0.5, 4 }, { 0.62, 1, 0 } },
+			points = { { 0, 0, 2 }, { 0.15, 0.25, 1.3 }, { 0.26, 0.55, 3.4 }, { 0.62, 1, 0.6 } },
 		},
 		smoothFrom = 1.31, -- seconds in: only the return to ready is smoothed
 		keys = {
@@ -155,8 +156,8 @@ local RELOADS: { [string]: any } = {
 			-- The shot heaves it back and up, slowly enough to feel the hit, knocking the left hand off; then it sinks
 			-- back down slowly while it spins.
 			key(0.15, tilt(-9, 0, 0, 0, 0.55, 0.6), Vector3.new(0, 0.05, -0.4), "out"),
-			key(0.2, tilt(-7, 0, 0, 0, 0.54, 0.45), Vector3.new(0, -0.18, -0.05), "in"), -- the hand gets under it
-			key(0.28, tilt(-4, 0, 0, 0, 0.62, 0.2), Vector3.new(0.02, 0.55, -0.18), "out"), -- and shoves it hard round
+			key(0.2, tilt(-7, 0, 0, 0, 0.54, 0.45), Vector3.new(0, -0.18, -0.05), "flow"), -- the hand gets under it
+			key(0.28, tilt(-4, 0, 0, 0, 0.62, 0.2), Vector3.new(0.02, 0.55, -0.18), "flow"), -- and shoves it hard round
 			key(0.44, tilt(-2, 0, 0, 0, 0.32, 0.06), Vector3.new(-0.3, -0.7, 0.3), "flow"), -- the hand drops away while it whips round
 			key(0.56, tilt(0, 0, 0, 0, 0.18, 0), Vector3.new(-0.05, -0.3, 0.08), "flow"), -- comes up under it
 			key(0.62, tilt(4, -2, 2, -0.02, 0.12, 0.01), Vector3.zero, "flow"), -- catches it
