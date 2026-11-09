@@ -85,10 +85,19 @@ end
 local ViewArms = {}
 
 -- Bends the arms. gun is the held gun relative to the camera.
-function ViewArms.pose(gun: CFrame, right: Grip, left: Grip, shoulders: { [string]: Vector3 }?, wraps: { [string]: number }?)
+-- rightGun, if given, is where the right hand holds instead, such as while the gun spins round its finger.
+function ViewArms.pose(
+	gun: CFrame,
+	right: Grip,
+	left: Grip,
+	shoulders: { [string]: Vector3 }?,
+	wraps: { [string]: number }?,
+	rightGun: CFrame?
+)
 	rig = rig or makeRig(true)
 	if rig then
-		rig.parts = SoldierPose.fromPalms(solver, SoldierPose.palm(gun, right), SoldierPose.palm(gun, left), shoulders, gun, wraps)
+		local rightPalm = SoldierPose.palm(rightGun or gun, right)
+		rig.parts = SoldierPose.fromPalms(solver, rightPalm, SoldierPose.palm(gun, left), shoulders, gun, wraps)
 	end
 end
 

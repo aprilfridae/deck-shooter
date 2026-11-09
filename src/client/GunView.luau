@@ -76,27 +76,28 @@ local DEFAULT_KICK = { back = 0.15, drop = 0.02, up = 4, roll = 1.5, rise = 0.03
 -- An automatic's shove, as a multiple of its spring's speed, so one shot alone peaks at about the full kick.
 local AUTO_SHOVE = 2.3
 -- Reloads for guns posed in code, as keys: seconds into the reload, the gun's turn and shift from its hold, where
--- the left hand is from its grip (in the gun's space), and how the move into that key eases. Timed to the sound,
--- and stretched if the gun's reload time differs from length.
-local function key(at: number, gun: CFrame, hand: Vector3, ease: string?): any
-	return { at = at, gun = gun, hand = hand, ease = ease or "inOut" }
+-- the left hand is from its grip (in the gun's space), how the move into that key eases, and how far the gun has
+-- spun backwards round the trigger (degrees). Timed to the sound, and stretched if the gun's reload time differs
+-- from length.
+local function key(at: number, gun: CFrame, hand: Vector3, ease: string?, spin: number?): any
+	return { at = at, gun = gun, hand = hand, ease = ease or "inOut", spin = spin or 360 }
 end
 local function tilt(roll: number, yaw: number, pitch: number, x: number, y: number, z: number): CFrame
 	return CFrame.new(x, y, z) * CFrame.Angles(math.rad(pitch), math.rad(yaw), math.rad(roll))
 end
 local TILTED = tilt(30, -10, 6, -0.12, 0.06, 0.05)
 local RELOADS: { [string]: any } = {
-	-- reload-sniper.wav: the cell slides in from 0.05s to 0.95s, clicks home at 0.94s and locks with a clunk at 1.06s.
+	-- reload-sniper.wav: a rising whine to 0.95s, a click at 0.94s and a clunk at 1.06s. The gun spins once
+	-- backwards round the trigger finger during the whine, then the left hand clicks the cell home and locks it.
 	Longscope = {
 		length = 1.714,
 		keys = {
-			key(0, CFrame.identity, Vector3.zero),
-			key(0.08, tilt(-3, 0, -3, 0, -0.03, 0), Vector3.zero), -- a small dip before the turn
-			key(0.24, TILTED, Vector3.zero),
-			key(0.36, TILTED, Vector3.new(0.02, -0.18, 0.28)), -- the hand drops to the cell
-			key(0.48, tilt(34, -10, 7, -0.12, 0.08, 0.05), Vector3.new(-0.2, -0.55, 0.32), "out"), -- pulls it out
-			key(0.62, TILTED, Vector3.new(-0.3, -0.95, 0.38)), -- out of view for a fresh one
-			key(0.8, TILTED, Vector3.new(0, -0.32, 0.26)),
+			key(0, CFrame.identity, Vector3.zero, nil, 0),
+			key(0.12, tilt(0, 0, -10, 0, -0.05, 0.03), Vector3.zero, nil, 0), -- dips to wind up
+			key(0.2, tilt(0, 0, -8, 0, -0.04, 0.03), Vector3.new(-0.25, -0.6, 0.3), "out", 0), -- left hand lets go
+			key(0.5, tilt(0, 0, 0, 0, 0.1, 0), Vector3.new(-0.3, -0.85, 0.35), "in", 160), -- whips round
+			key(0.76, tilt(10, -4, 4, -0.05, 0.03, 0.02), Vector3.new(-0.15, -0.6, 0.3), "out", 360), -- and catches
+			key(0.84, TILTED, Vector3.new(0, -0.3, 0.26)),
 			key(0.94, TILTED, Vector3.new(0.02, -0.1, 0.24), "in"), -- pushes it home
 			key(0.98, tilt(27, -9, 9, -0.12, 0.1, 0.05), Vector3.new(0.02, -0.06, 0.24), "out"), -- click
 			key(1.02, TILTED, Vector3.new(0.02, -0.16, 0.24)),
@@ -117,8 +118,8 @@ local function eased(ease: string, u: number): number
 	return u * u * (3 - 2 * u)
 end
 
--- The gun's offset and the left hand's, elapsed seconds into a keyed reload.
-local function reloadPose(reload: any, elapsed: number, reloadTime: number): (CFrame, Vector3)
+-- The gun's offset, the left hand's, and the gun's backward spin in radians, elapsed seconds into a keyed reload.
+local function reloadPose(reload: any, elapsed: number, reloadTime: number): (CFrame, Vector3, number)
 	local at = elapsed * reload.length / reloadTime
 	local keys = reload.keys
 	for index = 2, #keys do
@@ -126,10 +127,10 @@ local function reloadPose(reload: any, elapsed: number, reloadTime: number): (CF
 		if at < to.at then
 			local from = keys[index - 1]
 			local u = eased(to.ease, (at - from.at) / (to.at - from.at))
-			return from.gun:Lerp(to.gun, u), from.hand:Lerp(to.hand, u)
+			return from.gun:Lerp(to.gun, u), from.hand:Lerp(to.hand, u), math.rad(from.spin + (to.spin - from.spin) * u)
 		end
 	end
-	return CFrame.identity, Vector3.zero
+	return CFrame.identity, Vector3.zero, 0
 end
 
 -- Equipping a gun posed in code: it swings in from below and to the right.
@@ -579,18 +580,23 @@ function GunView.update(
 		end
 		-- A gun drawn bigger moves forward by its extra length, so its stock stays clear of the camera.
 		local forward = CFrame.new(0, 0, -length * (1 - 1 / viewScale) / 2)
-		local reloadGun, reloadHand = CFrame.identity, Vector3.zero
+		local reloadGun, reloadHand, spin = CFrame.identity, Vector3.zero, 0
 		keyedReloadAt = if reloading and keyedReload then keyedReloadAt or now else nil
 		if keyedReloadAt and config then
-			reloadGun, reloadHand = reloadPose(keyedReload, now - keyedReloadAt, config.reload)
+			reloadGun, reloadHand, spin = reloadPose(keyedReload, now - keyedReloadAt, config.reload)
 		end
-		shown = held * forward * equip * recoil * reloadGun * (turn or CFrame.identity)
 		local right, left = grips()
+		-- The right hand stays put with its finger in the trigger guard while the gun spins round it.
+		local hand = held * forward * equip * recoil * reloadGun * (turn or CFrame.identity)
+		local pivot = right.wrist
+		shown = held * forward * equip * recoil * reloadGun
+			* CFrame.new(pivot) * CFrame.Angles(spin, 0, 0) * CFrame.new(-pivot)
+			* (turn or CFrame.identity)
 		if reloadHand ~= Vector3.zero then
 			left = table.clone(left)
 			left.wrist += reloadHand
 		end
-		ViewArms.pose(shown, right, left, config and SHOULDERS[config.name], config and THUMB_WRAPS[config.name])
+		ViewArms.pose(shown, right, left, config and SHOULDERS[config.name], config and THUMB_WRAPS[config.name], hand)
 	end
 	view:PivotTo(base * shown)
 	view.Parent = camera
