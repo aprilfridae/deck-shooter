@@ -169,6 +169,7 @@ return {
 	["coin-burst.wav"] = 83189887154834,
 	["pistol-snap.wav"] = 79281291952301,
 	["reload-assault-v3.wav"] = 123472924583339,
+	["reload-assault-v4.wav"] = 93573545598665,
 	["gun-sniper-1.wav"] = 80989143421566,
 	["gun-sniper-base.wav"] = 93528293197197,
 	["gun-sniper-10.wav"] = 101900741207161,

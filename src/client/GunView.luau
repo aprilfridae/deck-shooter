@@ -60,11 +60,11 @@ local CLIP_BLEND = 0.25
 local RELOAD_BLEND = 1 -- the end of a reload settles into the next clip slowly, with weight
 local SNAP_BLEND = 0.12 -- a shot fired while the gun is still settling catches up this fast
 -- Times a reload clip to its sound: pairs of seconds into the sound and the clip time that should show then. In
--- reload-assault-v3.wav the mag clicks out at 0.42s, slams in at 0.67s and the charge is pulled at 0.89s; the
+-- reload-assault-v4.wav the mag clicks out at 0.42s, slams in at 0.64s and the charge is pulled at 0.86s; the
 -- clip's hand jerks the mag out at 0.43s, drives the new one home at 0.68s and slaps at 0.86s. The last pair
 -- ends the clip with the reload.
 local RELOAD_SYNC: { [string]: { { number } } } = {
-	M57 = { { 0, 0 }, { 0.42, 0.43 }, { 0.67, 0.68 }, { 0.89, 0.86 }, { 0.985, 0.985 } },
+	M57 = { { 0, 0 }, { 0.42, 0.43 }, { 0.64, 0.68 }, { 0.86, 0.86 }, { 0.985, 0.985 } },
 }
 -- Motion blur: Roblox can't blur one object, so faded copies of the gun and arms trail behind them,
 -- spread between where they were SMEAR_TIME ago and where they are now. Only while the gun moves fast enough.
@@ -105,8 +105,8 @@ local function tilt(roll: number, yaw: number, pitch: number, x: number, y: numb
 	return CFrame.new(x, y, z) * CFrame.Angles(math.rad(pitch), math.rad(yaw), math.rad(roll))
 end
 local RELOADS: { [string]: any } = {
-	-- reload-assault-v3.wav: a rattle from 0.09s, the mag clicks out at 0.42s, slams in at 0.67s, and the charge is
-	-- pulled at 0.89s and lets go at 0.96s. The M57 has a reload clip, so this layers on top of it: the whole hold,
+	-- reload-assault-v4.wav: a rattle from 0.09s, the mag clicks out at 0.42s, slams in at 0.64s, and the charge is
+	-- pulled at 0.86s and lets go at 0.93s. The M57 has a reload clip, so this layers on top of it: the whole hold,
 	-- arms and all, turns round the gun with a jolt on each hit. Only the gun's turn is used.
 	M57 = {
 		length = 0.985,
@@ -118,14 +118,14 @@ local RELOADS: { [string]: any } = {
 			key(0.42, tilt(15, -6, 3, -0.03, 0.01, 0), Vector3.zero, "in"),
 			key(0.46, tilt(17, -7, -3, -0.03, -0.05, 0), Vector3.zero, "out"), -- mag out: jolts down
 			key(0.53, tilt(15, -6, 3, -0.03, 0.01, 0), Vector3.zero),
-			key(0.63, tilt(16, -6, 1, -0.03, -0.03, 0), Vector3.zero), -- winds up for the new one
-			key(0.67, tilt(15, -6, 2, -0.03, -0.01, 0), Vector3.zero, "in"),
-			key(0.71, tilt(12, -5, 8, -0.03, 0.06, 0), Vector3.zero, "out"), -- mag in: bumps up hard
-			key(0.8, tilt(15, -6, 3, -0.03, 0.01, 0), Vector3.zero),
-			key(0.89, tilt(17, -7, 2, -0.04, 0, 0), Vector3.zero, "in"), -- charge pulled
-			key(0.93, tilt(18, -7, -1, -0.045, -0.02, 0), Vector3.zero, "out"),
-			key(0.96, tilt(17, -7, 1, -0.04, 0, 0), Vector3.zero, "in"),
-			key(1.07, tilt(-6, 2.5, 4, 0.015, 0.04, 0), Vector3.zero, "out"), -- let go: heaves back up past ready
+			key(0.6, tilt(16, -6, 1, -0.03, -0.03, 0), Vector3.zero), -- winds up for the new one
+			key(0.64, tilt(15, -6, 2, -0.03, -0.01, 0), Vector3.zero, "in"),
+			key(0.68, tilt(12, -5, 8, -0.03, 0.06, 0), Vector3.zero, "out"), -- mag in: bumps up hard
+			key(0.77, tilt(15, -6, 3, -0.03, 0.01, 0), Vector3.zero),
+			key(0.86, tilt(17, -7, 2, -0.04, 0, 0), Vector3.zero, "in"), -- charge pulled
+			key(0.9, tilt(18, -7, -1, -0.045, -0.02, 0), Vector3.zero, "out"),
+			key(0.93, tilt(17, -7, 1, -0.04, 0, 0), Vector3.zero, "in"),
+			key(1.04, tilt(-6, 2.5, 4, 0.015, 0.04, 0), Vector3.zero, "out"), -- let go: heaves back up past ready
 			-- then its weight takes over: it sinks past ready, hangs low a moment, and is lifted back up slowly
 			key(1.24, tilt(-5, 2, 3.2, 0.012, 0.03, 0), Vector3.zero, "out"),
 			key(1.62, tilt(-1, 0.5, -5, 0.004, -0.09, 0.02), Vector3.zero),
