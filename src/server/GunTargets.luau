@@ -2,6 +2,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Guns = ReplicatedStorage:WaitForChild("Guns")
+local Collision = require(Guns:WaitForChild("Collision"))
 local Combat = require(Guns:WaitForChild("Combat"))
 local History = require(Guns:WaitForChild("History"))
 local Hitbox = require(Guns:WaitForChild("Hitbox"))
@@ -87,6 +88,16 @@ function GunTargets.damage(target: Target, amount: number): boolean
 	target.health = health
 	target.model:SetAttribute("Health", health)
 	target.humanoid.Health = health
+	if killed then
+		-- The body's mesh parts only skip the world while the root carries them; once it falls apart they have to
+		-- land, or it drops through the floor.
+		for _, part in target.model:GetDescendants() do
+			if part:IsA("BasePart") then
+				part.CollisionGroup = Collision.corpse
+				part.CanCollide = true
+			end
+		end
+	end
 	return killed
 end
 

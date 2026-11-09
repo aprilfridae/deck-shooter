@@ -8,6 +8,7 @@ local Collision = {
 	walkOnly = "WalkOnly", -- railings and panes
 	shots = "Shots", -- set on the RaycastParams of shots and the edge check
 	body = "BodyMesh", -- the character's posed mesh parts (CharacterBody.server.luau)
+	corpse = "Corpse", -- a dead body's parts and the coins it bursts: they land on the floor, bullets pass through
 }
 
 local function register(name: string)
@@ -24,6 +25,9 @@ function Collision.setup()
 	register(Collision.walkOnly)
 	register(Collision.shots)
 	register(Collision.body)
+	register(Collision.corpse)
+	PhysicsService:CollisionGroupSetCollidable(Collision.corpse, Collision.body, false)
+	PhysicsService:CollisionGroupSetCollidable(Collision.corpse, Collision.shots, false)
 	PhysicsService:CollisionGroupSetCollidable(Collision.shots, Collision.walkOnly, false)
 	PhysicsService:CollisionGroupSetCollidable(Collision.body, Collision.walkOnly, false)
 end

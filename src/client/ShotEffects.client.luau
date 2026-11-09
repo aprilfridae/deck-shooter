@@ -8,13 +8,24 @@ local RunService = game:GetService("RunService")
 local GunAudio = require(script.Parent.GunAudio)
 local GunSounds = require(ReplicatedStorage.Guns.GunSounds)
 local GunView = require(script.Parent.GunView)
+local Collision = require(ReplicatedStorage.Guns.Collision)
 local Flyby = require(ReplicatedStorage.Guns.Flyby)
 local Tracer = require(ReplicatedStorage.Guns.Tracer)
 
 local remotes = ReplicatedStorage:WaitForChild("GunRemotes")
 local shotsRemote = remotes:WaitForChild("Shots") :: RemoteEvent
+local deathRemote = remotes:WaitForChild("DeathBurst") :: RemoteEvent
 
 local TRACER_SPEED = 600
+-- Coins burst out of a body when it dies, bounce on the floor and shrink away.
+local COINS = 16
+local COIN_SIZE = Vector3.new(0.1, 0.65, 0.65) -- a cylinder lies along X, so this is a flat coin
+local COIN_COLOR = Color3.fromRGB(255, 196, 46)
+local COIN_UP = { 22, 38 }
+local COIN_OUT = { 6, 16 }
+local COIN_SPIN = 25
+local COIN_LIFE = 2.6
+local COIN_SHRINK = 0.4
 local TRACER_LENGTH = 12
 local TRACER_WIDTH = 0.07
 local TRACER_COLOR = Palette.DataCyan
@@ -172,3 +183,41 @@ RunService.RenderStepped:Connect(function(dt)
 	stepTracers(dt)
 	stepDrops(dt)
 end)
+
+local function burstCoins(position: Vector3)
+	for _ = 1, COINS do
+		local coin = Instance.new("Part")
+		coin.Name = "Coin"
+		coin.Shape = Enum.PartType.Cylinder
+		coin.Size = COIN_SIZE
+		coin.Color = COIN_COLOR
+		coin.Material = Enum.Material.Metal
+		coin.Reflectance = 0.2
+		coin.CanQuery = false
+		coin.CanTouch = false
+		coin.CastShadow = false
+		coin.CollisionGroup = Collision.corpse
+		coin.CFrame = CFrame.new(position + random:NextUnitVector() * 0.5) * CFrame.Angles(
+			random:NextNumber(0, 2 * math.pi),
+			random:NextNumber(0, 2 * math.pi),
+			0
+		)
+		local angle = random:NextNumber(0, 2 * math.pi)
+		coin.AssemblyLinearVelocity = Vector3.new(math.cos(angle), 0, math.sin(angle))
+				* random:NextNumber(COIN_OUT[1], COIN_OUT[2])
+			+ Vector3.new(0, random:NextNumber(COIN_UP[1], COIN_UP[2]), 0)
+		coin.AssemblyAngularVelocity = random:NextUnitVector() * COIN_SPIN
+		coin.Parent = folder
+		task.delay(COIN_LIFE, function()
+			local start = os.clock()
+			while coin.Parent and os.clock() - start < COIN_SHRINK do
+				local share = 1 - (os.clock() - start) / COIN_SHRINK
+				coin.Size = COIN_SIZE * math.max(share, 0.05)
+				task.wait()
+			end
+			coin:Destroy()
+		end)
+	end
+end
+
+deathRemote.OnClientEvent:Connect(burstCoins)
