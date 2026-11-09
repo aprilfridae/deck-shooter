@@ -411,7 +411,9 @@ local function swayAndBob(dt: number, camera: Camera, aiming: boolean, sprinting
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local speed = 0
-	if root and humanoid and humanoid.FloorMaterial ~= Enum.Material.Air then
+	-- No steps while sliding: the player glides, so the gun mustn't bob as if running.
+	local sliding = Players.LocalPlayer:GetAttribute("MoveMode") == "Slide"
+	if root and humanoid and humanoid.FloorMaterial ~= Enum.Material.Air and not sliding then
 		local velocity = root.AssemblyLinearVelocity
 		speed = Vector2.new(velocity.X, velocity.Z).Magnitude
 	end
