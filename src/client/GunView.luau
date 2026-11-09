@@ -137,6 +137,7 @@ local RELOADS: { [string]: any } = {
 		-- shot to the catch, with no stop or change of direction between them.
 		lead = 0.12,
 		spin = { from = 0, to = 0.62, launch = 1.5 },
+		smoothFrom = 1.36, -- seconds in: only the return to ready is smoothed
 		keys = {
 			key(0, CFrame.identity, Vector3.zero),
 			-- The shot heaves it back and up, slowly enough to feel the hit, knocking the left hand off; then it sinks
@@ -734,8 +735,9 @@ function GunView.update(
 		end
 		if keyedReloadAt and keyedReload and config then
 			reloadGun, reloadHand, spin = reloadPose(keyedReload, now - keyedReloadAt, config.reload)
-			-- A touch of smoothing, so a corner between two keys never shows as a step.
-			local smooth = 1 - math.exp(-dt * 25)
+			-- A touch of smoothing on the way back to ready, so a corner between two keys never shows as a step. The
+			-- clicks before that stay sharp.
+			local smooth = if now - keyedReloadAt >= (keyedReload.smoothFrom or 0) then 1 - math.exp(-dt * 25) else 1
 			reloadShown = reloadShown:Lerp(reloadGun, smooth)
 			handShown = handShown:Lerp(reloadHand, smooth)
 			reloadGun, reloadHand = reloadShown, handShown
