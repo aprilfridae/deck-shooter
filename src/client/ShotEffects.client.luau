@@ -1,4 +1,5 @@
--- Bullet tracers and blood. The server sends where each bullet really went, spread included.
+-- Bullet tracers and blood: an acid green mist and drops, with no splats left behind. The server sends where each
+-- bullet really went, spread included.
 local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -9,7 +10,6 @@ local GunSounds = require(ReplicatedStorage.Guns.GunSounds)
 local GunView = require(script.Parent.GunView)
 local Flyby = require(ReplicatedStorage.Guns.Flyby)
 local Tracer = require(ReplicatedStorage.Guns.Tracer)
-local Collision = require(ReplicatedStorage.Guns.Collision)
 
 local remotes = ReplicatedStorage:WaitForChild("GunRemotes")
 local shotsRemote = remotes:WaitForChild("Shots") :: RemoteEvent
@@ -19,7 +19,7 @@ local TRACER_LENGTH = 12
 local TRACER_WIDTH = 0.07
 local TRACER_COLOR = Palette.DataCyan
 
-local BLOOD_COLOR = Palette.HazardRed
+local BLOOD_COLOR = Palette.SignalAcid -- acid green, not red
 local MIST_BURST = 30
 local DROPS = 18
 local HEADSHOT_SCALE = 2 -- headshots throw this much more blood
@@ -27,12 +27,6 @@ local DROP_SPEED = 26
 local DROP_LIFE = 0.45
 local DROP_SIZE = 0.16
 local GRAVITY = 110
-local SPLAT_REACH = 9
-local SPLAT_MIN = 0.9
-local SPLAT_MAX = 2.2
-local SPLAT_LIFE = 20
-local MAX_SPLATS = 140
-local SURFACE_GAP = 0.02
 
 local player = Players.LocalPlayer
 local random = Random.new()
@@ -75,7 +69,6 @@ mist.Parent = mistAnchor
 
 local tracers: { any } = {}
 local drops: { any } = {}
-local splats: { BasePart } = {}
 
 local function addTracer(from: Vector3, to: Vector3)
 	local line = to - from
@@ -101,47 +94,6 @@ local function addDrop(position: Vector3, direction: Vector3)
 	})
 end
 
-local function addSplat(position: Vector3, normal: Vector3)
-	local size = random:NextNumber(SPLAT_MIN, SPLAT_MAX)
-	local part = makePart(Vector3.new(size, size, 0.03), BLOOD_COLOR, Enum.Material.SmoothPlastic)
-	local front = position + normal * SURFACE_GAP
-	part.CFrame = CFrame.lookAt(front, front + normal) * CFrame.Angles(0, 0, random:NextNumber(0, math.pi))
-	part.Parent = folder
-	table.insert(splats, part)
-	if #splats > MAX_SPLATS then
-		table.remove(splats, 1):Destroy()
-	end
-	task.delay(SPLAT_LIFE, function()
-		local index = table.find(splats, part)
-		if index then
-			table.remove(splats, index)
-			part:Destroy()
-		end
-	end)
-end
-
--- Blood lands on whatever is behind the target, then on the ground beneath it.
-local function splatter(position: Vector3, direction: Vector3, hit: Instance?)
-	local ignored: { Instance } = { folder, workspace.CurrentCamera }
-	if hit then
-		table.insert(ignored, hit)
-	end
-	if player.Character then
-		table.insert(ignored, player.Character)
-	end
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = ignored
-	params.RespectCanCollide = true
-	Collision.forShots(params)
-	for _, reach in { direction * SPLAT_REACH, Vector3.new(0, -SPLAT_REACH, 0) } do
-		local surface = workspace:Raycast(position, reach, params)
-		if surface then
-			addSplat(surface.Position, surface.Normal)
-		end
-	end
-end
-
 local function bleed(shot: any)
 	local scale = if shot.head then HEADSHOT_SCALE else 1
 	mistAnchor.CFrame = CFrame.lookAt(shot.to, shot.to + shot.direction)
@@ -149,7 +101,6 @@ local function bleed(shot: any)
 	for _ = 1, DROPS * scale do
 		addDrop(shot.to, -shot.direction)
 	end
-	splatter(shot.to, shot.direction, shot.hit)
 end
 
 -- Someone else's bullet that misses you close by whizzes past, once per shot, from its closest

@@ -6,7 +6,7 @@ local RunService = game:GetService("RunService")
 
 local Collision = {
 	walkOnly = "WalkOnly", -- railings and panes
-	shots = "Shots", -- set on the RaycastParams of shots, splats and the edge check
+	shots = "Shots", -- set on the RaycastParams of shots and the edge check
 	body = "BodyMesh", -- the character's posed mesh parts (CharacterBody.server.luau)
 }
 
