@@ -294,7 +294,9 @@ end
 
 -- Remembers this frame's pose and trails the copies from the oldest remembered one up to it,
 -- the copies nearest the gun the strongest.
-local function drawSmear(camera: Camera, whole: any, base: CFrame)
+-- whole is this frame's pose: gun, plus bones on a gun with clips. hold is what the pose's gun is relative to.
+-- A gun posed in code has no bones, so only the gun trails.
+local function drawSmear(camera: Camera, whole: any, base: CFrame, hold: CFrame)
 	local now = os.clock()
 	table.insert(history, { at = now, frame = whole })
 	while #history > 1 and history[2].at <= now - SMEAR_TIME do
@@ -313,7 +315,6 @@ local function drawSmear(camera: Camera, whole: any, base: CFrame)
 		makeSmears()
 	end
 	smearShown = true
-	local hold = base * held * HIP:Inverse()
 	for _, smear in smears do
 		local transparency = 1 - SMEAR_OPACITY * smear.share
 		for _, part in smear.parts do
@@ -321,9 +322,11 @@ local function drawSmear(camera: Camera, whole: any, base: CFrame)
 		end
 		smear.gun:PivotTo(hold * from.gun:Lerp(whole.gun, smear.share))
 		smear.gun.Parent = camera
-		if smear.arms then
+		if smear.arms and whole.bones and from.bones and clips then
 			ViewArms.poseGhost(smear.arms, clips.meshOffset, ArmClip.blendBones(from.bones, whole.bones, smear.share))
 			ViewArms.placeGhost(smear.arms, camera, transparency, base)
+		elseif smear.arms then
+			ViewArms.hideGhost(smear.arms)
 		end
 	end
 end
@@ -627,7 +630,10 @@ function GunView.update(
 	view.Parent = camera
 	ViewArms.place(camera, base)
 	if clips and shownFrame then
-		drawSmear(camera, shownFrame, base)
+		drawSmear(camera, shownFrame, base, base * held * HIP:Inverse())
+	elseif not clips then
+		-- Guns posed in code trail too, so the Longscope's reload spin and kick blur.
+		drawSmear(camera, { gun = shown }, base, base)
 	elseif smearShown then
 		hideSmears()
 	end
