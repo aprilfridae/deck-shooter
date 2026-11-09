@@ -324,8 +324,8 @@ local held = HIP
 local SCOPES: { [string]: { part: string, eye: number } } = {
 	Longscope = { part = "sight_glass_low", eye = 0.15 },
 }
-local SCOPE_SHOW_FROM = 0.75 -- share of the way in when the scope view starts fading in
-local SCOPE_FULL_AT = 0.93 -- and when it's solid and the gun is hidden
+local SCOPE_SHOW_FROM = 0.82 -- share of the way in when the scope view appears and the gun hides
+local SCOPE_FULL_AT = 0.88 -- when the scope view is solid: a fade of a frame or two, so it never pops
 local scopeAim: CFrame? = nil -- the hold that lines the sight up with the eye, for the gun shown
 local scopeShare = 0 -- how far into the scope the view is, 0 to 1
 local scopeGui: ScreenGui? = nil
@@ -1051,7 +1051,7 @@ function GunView.update(
 	local pivot = view:GetPivot()
 	showFlash(camera, pivot * CFrame.new(0, barrelRise, -length / 2))
 	ViewArms.place(camera, base)
-	if not clips and scopeShare >= SCOPE_FULL_AT then
+	if not clips and scopeShare >= SCOPE_SHOW_FROM then
 		-- Looking through the scope: the gun and arms would only block it.
 		view.Parent = nil
 		ViewArms.hide()
