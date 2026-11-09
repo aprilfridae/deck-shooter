@@ -149,7 +149,7 @@ local function onFrame(dt: number)
 		local shotTime = nextShot(pressed, keys.fire, now)
 		if shotTime then
 			fire(camera, aiming, shotTime)
-		elseif pressed and gun and ammo <= 0 and not reloading then
+		elseif pressed and gun and ammo <= 0 and not reloading and not gun.manualReload then
 			reloadRemote:FireServer()
 		end
 	end

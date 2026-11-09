@@ -35,12 +35,13 @@ Damage falls off in a straight line between the two distances, then stays flat. 
 | M57 | 24 | 2x | 600 | 30 | 0.985s | Auto | 0.2 | 100% to 90 studs, 70% by 180 |
 | B33 | 24 | Kill | 540 | 30 | 0.985s | Auto | 0.4 | 100% to 90 studs, 70% by 180 |
 | SMG | 17 | 2x | 800 | 32 | 2.0s | Auto | 0.8 | 100% to 40 studs, 60% by 90 |
-| Longscope | 85 | Kill | 50 | 5 | 1.714s | Single | 0, hipfired or scoped | No falloff |
+| Longscope | 85 | Kill | 50 | 1 | 1.714s | Single | 0, hipfired or scoped | No falloff |
 | Shotgun | 8 pellets of 14 | 2x per pellet | 75 | 6 | 0.5s per shell | Single | 4 per pellet | 100% to 15 studs, 0% by 45 |
 | Energy Pistol | 20 | 2x | 400 | 12 | 0.964s | Single | 0.4 | 100% to 40 studs, 70% by 90 |
 
 **In the data, unused:** Machine pistol (13 damage, 900 RPM, 20 rounds, 1.6s, auto, spread 1), Revolver (45, 150, 6, 2.2s, single, 0.3) and Auto-pistol (16, 550, 15, 1.5s, single, 0.6). All three do 2x on headshots and use the Energy Pistol's falloff.
 
+- The Longscope holds one round, so every shot needs a reload, and pulling the trigger on it empty doesn't start one: press reload. Other guns start a reload when fired empty.
 - A 2x headshot applies after falloff, so the M57 does 48 to the head only within 90 studs.
 - The M57, B33, Longscope and Energy Pistol reload times match their reload sounds (`GunSounds.luau`). The SMG and Shotgun have no reload sound yet.
 
