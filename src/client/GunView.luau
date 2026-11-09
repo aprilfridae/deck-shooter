@@ -15,6 +15,13 @@ local SIDEARM_LENGTH = 1
 local MODEL_SCALE = 0.031
 -- Guns that looked too small in the soldier's hands are drawn bigger. The grips move with them.
 local VIEW_SCALES: { [string]: number } = { Longscope = 1.35 }
+-- Where the left hand holds a gun, as a share of its length from the middle, where the usual spot is out of reach.
+-- Too far forward and the arm locks straight with the shoulder sliding into view.
+local LEFT_GRIPS: { [string]: number } = { Longscope = 0 }
+local leftGrip = LEFT_GRIP_Z
+-- Shoulders moved for a gun, in camera space. The Longscope's left arm comes up from below instead of
+-- reaching across the screen.
+local SHOULDERS: { [string]: { [string]: Vector3 } } = { Longscope = { Left = Vector3.new(-0.55, -1.8, 0.2) } }
 local BLOCK_SECTION = Vector2.new(0.3, 0.4)
 local BARREL_RISE = 0.26 -- how far above the model's middle the barrel sits, as a share of its height
 local HIP = CFrame.new(0.9, -0.8, -2)
@@ -222,7 +229,7 @@ local function grips(): (any, any)
 	end
 	local right = { wrist = Vector3.new(PRIMARY_RIGHT.x * viewScale, PRIMARY_RIGHT.y * viewScale, length * RIGHT_GRIP_Z) }
 	right.along, right.thumb = PRIMARY_RIGHT.along, PRIMARY_RIGHT.thumb
-	local left = { wrist = Vector3.new(PRIMARY_LEFT.x * viewScale, PRIMARY_LEFT.y * viewScale, length * LEFT_GRIP_Z) }
+	local left = { wrist = Vector3.new(PRIMARY_LEFT.x * viewScale, PRIMARY_LEFT.y * viewScale, length * leftGrip) }
 	left.along, left.thumb = PRIMARY_LEFT.along, PRIMARY_LEFT.thumb
 	return right, left
 end
@@ -238,6 +245,7 @@ function GunView.setGun(gunId: string, slot: string)
 	end
 	isSidearm = slot == "sidearm"
 	viewScale = VIEW_SCALES[GunConfig.guns[gunId].name] or 1
+	leftGrip = LEFT_GRIPS[GunConfig.guns[gunId].name] or LEFT_GRIP_Z
 	length = if isSidearm then SIDEARM_LENGTH else PRIMARY_LENGTH
 	barrelRise = 0
 	view = makeModel(GunConfig.guns[gunId].name) or makeBlock()
@@ -436,7 +444,7 @@ function GunView.update(
 			left = table.clone(left)
 			left.wrist += SLAP_HAND * handAway
 		end
-		ViewArms.pose(shown, right, left)
+		ViewArms.pose(shown, right, left, config and SHOULDERS[config.name])
 	end
 	view:PivotTo(camera.CFrame * shown)
 	view.Parent = camera

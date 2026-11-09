@@ -129,9 +129,9 @@ local function aimed(rest: CFrame, restEnd: Vector3, from: Vector3, to: Vector3)
 	return CFrame.new(from) * turn * rest.Rotation
 end
 
-local function poseArm(side: any, hand: CFrame, palm: CFrame, parts: any)
+local function poseArm(side: any, hand: CFrame, palm: CFrame, parts: any, shoulder: Vector3?)
 	local wrist = palm.Position
-	local shoulder = side.shoulder
+	shoulder = shoulder or side.shoulder
 	local reach = (wrist - shoulder).Magnitude
 	local direction = (wrist - shoulder).Unit
 	local longest = side.upperLength + side.foreLength
@@ -199,11 +199,12 @@ function SoldierPose.fromBones(pose: any, offset: CFrame, bones: any): { [string
 end
 
 -- Both hands on a gun that has no clip.
-function SoldierPose.fromPalms(pose: any, right: CFrame, left: CFrame): { [string]: CFrame }
+-- shoulders moves either shoulder from its usual place, in camera space, for a gun held differently.
+function SoldierPose.fromPalms(pose: any, right: CFrame, left: CFrame, shoulders: { [string]: Vector3 }?): { [string]: CFrame }
 	local parts = {}
 	for side, palm in { [pose.right] = right, [pose.left] = left } do
 		local hand = palm * side.handOnPalm
-		poseArm(side, hand, palm, parts)
+		poseArm(side, hand, palm, parts, shoulders and shoulders[side.name])
 		for _, digit in side.digits do
 			local aims = {}
 			for index, aim in digit.grip do
