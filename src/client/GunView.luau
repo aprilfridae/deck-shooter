@@ -102,6 +102,8 @@ local function makeModel(name: string): Model?
 	return model
 end
 
+local GunView = {}
+
 local function grips(): (any, any)
 	if isSidearm then
 		return SIDEARM_RIGHT, SIDEARM_LEFT
