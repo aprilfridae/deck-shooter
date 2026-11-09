@@ -52,6 +52,9 @@ local EASE = 11
 -- A new clip fades in from the last pose over this long, so the end of a reload doesn't cut to idle.
 -- A shot and a swap start at once, so they keep their snap.
 local CLIP_BLEND = 0.25
+-- Reload clips that ran ahead of their sound: the start plays slower, by up to this many seconds behind, and
+-- the end catches up, so the clip still finishes with the reload.
+local RELOAD_LAG: { [string]: number } = { M57 = 0.08 }
 -- Motion blur: Roblox can't blur one object, so faded copies of the gun and arms trail behind them,
 -- spread between where they were SMEAR_TIME ago and where they are now. Only while the gun moves fast enough.
 local SMEAR_COPIES = 4
@@ -99,8 +102,8 @@ local RELOADS: { [string]: any } = {
 		layer = true,
 		keys = {
 			key(0, CFrame.identity, Vector3.zero),
-			key(0.1, tilt(-2, 0, -3, 0, -0.04, 0), Vector3.zero), -- dips to wind up
-			key(0.26, tilt(14, -6, 4, -0.03, 0.02, 0), Vector3.zero), -- rolls the mag well toward the hand
+			key(0.17, tilt(-3, 0, -4, 0, -0.05, 0), Vector3.zero), -- dips to wind up, taking its time
+			key(0.3, tilt(14, -6, 4, -0.03, 0.02, 0), Vector3.zero), -- rolls the mag well toward the hand
 			key(0.36, tilt(15, -6, 3, -0.03, 0.01, 0), Vector3.zero, "in"),
 			key(0.4, tilt(17, -7, -3, -0.03, -0.05, 0), Vector3.zero, "out"), -- mag out: jolts down
 			key(0.48, tilt(15, -6, 3, -0.03, 0.01, 0), Vector3.zero),
@@ -511,7 +514,13 @@ local function clipFrame(reloading: boolean, sprinting: boolean): (any, string)
 	end
 	reloadAt = if reloading then reloadAt or os.clock() else nil
 	if reloadAt then
-		local frame = ArmClip.sampleAt(reloadClip, os.clock() - reloadAt)
+		local elapsed = os.clock() - reloadAt
+		local lag = RELOAD_LAG[GunConfig.guns[shownGun :: string].name]
+		local clipLength = #reloadClip.frames / reloadClip.fps
+		if lag and elapsed < clipLength then
+			elapsed -= lag * math.sin(math.pi * elapsed / clipLength)
+		end
+		local frame = ArmClip.sampleAt(reloadClip, elapsed)
 		if frame then
 			return frame, "reload"
 		end
