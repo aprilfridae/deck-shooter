@@ -483,6 +483,82 @@ local function swayAndBob(dt: number, camera: Camera, aiming: boolean, sprinting
 		* bob
 end
 
+-- Muzzle flashes, by gun name: how big, in studs on screen, and how long they show.
+local FLASHES: { [string]: { size: number, time: number } } = {
+	M57 = { size = 0.55, time = 0.045 },
+	Longscope = { size = 1.3, time = 0.07 },
+}
+local FLASH_COLOR = Color3.fromRGB(150, 255, 255) -- Data Cyan, washed toward white, like the tracers
+local flashModel: Model? = nil
+local flashParts: { BasePart } = {}
+local flashLight: PointLight? = nil
+local flashShownAt = -math.huge
+local flashRoll = 0
+local flashScale = 1
+
+-- A bright core and three petals round the barrel.
+local function makeFlash(): Model
+	local model = Instance.new("Model")
+	model.Name = "MuzzleFlash"
+	local function part(shape: Enum.PartType, transparency: number): Part
+		local piece = Instance.new("Part")
+		piece.Anchored = true
+		piece.CanCollide = false
+		piece.CanQuery = false
+		piece.CanTouch = false
+		piece.CastShadow = false
+		piece.Material = Enum.Material.Neon
+		piece.Color = FLASH_COLOR
+		piece.Shape = shape
+		piece.Transparency = transparency
+		piece.Parent = model
+		table.insert(flashParts, piece)
+		return piece
+	end
+	part(Enum.PartType.Ball, 0).Color = Color3.new(1, 1, 1)
+	for _ = 1, 3 do
+		part(Enum.PartType.Block, 0.15)
+	end
+	part(Enum.PartType.Ball, 0.55) -- a soft glow round it all
+	local light = Instance.new("PointLight")
+	light.Color = FLASH_COLOR
+	light.Range = 12
+	light.Shadows = false
+	light.Parent = flashParts[1]
+	flashLight = light
+	return model
+end
+
+-- Places the flash at the muzzle, or hides it once its time is up.
+local function showFlash(camera: Camera, muzzle: CFrame)
+	local config = if shownGun then GunConfig.guns[shownGun] else nil
+	local style = config and FLASHES[config.name]
+	local t = if style then (os.clock() - flashShownAt) / style.time else 1
+	if not style or t >= 1 then
+		if flashModel then
+			flashModel.Parent = nil
+		end
+		return
+	end
+	flashModel = flashModel or makeFlash()
+	local size = style.size * flashScale * (1 - 0.4 * t)
+	local at = muzzle * CFrame.Angles(0, 0, flashRoll)
+	local core, glow = flashParts[1], flashParts[5]
+	core.Size = Vector3.one * size * 0.35
+	core.CFrame = at * CFrame.new(0, 0, -size * 0.12)
+	for petal = 2, 4 do
+		local piece = flashParts[petal]
+		piece.Size = Vector3.new(size * 0.09, size * 0.35, size)
+		piece.CFrame = at * CFrame.Angles(0, 0, math.rad(60 * petal)) * CFrame.new(0, 0, -size * 0.45)
+	end
+	glow.Size = Vector3.one * size * 0.8
+	glow.CFrame = at * CFrame.new(0, 0, -size * 0.25)
+	if flashLight then
+		flashLight.Brightness = 8 * (1 - t)
+	end
+	flashModel.Parent = camera
+end
+
 local GunView = {}
 
 local function grips(): (any, any)
@@ -541,7 +617,7 @@ function GunView.muzzle(): Vector3?
 	if not view or not view.Parent then
 		return nil
 	end
-	return view:GetPivot() * Vector3.new(0, barrelRise, -length / 2)
+	return view:GetPivot() * Vector3.new(0, barrelRise, -length * viewScale / 2)
 end
 
 function GunView.kick()
@@ -559,6 +635,9 @@ function GunView.kick()
 		kickRoll = 1
 	end
 	firedAt = os.clock()
+	flashShownAt = firedAt
+	flashRoll = math.random() * math.pi * 2
+	flashScale = 0.85 + math.random() * 0.3
 	-- A gun that reloads after every shot starts its reload's keys now, and they carry the kick.
 	local keyed = config and RELOADS[config.name]
 	if keyed and keyed.lead and config.autoReload and not clips then
@@ -730,6 +809,9 @@ function GunView.update(
 	layerShown = layerShown:Lerp(layer, 1 - math.exp(-dt * 30))
 	local base = camera.CFrame * sway * (if clips then recoil * layerShown else CFrame.identity)
 	if showCard(camera, cardOut, sway) then
+		if flashModel then
+			flashModel.Parent = nil
+		end
 		return
 	end
 	if clips then
@@ -812,6 +894,8 @@ function GunView.update(
 	end
 	view:PivotTo(base * shown)
 	view.Parent = camera
+	local pivot = view:GetPivot()
+	showFlash(camera, pivot * CFrame.new(0, barrelRise, -length * viewScale / 2))
 	ViewArms.place(camera, base)
 	if clips and shownFrame then
 		drawSmear(camera, shownFrame, base, base * held * HIP:Inverse())
@@ -831,6 +915,9 @@ function GunView.hide()
 	end
 	CardView.hide()
 	ViewArms.hide()
+	if flashModel then
+		flashModel.Parent = nil
+	end
 end
 
 return GunView
