@@ -171,7 +171,7 @@ return {
 	["reload-assault-v3.wav"] = 123472924583339,
 	["reload-assault-v4.wav"] = 93573545598665,
 	["gun-sniper-1.wav"] = 80989143421566,
-	["gun-sniper-base.wav"] = 93528293197197,
+	["gun-sniper-base.wav"] = 137458622482508,
 	["gun-sniper-10.wav"] = 101900741207161,
 	["gun-sniper-11.wav"] = 140397677856460,
 	["gun-sniper-13.wav"] = 112806676400124,

@@ -134,8 +134,8 @@ local RELOADS: { [string]: any } = {
 			key(2.7, CFrame.identity, Vector3.zero),
 		},
 	},
-	-- gun-sniper-base.wav, from the shot: the blast, a rising click from 1s peaking at 1.04s, a clunk at 1.32s and a
-	-- whirr to 1.6s. The gun spins once backwards round the trigger finger while the blast rings out, the left hand
+	-- gun-sniper-base.wav, from the shot: the blast, a rising click from 1s peaking at 1.04s, a clunk at 1.22s and a
+	-- whirr to 1.5s. The gun spins once backwards round the trigger finger while the blast rings out, the left hand
 	-- drives the cell home on the click, and pushes the gun back to ready through the clunk and whirr.
 	Longscope = {
 		length = 1.714,
@@ -150,7 +150,7 @@ local RELOADS: { [string]: any } = {
 			to = 0.62,
 			points = { { 0, 0, 2 }, { 0.15, 0.25, 1.3 }, { 0.26, 0.55, 3.4 }, { 0.62, 1, 0.6 } },
 		},
-		smoothFrom = 1.31, -- seconds in: only the return to ready is smoothed
+		smoothFrom = 1.21, -- seconds in: only the return to ready is smoothed
 		keys = {
 			key(0, CFrame.identity, Vector3.zero),
 			-- The shot heaves it back and up, slowly enough to feel the hit, knocking the left hand off; then it sinks
@@ -168,14 +168,14 @@ local RELOADS: { [string]: any } = {
 			key(0.98, tilt(20, -6, -2, -0.06, -0.04, 0.02), Vector3.new(0, -0.42, 0.36)), -- holds there, loaded, sagging under the hand
 			key(1.03, tilt(18, -6, 2, -0.06, 0, 0.03), Vector3.new(0.02, -0.02, 0.24), "in"), -- CLICK: drives the cell in
 			key(1.08, tilt(12, -5, 15, -0.05, 0.17, 0.1), Vector3.new(0.02, 0.06, 0.24), "out"), -- and the hit shoves the gun up and back
-			key(1.15, tilt(21, -7, -3, -0.07, -0.05, 0.02), Vector3.new(0.02, -0.03, 0.24)), -- drops back past
-			key(1.22, tilt(20, -7, 1, -0.07, -0.01, 0.03), Vector3.new(0.02, -0.01, 0.24)),
+			key(1.13, tilt(21, -7, -3, -0.07, -0.05, 0.02), Vector3.new(0.02, -0.03, 0.24)), -- drops back past
+			key(1.17, tilt(20, -7, 1, -0.07, -0.01, 0.03), Vector3.new(0.02, -0.01, 0.24)),
 			-- CLICK release: a small wind-up further into the tilt, then the left hand drives forward and pushes the gun
 			-- with it as it eases back round to ready, and it settles.
-			key(1.31, tilt(24, -8, -1, -0.08, -0.03, 0.05), Vector3.new(0.02, -0.02, 0.3)),
-			key(1.5, tilt(3, -1, 3, -0.01, 0.04, -0.14), Vector3.new(0, 0, -0.06)), -- the hand shoves it forward as it turns back
-			key(1.64, tilt(-1, 0.3, -0.5, 0.002, -0.006, 0.015), Vector3.zero), -- and it rocks back a touch
-			key(1.77, CFrame.identity, Vector3.zero),
+			key(1.21, tilt(24, -8, -1, -0.08, -0.03, 0.05), Vector3.new(0.02, -0.02, 0.3)),
+			key(1.4, tilt(3, -1, 3, -0.01, 0.04, -0.14), Vector3.new(0, 0, -0.06)), -- the hand shoves it forward as it turns back
+			key(1.55, tilt(-1, 0.3, -0.5, 0.002, -0.006, 0.015), Vector3.zero), -- and it rocks back a touch
+			key(1.7, CFrame.identity, Vector3.zero),
 		},
 	},
 }
