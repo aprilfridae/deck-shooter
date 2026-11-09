@@ -76,7 +76,7 @@ local DEFAULT_KICK = { back = 0.15, drop = 0.02, up = 4, roll = 1.5, rise = 0.03
 -- An automatic's shove, as a multiple of its spring's speed, so one shot alone peaks at about the full kick.
 local AUTO_SHOVE = 2.3
 -- Reloads for guns posed in code, as keys: seconds into the reload, the gun's turn and shift from its hold, where
--- the left hand is from its grip (in the gun's space), how the move into that key eases, and how far the gun has
+-- the left hand is from its grip (in the space of the gun before any spin, so it can let go and catch), how the move into that key eases, and how far the gun has
 -- spun backwards round the trigger (degrees). Timed to the sound, and stretched if the gun's reload time differs
 -- from length.
 local function key(at: number, gun: CFrame, hand: Vector3, ease: string?, spin: number?): any
@@ -94,9 +94,12 @@ local RELOADS: { [string]: any } = {
 		keys = {
 			key(0, CFrame.identity, Vector3.zero, nil, 0),
 			key(0.12, tilt(0, 0, -10, 0, -0.05, 0.03), Vector3.zero, nil, 0), -- dips to wind up
-			key(0.2, tilt(0, 0, -8, 0, -0.04, 0.03), Vector3.new(-0.25, -0.6, 0.3), "out", 0), -- left hand lets go
-			key(0.5, tilt(0, 0, 0, 0, 0.1, 0), Vector3.new(-0.3, -0.85, 0.35), "in", 160), -- whips round
-			key(0.76, tilt(10, -4, 4, -0.05, 0.03, 0.02), Vector3.new(-0.15, -0.6, 0.3), "out", 360), -- and catches
+			key(0.2, tilt(0, 0, -4, 0, -0.02, 0.03), Vector3.new(0, 0.22, -0.12), "in", 35), -- the left hand shoves it up
+			key(0.27, tilt(0, 0, 0, 0, 0.04, 0.02), Vector3.new(-0.05, 0.38, -0.05), "out", 85), -- and follows through
+			key(0.45, tilt(0, 0, 0, 0, 0.1, 0), Vector3.new(-0.3, -0.7, 0.3), nil, 190), -- drops away while it whips round
+			key(0.68, tilt(0, 0, 0, 0, 0.06, 0), Vector3.new(-0.05, -0.3, 0.08), nil, 330), -- comes up under it
+			key(0.76, tilt(4, -2, 2, -0.02, 0.03, 0.01), Vector3.zero, "out", 360), -- catches it
+			key(0.81, tilt(8, -3, -3, -0.04, -0.04, 0.02), Vector3.new(0, -0.04, 0), "out", 360), -- and gives with the weight
 			key(0.84, TILTED, Vector3.new(0, -0.3, 0.26)),
 			key(0.94, TILTED, Vector3.new(0.02, -0.1, 0.24), "in"), -- pushes it home
 			key(0.98, tilt(27, -9, 9, -0.12, 0.1, 0.05), Vector3.new(0.02, -0.06, 0.24), "out"), -- click
@@ -586,7 +589,8 @@ function GunView.update(
 			reloadGun, reloadHand, spin = reloadPose(keyedReload, now - keyedReloadAt, config.reload)
 		end
 		local right, left = grips()
-		-- The right hand stays put with its finger in the trigger guard while the gun spins round it.
+		-- The hands go by the gun before its spin: the right stays put with its finger in the trigger guard while the
+		-- gun spins round it, and the left lets go and catches it.
 		local hand = held * forward * equip * recoil * reloadGun * (turn or CFrame.identity)
 		local pivot = right.wrist
 		shown = held * forward * equip * recoil * reloadGun
@@ -596,7 +600,7 @@ function GunView.update(
 			left = table.clone(left)
 			left.wrist += reloadHand
 		end
-		ViewArms.pose(shown, right, left, config and SHOULDERS[config.name], config and THUMB_WRAPS[config.name], hand)
+		ViewArms.pose(shown, right, left, config and SHOULDERS[config.name], config and THUMB_WRAPS[config.name], hand, hand)
 	end
 	view:PivotTo(base * shown)
 	view.Parent = camera
