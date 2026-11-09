@@ -57,7 +57,7 @@ local EASE = 11
 -- A new clip fades in from the last pose over this long, so the end of a reload doesn't cut to idle.
 -- A shot and a swap start at once, so they keep their snap.
 local CLIP_BLEND = 0.25
-local RELOAD_BLEND = 0.8 -- the end of a reload settles into the next clip slowly, with weight
+local RELOAD_BLEND = 1 -- the end of a reload settles into the next clip slowly, with weight
 local SNAP_BLEND = 0.12 -- a shot fired while the gun is still settling catches up this fast
 -- Times a reload clip to its sound: pairs of seconds into the sound and the clip time that should show then. In
 -- reload-assault-v3.wav the mag clicks out at 0.42s, slams in at 0.67s and the charge is pulled at 0.89s; the
@@ -125,13 +125,13 @@ local RELOADS: { [string]: any } = {
 			key(0.89, tilt(17, -7, 2, -0.04, 0, 0), Vector3.zero, "in"), -- charge pulled
 			key(0.93, tilt(18, -7, -1, -0.045, -0.02, 0), Vector3.zero, "out"),
 			key(0.96, tilt(17, -7, 1, -0.04, 0, 0), Vector3.zero, "in"),
-			key(1.05, tilt(-6, 2.5, 4, 0.015, 0.04, 0), Vector3.zero, "out"), -- let go: heaves back up past ready
+			key(1.07, tilt(-6, 2.5, 4, 0.015, 0.04, 0), Vector3.zero, "out"), -- let go: heaves back up past ready
 			-- then its weight takes over: it sinks past ready, hangs low a moment, and is lifted back up slowly
-			key(1.18, tilt(-5, 2, 3.2, 0.012, 0.03, 0), Vector3.zero, "out"),
-			key(1.5, tilt(-1, 0.5, -5, 0.004, -0.09, 0.02), Vector3.zero),
-			key(1.7, tilt(0, 0.3, -5.5, 0.002, -0.1, 0.02), Vector3.zero),
-			key(2.1, tilt(0.5, -0.1, 0.8, 0, 0.008, 0), Vector3.zero),
-			key(2.4, CFrame.identity, Vector3.zero),
+			key(1.24, tilt(-5, 2, 3.2, 0.012, 0.03, 0), Vector3.zero, "out"),
+			key(1.62, tilt(-1, 0.5, -5, 0.004, -0.09, 0.02), Vector3.zero),
+			key(1.86, tilt(0, 0.3, -5.5, 0.002, -0.1, 0.02), Vector3.zero),
+			key(2.34, tilt(0.5, -0.1, 0.8, 0, 0.008, 0), Vector3.zero),
+			key(2.7, CFrame.identity, Vector3.zero),
 		},
 	},
 	-- gun-sniper-base.wav, from the shot: the blast, a rising click from 1s peaking at 1.04s, a clunk at 1.32s and a
