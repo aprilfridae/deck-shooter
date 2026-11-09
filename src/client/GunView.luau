@@ -164,7 +164,7 @@ local RELOADS: { [string]: any } = {
 			key(0.44, tilt(-2, 0, 0, 0, 0.85, 0.05), Vector3.new(0.02, -0.1, -0.03), "flow"), -- it flips up above the hand
 			key(0.56, tilt(1, -1, 1, 0.01, 0.8, 0.02), Vector3.new(0.01, -0.05, 0), "flow"), -- and comes back down
 			key(0.62, tilt(4, -2, 2, 0.02, 0.75, 0.02), Vector3.zero, "flow"), -- landing in the waiting hand
-			key(0.7, tilt(8, -3, -3, -0.01, 0.62, 0.02), Vector3.new(0, -0.04, 0), "flow"), -- gives with the weight
+			key(0.7, tilt(8, -3, -6, -0.01, 0.53, 0.02), Vector3.new(0, -0.05, 0), "flow"), -- both hands drop a little with the weight first
 			key(0.79, tilt(14, -5, 0, -0.04, 0.28, 0.03), Vector3.new(0, -0.2, 0.15)), -- then sinks back down
 			-- CLICK: the gun tips to show the cell slot, the hand pulls back to load up, then drives the cell in on
 			-- the sound and the gun bumps up off the hit and settles.
