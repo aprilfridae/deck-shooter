@@ -80,9 +80,10 @@ describe("Damage", function()
 		expect(Damage.hit(guns.AK47, 500, true)).toBe(Damage.KILL)
 	end)
 
-	it("kills on a Sniper headshot, and has no falloff", function()
+	it("kills on any Sniper hit, head or body, at any range", function()
 		expect(Damage.hit(guns.Sniper, 900, true)).toBe(Damage.KILL)
-		expect(Damage.hit(guns.Sniper, 900, false)).toBe(85)
+		expect(Damage.hit(guns.Sniper, 900, false)).toBe(Damage.KILL)
+		expect(Damage.hit(guns.Sniper, 5, false)).toBe(Damage.KILL)
 	end)
 
 	it("scales each shotgun pellet to nothing by 45 studs", function()

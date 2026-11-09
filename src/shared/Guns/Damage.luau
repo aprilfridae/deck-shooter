@@ -17,6 +17,9 @@ function Damage.hit(gun: any, distance: number, isHead: boolean): number
 	if isHead and gun.headshot == "Kill" then
 		return Damage.KILL
 	end
+	if gun.bodyshot == "Kill" then
+		return Damage.KILL
+	end
 	local amount = gun.body * Damage.rangeScale(gun, distance)
 	return if isHead then amount * 2 else amount
 end
