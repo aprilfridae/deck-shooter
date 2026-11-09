@@ -48,6 +48,11 @@ local BOB_SPRINT = 1.9 -- how much bigger the bob is while sprinting
 local WALK_SPEED = 16
 -- Sprinting: the gun settles a little lower and closer, tipped down. Small on purpose.
 local SPRINT_HOLD = CFrame.new(0.03, -0.08, 0.06) * CFrame.Angles(math.rad(-6), math.rad(4), math.rad(3))
+-- Guns that sank too low sprinting: their own lean, and how much of the footstep dip they take.
+local SPRINT_HOLDS: { [string]: CFrame } = {
+	["Energy Pistol"] = CFrame.new(0.02, -0.02, 0.03) * CFrame.Angles(math.rad(-2), math.rad(3), math.rad(2)),
+}
+local BOB_DIPS: { [string]: number } = { ["Energy Pistol"] = 0.5 }
 local EASE = 11
 -- A new clip fades in from the last pose over this long, so the end of a reload doesn't cut to idle.
 -- A shot and a swap start at once, so they keep their snap.
@@ -409,13 +414,14 @@ local function swayAndBob(dt: number, camera: Camera, aiming: boolean, sprinting
 	sprintWeight += ((if running and not aiming then 1 else 0) - sprintWeight) * (1 - math.exp(-dt * 5))
 	local side = math.sin(bobPhase)
 	local dip = math.abs(math.cos(bobPhase)) -- 1 on each footfall
-	local bob = CFrame.new(side * BOB_SIDE * bobWeight, -dip * BOB_HEIGHT * bobWeight, 0)
+	local gunName = if shownGun then GunConfig.guns[shownGun].name else ""
+	local bob = CFrame.new(side * BOB_SIDE * bobWeight, -dip * BOB_HEIGHT * bobWeight * (BOB_DIPS[gunName] or 1), 0)
 		* CFrame.Angles(
 			math.rad(-dip * BOB_NOD * bobWeight),
 			math.rad(side * BOB_ROLL * 0.6 * bobWeight),
 			math.rad(side * BOB_ROLL * bobWeight)
 		)
-	bob = CFrame.identity:Lerp(SPRINT_HOLD, sprintWeight) * bob
+	bob = CFrame.identity:Lerp(SPRINT_HOLDS[gunName] or SPRINT_HOLD, sprintWeight) * bob
 
 	return CFrame.new(swayAngles.Y * SWAY_MOVE, swayAngles.X * SWAY_MOVE, 0)
 		* CFrame.Angles(swayAngles.X, swayAngles.Y, swayAngles.Y * 0.6)
