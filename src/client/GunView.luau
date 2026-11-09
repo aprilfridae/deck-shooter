@@ -90,7 +90,6 @@ local VIEW_KICKS: { [string]: any } = {
 local DEFAULT_KICK = { back = 0.165, drop = 0.022, up = 4.4, roll = 1.7, rise = 0.034, stiff = 187.5, damp = 20.9 }
 -- An automatic's shove, as a multiple of its spring's speed, so one shot alone peaks at about the full kick.
 local AUTO_SHOVE = 2.3
-local KICK_HANDOFF = 0.22 -- seconds a keyed reload takes to fade out the kick it started in
 -- Reloads for guns posed in code, as keys: seconds into the reload, the gun's turn and shift from its hold, where
 -- the left hand is from its grip (in the space of the gun before any spin, so it can let go and catch), and how the move into that key eases. A reload with
 -- a spin turns the gun once backwards round the trigger between those times. Timed to the sound, and stretched if the gun's reload time differs
@@ -133,30 +132,32 @@ local RELOADS: { [string]: any } = {
 	-- backwards round the trigger finger during the whine, then the left hand clicks the cell home and locks it.
 	Longscope = {
 		length = 1.714,
-		-- One smooth spin from the shove to the catch, so it never slows between keys.
-		spin = { from = 0.13, to = 0.76 },
+		-- It reloads after every shot, so its keys start at the shot: the reload itself begins lead seconds later.
+		-- The kick throws the barrel up and that same turn carries on into the backward spin, one throw from the
+		-- shot to the catch, with no stop or change of direction between them.
+		lead = 0.12,
+		spin = { from = 0, to = 0.88, launch = 1.8 },
 		keys = {
 			key(0, CFrame.identity, Vector3.zero),
-			key(0.12, tilt(0, 0, -10, 0, -0.05, 0.03), Vector3.zero), -- dips to wind up
-			key(0.2, tilt(0, 0, -4, 0, -0.02, 0.03), Vector3.new(0, 0.22, -0.12), "in"), -- the left hand shoves it up
-			key(0.27, tilt(0, 0, 0, 0, 0.04, 0.02), Vector3.new(-0.05, 0.38, -0.05), "out"), -- and follows through
-			key(0.45, tilt(0, 0, 0, 0, 0.1, 0), Vector3.new(-0.3, -0.7, 0.3)), -- drops away while it whips round
-			key(0.68, tilt(0, 0, 0, 0, 0.06, 0), Vector3.new(-0.05, -0.3, 0.08)), -- comes up under it
-			key(0.76, tilt(4, -2, 2, -0.02, 0.03, 0.01), Vector3.zero, "out"), -- catches it
-			key(0.81, tilt(8, -3, -3, -0.04, -0.04, 0.02), Vector3.new(0, -0.04, 0), "out"), -- and gives with the weight
+			key(0.07, tilt(-7, 0, 0, 0, 0.02, 0.7), Vector3.new(0, 0.05, -0.45), "out"), -- slams back, knocking the hand off
+			key(0.22, tilt(-3, 0, 0, 0, 0.08, 0.28), Vector3.new(-0.12, -0.2, -0.05)), -- it comes forward again, still turning
+			key(0.57, tilt(0, 0, 0, 0, 0.1, 0), Vector3.new(-0.3, -0.7, 0.3)), -- the hand drops away while it whips round
+			key(0.8, tilt(0, 0, 0, 0, 0.06, 0), Vector3.new(-0.05, -0.3, 0.08)), -- comes up under it
+			key(0.88, tilt(4, -2, 2, -0.02, 0.03, 0.01), Vector3.zero, "out"), -- catches it
+			key(0.93, tilt(8, -3, -3, -0.04, -0.04, 0.02), Vector3.new(0, -0.04, 0), "out"), -- and gives with the weight
 			-- CLICK: the gun tips to show the cell slot, the hand pulls back to load up, then drives the cell in on
 			-- the sound and the gun bumps up off the hit and settles.
-			key(0.85, tilt(18, -6, 2, -0.06, 0, 0.03), Vector3.new(0, -0.38, 0.26)),
-			key(0.97, tilt(19, -6, 1, -0.06, -0.01, 0.03), Vector3.new(0, -0.4, 0.26)), -- holds there, loaded
-			key(1.03, tilt(18, -6, 2, -0.06, 0, 0.03), Vector3.new(0.02, -0.02, 0.24), "in"),
-			key(1.07, tilt(16, -6, 9, -0.06, 0.09, 0.03), Vector3.new(0.02, 0.05, 0.24), "out"),
-			key(1.11, tilt(20, -7, 1, -0.07, -0.01, 0.03), Vector3.new(0.02, -0.01, 0.24)),
+			key(0.97, tilt(18, -6, 2, -0.06, 0, 0.03), Vector3.new(0, -0.38, 0.26)),
+			key(1.09, tilt(19, -6, 1, -0.06, -0.01, 0.03), Vector3.new(0, -0.4, 0.26)), -- holds there, loaded
+			key(1.15, tilt(18, -6, 2, -0.06, 0, 0.03), Vector3.new(0.02, -0.02, 0.24), "in"),
+			key(1.19, tilt(16, -6, 9, -0.06, 0.09, 0.03), Vector3.new(0.02, 0.05, 0.24), "out"),
+			key(1.23, tilt(20, -7, 1, -0.07, -0.01, 0.03), Vector3.new(0.02, -0.01, 0.24)),
 			-- CLICK release: a small wind-up further into the tilt, then a beat after the clunk the gun eases back to
 			-- ready, rolls just past and settles, the hand riding back onto its grip.
-			key(1.24, tilt(23, -8, 0, -0.08, -0.02, 0.03), Vector3.new(0.02, -0.02, 0.22), "in"),
-			key(1.4, tilt(-3, 1, 1.5, 0.005, 0.015, 0), Vector3.zero), -- eases back round, just past
-			key(1.58, tilt(0.8, -0.3, -0.4, 0, -0.004, 0), Vector3.zero),
-			key(1.714, CFrame.identity, Vector3.zero),
+			key(1.36, tilt(23, -8, 0, -0.08, -0.02, 0.03), Vector3.new(0.02, -0.02, 0.22), "in"),
+			key(1.52, tilt(-3, 1, 1.5, 0.005, 0.015, 0), Vector3.zero), -- eases back round, just past
+			key(1.7, tilt(0.8, -0.3, -0.4, 0, -0.004, 0), Vector3.zero),
+			key(1.834, CFrame.identity, Vector3.zero),
 		},
 	},
 }
@@ -179,14 +180,17 @@ local function spinAt(reload: any, at: number): number
 		return 0 -- a full turn is back where it started
 	end
 	local u = (at - spin.from) / (spin.to - spin.from)
-	-- Leaves the shove already moving, peaks a quarter of the way round, and slows to a stop in the hand.
-	local eased = 1.2 * u + 0.6 * u * u - 0.8 * u * u * u
+	-- Leaves already moving at launch times its average speed, and slows to a stop in the hand.
+	local s = spin.launch or 1.2
+	local eased = s * u + (3 - 2 * s) * u * u + (s - 2) * u * u * u
 	return eased * 2 * math.pi
 end
 
 -- The gun's offset, the left hand's, and the gun's backward spin in radians, elapsed seconds into a keyed reload.
+-- A reload with a lead counts from the shot before it, and only the part after the lead stretches.
 local function reloadPose(reload: any, elapsed: number, reloadTime: number): (CFrame, Vector3, number)
-	local at = elapsed * reload.length / reloadTime
+	local lead = reload.lead or 0
+	local at = if elapsed < lead then elapsed else lead + (elapsed - lead) * reload.length / reloadTime
 	local keys = reload.keys
 	for index = 2, #keys do
 		local to = keys[index]
@@ -236,14 +240,13 @@ local kick = 0
 local kickSpeed = 0
 local kickRoll = 1 -- which way this shot rolls
 local settle, settleSpeed, settleGoal = 0, 0, 0
-local kickHandoff: number? = nil -- the kick a keyed reload took over, fading out
 local shown = HIP
 local clips: any = nil
 local firedAt: number? = nil
 local reloadAt: number? = nil
 local reloadClip: any = nil
 local equipAt: number? = nil
-local keyedReloadAt: number? = nil -- when a keyed reload started
+local keyedReloadAt: number? = nil -- when a keyed reload started, or the shot that starts it
 local layerAt: number? = nil -- when a clip gun's reload layer started; it plays to its end even if the reload ends first
 local layerShown = CFrame.identity
 local holsterAt: number? = nil
@@ -461,6 +464,7 @@ function GunView.setGun(gunId: string, slot: string)
 	view = makeModel(GunConfig.guns[gunId].name) or makeBlock()
 	clips = ArmClips[GunConfig.guns[gunId].name]
 	firedAt = nil
+	keyedReloadAt = nil
 	reloadAt = nil
 	holsterAt = nil
 	equipAt = os.clock()
@@ -505,6 +509,11 @@ function GunView.kick()
 		kickRoll = 1
 	end
 	firedAt = os.clock()
+	-- A gun that reloads after every shot starts its reload's keys now, and they carry the kick.
+	local keyed = config and RELOADS[config.name]
+	if keyed and keyed.lead and config.autoReload and not clips then
+		keyedReloadAt = firedAt
+	end
 end
 
 -- The frame to show. Swapping guns beats everything, then reloading, then a shot, then running, then idle.
@@ -614,7 +623,8 @@ function GunView.update(
 	local viewKick = (config and VIEW_KICKS[config.name]) or DEFAULT_KICK
 	local ease = 1 - math.exp(-dt * (if config and config.aimFov then AIM_EASE else EASE))
 	held = held:Lerp(goal, ease)
-	local rising = viewKick.rise and firedAt and os.clock() - firedAt < viewKick.rise
+	local keyedKick = keyedReloadAt ~= nil and keyedReload ~= nil and keyedReload.lead ~= nil
+	local rising = viewKick.rise and firedAt and os.clock() - firedAt < viewKick.rise and not keyedKick
 	if rising then
 		local u = (os.clock() - (firedAt :: number)) / viewKick.rise
 		kick = 1 - (1 - u) ^ 3
@@ -624,16 +634,8 @@ function GunView.update(
 		kickSpeed += (-kick * viewKick.stiff - kickSpeed * viewKick.damp) * step
 		kick += kickSpeed * step
 	end
-	-- A keyed reload that starts while the gun is still kicked takes the kick over: the kick stops springing and
-	-- fades out along the reload's wind-up, so the gun flows from the shot straight into the reload.
-	if not clips and keyedReload and reloading then
-		local since = os.clock() - (keyedReloadAt or os.clock())
-		kickHandoff = kickHandoff or kick
-		local u = math.clamp(since / KICK_HANDOFF, 0, 1)
-		kick = kickHandoff * (1 - u * u * (3 - 2 * u))
-		kickSpeed = 0
-	else
-		kickHandoff = nil
+	if keyedKick then
+		kick, kickSpeed = 0, 0 -- the reload's keys carry this shot's kick
 	end
 	local recoil = CFrame.new(0, -viewKick.drop * kick, viewKick.back * kick)
 		* CFrame.Angles(math.rad(viewKick.up * kick), 0, math.rad(viewKick.roll * kickRoll * kick))
@@ -715,8 +717,20 @@ function GunView.update(
 		-- A gun drawn bigger moves forward by its extra length, so its stock stays clear of the camera.
 		local forward = CFrame.new(0, 0, -length * (1 - 1 / viewScale) / 2)
 		local reloadGun, reloadHand, spin = CFrame.identity, Vector3.zero, 0
-		keyedReloadAt = if reloading and keyedReload then keyedReloadAt or now else nil
-		if keyedReloadAt and config then
+		-- A keyed reload plays to its last key, even if the reload ends first.
+		if keyedReloadAt and keyedReload and config and not reloading then
+			local lead = keyedReload.lead or 0
+			local last = lead + (keyedReload.keys[#keyedReload.keys].at - lead) * config.reload / keyedReload.length
+			if now - keyedReloadAt >= last then
+				keyedReloadAt = nil
+			end
+		elseif not keyedReload then
+			keyedReloadAt = nil
+		end
+		if reloading and keyedReload and not keyedReloadAt then
+			keyedReloadAt = now
+		end
+		if keyedReloadAt and keyedReload and config then
 			reloadGun, reloadHand, spin = reloadPose(keyedReload, now - keyedReloadAt, config.reload)
 		end
 		local right, left = grips()
