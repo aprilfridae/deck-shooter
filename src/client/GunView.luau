@@ -108,12 +108,11 @@ local RELOADS: { [string]: any } = {
 			key(1.03, tilt(18, -6, 2, -0.06, 0, 0.03), Vector3.new(0.02, -0.02, 0.24), "in"),
 			key(1.07, tilt(16, -6, 9, -0.06, 0.09, 0.03), Vector3.new(0.02, 0.05, 0.24), "out"),
 			key(1.11, tilt(20, -7, 1, -0.07, -0.01, 0.03), Vector3.new(0.02, -0.01, 0.24)),
-			-- CLICK release: a small wind-up further into the tilt, then a beat after the clunk the gun snaps back to
-			-- ready, swings a little past and settles, the hand riding back onto its grip.
+			-- CLICK release: a small wind-up further into the tilt, then a beat after the clunk the gun eases back to
+			-- ready, rolls just past and settles, the hand riding back onto its grip.
 			key(1.24, tilt(23, -8, 0, -0.08, -0.02, 0.03), Vector3.new(0.02, -0.02, 0.22), "in"),
-			key(1.33, tilt(-6, 2, 3, 0.01, 0.03, 0), Vector3.zero, "out"),
-			key(1.48, tilt(2, -1, -1, 0, -0.01, 0), Vector3.zero),
-			key(1.63, CFrame.identity, Vector3.zero),
+			key(1.4, tilt(-3, 1, 1.5, 0.005, 0.015, 0), Vector3.zero), -- eases back round, just past
+			key(1.58, tilt(0.8, -0.3, -0.4, 0, -0.004, 0), Vector3.zero),
 			key(1.714, CFrame.identity, Vector3.zero),
 		},
 	},
