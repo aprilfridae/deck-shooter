@@ -90,6 +90,7 @@ local VIEW_KICKS: { [string]: any } = {
 local DEFAULT_KICK = { back = 0.165, drop = 0.022, up = 4.4, roll = 1.7, rise = 0.034, stiff = 187.5, damp = 20.9 }
 -- An automatic's shove, as a multiple of its spring's speed, so one shot alone peaks at about the full kick.
 local AUTO_SHOVE = 2.3
+local KICK_HANDOFF = 0.22 -- seconds a keyed reload takes to fade out the kick it started in
 -- Reloads for guns posed in code, as keys: seconds into the reload, the gun's turn and shift from its hold, where
 -- the left hand is from its grip (in the space of the gun before any spin, so it can let go and catch), and how the move into that key eases. A reload with
 -- a spin turns the gun once backwards round the trigger between those times. Timed to the sound, and stretched if the gun's reload time differs
@@ -235,6 +236,7 @@ local kick = 0
 local kickSpeed = 0
 local kickRoll = 1 -- which way this shot rolls
 local settle, settleSpeed, settleGoal = 0, 0, 0
+local kickHandoff: number? = nil -- the kick a keyed reload took over, fading out
 local shown = HIP
 local clips: any = nil
 local firedAt: number? = nil
@@ -621,6 +623,17 @@ function GunView.update(
 		local step = math.min(dt, 1 / 30)
 		kickSpeed += (-kick * viewKick.stiff - kickSpeed * viewKick.damp) * step
 		kick += kickSpeed * step
+	end
+	-- A keyed reload that starts while the gun is still kicked takes the kick over: the kick stops springing and
+	-- fades out along the reload's wind-up, so the gun flows from the shot straight into the reload.
+	if not clips and keyedReload and reloading then
+		local since = os.clock() - (keyedReloadAt or os.clock())
+		kickHandoff = kickHandoff or kick
+		local u = math.clamp(since / KICK_HANDOFF, 0, 1)
+		kick = kickHandoff * (1 - u * u * (3 - 2 * u))
+		kickSpeed = 0
+	else
+		kickHandoff = nil
 	end
 	local recoil = CFrame.new(0, -viewKick.drop * kick, viewKick.back * kick)
 		* CFrame.Angles(math.rad(viewKick.up * kick), 0, math.rad(viewKick.roll * kickRoll * kick))
