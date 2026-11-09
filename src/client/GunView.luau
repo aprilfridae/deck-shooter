@@ -137,7 +137,7 @@ local RELOADS: { [string]: any } = {
 		-- shot to the catch, with no stop or change of direction between them.
 		lead = 0.12,
 		spin = { from = 0, to = 0.62, launch = 1.5 },
-		smoothFrom = 1.45, -- seconds in: only the return to ready is smoothed
+		smoothFrom = 1.36, -- seconds in: only the return to ready is smoothed
 		keys = {
 			key(0, CFrame.identity, Vector3.zero),
 			-- The shot heaves it back and up, slowly enough to feel the hit, knocking the left hand off; then it sinks
@@ -158,7 +158,7 @@ local RELOADS: { [string]: any } = {
 			-- CLICK release: a small wind-up further into the tilt, then a beat after the clunk the gun eases back to
 			-- ready, rolls just past and settles, the hand riding back onto its grip.
 			key(1.36, tilt(23, -8, 0, -0.08, -0.02, 0.03), Vector3.new(0.02, -0.02, 0.22)),
-			key(1.45, tilt(-2.5, 0.9, 1.5, 0.005, 0.015, 0), Vector3.zero, "out"), -- the release snaps it back round, just past
+			key(1.64, tilt(-0.8, 0.3, 0.5, 0.002, 0.005, 0), Vector3.zero), -- the hand slides forward as it eases back to rest
 			key(1.834, CFrame.identity, Vector3.zero),
 		},
 	},
