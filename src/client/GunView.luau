@@ -75,6 +75,63 @@ local VIEW_KICKS: { [string]: any } = {
 local DEFAULT_KICK = { back = 0.15, drop = 0.02, up = 4, roll = 1.5, rise = 0.03, stiff = 250, damp = 24 }
 -- An automatic's shove, as a multiple of its spring's speed, so one shot alone peaks at about the full kick.
 local AUTO_SHOVE = 2.3
+-- Reloads for guns posed in code, as keys: seconds into the reload, the gun's turn and shift from its hold, where
+-- the left hand is from its grip (in the gun's space), and how the move into that key eases. Timed to the sound,
+-- and stretched if the gun's reload time differs from length.
+local function key(at: number, gun: CFrame, hand: Vector3, ease: string?): any
+	return { at = at, gun = gun, hand = hand, ease = ease or "inOut" }
+end
+local function tilt(roll: number, yaw: number, pitch: number, x: number, y: number, z: number): CFrame
+	return CFrame.new(x, y, z) * CFrame.Angles(math.rad(pitch), math.rad(yaw), math.rad(roll))
+end
+local TILTED = tilt(30, -10, 6, -0.12, 0.06, 0.05)
+local RELOADS: { [string]: any } = {
+	-- reload-sniper.wav: the cell slides in from 0.05s to 0.95s, clicks home at 0.94s and locks with a clunk at 1.06s.
+	Longscope = {
+		length = 1.714,
+		keys = {
+			key(0, CFrame.identity, Vector3.zero),
+			key(0.08, tilt(-3, 0, -3, 0, -0.03, 0), Vector3.zero), -- a small dip before the turn
+			key(0.24, TILTED, Vector3.zero),
+			key(0.36, TILTED, Vector3.new(0.02, -0.18, 0.28)), -- the hand drops to the cell
+			key(0.48, tilt(34, -10, 7, -0.12, 0.08, 0.05), Vector3.new(-0.2, -0.55, 0.32), "out"), -- pulls it out
+			key(0.62, TILTED, Vector3.new(-0.3, -0.95, 0.38)), -- out of view for a fresh one
+			key(0.8, TILTED, Vector3.new(0, -0.32, 0.26)),
+			key(0.94, TILTED, Vector3.new(0.02, -0.1, 0.24), "in"), -- pushes it home
+			key(0.98, tilt(27, -9, 9, -0.12, 0.1, 0.05), Vector3.new(0.02, -0.06, 0.24), "out"), -- click
+			key(1.02, TILTED, Vector3.new(0.02, -0.16, 0.24)),
+			key(1.06, tilt(25, -8, 10, -0.11, 0.12, 0.05), Vector3.new(0.02, -0.02, 0.22), "in"), -- the heel of the hand locks it
+			key(1.12, TILTED, Vector3.zero, "out"),
+			key(1.42, tilt(-4, 2, -2, 0, -0.01, 0), Vector3.zero), -- turns back, a little past
+			key(1.714, CFrame.identity, Vector3.zero),
+		},
+	},
+}
+
+local function eased(ease: string, u: number): number
+	if ease == "in" then
+		return u * u * u
+	elseif ease == "out" then
+		return 1 - (1 - u) ^ 3
+	end
+	return u * u * (3 - 2 * u)
+end
+
+-- The gun's offset and the left hand's, elapsed seconds into a keyed reload.
+local function reloadPose(reload: any, elapsed: number, reloadTime: number): (CFrame, Vector3)
+	local at = elapsed * reload.length / reloadTime
+	local keys = reload.keys
+	for index = 2, #keys do
+		local to = keys[index]
+		if at < to.at then
+			local from = keys[index - 1]
+			local u = eased(to.ease, (at - from.at) / (to.at - from.at))
+			return from.gun:Lerp(to.gun, u), from.hand:Lerp(to.hand, u)
+		end
+	end
+	return CFrame.identity, Vector3.zero
+end
+
 -- Equipping a gun posed in code: it swings in from below and to the right.
 local EQUIP_TIME = 0.4
 local EQUIP_FROM = CFrame.new(0.6, -1.2, 0.3) * CFrame.Angles(math.rad(-40), math.rad(25), math.rad(-30))
@@ -117,6 +174,7 @@ local firedAt: number? = nil
 local reloadAt: number? = nil
 local reloadClip: any = nil
 local equipAt: number? = nil
+local keyedReloadAt: number? = nil -- when a keyed reload started
 local holsterAt: number? = nil
 local snapAt: number? = nil
 local cardAt: number? = nil
@@ -460,7 +518,8 @@ function GunView.update(
 )
 	view = view or makeBlock()
 	local goal = if aiming then AIMED else HIP
-	if reloading and not clips then
+	local keyedReload = if shownGun then RELOADS[GunConfig.guns[shownGun].name] else nil
+	if reloading and not clips and not keyedReload then
 		goal *= RELOAD_DIP
 	end
 	local config = if shownGun then GunConfig.guns[shownGun] else nil
@@ -520,8 +579,17 @@ function GunView.update(
 		end
 		-- A gun drawn bigger moves forward by its extra length, so its stock stays clear of the camera.
 		local forward = CFrame.new(0, 0, -length * (1 - 1 / viewScale) / 2)
-		shown = held * forward * equip * recoil * (turn or CFrame.identity)
+		local reloadGun, reloadHand = CFrame.identity, Vector3.zero
+		keyedReloadAt = if reloading and keyedReload then keyedReloadAt or now else nil
+		if keyedReloadAt and config then
+			reloadGun, reloadHand = reloadPose(keyedReload, now - keyedReloadAt, config.reload)
+		end
+		shown = held * forward * equip * recoil * reloadGun * (turn or CFrame.identity)
 		local right, left = grips()
+		if reloadHand ~= Vector3.zero then
+			left = table.clone(left)
+			left.wrist += reloadHand
+		end
 		ViewArms.pose(shown, right, left, config and SHOULDERS[config.name], config and THUMB_WRAPS[config.name])
 	end
 	view:PivotTo(base * shown)
