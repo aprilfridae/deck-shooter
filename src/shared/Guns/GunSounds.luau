@@ -51,8 +51,8 @@ local GunSounds = {
 	-- Each gun's reload time in GunConfig matches the length of its sound here. The Sniper has none: its base
 	-- shot sound covers it.
 	reloads = {
-		M4 = sound("reload-assault-v2.wav"),
-		AK47 = sound("reload-assault-v2.wav"),
+		M4 = sound("reload-assault-v3.wav"),
+		AK47 = sound("reload-assault-v3.wav"),
 		Pistol = sound("reload-pistol-v4.wav"),
 	},
 	hits = {

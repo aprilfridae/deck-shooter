@@ -21,7 +21,7 @@ What the game already plays and what it still needs. Checked against the code on
 | Longscope shots | `gun-sniper-1` to `30`, without 12 | Each shot, 1.2s apart. Take 12 starts late and is much louder. |
 | Shotgun shots | `gun-shotgun-1` to `30` | Each shot, 0.8s apart |
 | Energy Pistol shots | `gun-pistol-1` to `30` | Each shot, 150ms apart |
-| Assault reload | `reload-assault-v2` | M57 and B33 reloads (0.985s) |
+| Assault reload | `reload-assault-v3` | M57 and B33 reloads (0.985s; the file runs on with a silent tail) |
 | Longscope shot base | `gun-sniper-base` | Every Longscope shot, under the take (the Longscope has no reload sound) |
 | Coin burst | `coin-burst` | A kill's coins, from the body |
 | Pistol snap | `pistol-snap` | The pistol hand's finger snap on a kill |
@@ -68,7 +68,7 @@ Other players' footsteps can't be heard either, because Roblox's default footste
 | `bullet-impact` | A shot hits a wall or floor. Keep it neutral until arenas have real materials | Mono | 3 | 0.2s | |
 | `death` | You die | Stereo | 1 | 0.8s | |
 
-Also open: the M57's reload hit isn't aligned to `reload-assault-v2`.
+The M57's reload clip and layer are timed to `reload-assault-v3` (`RELOAD_SYNC` and `RELOADS` in `GunView.luau`).
 
 ### 3. Cards and movement extras
 
