@@ -231,6 +231,7 @@ RunService.RenderStepped:Connect(function()
 	shieldText:setVisible(shield ~= "")
 	shieldText:setPosition(UDim2.new(0, MARGIN + healthText:width() + SHIELD_GAP, 1, BASELINE))
 	classText:set(player:GetAttribute("Class") or "")
+	crosshair.Visible = player:GetAttribute("ScopeShown") ~= true -- the scope has its own reticle
 	local gun = GunConfig.guns[player:GetAttribute("GunId")]
 	local reloading = gun ~= nil and player:GetAttribute("Reloading") == true
 	ammoText:setVisible(gun ~= nil)

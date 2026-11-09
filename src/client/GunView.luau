@@ -316,6 +316,107 @@ local barrelRise = 0
 local isSidearm = false
 local viewScale = 1
 local held = HIP
+
+-- Scopes: aiming lines the gun's sight up with your eye, and once it's there the screen shows the view through it
+-- and the gun is hidden. part is the sight's glass in the model; eye is how far in front of the camera its back end
+-- sits.
+local SCOPES: { [string]: { part: string, eye: number } } = {
+	Longscope = { part = "sight_glass_low", eye = 0.15 },
+}
+local SCOPE_SHOW_FROM = 0.75 -- share of the way in when the scope view starts fading in
+local SCOPE_FULL_AT = 0.93 -- and when it's solid and the gun is hidden
+local scopeAim: CFrame? = nil -- the hold that lines the sight up with the eye, for the gun shown
+local scopeShare = 0 -- how far into the scope the view is, 0 to 1
+local scopeGui: ScreenGui? = nil
+local scopeGroup: CanvasGroup? = nil
+
+-- A round lens in black, with a thin reticle: drawn with frames, no images needed.
+local function makeScopeGui(): ScreenGui
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "Scope"
+	gui.IgnoreGuiInset = true
+	gui.ResetOnSpawn = false
+	gui.DisplayOrder = -1 -- under the HUD
+	local group = Instance.new("CanvasGroup")
+	group.Size = UDim2.fromScale(1, 1)
+	group.BackgroundTransparency = 1
+	group.GroupTransparency = 1
+	group.Parent = gui
+	scopeGroup = group
+	local lens = Instance.new("Frame")
+	lens.AnchorPoint = Vector2.new(0.5, 0.5)
+	lens.Position = UDim2.fromScale(0.5, 0.5)
+	lens.Size = UDim2.fromScale(0.92, 0.92)
+	lens.BackgroundColor3 = Palette.DataCyan
+	lens.BackgroundTransparency = 0.95 -- a faint tint on the glass
+	lens.Parent = group
+	local aspect = Instance.new("UIAspectRatioConstraint")
+	aspect.DominantAxis = Enum.DominantAxis.Height
+	aspect.Parent = lens
+	Instance.new("UICorner", lens).CornerRadius = UDim.new(0.5, 0)
+	-- Everything outside the lens is the scope's black tube.
+	local tube = Instance.new("UIStroke")
+	tube.Thickness = 4000
+	tube.Color = Color3.new(0, 0, 0)
+	tube.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	tube.Parent = lens
+	-- A soft dark edge just inside the rim.
+	local rim = Instance.new("Frame")
+	rim.AnchorPoint = Vector2.new(0.5, 0.5)
+	rim.Position = UDim2.fromScale(0.5, 0.5)
+	rim.Size = UDim2.fromScale(1, 1)
+	rim.BackgroundTransparency = 1
+	rim.Parent = lens
+	Instance.new("UICorner", rim).CornerRadius = UDim.new(0.5, 0)
+	local rimStroke = Instance.new("UIStroke")
+	rimStroke.Thickness = 14
+	rimStroke.Color = Color3.new(0, 0, 0)
+	rimStroke.Transparency = 0.35
+	rimStroke.Parent = rim
+	local function line(size: UDim2, position: UDim2, anchor: Vector2)
+		local piece = Instance.new("Frame")
+		piece.Size = size
+		piece.Position = position
+		piece.AnchorPoint = anchor
+		piece.BackgroundColor3 = Color3.new(0, 0, 0)
+		piece.BackgroundTransparency = 0.15
+		piece.BorderSizePixel = 0
+		piece.Parent = lens
+	end
+	-- Fine hairs through the middle, and thick posts in from the rim.
+	line(UDim2.new(1, 0, 0, 1), UDim2.fromScale(0.5, 0.5), Vector2.new(0.5, 0.5))
+	line(UDim2.new(0, 1, 1, 0), UDim2.fromScale(0.5, 0.5), Vector2.new(0.5, 0.5))
+	line(UDim2.new(0.36, 0, 0, 5), UDim2.fromScale(0, 0.5), Vector2.new(0, 0.5))
+	line(UDim2.new(0.36, 0, 0, 5), UDim2.fromScale(1, 0.5), Vector2.new(1, 0.5))
+	line(UDim2.new(0, 5, 0.36, 0), UDim2.fromScale(0.5, 1), Vector2.new(0.5, 1))
+	local dot = Instance.new("Frame")
+	dot.AnchorPoint = Vector2.new(0.5, 0.5)
+	dot.Position = UDim2.fromScale(0.5, 0.5)
+	dot.Size = UDim2.fromOffset(4, 4)
+	dot.BackgroundColor3 = Palette.SignalAcid
+	dot.BorderSizePixel = 0
+	dot.Parent = lens
+	Instance.new("UICorner", dot).CornerRadius = UDim.new(0.5, 0)
+	gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+	return gui
+end
+
+local function showScope(share: number)
+	local fade = math.clamp((share - SCOPE_SHOW_FROM) / (SCOPE_FULL_AT - SCOPE_SHOW_FROM), 0, 1)
+	if fade > 0 then
+		scopeGui = scopeGui or makeScopeGui()
+	end
+	if scopeGroup then
+		scopeGroup.GroupTransparency = 1 - fade
+	end
+	if scopeGui then
+		scopeGui.Enabled = fade > 0
+	end
+	local shown = fade >= 1
+	if Players.LocalPlayer:GetAttribute("ScopeShown") ~= (if shown then true else nil) then
+		Players.LocalPlayer:SetAttribute("ScopeShown", if shown then true else nil)
+	end
+end
 local kick = 0
 local kickSpeed = 0
 local kickRoll = 1 -- which way this shot rolls
@@ -621,6 +722,16 @@ function GunView.setGun(gunId: string, slot: string)
 	length = if isSidearm then SIDEARM_LENGTH else PRIMARY_LENGTH
 	barrelRise = 0
 	view = makeModel(GunConfig.guns[gunId].name) or makeBlock()
+	-- The hold that puts the sight's back end straight in front of the eye.
+	scopeAim = nil
+	local scope = SCOPES[GunConfig.guns[gunId].name]
+	local glass = scope and view:FindFirstChild(scope.part, true)
+	if scope and glass and glass:IsA("BasePart") then
+		local sight = view:GetPivot():ToObjectSpace(glass.CFrame)
+		local back = sight.Position + Vector3.new(0, 0, glass.Size.Z / 2)
+		local forward = CFrame.new(0, 0, -length * (1 - 1 / viewScale) / 2)
+		scopeAim = CFrame.new(-back.X, -back.Y, -scope.eye - back.Z) * forward:Inverse()
+	end
 	clips = ArmClips[GunConfig.guns[gunId].name]
 	firedAt = nil
 	keyedReloadAt = nil
@@ -652,7 +763,7 @@ function GunView.muzzle(): Vector3?
 	if not view or not view.Parent then
 		return nil
 	end
-	return view:GetPivot() * Vector3.new(0, barrelRise, -length * viewScale / 2)
+	return view:GetPivot() * Vector3.new(0, barrelRise, -length / 2)
 end
 
 function GunView.kick()
@@ -783,7 +894,7 @@ function GunView.update(
 	cardOut: boolean
 )
 	view = view or makeBlock()
-	local goal = if aiming then AIMED else HIP
+	local goal = if aiming then scopeAim or AIMED else HIP
 	local keyedReload = if shownGun then RELOADS[GunConfig.guns[shownGun].name] else nil
 	if reloading and not clips and not keyedReload then
 		goal *= RELOAD_DIP
@@ -792,6 +903,13 @@ function GunView.update(
 	local viewKick = (config and VIEW_KICKS[config.name]) or DEFAULT_KICK
 	local ease = 1 - math.exp(-dt * (if config and config.aimFov then AIM_EASE else EASE))
 	held = held:Lerp(goal, ease)
+	if scopeAim then
+		local whole = (HIP.Position - scopeAim.Position).Magnitude
+		scopeShare = math.clamp(1 - (held.Position - scopeAim.Position).Magnitude / whole, 0, 1)
+	else
+		scopeShare = 0
+	end
+	showScope(if clips then 0 else scopeShare)
 	local keyedKick = keyedReloadAt ~= nil and keyedReload ~= nil and keyedReload.lead ~= nil
 	local rising = viewKick.rise and firedAt and os.clock() - firedAt < viewKick.rise and not keyedKick
 	if rising then
@@ -930,8 +1048,18 @@ function GunView.update(
 	view:PivotTo(base * shown)
 	view.Parent = camera
 	local pivot = view:GetPivot()
-	showFlash(camera, pivot * CFrame.new(0, barrelRise, -length * viewScale / 2))
+	showFlash(camera, pivot * CFrame.new(0, barrelRise, -length / 2))
 	ViewArms.place(camera, base)
+	if not clips and scopeShare >= SCOPE_FULL_AT then
+		-- Looking through the scope: the gun and arms would only block it.
+		view.Parent = nil
+		ViewArms.hide()
+		hideSmears()
+		if flashModel then
+			flashModel.Parent = nil
+		end
+		return
+	end
 	if clips and shownFrame then
 		drawSmear(camera, shownFrame, base, base * held * HIP:Inverse())
 	elseif not clips then
@@ -950,6 +1078,7 @@ function GunView.hide()
 	end
 	CardView.hide()
 	ViewArms.hide()
+	showScope(0)
 	if flashModel then
 		flashModel.Parent = nil
 	end
