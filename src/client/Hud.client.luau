@@ -211,8 +211,8 @@ hitRemote.OnClientEvent:Connect(function(info)
 	markerSize = if info.killed then MARKER_KILL else 1
 	marker.Visible = true
 	GunAudio.playHit(info.headshot, info.killed)
-	if info.killed then
-		GunView.snap()
+	if info.killed and GunView.snap() then
+		GunAudio.playSnap()
 	end
 end)
 

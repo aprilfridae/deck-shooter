@@ -605,11 +605,13 @@ function GunView.holster()
 	holsterAt = os.clock()
 end
 
--- Snaps the fingers of the free hand, on guns that leave one free.
-function GunView.snap()
+-- Snaps the fingers of the free hand, on guns that leave one free. True if it snapped.
+function GunView.snap(): boolean
 	if clips and clips.snap then
 		snapAt = os.clock()
+		return true
 	end
+	return false
 end
 
 -- Where bullets leave the gun on screen, or nil while it's hidden.

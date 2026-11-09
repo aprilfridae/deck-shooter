@@ -76,6 +76,9 @@ local GunSounds = {
 		hard = sound("move-land-hard.wav"),
 	},
 	slideStart = sound("move-slide-start.wav"),
+	-- The pistol hand's finger snap on a kill. The clip's fingers click together this far in.
+	snap = sound("pistol-snap.wav"),
+	snapDelaySeconds = 0.06,
 	-- The coins a body bursts into when it dies.
 	coinBurst = sound("coin-burst.wav"),
 	-- Each pack rarity's opening sound.

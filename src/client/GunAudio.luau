@@ -49,6 +49,7 @@ for _, soundId in {
 	GunSounds.lands.hard,
 	GunSounds.slideStart,
 	GunSounds.coinBurst,
+	GunSounds.snap,
 } do
 	others[soundId] = newSound(soundId)
 end
@@ -159,6 +160,10 @@ function GunAudio.playWhizz(closest: Vector3, direction: Vector3)
 		WorldPosition = anchor.WorldPosition + direction * WHIZZ_SPEED * seconds,
 	}):Play()
 	copy:Play()
+end
+
+function GunAudio.playSnap()
+	task.delay(GunSounds.snapDelaySeconds, playCopy, others[GunSounds.snap], 0)
 end
 
 function GunAudio.playCoins(position: Vector3)
