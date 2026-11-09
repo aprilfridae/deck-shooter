@@ -58,7 +58,8 @@ local SNAPPY = { fire = true, holster = true }
 -- Guns posed in code move like this when they fire: pushed back (studs), dropped (studs), barrel up and
 -- rolled (degrees), settling at ease per second. The Longscope slams back hard and is home in about 0.15s.
 local VIEW_KICKS: { [string]: any } = {
-	Longscope = { back = 0.6, drop = 0.15, up = 14, roll = -8, ease = 16, slap = true },
+	-- The Longscope snaps back at once, then comes home slowly on a spring that swings a little past.
+	Longscope = { back = 0.85, drop = 0.22, up = 19, roll = -11, ease = 16, stiff = 55, damp = 10, slap = true },
 }
 local DEFAULT_KICK = { back = 0.25, drop = 0, up = 0, roll = 0, ease = 14, slap = false }
 -- Recharging an energy gun: after the kick, the left hand comes off, then slaps the side of the gun,
@@ -106,6 +107,7 @@ local isSidearm = false
 local viewScale = 1
 local held = HIP
 local kick = 0
+local kickSpeed = 0
 local shown = HIP
 local clips: any = nil
 local firedAt: number? = nil
@@ -345,6 +347,7 @@ end
 
 function GunView.kick()
 	kick = 1
+	kickSpeed = 0
 	firedAt = os.clock()
 end
 
@@ -446,7 +449,13 @@ function GunView.update(
 	local viewKick = (config and VIEW_KICKS[config.name]) or DEFAULT_KICK
 	local ease = 1 - math.exp(-dt * (if config and config.aimFov then AIM_EASE else EASE))
 	held = held:Lerp(goal, ease)
-	kick *= math.exp(-dt * viewKick.ease)
+	if viewKick.stiff then
+		local step = math.min(dt, 1 / 30)
+		kickSpeed += (-kick * viewKick.stiff - kickSpeed * viewKick.damp) * step
+		kick += kickSpeed * step
+	else
+		kick *= math.exp(-dt * viewKick.ease)
+	end
 	local turn = if shownGun then TURNS[GunConfig.guns[shownGun].name] else nil
 	local sway = swayAndBob(dt, camera, aiming, sprinting)
 	local base = camera.CFrame * sway

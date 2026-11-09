@@ -61,7 +61,7 @@ GunConfig.guns = {
 	}),
 	Sniper = gun({
 		name = "Longscope",
-		kick = 0.8,
+		kick = 1.2,
 		body = 85,
 		headshot = "Kill",
 		rpm = 50,

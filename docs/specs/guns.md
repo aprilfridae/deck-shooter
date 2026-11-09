@@ -21,7 +21,7 @@ The code and saves use internal ids, and players see display names: `M4` is the 
 
 ## Decided by River
 
-- All guns are hip fire only, except the Longscope, which can aim down sights. Scoping in and out takes about 0.1s. A scoped shot drops the scope until the gun can fire again (the time between shots), and holding aim scopes back in. In first person the Longscope slams back with its barrel up and is home in about 0.15s, then the left hand comes off and slaps the side of the gun, which jolts and rolls (it's an energy gun, so there's no bolt). Guns posed in code swing in from the bottom right over 0.4s when equipped. The base and firing gun pose always points straight.
+- All guns are hip fire only, except the Longscope, which can aim down sights. Scoping in and out takes about 0.1s. A scoped shot drops the scope until the gun can fire again (the time between shots), and holding aim scopes back in. In first person the Longscope slams back with its barrel up and is home in about 0.4s on a spring that swings a little past, then the left hand comes off and slaps the side of the gun, which jolts and rolls (it's an energy gun, so there's no bolt). Guns posed in code swing in from the bottom right over 0.4s when equipped. The base and firing gun pose always points straight.
 - The M57 does 2x headshot damage. The B33 kills on any headshot. The Longscope kills on any headshot. These replace the parent spec's single headshot multiplier.
 - Every class uses the Energy Pistol as its sidearm for now. The machine pistol, revolver and auto-pistol stay in the gun data, unused, until River brings them back.
 - Guns add 0 to Deck Power Rating. Gun upgrades wait until after launch.
@@ -47,7 +47,7 @@ Damage falls off in a straight line between the two distances, then stays flat. 
 ## Recoil
 
 - Recoil is like Call of Duty's: almost none. Bullets always go where the crosshair is, with no spray pattern to learn.
-- Each shot nudges the view up by the gun's `kick` (degrees), plus up to 30% of that to either side, and it settles straight back. M57 0.12, B33 0.15, SMG 0.08, Longscope 0.8, Shotgun 0.6, Energy Pistol 0.25. A full M57 magazine climbs under 1 degree.
+- Each shot nudges the view up by the gun's `kick` (degrees), plus up to 30% of that to either side, and it settles straight back. M57 0.12, B33 0.15, SMG 0.08, Longscope 1.2, Shotgun 0.6, Energy Pistol 0.25. A full M57 magazine climbs under 1 degree.
 - The client applies the kick, so a no-recoil cheat is an accepted risk, and with this little recoil there's not much to gain. The server rolls spread, so a client can't remove it.
 
 ## Keys

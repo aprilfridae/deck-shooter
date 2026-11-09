@@ -58,7 +58,7 @@ describe("Recoil", function()
 	it("gives every gun a small kick", function()
 		for _, gun in GunConfig.guns do
 			expect(type(gun.kick)).toBe("number")
-			expect(gun.kick > 0 and gun.kick <= 1).toBe(true)
+			expect(gun.kick > 0 and gun.kick <= 1.5).toBe(true)
 			expect(gun.pattern).toBe(nil)
 		end
 	end)
