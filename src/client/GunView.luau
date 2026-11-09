@@ -156,9 +156,8 @@ local RELOADS: { [string]: any } = {
 			key(1.23, tilt(20, -7, 1, -0.07, -0.01, 0.03), Vector3.new(0.02, -0.01, 0.24)),
 			-- CLICK release: a small wind-up further into the tilt, then a beat after the clunk the gun eases back to
 			-- ready, rolls just past and settles, the hand riding back onto its grip.
-			key(1.36, tilt(23, -8, 0, -0.08, -0.02, 0.03), Vector3.new(0.02, -0.02, 0.22), "in"),
-			key(1.52, tilt(-3, 1, 1.5, 0.005, 0.015, 0), Vector3.zero), -- eases back round, just past
-			key(1.7, tilt(0.8, -0.3, -0.4, 0, -0.004, 0), Vector3.zero),
+			key(1.36, tilt(23, -8, 0, -0.08, -0.02, 0.03), Vector3.new(0.02, -0.02, 0.22)),
+			key(1.54, tilt(-2, 0.7, 1, 0.004, 0.01, 0), Vector3.zero), -- eases back round, just past
 			key(1.834, CFrame.identity, Vector3.zero),
 		},
 	},
@@ -251,6 +250,7 @@ local equipAt: number? = nil
 local keyedReloadAt: number? = nil -- when a keyed reload started, or the shot that starts it
 local layerAt: number? = nil -- when a clip gun's reload layer started; it plays to its end even if the reload ends first
 local layerShown = CFrame.identity
+local reloadShown, handShown = CFrame.identity, Vector3.zero -- a code-posed gun's reload, smoothed
 local holsterAt: number? = nil
 local snapAt: number? = nil
 local cardAt: number? = nil
@@ -734,6 +734,13 @@ function GunView.update(
 		end
 		if keyedReloadAt and keyedReload and config then
 			reloadGun, reloadHand, spin = reloadPose(keyedReload, now - keyedReloadAt, config.reload)
+			-- A touch of smoothing, so a corner between two keys never shows as a step.
+			local smooth = 1 - math.exp(-dt * 25)
+			reloadShown = reloadShown:Lerp(reloadGun, smooth)
+			handShown = handShown:Lerp(reloadHand, smooth)
+			reloadGun, reloadHand = reloadShown, handShown
+		else
+			reloadShown, handShown = CFrame.identity, Vector3.zero
 		end
 		local right, left = grips()
 		-- The hands go by the gun before its spin: the right stays put with its finger in the trigger guard while the
