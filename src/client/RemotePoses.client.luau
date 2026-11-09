@@ -21,7 +21,7 @@ local FORWARD_LEAN_AXIS = Vector3.xAxis
 local FEET_BELOW_ROOT = 3 -- the soldier's root sits this far above its feet
 local GROUND_REACH = 0.6 -- studs below the feet that still count as standing
 local FIRST_PERSON = 1.5 -- a camera this close to your own head is first person, so your held gun hides
-local POSE_EASE = 18 -- how fast a soldier's joints catch up with the picked pose, per second
+local POSE_EASE = 14 -- how fast a soldier's joints catch up with the picked pose, per second
 
 -- Sidearms without poses of their own borrow the Energy Pistol's.
 local POSES_OF = {

@@ -31,11 +31,11 @@ local HIP = CFrame.new(0.9, -0.8, -2)
 local AIMED = CFrame.new(0, -0.55, -2)
 local RELOAD_DIP = CFrame.new(0, -0.7, 0) * CFrame.Angles(math.rad(-25), 0, 0)
 -- Sway: the gun and arms lag behind the mouse, then swing back on a spring.
-local SWAY_TURN = 0.025 -- how far they turn per radian per second the camera turns
+local SWAY_TURN = 0.03 -- how far they turn per radian per second the camera turns
 local SWAY_MOVE = 0.3 -- and how far they slide, in studs per radian they turn
-local SWAY_MAX = math.rad(5)
-local SWAY_STIFF = 180 -- spring strength
-local SWAY_DAMP = 20 -- spring damping, a little under critical, so it swings past once
+local SWAY_MAX = math.rad(6)
+local SWAY_STIFF = 120 -- spring strength
+local SWAY_DAMP = 17 -- spring damping, a little under critical, so it swings past once
 local SWAY_AIMED = 0.25 -- the share of sway left while scoped
 -- Bob: the gun rides the steps, dipping and nodding on each footfall and swinging side to side
 -- every two steps. Studs and degrees at walking speed.
@@ -48,10 +48,10 @@ local BOB_SPRINT = 1.9 -- how much bigger the bob is while sprinting
 local WALK_SPEED = 16
 -- Sprinting: the gun settles a little lower and closer, tipped down. Small on purpose.
 local SPRINT_HOLD = CFrame.new(0.03, -0.08, 0.06) * CFrame.Angles(math.rad(-6), math.rad(4), math.rad(3))
-local EASE = 14
+local EASE = 11
 -- A new clip fades in from the last pose over this long, so the end of a reload doesn't cut to idle.
 -- A shot and a swap start at once, so they keep their snap.
-local CLIP_BLEND = 0.2
+local CLIP_BLEND = 0.25
 -- Motion blur: Roblox can't blur one object, so faded copies of the gun and arms trail behind them,
 -- spread between where they were SMEAR_TIME ago and where they are now. Only while the gun moves fast enough.
 local SMEAR_COPIES = 4
@@ -65,14 +65,14 @@ local SNAPPY = { fire = true, holster = true }
 -- shot that stacks a little while spraying. Either way the gun comes home on a spring (stiff, damp) that swings
 -- a little past. Guns with clips (M57, Energy Pistol) move the whole view, arms and all, on top of the clip.
 local VIEW_KICKS: { [string]: any } = {
-	M57 = { back = 0.06, drop = 0.01, up = 1.4, roll = 0.8, stiff = 420, damp = 32, auto = true },
-	B33 = { back = 0.14, drop = 0.02, up = 3, roll = 1.4, stiff = 360, damp = 28, auto = true },
-	SMG = { back = 0.09, drop = 0.01, up = 2, roll = 1.2, stiff = 480, damp = 34, auto = true },
-	["Energy Pistol"] = { back = 0.12, drop = 0.03, up = 7, roll = 2, rise = 0.035, stiff = 220, damp = 22 },
-	Shotgun = { back = 0.55, drop = 0.12, up = 13, roll = -6, rise = 0.07, stiff = 70, damp = 12 },
-	Longscope = { back = 0.85, drop = 0.22, up = 19, roll = -11, rise = 0.09, stiff = 55, damp = 10 },
+	M57 = { back = 0.066, drop = 0.011, up = 1.5, roll = 0.9, stiff = 315, damp = 27.8, auto = true },
+	B33 = { back = 0.154, drop = 0.022, up = 3.3, roll = 1.5, stiff = 270, damp = 24.4, auto = true },
+	SMG = { back = 0.099, drop = 0.011, up = 2.2, roll = 1.3, stiff = 360, damp = 29.6, auto = true },
+	["Energy Pistol"] = { back = 0.132, drop = 0.033, up = 7.7, roll = 2.2, rise = 0.04, stiff = 165, damp = 19.1 },
+	Shotgun = { back = 0.605, drop = 0.132, up = 14.3, roll = -6.6, rise = 0.081, stiff = 52.5, damp = 10.4 },
+	Longscope = { back = 0.935, drop = 0.242, up = 20.9, roll = -12.1, rise = 0.103, stiff = 41.2, damp = 8.7 },
 }
-local DEFAULT_KICK = { back = 0.15, drop = 0.02, up = 4, roll = 1.5, rise = 0.03, stiff = 250, damp = 24 }
+local DEFAULT_KICK = { back = 0.165, drop = 0.022, up = 4.4, roll = 1.7, rise = 0.034, stiff = 187.5, damp = 20.9 }
 -- An automatic's shove, as a multiple of its spring's speed, so one shot alone peaks at about the full kick.
 local AUTO_SHOVE = 2.3
 -- Reloads for guns posed in code, as keys: seconds into the reload, the gun's turn and shift from its hold, where
@@ -158,10 +158,10 @@ local function reloadPose(reload: any, elapsed: number, reloadTime: number): (CF
 end
 
 -- Equipping a gun posed in code: it swings in from below and to the right.
-local EQUIP_TIME = 0.4
+local EQUIP_TIME = 0.45
 local EQUIP_FROM = CFrame.new(0.6, -1.2, 0.3) * CFrame.Angles(math.rad(-40), math.rad(25), math.rad(-30))
 -- Scoping in and out is quick on a gun that can scope.
-local AIM_EASE = 30
+local AIM_EASE = 24
 local HOLSTER_WAIT = 0.3 -- how long the gun stays down waiting for the server to swap it
 
 -- Where the hands sit. Primary wrists sit along the gun as a share of its length.
@@ -362,8 +362,8 @@ local function swayAndBob(dt: number, camera: Camera, aiming: boolean, sprinting
 	bobPhase += speed * dt * math.pi / STEP_STUDS
 	local running = sprinting and speed > 1
 	local bobGoal = math.min(speed / WALK_SPEED, 1) * (if running then BOB_SPRINT else 1) * share
-	bobWeight += (bobGoal - bobWeight) * (1 - math.exp(-dt * 8))
-	sprintWeight += ((if running and not aiming then 1 else 0) - sprintWeight) * (1 - math.exp(-dt * 7))
+	bobWeight += (bobGoal - bobWeight) * (1 - math.exp(-dt * 6))
+	sprintWeight += ((if running and not aiming then 1 else 0) - sprintWeight) * (1 - math.exp(-dt * 5))
 	local side = math.sin(bobPhase)
 	local dip = math.abs(math.cos(bobPhase)) -- 1 on each footfall
 	local bob = CFrame.new(side * BOB_SIDE * bobWeight, -dip * BOB_HEIGHT * bobWeight, 0)

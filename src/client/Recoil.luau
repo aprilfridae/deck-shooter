@@ -2,7 +2,7 @@
 -- Each shot nudges the view up by the gun's kick, plus a hair either side, and it settles straight back.
 -- The camera keeps whatever it is given, so only the change each frame is applied to it.
 local KICK_EASE = 40 -- how fast the view reaches the kick
-local SETTLE_EASE = 9 -- how fast it comes back down
+local SETTLE_EASE = 7 -- how fast it comes back down
 local SIDE_SHARE = 0.3 -- the most a shot drifts sideways, as a share of its kick
 
 local Recoil = {}
