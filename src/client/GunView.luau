@@ -91,6 +91,28 @@ local function tilt(roll: number, yaw: number, pitch: number, x: number, y: numb
 	return CFrame.new(x, y, z) * CFrame.Angles(math.rad(pitch), math.rad(yaw), math.rad(roll))
 end
 local RELOADS: { [string]: any } = {
+	-- reload-assault-v2.wav: the mag clicks out at 0.36s, slams in at 0.66s and the charge is slapped at 0.84s.
+	-- The M57 has a reload clip, so this layers on top of it: the whole hold, arms and all, turns round the
+	-- gun with a jolt on each hit. Only the gun's turn is used.
+	M57 = {
+		length = 0.985,
+		layer = true,
+		keys = {
+			key(0, CFrame.identity, Vector3.zero),
+			key(0.1, tilt(-2, 0, -3, 0, -0.04, 0), Vector3.zero), -- dips to wind up
+			key(0.26, tilt(14, -6, 4, -0.03, 0.02, 0), Vector3.zero), -- rolls the mag well toward the hand
+			key(0.36, tilt(15, -6, 3, -0.03, 0.01, 0), Vector3.zero, "in"),
+			key(0.4, tilt(17, -7, -3, -0.03, -0.05, 0), Vector3.zero, "out"), -- mag out: jolts down
+			key(0.48, tilt(15, -6, 3, -0.03, 0.01, 0), Vector3.zero),
+			key(0.62, tilt(16, -6, 1, -0.03, -0.03, 0), Vector3.zero), -- winds up for the new one
+			key(0.66, tilt(15, -6, 2, -0.03, -0.01, 0), Vector3.zero, "in"),
+			key(0.7, tilt(12, -5, 8, -0.03, 0.06, 0), Vector3.zero, "out"), -- mag in: bumps up hard
+			key(0.78, tilt(15, -6, 3, -0.03, 0.01, 0), Vector3.zero),
+			key(0.84, tilt(17, -7, 2, -0.04, 0, 0), Vector3.zero, "in"),
+			key(0.9, tilt(-4, 2, 2, 0.01, 0.02, 0), Vector3.zero, "out"), -- charge: snaps back to ready, a little past
+			key(0.985, CFrame.identity, Vector3.zero),
+		},
+	},
 	-- reload-sniper.wav: a rising whine to 0.95s, a click at 0.94s and a clunk at 1.06s. The gun spins once
 	-- backwards round the trigger finger during the whine, then the left hand clicks the cell home and locks it.
 	Longscope = {
@@ -588,8 +610,14 @@ function GunView.update(
 		settle, settleSpeed, settleGoal = 0, 0, 0
 	end
 	local sway = swayAndBob(dt, camera, aiming, sprinting)
-	-- A gun with clips kicks the whole view, so the arms holding it go too.
-	local base = camera.CFrame * sway * (if clips then recoil else CFrame.identity)
+	-- A gun with clips kicks the whole view, so the arms holding it go too, and its reload layer turns it round
+	-- the gun's hold.
+	local layer = CFrame.identity
+	if clips and keyedReload and keyedReload.layer and reloading and reloadAt and config then
+		local turnBy = reloadPose(keyedReload, os.clock() - reloadAt, config.reload)
+		layer = CFrame.new(HIP.Position) * turnBy * CFrame.new(-HIP.Position)
+	end
+	local base = camera.CFrame * sway * (if clips then recoil * layer else CFrame.identity)
 	if showCard(camera, cardOut, sway) then
 		return
 	end
