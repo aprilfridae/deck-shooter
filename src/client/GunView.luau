@@ -30,8 +30,6 @@ local BARREL_RISE = 0.26 -- how far above the model's middle the barrel sits, as
 local HIP = CFrame.new(0.9, -0.8, -2)
 local AIMED = CFrame.new(0, -0.55, -2)
 local RELOAD_DIP = CFrame.new(0, -0.7, 0) * CFrame.Angles(math.rad(-25), 0, 0)
--- Sprinting with a gun posed in code: lowered and turned across the body. Guns with clips have run clips.
-local SPRINT = CFrame.new(-0.25, -0.3, 0.15) * CFrame.Angles(math.rad(-12), math.rad(38), math.rad(18))
 -- Sway: the gun and arms lag behind the mouse, then swing back on a spring.
 local SWAY_TURN = 0.025 -- how far they turn per radian per second the camera turns
 local SWAY_MOVE = 0.3 -- and how far they slide, in studs per radian they turn
@@ -440,7 +438,7 @@ function GunView.update(
 	cardOut: boolean
 )
 	view = view or makeBlock()
-	local goal = if aiming then AIMED elseif sprinting and not clips and not reloading then HIP * SPRINT else HIP
+	local goal = if aiming then AIMED else HIP
 	if reloading and not clips then
 		goal *= RELOAD_DIP
 	end
