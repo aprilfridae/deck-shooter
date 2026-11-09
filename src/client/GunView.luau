@@ -52,7 +52,7 @@ local EASE = 11
 -- A new clip fades in from the last pose over this long, so the end of a reload doesn't cut to idle.
 -- A shot and a swap start at once, so they keep their snap.
 local CLIP_BLEND = 0.25
-local RELOAD_BLEND = 0.45 -- the end of a reload settles into the next clip slowly, with weight
+local RELOAD_BLEND = 0.8 -- the end of a reload settles into the next clip slowly, with weight
 -- Reload clips that ran ahead of their sound: the start plays slower, by up to this many seconds behind, and
 -- the end catches up, so the clip still finishes with the reload.
 local RELOAD_LAG: { [string]: number } = { M57 = 0.08 }
@@ -113,11 +113,12 @@ local RELOADS: { [string]: any } = {
 			key(0.7, tilt(12, -5, 8, -0.03, 0.06, 0), Vector3.zero, "out"), -- mag in: bumps up hard
 			key(0.78, tilt(15, -6, 3, -0.03, 0.01, 0), Vector3.zero),
 			key(0.84, tilt(17, -7, 2, -0.04, 0, 0), Vector3.zero, "in"),
-			key(0.92, tilt(-6, 2.5, 4, 0.015, 0.04, 0), Vector3.zero, "out"), -- charge: heaves back up past ready
-			-- and settles slowly under its own weight, after the reload itself is done
-			key(1.1, tilt(-4, 1.8, 2.8, 0.01, 0.028, 0), Vector3.zero),
-			key(1.35, tilt(0.8, -0.4, -0.5, 0, -0.006, 0), Vector3.zero),
-			key(1.6, CFrame.identity, Vector3.zero),
+			key(0.95, tilt(-6, 2.5, 4, 0.015, 0.04, 0), Vector3.zero, "out"), -- charge: heaves back up past ready
+			-- and comes back down slowly under its own weight, long after the reload itself is done
+			key(1.15, tilt(-5.2, 2.2, 3.5, 0.013, 0.035, 0), Vector3.zero, "out"),
+			key(1.6, tilt(-2, 0.9, 1.3, 0.005, 0.013, 0), Vector3.zero),
+			key(2.0, tilt(0.3, -0.1, -0.2, 0, -0.002, 0), Vector3.zero),
+			key(2.3, CFrame.identity, Vector3.zero),
 		},
 	},
 	-- reload-sniper.wav: a rising whine to 0.95s, a click at 0.94s and a clunk at 1.06s. The gun spins once
