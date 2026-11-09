@@ -844,12 +844,29 @@ local function clipFrame(reloading: boolean, sprinting: boolean): (any, string)
 end
 
 -- The snap frame to lay over the clip, if one is playing.
-local function snapFrame(): any
-	local frame = if snapAt then ArmClip.sampleAt(clips.snap, os.clock() - snapAt) else nil
-	if not frame then
-		snapAt = nil
+-- The snap plays a little slower than exported, and eases on and off the hand instead of popping.
+local SNAP_SPEED = 0.8
+local SNAP_EASE_IN = 0.1
+local SNAP_EASE_OUT = 0.16
+
+-- The snap's pose, and how much of it shows (0 to 1).
+local function snapFrame(): (any, number)
+	if not snapAt then
+		return nil, 0
 	end
-	return frame
+	local elapsed = (os.clock() - snapAt) * SNAP_SPEED
+	local length = (#clips.snap.frames - 1) / clips.snap.fps
+	local frame = ArmClip.sampleAt(clips.snap, math.min(elapsed, length))
+	local after = elapsed - length
+	if not frame or after > SNAP_EASE_OUT then
+		snapAt = nil
+		return nil, 0
+	end
+	local weight = math.clamp(elapsed / SNAP_EASE_IN, 0, 1)
+	if after > 0 then
+		weight = 1 - after / SNAP_EASE_OUT
+	end
+	return frame, weight * weight * (3 - 2 * weight)
 end
 
 -- With a card out, the gun drops, then the arms play the card flying across and holding it.
@@ -987,7 +1004,15 @@ function GunView.update(
 				frame = ArmClip.blendFrames(blendFrom, frame, t * t * (3 - 2 * t))
 			end
 		end
-		local snap = snapFrame()
+		local snap, snapWeight = snapFrame()
+		if snap and snapWeight < 1 then
+			-- Only the snapping hand's bones, part of the way from where the clip has them.
+			local partBones = {}
+			for name in snap.bones do
+				partBones[name] = frame.bones[name] or snap.bones[name]
+			end
+			snap = { gun = snap.gun, bones = ArmClip.blendBones(partBones, snap.bones, snapWeight) }
+		end
 		local whole = if snap then ArmClip.overlay(frame, snap) else frame
 		shownFrame, shownBase, shownSnap = whole, frame, snap
 		ViewArms.showFrame(clips.meshOffset, whole.bones)
