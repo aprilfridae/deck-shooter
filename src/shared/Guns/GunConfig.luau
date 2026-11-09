@@ -75,7 +75,7 @@ GunConfig.guns = {
 		lowTo = math.huge,
 		lowScale = 1,
 		spread = 0,
-		aimFov = 30, -- only guns with this can aim down sights
+		aimFov = 18, -- only guns with this can aim down sights
 	}),
 	Shotgun = gun({
 		name = "Shotgun",
