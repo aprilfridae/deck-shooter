@@ -115,7 +115,8 @@ describe("CardFlourish", function()
 		for index = 1, CardFlourish.COUNT do
 			expect(math.abs(landing[index]) < 0.01).toBe(true)
 		end
-		expect(CardFlourish.sway(CardFlourish.at(0.055), 3).bends).toBe(squeezed)
+		local pose = CardFlourish.at(0.055)
+		expect(CardFlourish.sway(pose, 3).bends).toBe(pose.bends)
 	end)
 
 	it("shows a bent card as an arc between its two ends", function()
