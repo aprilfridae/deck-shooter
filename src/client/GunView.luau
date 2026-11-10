@@ -1077,10 +1077,10 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 		-- Turning to another card skips what's left of the flourish and flips the next one over.
 		turns += 1
 		turnAt = now
+		GunAudio.playCardSkip() -- on every turn, whether or not it cuts the flourish short
 		if elapsed < CardFlourish.LENGTH then
 			cardAt = now - CardFlourish.LENGTH
 			CardView.snap()
-			GunAudio.playCardSkip()
 			elapsed = CardFlourish.LENGTH
 		end
 	end
