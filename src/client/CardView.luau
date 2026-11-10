@@ -234,8 +234,11 @@ local function make(): Folder
 			local copy, copyFace = makeCard()
 			copy.Name = "Blur"
 			copy.Transparency = FADES[ghost]
+			-- Blur copies glow in one flat colour, white nearest the card and blue furthest back, with no picture.
+			copy.Color = Palette.blur(1 - (ghost - 1) / (GHOSTS - 1))
+			copy.Material = Enum.Material.Neon
 			for _, image in copy:GetChildren() do
-				(image :: Decal).Transparency = FADES[ghost]
+				(image :: Decal).Transparency = 1
 			end
 			copy.CFrame = AWAY
 			copy.Parent = folder

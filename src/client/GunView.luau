@@ -588,6 +588,17 @@ local function makeSmears()
 				if real then
 					table.insert(movers, { part = part, rest = real.rest, slides = real.slides })
 				end
+				-- Blur copies glow in one flat colour: white nearest the gun, blue furthest back.
+				part.Color = Palette.blur(i / SMEAR_COPIES)
+				part.Material = Enum.Material.Neon
+				if part:IsA("MeshPart") then
+					part.TextureID = ""
+				end
+				for _, look in part:GetChildren() do
+					if look:IsA("SurfaceAppearance") or look:IsA("Decal") or look:IsA("Texture") then
+						look:Destroy()
+					end
+				end
 				table.insert(parts, part)
 			end
 		end
@@ -598,7 +609,7 @@ local function makeSmears()
 			gun = gun,
 			parts = parts,
 			movers = movers,
-			arms = ViewArms.makeGhost(),
+			arms = ViewArms.makeGhost(i / SMEAR_COPIES),
 			share = i / (SMEAR_COPIES + 1),
 		}
 	end

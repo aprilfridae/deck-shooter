@@ -6,6 +6,7 @@ local ArmClips = require(ReplicatedStorage.Guns.ArmClips)
 local ArmPose = require(ReplicatedStorage.Guns.ArmPose)
 local SoldierArmsData = require(ReplicatedStorage.Guns.SoldierArmsData)
 local SoldierPose = require(ReplicatedStorage.Guns.SoldierPose)
+local Palette = require(ReplicatedStorage.Guns.Palette)
 
 local FINGER_JITTER = 1.2 -- degrees at every finger and thumb joint
 local ARM_JITTER = 0.4
@@ -128,9 +129,31 @@ function ViewArms.showFrame(offset: CFrame, bones: { [string]: { number } }, pal
 	end
 end
 
--- A faded copy of the arms for the motion blur, or nil if the arms model is missing.
-function ViewArms.makeGhost(): any
-	return makeRig()
+-- Makes a rig a glowing copy in one flat colour, for the motion blur: white near the arms, blue further back.
+local function tint(ghost: any, near: number)
+	local color = Palette.blur(near)
+	for _, mesh in ghost.meshes do
+		mesh.Color = color
+		mesh.Material = Enum.Material.Neon
+		if mesh:IsA("MeshPart") then
+			mesh.TextureID = ""
+		end
+		for _, look in mesh:GetChildren() do
+			if look:IsA("SurfaceAppearance") or look:IsA("Decal") or look:IsA("Texture") then
+				look:Destroy()
+			end
+		end
+	end
+end
+
+-- A faded copy of the arms for the motion blur, or nil if the arms model is missing. near is 1 for the copy nearest
+-- the arms and 0 for the furthest.
+function ViewArms.makeGhost(near: number?): any
+	local ghost = makeRig()
+	if ghost then
+		tint(ghost, near or 1)
+	end
+	return ghost
 end
 
 function ViewArms.poseGhost(ghost: any, offset: CFrame, bones: { [string]: { number } }, palms: { [string]: CFrame }?)
@@ -186,11 +209,15 @@ function ViewArms.blur(camera: Camera, view: CFrame?)
 	if was and now - was.at < 0.2 then
 		local back = math.min(BLUR_SHUTTER / (now - was.at), 1)
 		for copy, fade in BLUR_FADES do
-			local ghost = blurRigs[copy] or makeRig()
+			local ghost = blurRigs[copy]
 			if not ghost then
-				break
+				ghost = makeRig()
+				if not ghost then
+					break
+				end
+				tint(ghost, 1 - (copy - 1) / math.max(#BLUR_FADES - 1, 1))
+				blurRigs[copy] = ghost
 			end
-			blurRigs[copy] = ghost
 			local parts = {}
 			for group, frame in rig.parts do
 				local old = was.parts[group]
