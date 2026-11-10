@@ -26,7 +26,7 @@ end
 local rig: any = nil
 
 -- Motion blur for the hands with the cards: faint copies of the arms trail back along the way they came.
-local BLUR_FADES = { 0.84, 0.93 } -- how see-through each copy is, nearest the arms first
+local BLUR_FADES = { 0.92, 0.965 } -- how see-through each copy is, nearest the arms first
 local BLUR_SHUTTER = 0.03 -- seconds of movement the arms are smeared over
 local BLUR_MIN_MOVE = 0.012 -- studs a part must be from the real one for its copy to show
 local blurRigs: { any } = {}

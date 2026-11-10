@@ -47,7 +47,7 @@ local printed: { [number]: string } = {} -- what each card has printed on it
 -- Motion blur: each card has a few faint copies of itself, and while it moves fast they trail back along the way it
 -- came.
 local GHOSTS = 3 -- copies of each card
-local FADES = { 0.8, 0.89, 0.95 } -- how see-through each is, nearest the card first
+local FADES = { 0.9, 0.945, 0.975 } -- how see-through each is, nearest the card first
 local SHUTTER = 0.03 -- seconds of movement a card is smeared over
 local BLUR_FROM = 0.5 -- studs a second a card has to move to blur
 local STACKED = 0.02 -- cards this close move as one stack, and only one of them blurs

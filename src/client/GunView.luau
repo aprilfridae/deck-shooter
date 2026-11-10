@@ -124,7 +124,7 @@ local RELOAD_SYNC: { [string]: { { number } } } = {
 -- spread between where they were SMEAR_TIME ago and where they are now. Only while the gun moves fast enough.
 local SMEAR_COPIES = 4
 local SMEAR_TIME = 0.06
-local SMEAR_OPACITY = 0.2
+local SMEAR_OPACITY = 0.1
 local SMEAR_MIN_MOVE = 0.04 -- studs the gun must travel in SMEAR_TIME to blur
 local SMEAR_MIN_TURN = math.rad(4)
 local SNAPPY = { fire = true }
