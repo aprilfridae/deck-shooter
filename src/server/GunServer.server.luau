@@ -12,7 +12,9 @@ local Spread = require(Guns:WaitForChild("Spread"))
 local Weapon = require(Guns:WaitForChild("Weapon"))
 local Zones = require(Guns:WaitForChild("Zones"))
 local Collision = require(Guns:WaitForChild("Collision"))
+local KillRewards = require(Guns:WaitForChild("KillRewards"))
 local Requests = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Requests"))
+local CardConfig = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Config"))
 local GunTargets = require(script.Parent.GunTargets)
 local loadouts = require(script.Parent.Loadouts)
 local PlayerCards = require(script.Parent.PlayerCards)
@@ -40,6 +42,9 @@ local swapRemote = remote("Swap")
 local hitRemote = remote("HitConfirm")
 local impactRemote = remote("Impacts")
 local shotsRemote = remote("Shots")
+local rewardRemote = remote("KillReward") -- to the killer: the lines a shot's kills earned and the Credits they add up to
+-- What each player's kills have earned lately: their streak, and when each victim last paid them. Not saved.
+local records: { [Player]: KillRewards.Record } = {}
 local deathRemote = remote("DeathBurst") -- where someone died and who killed them, for the coin burst
 local loadoutRemote = remote("SetLoadout")
 remotes.Parent = ReplicatedStorage
@@ -141,6 +146,14 @@ local function onFire(player: Player, raw: any)
 	-- them, however far apart.
 	local collaterals: { [GunTargets.Target]: boolean } = {}
 	local headshot = false
+	-- For the kill rewards: how many of this shot's bullets hit each target, and whether one hit its head.
+	local struck: { [GunTargets.Target]: { bullets: number, head: boolean } } = {}
+	local function strike(target: GunTargets.Target, head: boolean)
+		local hit = struck[target] or { bullets = 0, head = false }
+		hit.bullets += 1
+		hit.head = hit.head or head
+		struck[target] = hit
+	end
 	local impacts = {}
 	local shots = {}
 	local origin = Vector3.new(shot.origin.x, shot.origin.y, shot.origin.z)
@@ -153,6 +166,7 @@ local function onFire(player: Player, raw: any)
 			-- It passes through them all, so the tracer runs on to whatever stops it, with blood on each body.
 			for _, hit in hits do
 				collaterals[hit.target] = true
+				strike(hit.target, hit.zone == "Head")
 				headshot = headshot or hit.zone == "Head"
 				table.insert(shots, {
 					to = origin + line * hit.distance,
@@ -170,6 +184,7 @@ local function onFire(player: Player, raw: any)
 			if first then
 				local isHead = first.zone == "Head"
 				totals[first.target] = (totals[first.target] or 0) + Damage.hit(gun, first.distance, isHead)
+				strike(first.target, isHead)
 				headshot = headshot or isHead
 			elseif wall then
 				table.insert(impacts, { position = wall.Position, normal = wall.Normal })
@@ -191,16 +206,45 @@ local function onFire(player: Player, raw: any)
 		totals[target] = math.huge
 	end
 	local announced = false -- a collateral is told to the shooter once, however many bodies it went through
+	local kills: { KillRewards.Kill } = {}
 	for target, amount in totals do
 		if amount > 0 then
+			local fullHealth = target.shield == nil and target.health >= target.humanoid.MaxHealth
 			local killed = if collaterals[target] then GunTargets.kill(target) else GunTargets.damage(target, amount)
 			if killed then
 				deathRemote:FireAllClients(target.root.Position, player) -- the killer, who the coins fly to
+				local hit = struck[target]
+				table.insert(kills, {
+					victim = target.player or target.model,
+					-- Players pay, and so will anything else given the PaysKill attribute (River's bots, later).
+					-- The test dummy has neither and never pays.
+					pays = target.player ~= nil or target.model:GetAttribute("PaysKill") == true,
+					head = hit ~= nil and hit.head,
+					fullHealth = fullHealth,
+					bullets = if hit then hit.bullets else 1,
+					distance = (target.root.Position - shooter.root.Position).Magnitude,
+				})
+				local victim = target.player
+				if victim and records[victim] then
+					KillRewards.died(records[victim])
+				end
 			end
 			local collateral = collaterals[target] == true and not announced
 			announced = announced or collateral
 			hitRemote:FireClient(player, { headshot = headshot, killed = killed, collateral = collateral })
 		end
+	end
+	if #kills > 0 then
+		-- The server alone decides what the kills are worth and adds it to the killer's saved Credits.
+		local record = records[player] or KillRewards.newRecord()
+		records[player] = record
+		local lines, total = KillRewards.forShot(kills, next(collaterals) ~= nil, record, os.clock())
+		local data = PlayerCards.get(player)
+		if total > 0 and data then
+			data.credits = math.min(data.credits + total, CardConfig.MaxCredits)
+			PlayerCards.changed(player)
+		end
+		rewardRemote:FireClient(player, lines, total)
 	end
 end
 
@@ -263,6 +307,9 @@ end
 
 local function onPlayer(player: Player)
 	local function onCharacter(character: Model)
+		if records[player] then
+			KillRewards.died(records[player]) -- a new life, however the last one ended
+		end
 		applyLoadout(player)
 		GunTargets.add(character, player)
 	end
@@ -285,6 +332,7 @@ for _, player in Players:GetPlayers() do
 end
 Players.PlayerRemoving:Connect(function(player)
 	loadouts[player] = nil
+	records[player] = nil
 	requestWindows[player] = nil
 end)
 

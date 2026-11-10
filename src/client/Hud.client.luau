@@ -15,6 +15,7 @@ local CardData = require(script.Parent.CardData)
 local CardFace = require(script.Parent.CardFace)
 local CardInHand = require(script.Parent.CardInHand)
 local TypeLabel = require(script.Parent.TypeLabel)
+local KillPopups = require(script.Parent.KillPopups)
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local Cards = require(CardCore:WaitForChild("Cards"))
 local CardIndex = require(CardCore:WaitForChild("CardIndex"))
@@ -22,6 +23,7 @@ local HudText = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Hud
 
 local remotes = ReplicatedStorage:WaitForChild("GunRemotes")
 local hitRemote = remotes:WaitForChild("HitConfirm") :: RemoteEvent
+local rewardRemote = remotes:WaitForChild("KillReward") :: RemoteEvent
 
 local BONE = Palette.Bone
 -- The hit marker: four dashes in an X around the crosshair.
@@ -118,6 +120,7 @@ end
 
 gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitToScreen)
 fitToScreen()
+KillPopups.start(hud, rewardRemote)
 
 local function number(style: string, color: Color3, right: boolean?, position: UDim2): any
 	return TypeLabel.new(

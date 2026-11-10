@@ -54,6 +54,7 @@ local listed = {
 	cardspin_spec = true,
 	cardflourish_spec = true,
 	loosen_spec = true,
+	killrewards_spec = true,
 	akreload_spec = true,
 	skipburst_spec = true,
 	cardtext_spec = true,
@@ -74,6 +75,7 @@ require("./cardmotion_spec")
 require("./cardspin_spec")
 require("./cardflourish_spec")
 require("./loosen_spec")
+require("./killrewards_spec")
 require("./akreload_spec")
 require("./skipburst_spec")
 require("./cardtext_spec")

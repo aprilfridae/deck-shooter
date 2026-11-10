@@ -1,8 +1,8 @@
 # Kill rewards and pop-ups
 
-**Status:** designed with River on 2026-11-10. Not built yet.
+**Status:** built on 2026-11-10, waiting on River's check in Play. The rules and the timing are tested; the look, and real Credits landing between two players, are not.
 
-**Values will live in:** `src/shared/Guns/KillRewards.luau` for the amounts and rules. The pop-ups' timings and sizes will be constants at the top of `src/client/KillPopups.luau`.
+**Values live in:** `src/shared/Guns/KillRewards.luau` for the amounts and rules, `src/shared/Guns/Hud/KillPopupTiming.luau` for the pop-ups' timings, and the constants at the top of `src/client/KillPopups.luau` for where they sit and their type.
 
 ## Goal
 
@@ -29,7 +29,7 @@ A kill should feel good the way it does in Call of Duty: lines pop up beside the
 
 ## Who pays
 
-- A target pays if it carries the pays flag. Player characters have it.
+- A target pays if it's a player's character, or its model has the attribute `PaysKill = true`.
 - The test dummy doesn't have it and never pays.
 - River plans bots that pass for players once there are maps. They get the flag and pay exactly as players do. Nothing else needs to change for them.
 - A kill of a target that doesn't pay still shows its lines, with no amounts and no total, so the pop-ups can be seen and tuned alone in the test room.
@@ -52,14 +52,14 @@ The same victim pays the same killer only once every 20 seconds. A second kill i
 - They stack just right of the crosshair, newest on top, older lines sliding down. Up to 5 show; the oldest drops off.
 - Each line is its name on the left and its amount on the right, like `ONE SHOT ONE KILL   +100`.
 - A line punches in at 1.25 times its size and settles in 0.12s, holds for 2s, and fades over 0.3s.
-- Above the stack one total, like `+850 CR`, counts up to its new value over 0.35s each time lines arrive, and clears after 2.5s with nothing new.
+- Above the stack one total, like `+850 CR` (plain digits: the HUD's type has no comma), counts up to its new value over 0.35s each time lines arrive, and clears after 2.5s with nothing new.
 - They use the HUD's own type (`TypeLabel`): names in Bone, amounts and the total in Signal Acid, which is the colour of the coins that fly into the killer.
-- They hide with the rest of the HUD (the title screen, the scope).
+- They hide with the rest of the HUD (the title screen, the Outpost). They stay up while scoped, so a Longscope kill shows them. One shot's lines land 0.07s apart, the kill first.
 - No sound yet. Each line kind has a slot for one, so River can add them later.
 
 ## Checks
 
-- Lune: `killrewards_spec` covers each line's rule, that lines stack, the amounts, streak counts and their reset, that a target without the flag shows lines and pays nothing, and the 20 second rule. `killpopups_spec` covers the pure timing: a line's size and fade at each moment, the stack's order and its limit of 5, and the total's count-up and clearing.
+- Lune: `killrewards_spec` covers each line's rule, that lines stack, the amounts, streak counts and their reset, that a target without the flag shows lines and pays nothing, and the 20 second rule; and the pop-ups' pure timing: a line's size and fade at each moment, and the total's count-up and clearing.
 - River in Play: the look and feel, on the dummy. Real Credits landing needs Studio's two-player test, because only players pay.
 
 ## Not in this
