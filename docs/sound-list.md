@@ -42,6 +42,7 @@ What the game already plays and what it still needs. Checked against the code on
 | Landings | `move-land-soft`, `move-land-hard` | Landing after at least 0.15s in the air. Hard if the fall reached 60 studs per second (a fast fall or long drop), else soft. |
 | Bullet flybys | `bullet-whizz-1` to `16` | Someone else's bullet passes within 6 studs of your head and misses. Mono, played in 3D along the bullet's path (`docs/specs/guns.md`). River's takes were trimmed to 0.5s and folded to mono. |
 | Slide start | `move-slide-start-v2` | Every slide as it begins, including one started by landing (River's "SLIDE", 1.29s) |
+| Slide layer | `move-slide-layer-1` to `-15` | On top of the slide start, one take at random, never the same twice running (River's "SLIDE START" takes) |
 | Pack open | `pack-open-common`, `-rarer`, `-rarest` | Once as a pack spins in, in the Menu volume group. Common for Field, rarer for Redline and Prototype, rarest for Zero-Day. |
 
 ## Still needed
