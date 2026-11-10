@@ -207,10 +207,19 @@ local function printFace(index: number)
 	gui.Name = "Print"
 	gui.Face = Enum.NormalId.Top
 	gui.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
-	gui.CanvasSize = Vector2.new(PRINT_WIDTH, PRINT_WIDTH * 240 / 150)
+	-- The top of a card part runs its long way across, so the face is laid on it turned a quarter.
+	local height = PRINT_WIDTH * 240 / 150
+	gui.CanvasSize = Vector2.new(height, PRINT_WIDTH)
+	local turned = Instance.new("Frame")
+	turned.BackgroundTransparency = 1
+	turned.AnchorPoint = Vector2.new(0.5, 0.5)
+	turned.Position = UDim2.fromScale(0.5, 0.5)
+	turned.Size = UDim2.fromOffset(PRINT_WIDTH, height)
+	turned.Rotation = 90
+	turned.Parent = gui
 	gui.LightInfluence = 1
 	gui.Parent = parts[index]
-	CardFace.new(gui, { cardId = entry.cardId, tier = entry.tier, variant = entry.variant, width = PRINT_WIDTH })
+	CardFace.new(turned, { cardId = entry.cardId, tier = entry.tier, variant = entry.variant, width = PRINT_WIDTH })
 	prints[index] = gui
 	faces[index].Transparency = 1 -- the print has the image too
 end
