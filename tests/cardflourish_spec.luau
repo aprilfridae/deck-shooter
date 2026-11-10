@@ -50,6 +50,30 @@ describe("CardFlourish", function()
 		end
 	end)
 
+	it("turns the next card face up onto the one the right hand holds", function()
+		local ended = CardFlourish.at(CardFlourish.LENGTH)
+		local first = ended.cards[CardFlourish.CHOSEN]
+		for turns = 1, 3 do
+			local pose = CardFlourish.turn(turns, 5)
+			expect(#pose.cards).toBe(CardFlourish.COUNT)
+			local top = CardFlourish.top(turns)
+			expect(top).toBe(CardFlourish.CHOSEN - turns)
+			local offset = first:PointToObjectSpace(pose.cards[top].Position)
+			expect(math.abs(offset.X) < 0.001 and math.abs(offset.Z) < 0.001 and offset.Y > 0).toBe(true)
+			for index, frame in pose.cards do
+				expect(frame.UpVector:Dot(-frame.Position) > 0).toBe(index >= top and index <= CardFlourish.CHOSEN)
+			end
+		end
+		local start = CardFlourish.turn(1, 0).cards[CardFlourish.CHOSEN - 1]
+		expect((start.Position - ended.cards[CardFlourish.CHOSEN - 1].Position).Magnitude < 0.05).toBe(true)
+	end)
+
+	it("crushes the card turned to", function()
+		local crush = CardFlourish.crush(CardFlourish.LENGTH, CardFlourish.CRUSH, 2)
+		expect(crush.card).toBe(CardFlourish.CHOSEN - 2)
+		expect((crush.pose.cards[crush.card].Position - crush.palm).Magnitude < 1e-4).toBe(true)
+	end)
+
 	it("holds its end", function()
 		local last = CardFlourish.at(CardFlourish.LENGTH).cards[1]
 		local later = CardFlourish.at(CardFlourish.LENGTH + 10).cards[1]

@@ -468,6 +468,9 @@ local snapAt: number? = nil
 local cardAt: number? = nil
 local cardUsed = 0 -- how many cards had been used when this one came out
 local crushAt: number? = nil -- when the card in hand was used
+local cardTurns = 0 -- CardInHand.turns as of the last look
+local turns = 0 -- how many times the card held has been changed since the cards came out
+local turnAt = 0 -- when it last was
 local shownFrame: any = nil -- what's on screen, with any snap laid over it
 local shownBase: any = nil
 local shownSnap: any = nil
@@ -971,8 +974,20 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 		cardAt = now
 		holsterAt = cardAt
 		cardUsed = CardInHand.used
+		cardTurns, turns = CardInHand.turns, 0
 	end
 	local elapsed = (crushAt or now) - (cardAt :: number) - drop
+	if CardInHand.turns ~= cardTurns then
+		cardTurns = CardInHand.turns
+		if elapsed >= 0 then -- turning to another card skips what's left of the flourish and flips the next one over
+			turns += 1
+			turnAt = now
+			if elapsed < CardFlourish.LENGTH then
+				cardAt = now - drop - CardFlourish.LENGTH
+				elapsed = CardFlourish.LENGTH
+			end
+		end
+	end
 	if elapsed < 0 then
 		return false
 	end
@@ -982,10 +997,13 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 		table.clear(history)
 	end
 	local held = camera.CFrame * cardSway
-	local crush = if crushAt then CardFlourish.crush(elapsed, now - crushAt) else nil
-	local pose = if crush then crush.pose else CardFlourish.at(elapsed)
+	local crush = if crushAt then CardFlourish.crush(elapsed, now - crushAt, turns) else nil
+	local pose = if crush
+		then crush.pose
+		elseif turns > 0 then CardFlourish.turn(turns, now - turnAt)
+		else CardFlourish.at(elapsed)
 	ViewArms.holdCards(pose.right, pose.left, pose.fingers)
-	CardView.show(camera, held, pose.cards, crush)
+	CardView.show(camera, held, pose.cards, crush, CardFlourish.top(turns))
 	ViewArms.place(camera, held)
 	return true
 end

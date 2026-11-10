@@ -24,6 +24,10 @@ local burst = false -- whether this card has burst yet
 local faces: { Decal } = {}
 local holder: Folder? = nil
 local shown = false
+local art: { string } = {} -- the image of the card in each deck slot
+local topShown: number? = nil -- the card showing the held card's art
+local slotShown: number? = nil -- and the slot it shows
+local shrunk: number? = nil -- the card the crush has shrunk
 
 local CORNER = CardFlourish.CARD_SIZE.X * 10 / 150 -- the card art's corners (tools/make-card-art.py)
 local rounded: BasePart? = nil -- a card cut with those corners, once it's made
@@ -147,7 +151,8 @@ end
 -- Deals the player's deck through the cards over and over, with the card in hand on top of the right hand's half.
 local function dress()
 	local snapshot = CardData.get()
-	local art = {}
+	table.clear(art)
+	topShown, slotShown = nil, nil
 	if snapshot then
 		for slot, entry in snapshot.deck do
 			local variant = CardIndex.variant(snapshot.stacks, entry.cardId, entry.tier)
@@ -167,29 +172,40 @@ local CardView = {}
 -- Puts the card in hand back to full size, ready for the next one.
 local function restore()
 	burst = false
-	local card = parts[CardFlourish.CHOSEN]
+	local card = shrunk and parts[shrunk]
 	if card then
 		card.Size = CardFlourish.CARD_SIZE
 	end
+	shrunk = nil
 end
 
--- cards is where each card is, relative to view. crush is the card in hand being crushed, if it is.
-function CardView.show(camera: Camera, view: CFrame, cards: { CFrame }, crush: CardFlourish.Crush?)
+-- cards is where each card is, relative to view. crush is the card in hand being crushed, if it is. top is the card
+-- that's face up on top in the right hand, which shows the card held.
+function CardView.show(camera: Camera, view: CFrame, cards: { CFrame }, crush: CardFlourish.Crush?, top: number)
 	holder = holder or make()
 	if not shown then
 		shown = true
 		dress()
 	end
+	local slot = CardInHand.slot
+	if slot and (top ~= topShown or slot ~= slotShown) then
+		topShown, slotShown = top, slot
+		faces[top].Texture = art[slot] or ""
+	end
 	if crush then
 		local left = math.max(1 - crush.crushed, 0.01)
-		parts[CardFlourish.CHOSEN].Size = CardFlourish.CARD_SIZE * Vector3.new(left, 1, left);
+		if shrunk ~= crush.card then
+			restore()
+			shrunk = crush.card
+		end
+		parts[crush.card].Size = CardFlourish.CARD_SIZE * Vector3.new(left, 1, left);
 		(fist :: BasePart).CFrame = view * CFrame.new(crush.palm)
 		if crush.crushed >= 1 and not burst then
 			burst = true;
 			(shards :: ParticleEmitter):Emit(SHARDS);
 			(sparks :: ParticleEmitter):Emit(SPARKS)
 		end
-	elseif burst or parts[CardFlourish.CHOSEN].Size ~= CardFlourish.CARD_SIZE then
+	elseif burst or shrunk then
 		restore()
 	end
 	local placed = table.create(#cards)

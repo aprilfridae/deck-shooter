@@ -452,15 +452,63 @@ end
 
 local ended: Pose? = nil
 
-export type Crush = { pose: Pose, crushed: number, palm: Vector3 }
+-- The pose the flourish ends on. Nothing changes it.
+local function final(): Pose
+	local pose = ended or CardFlourish.at(LENGTH)
+	ended = pose
+	return pose
+end
+
+local TOP_FRAME = frameOf(TOP) -- the chosen card back on top of the deck
+local TURN_FINGERS: { FingerKey } = { -- the right thumb lifts to let the next card land, then comes down on it
+	{ at = FLIP_AT, shape = RIGHT_CARD },
+	{ at = 5.2, shape = RIGHT_CATCH },
+	{ at = 5.52, shape = RIGHT_CARD },
+}
+
+-- The card that's face up on top in the right hand after the held card has been turned `turns` times. Each turn
+-- takes the next card down the deck, and after HALF of them they start again.
+function CardFlourish.top(turns: number): number
+	return CHOSEN - turns % HALF
+end
+
+-- Turning to the next card: the flourish is done, the held card has been changed `turns` times, the last of them
+-- `since` seconds ago. The left thumb flips the deck's top card across, and it lands face up on the cards the right
+-- hand already holds.
+function CardFlourish.turn(turns: number, since: number): Pose
+	local done = final()
+	local over = turns % HALF
+	local at = FLIP_AT + math.clamp(since, 0, 10) * SPEED
+	local leftGive = SINK * (-0.012 * knock(at - FLIP_AT))
+	local rightGive = CATCH * (0.035 * knock(at - CAUGHT_AT + 0.04))
+	local cards = table.create(COUNT)
+	for index, frame in done.cards do
+		cards[index] = frame + leftGive
+	end
+	for under = 0, over - 1 do
+		cards[CHOSEN - under] = done.cards[CHOSEN] * CFrame.new(0, under * THICKNESS, 0) + rightGive
+	end
+	-- A card's own y turns over with it, so the one offset starts it lower in the deck and lands it on top.
+	cards[CHOSEN - over] = frameOf(flowing(FLIP, at)) * CFrame.new(0, over * THICKNESS, 0) + rightGive
+	return {
+		cards = cards,
+		right = done.right + rightGive,
+		left = done.left + leftGive,
+		fingers = { Right = fingersAt(TURN_FINGERS, at), Left = fingersAt(LEFT_FINGERS, at) },
+	}
+end
+
+export type Crush = { pose: Pose, crushed: number, palm: Vector3, card: number }
 
 -- The card being used: `since` seconds ago, with the flourish `elapsed` seconds in. Wherever things were, the right
 -- hand snatches its card and closes into a fist around it, and the rest of the deck squares up in the left.
--- crushed is how far gone the card is, from 0 to 1, and palm is the middle of the fist.
-function CardFlourish.crush(elapsed: number, since: number): Crush
-	local pose = CardFlourish.at(elapsed)
-	local final = ended or CardFlourish.at(LENGTH)
-	ended = final
+-- crushed is how far gone the card is, from 0 to 1, palm is the middle of the fist and card is the one crushed.
+-- turns is how many times the held card had been changed. The cards under it in the right hand go back to the deck.
+function CardFlourish.crush(elapsed: number, since: number, turns: number?): Crush
+	local turned = turns or 0
+	local chosen = CardFlourish.top(turned)
+	local pose = if turned > 0 then CardFlourish.turn(turned, 10) else CardFlourish.at(elapsed)
+	local final = final()
 	local grab = smooth(math.clamp(since / 0.12, 0, 1))
 	local fist = smooth(math.clamp((since - 0.06) / (BURST_AT - 0.06), 0, 1))
 	pose.right = pose.right:Lerp(final.right, grab) + SINK * (0.04 * knock(since - BURST_AT + 0.03)) -- the fist jolts shut
@@ -476,10 +524,16 @@ function CardFlourish.crush(elapsed: number, since: number): Crush
 	pose.fingers.Left = holding
 	local palm = (pose.right * CFrame.new(0.06, 0.32, 0)).Position
 	for index, frame in pose.cards do
-		pose.cards[index] = frame:Lerp(final.cards[index], grab) -- the deck snaps shut out of the fist's way
+		local to = final.cards[index]
+		if index == chosen then
+			to = final.cards[CHOSEN] -- held up in the right hand
+		elseif index == CHOSEN then
+			to = TOP_FRAME
+		end
+		pose.cards[index] = frame:Lerp(to, grab) -- the deck snaps shut out of the fist's way
 	end
-	local card = pose.cards[CHOSEN]
-	pose.cards[CHOSEN] = card - card.Position + card.Position:Lerp(palm, fist)
+	local card = pose.cards[chosen]
+	pose.cards[chosen] = card - card.Position + card.Position:Lerp(palm, fist)
 	local digits: Shape = {}
 	for bone, aims in pose.fingers.Right do
 		local closed = {}
@@ -490,7 +544,7 @@ function CardFlourish.crush(elapsed: number, since: number): Crush
 		digits[bone] = closed
 	end
 	pose.fingers.Right = digits
-	return { pose = pose, crushed = fist, palm = palm }
+	return { pose = pose, crushed = fist, palm = palm, card = chosen }
 end
 
 return CardFlourish
