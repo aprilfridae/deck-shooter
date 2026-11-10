@@ -231,10 +231,10 @@ local VIEW_KICKS: { [string]: any } = {
 	-- A hard, snappy kick that never goes the same way twice: it rolls to either side (sides), and each shot's
 	-- climb, shove, roll and twist vary twice as much as other guns' (loose).
 	["Energy Pistol"] = {
-		back = 0.24, drop = 0.06, up = 14, roll = 4, rise = 0.04, stiff = 70, damp = 12.5, sides = true, loose = 2,
-		left = 5, -- degrees the muzzle kicks to the left as well
+		back = 0.2, drop = 0.05, up = 11, roll = 3.5, rise = 0.04, stiff = 70, damp = 12.5, sides = true, loose = 2,
+		left = 4, -- degrees the muzzle kicks to the left as well
 		stillLeft = true, -- the kick is the gun hand's: the left hand stays where it is
-		wrist = 18, -- degrees more the gun snaps up about the wrist, on top of the whole arm's kick
+		wrist = 10, -- degrees more the gun snaps up about the wrist, on top of the whole arm's kick
 		-- Its soft spring (it was 165 and 19.1) takes about twice as long to bring it home.
 	},
 	Shotgun = { back = 0.605, drop = 0.132, up = 14.3, roll = -6.6, rise = 0.081, stiff = 52.5, damp = 10.4 },
