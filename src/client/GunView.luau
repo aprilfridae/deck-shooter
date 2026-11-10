@@ -230,7 +230,9 @@ local VIEW_KICKS: { [string]: any } = {
 	-- A hard, snappy kick that never goes the same way twice: it rolls to either side (sides), and each shot's
 	-- climb, shove, roll and twist vary twice as much as other guns' (loose).
 	["Energy Pistol"] = {
-		back = 0.24, drop = 0.06, up = 14, roll = 4, rise = 0.04, stiff = 165, damp = 19.1, sides = true, loose = 2,
+		back = 0.24, drop = 0.06, up = 14, roll = 4, rise = 0.04, stiff = 70, damp = 12.5, sides = true, loose = 2,
+		left = 5, -- degrees the muzzle kicks to the left as well
+		-- Its soft spring (it was 165 and 19.1) takes about twice as long to bring it home.
 	},
 	Shotgun = { back = 0.605, drop = 0.132, up = 14.3, roll = -6.6, rise = 0.081, stiff = 52.5, damp = 10.4 },
 	Longscope = { back = 0.935, drop = 0.242, up = 20.9, roll = -12.1, rise = 0.103, stiff = 41.2, damp = 8.7 },
@@ -1296,7 +1298,11 @@ function GunView.update(
 	-- No two shots kick quite alike: each climbs, shoves, rolls and twists a little more or less.
 	local climb = viewKick.up * shot.up * kick
 	local recoil = CFrame.new(0, -viewKick.drop * kick, viewKick.back * shot.back * kick)
-		* CFrame.Angles(math.rad(climb), math.rad(climb * shot.yaw), math.rad(viewKick.roll * shot.roll * kickRoll * kick))
+		* CFrame.Angles(
+			math.rad(climb),
+			math.rad(climb * shot.yaw + (viewKick.left or 0) * kick),
+			math.rad(viewKick.roll * shot.roll * kickRoll * kick)
+		)
 	local slow = viewKick.settle
 	if slow and config then
 		-- Still spraying while the next shot is due; a beat after that the gun starts home.
