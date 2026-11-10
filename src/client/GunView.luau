@@ -76,6 +76,13 @@ local CLIP_FINGERS: { [string]: { [string]: { [string]: { Vector3 } } } } = {
 				Vector3.new(-0.094, -0.027, 0.019).Unit, -- then in to the trigger
 				Vector3.new(-1, 0, 0.05).Unit, -- and its tip across the front of the blade
 			},
+			-- The thumb lay forward along the right side of the gun. It wraps round the back of the grip instead:
+			-- across behind it, round onto its left side, and forward along that.
+			Pulgar = {
+				Vector3.new(-0.9, -0.2, -0.2).Unit, -- dipping under the back of the receiver
+				Vector3.new(-0.75, -0.1, -0.65).Unit,
+				Vector3.new(-0.2, -0.15, -0.97).Unit,
+			},
 		},
 	},
 }
