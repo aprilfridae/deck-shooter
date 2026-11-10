@@ -572,19 +572,20 @@ end
 local function makeSmears()
 	for i = 1, SMEAR_COPIES do
 		local gun = (view :: any):Clone()
-		-- A coded reload moves the magazine and bolt and shows a spare magazine. The blur copies keep theirs in
-		-- the gun, wherever the real ones were when the copy was made, and have no spare.
+		-- A coded reload moves the magazine and bolt and shows a spare magazine. The blur copies' magazine and bolt
+		-- follow the real ones (see drawSmear), and they have no spare.
 		local rests = {}
 		for _, moving in codeParts do
-			rests[moving.part.Name] = moving.rest
+			rests[moving.part.Name] = moving
 		end
-		local parts = {}
+		local parts, movers = {}, {}
 		for _, part in gun:GetDescendants() do
 			if part:IsA("BasePart") and part.Name == "Spare" then
 				part:Destroy()
 			elseif part:IsA("BasePart") then
-				if rests[part.Name] then
-					part.CFrame = gun:GetPivot() * rests[part.Name]
+				local real = rests[part.Name]
+				if real then
+					table.insert(movers, { part = part, rest = real.rest, slides = real.slides })
 				end
 				table.insert(parts, part)
 			end
@@ -592,7 +593,13 @@ local function makeSmears()
 		if gun:IsA("BasePart") then
 			table.insert(parts, gun)
 		end
-		smears[i] = { gun = gun, parts = parts, arms = ViewArms.makeGhost(), share = i / (SMEAR_COPIES + 1) }
+		smears[i] = {
+			gun = gun,
+			parts = parts,
+			movers = movers,
+			arms = ViewArms.makeGhost(),
+			share = i / (SMEAR_COPIES + 1),
+		}
 	end
 end
 
@@ -624,7 +631,20 @@ local function drawSmear(camera: Camera, whole: any, base: CFrame, hold: CFrame)
 		for _, part in smear.parts do
 			part.Transparency = transparency
 		end
-		smear.gun:PivotTo(hold * from.gun:Lerp(whole.gun, smear.share))
+		local placed = hold * from.gun:Lerp(whole.gun, smear.share)
+		smear.gun:PivotTo(placed)
+		if whole.mag and #smear.movers > 0 then
+			-- The copy's magazine and bolt go where the real ones are, trailing like the gun. A magazine that has
+			-- just changed places (the old one gone, the new one in) doesn't streak between the two.
+			local was = from.mag or whole.mag
+			local near = (was.Position - whole.mag.Position).Magnitude < 0.6
+			local swapped = placed * (if near then was:Lerp(whole.mag, smear.share) else whole.mag)
+			local back = (from.bolt or whole.bolt)
+			local slid = placed * CFrame.new(0, 0, back + (whole.bolt - back) * smear.share)
+			for _, moving in smear.movers do
+				moving.part.CFrame = (if moving.slides then slid else swapped) * moving.rest
+			end
+		end
 		smear.gun.Parent = camera
 		if smear.arms and whole.bones and from.bones and clips then
 			-- Hands a coded reload has moved trail from where they were, like the gun.
@@ -1255,6 +1275,13 @@ function GunView.update(
 		shown = held * HIP:Inverse() * frame.gun * codeTurn
 		-- What the blur trails: the clip's pose with a coded reload's turn of the gun and its moved hands.
 		smearFrame = { gun = whole.gun * codeTurn, bones = whole.bones, palms = clipPalms }
+		if codeReload then
+			-- Where the magazine and bolt are in the gun, so the blur's copies can put theirs there too.
+			local per, origin = codeReload.perMetre, codeReload.origin
+			local mag = if codePose then codePose.mag else CFrame.identity
+			smearFrame.mag = CFrame.new(origin + mag.Position * per) * mag.Rotation * CFrame.new(-origin)
+			smearFrame.bolt = if codePose then codePose.bolt * per else 0
+		end
 	else
 		local now = os.clock()
 		-- A gun drawn bigger moves forward by its extra length, so its stock stays clear of the camera.
