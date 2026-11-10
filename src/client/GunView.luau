@@ -1336,7 +1336,10 @@ function GunView.update(
 		return
 	end
 	if clips and codePose then
-		hideSmears() -- the blur copies don't turn with a reload keyed in code
+		-- The blur copies don't turn with a reload keyed in code. What they remember is dropped too, or they'd come
+		-- back at the end trailing from wherever the gun was before the reload.
+		hideSmears()
+		table.clear(history)
 	elseif clips and shownFrame then
 		drawSmear(camera, shownFrame, base, base * held * HIP:Inverse())
 	elseif not clips then
