@@ -33,6 +33,14 @@ local gripShift: { right: Vector3, left: Vector3 }? = nil
 local SHOULDERS: { [string]: { [string]: Vector3 } } = { Longscope = { Left = Vector3.new(-0.55, -1.8, 0.2) } }
 -- How far a thumb curls around the gun, in radians at the tip.
 local THUMB_WRAPS: { [string]: { [string]: number } } = { Longscope = { Left = math.rad(70) } }
+-- Guns with a lever: the parts named Lever_... swing about `pivot` and the ones named Bolt_... slide back with it.
+-- pivot and slide are in the stored model's studs from its middle (see docs/HANDOFF.md for the lever rifle's
+-- numbers); swing is how far the lever opens, down and forward.
+local LEVERS: { [string]: { pivot: Vector3, swing: number, slide: number } } = {
+	Longscope = { pivot = Vector3.new(0, -1.82, 9.1), swing = math.rad(55), slide = 6.08 },
+}
+local lever: { pivot: Vector3, swing: number, slide: number }? = nil -- the gun shown's, in view studs
+local leverParts: { { part: BasePart, rest: CFrame, slides: boolean } } = {}
 local BLOCK_SECTION = Vector2.new(0.3, 0.4)
 local BARREL_RISE = 0.26 -- how far above the model's middle the barrel sits, as a share of its height
 local BARREL_RISES: { [string]: number } = { Longscope = 0.098 } -- guns whose barrel sits somewhere else
@@ -153,8 +161,9 @@ local RELOADS: { [string]: any } = {
 		},
 	},
 	-- gun-sniper-base.wav, from the shot: the blast, a rising click from 1s peaking at 1.04s, a clunk at 1.32s and a
-	-- whirr to 1.6s. The gun spins once backwards round the trigger finger while the blast rings out, the left hand
-	-- drives the cell home on the click, and pushes the gun back to ready through the clunk and whirr.
+	-- whirr to 1.6s. The gun spins once backwards round the trigger finger while the blast rings out and the left
+	-- hand catches it; the right hand throws the lever open on the click, slams it shut on the clunk, and the gun
+	-- settles back to ready through the whirr.
 	Longscope = {
 		length = 1.714,
 		-- It reloads after every shot, so its keys start at the shot: the reload itself begins lead seconds later.
@@ -168,7 +177,10 @@ local RELOADS: { [string]: any } = {
 			to = 0.62,
 			points = { { 0, 0, 2 }, { 0.15, 0.25, 1.3 }, { 0.26, 0.55, 3.4 }, { 0.62, 1, 0.6 } },
 		},
-		smoothFrom = 1.31, -- seconds in: the return to ready gets a touch more smoothing on top
+		smoothFrom = 1.4, -- seconds in: the return to ready gets a touch more smoothing on top
+		-- How far open the lever is (0 to 1) at each time: thrown open into the click, held, and slammed shut on the
+		-- clunk. Each move speeds up into its stop.
+		lever = { { 0.92, 0 }, { 1.03, 1 }, { 1.2, 1 }, { 1.32, 0 } },
 		keys = {
 			key(0, CFrame.identity, Vector3.zero),
 			-- The shot heaves it back and up, slowly enough to feel the hit, knocking the left hand off; then it sinks
@@ -183,20 +195,18 @@ local RELOADS: { [string]: any } = {
 			key(0.56, tilt(1, -1, 1, 0.01, 0.47, 0.02), Vector3.new(0.01, -0.03, 0), "flow"), -- and comes back down, the hand already easing down to meet it
 			key(0.62, tilt(4, -2, 2, 0.02, 0.41, 0.02), Vector3.zero, "flow"), -- landing in the hand
 			key(0.68, tilt(9, -3, -8, -0.01, 0.25, 0.02), Vector3.new(0, -0.04, 0), "flow"), -- both hands drop with the weight straight away
-			key(0.79, tilt(14, -5, 0, -0.04, 0.12, 0.03), Vector3.new(0, -0.2, 0.15), "flow"), -- then sinks back down
-			-- CLICK: the gun tips to show the cell slot, the hand pulls back to load up, then drives the cell in on
-			-- the sound and the gun bumps up off the hit and settles.
-			key(0.86, tilt(18, -6, 2, -0.06, 0, 0.03), Vector3.new(0, -0.4, 0.32), "flow"),
-			key(0.98, tilt(20, -6, -2, -0.06, -0.04, 0.02), Vector3.new(0, -0.42, 0.36), "flow"), -- holds there, loaded, sagging under the hand
-			key(1.03, tilt(18, -6, 2, -0.06, 0, 0.03), Vector3.new(0.02, -0.02, 0.24), "in"), -- CLICK: drives the cell in
-			key(1.08, tilt(12, -5, 15, -0.05, 0.17, 0.1), Vector3.new(0.02, 0.06, 0.24), "out"), -- and the hit shoves the gun up and back
-			key(1.15, tilt(21, -7, -3, -0.07, -0.05, 0.02), Vector3.new(0.02, -0.03, 0.24)), -- drops back past
-			key(1.22, tilt(20, -7, 1, -0.07, -0.01, 0.03), Vector3.new(0.02, -0.01, 0.24), "flow"),
-			-- CLICK release: a small wind-up further into the tilt, then the left hand drives forward and pushes the gun
-			-- with it as it eases back round to ready, and it settles.
-			key(1.31, tilt(24, -8, -1, -0.08, -0.03, 0.05), Vector3.new(0.02, -0.02, 0.3), "flow"),
-			key(1.5, tilt(3, -1, 3, -0.01, 0.04, -0.14), Vector3.new(0, 0, -0.06), "flow"), -- the hand shoves it forward as it turns back
-			key(1.64, tilt(-1, 0.3, -0.5, 0.002, -0.006, 0.015), Vector3.zero, "flow"), -- and it rocks back a touch
+			key(0.79, tilt(10, -4, 2, -0.03, 0.1, 0.03), Vector3.zero, "flow"), -- then it sinks into both hands, canted a little
+			-- CLICK: the left hand keeps hold of the fore-end and the right hand throws the lever open, down and
+			-- forward. The throw shoves the gun down and forward and kicks its muzzle up, and it rebounds.
+			key(0.92, tilt(12, -4, 3, -0.03, 0.05, 0.03), Vector3.zero, "flow"), -- a small wind-up
+			key(1.03, tilt(9, -3, 6, -0.02, -0.07, -0.08), Vector3.zero, "in"), -- CLICK: the lever hits its stop
+			key(1.09, tilt(10, -3, 1, -0.02, -0.02, -0.04), Vector3.zero, "out"),
+			key(1.2, tilt(11, -4, 2, -0.03, -0.03, -0.03), Vector3.zero, "flow"), -- held open
+			-- CLUNK: the hand slams the lever shut, which shoves the gun up and back and dips its muzzle, and it
+			-- eases back round to ready and settles.
+			key(1.32, tilt(6, -2, -5, -0.01, 0.07, 0.1), Vector3.zero, "in"),
+			key(1.4, tilt(3, -1, -1, 0, 0.02, 0.04), Vector3.zero, "out"),
+			key(1.55, tilt(-1, 0.3, -0.5, 0.002, -0.006, 0.015), Vector3.zero, "flow"), -- and it rocks back a touch
 			key(1.77, CFrame.identity, Vector3.zero, "flow"),
 		},
 	},
@@ -289,8 +299,25 @@ function flowing(keys: any, index: number, u: number): CFrame
 	return CFrame.new(hermite(keys, index, u, placeOf)) * turned
 end
 
+-- How far open a reload has the gun's lever, 0 to 1.
+local function leverAt(reload: any, at: number): number
+	local track = reload.lever
+	if not track or at <= track[1][1] then
+		return 0
+	end
+	for index = 2, #track do
+		local from, to = track[index - 1], track[index]
+		if at < to[1] then
+			local u = (at - from[1]) / (to[1] - from[1])
+			return from[2] + (to[2] - from[2]) * u * u
+		end
+	end
+	return track[#track][2]
+end
+
 -- A reload with a lead counts from the shot before it, and only the part after the lead stretches.
-local function reloadPose(reload: any, elapsed: number, reloadTime: number): (CFrame, Vector3, number)
+-- Returns the gun's move, the left hand's, the spin and how far open the lever is.
+local function reloadPose(reload: any, elapsed: number, reloadTime: number): (CFrame, Vector3, number, number)
 	local lead = reload.lead or 0
 	local at = if elapsed < lead then elapsed else lead + (elapsed - lead) * reload.length / reloadTime
 	local keys = reload.keys
@@ -300,13 +327,13 @@ local function reloadPose(reload: any, elapsed: number, reloadTime: number): (CF
 			local from = keys[index - 1]
 			local u = (at - from.at) / (to.at - from.at)
 			if to.ease == "flow" then
-				return flowing(keys, index, u), flowHand(keys, index, u), spinAt(reload, at)
+				return flowing(keys, index, u), flowHand(keys, index, u), spinAt(reload, at), leverAt(reload, at)
 			end
 			u = eased(to.ease, u)
-			return from.gun:Lerp(to.gun, u), from.hand:Lerp(to.hand, u), spinAt(reload, at)
+			return from.gun:Lerp(to.gun, u), from.hand:Lerp(to.hand, u), spinAt(reload, at), leverAt(reload, at)
 		end
 	end
-	return CFrame.identity, Vector3.zero, 0
+	return CFrame.identity, Vector3.zero, 0, 0
 end
 
 -- Scoping in and out is quick on a gun that can scope.
@@ -454,6 +481,7 @@ local keyedReloadAt: number? = nil -- when a keyed reload started, or the shot t
 local layerAt: number? = nil -- when a clip gun's reload layer started; it plays to its end even if the reload ends first
 local layerShown = CFrame.identity
 local reloadShown, handShown = CFrame.identity, Vector3.zero -- a code-posed gun's reload, smoothed
+local leverOpen = 0 -- how far open the gun shown's lever is, 0 to 1
 local snapAt: number? = nil
 local cardAt: number? = nil
 local cardUsed = 0 -- how many cards had been used when this one came out
@@ -779,6 +807,20 @@ function GunView.setGun(gunId: string, slot: string)
 	length = if isSidearm then SIDEARM_LENGTH else PRIMARY_LENGTH
 	barrelRise = 0
 	view = makeModel(GunConfig.guns[gunId].name) or makeBlock()
+	lever = nil
+	table.clear(leverParts)
+	local levered = LEVERS[GunConfig.guns[gunId].name]
+	if levered and view:IsA("Model") then
+		local scale = MODEL_SCALE * viewScale
+		lever = { pivot = levered.pivot * scale, swing = levered.swing, slide = levered.slide * scale }
+		local middle = view:GetPivot()
+		for _, part in view:GetDescendants() do
+			local swings, slides = part.Name:find("^Lever_") ~= nil, part.Name:find("^Bolt_") ~= nil
+			if part:IsA("BasePart") and (swings or slides) then
+				table.insert(leverParts, { part = part, rest = middle:ToObjectSpace(part.CFrame), slides = slides })
+			end
+		end
+	end
 	-- The hold that puts the sight's back end straight in front of the eye.
 	scopeAim = nil
 	local scope = SCOPES[GunConfig.guns[gunId].name]
@@ -1112,6 +1154,7 @@ function GunView.update(
 		-- A gun drawn bigger moves forward by its extra length, so its stock stays clear of the camera.
 		local forward = CFrame.new(0, 0, -length * (1 - 1 / viewScale) / 2)
 		local reloadGun, reloadHand, spin = CFrame.identity, Vector3.zero, 0
+		leverOpen = 0
 		-- A keyed reload plays to its last key, even if the reload ends first.
 		if keyedReloadAt and keyedReload and config and not reloading then
 			local lead = keyedReload.lead or 0
@@ -1131,7 +1174,7 @@ function GunView.update(
 			local lead = keyedReload.lead or 0
 			local last = lead + (keyedReload.keys[#keyedReload.keys].at - lead) * config.reload / keyedReload.length
 			local at = Loosen.tempo(now - keyedReloadAt, last, looseLife + now)
-			reloadGun, reloadHand, spin = reloadPose(keyedReload, at, config.reload)
+			reloadGun, reloadHand, spin, leverOpen = reloadPose(keyedReload, at, config.reload)
 			-- A touch of smoothing on the way back to ready, so a corner between two keys never shows as a step. The
 			-- clicks before that stay sharp.
 			local smooth = if now - keyedReloadAt >= (keyedReload.smoothFrom or 0) then 1 - math.exp(-dt * 25) else 1
@@ -1154,9 +1197,26 @@ function GunView.update(
 			left = table.clone(left)
 			left.wrist += reloadHand
 		end
+		if lever and leverOpen > 0 then
+			-- The right hand is in the lever's loop and rides it round.
+			local hinge = CFrame.Angles(lever.swing * leverOpen, 0, 0)
+			right = {
+				wrist = lever.pivot + hinge * (right.wrist - lever.pivot),
+				along = hinge * right.along,
+				thumb = hinge * right.thumb,
+			}
+		end
 		ViewArms.pose(shown, right, left, config and SHOULDERS[config.name], config and THUMB_WRAPS[config.name], hand, hand)
 	end
 	view:PivotTo(base * shown)
+	if lever and leverOpen > 0 then
+		local middle = base * shown
+		local swung = middle * CFrame.new(lever.pivot) * CFrame.Angles(lever.swing * leverOpen, 0, 0) * CFrame.new(-lever.pivot)
+		local slid = middle * CFrame.new(0, 0, lever.slide * leverOpen)
+		for _, moving in leverParts do
+			moving.part.CFrame = (if moving.slides then slid else swung) * moving.rest
+		end
+	end
 	view.Parent = camera
 	local pivot = view:GetPivot()
 	showFlash(camera, pivot * CFrame.new(0, barrelRise, -length / 2))
