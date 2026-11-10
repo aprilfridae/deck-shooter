@@ -67,6 +67,7 @@ local codeReloadAt: number? = nil -- when it started
 local codeReloading = false -- whether this reload has started it
 local codePose: any = nil -- this frame's
 local codeTurn = CFrame.identity -- this frame's turn of the gun, in view studs
+local smearFrame: any = nil -- this frame's pose for the motion blur, on a gun with clips
 local codeParts: { { part: BasePart, rest: CFrame, slides: boolean } } = {}
 local spareParts: { { part: BasePart, rest: CFrame } } = {} -- a second magazine, for while there are two
 local spareShown = false
@@ -571,9 +572,20 @@ end
 local function makeSmears()
 	for i = 1, SMEAR_COPIES do
 		local gun = (view :: any):Clone()
+		-- A coded reload moves the magazine and bolt and shows a spare magazine. The blur copies keep theirs in
+		-- the gun, wherever the real ones were when the copy was made, and have no spare.
+		local rests = {}
+		for _, moving in codeParts do
+			rests[moving.part.Name] = moving.rest
+		end
 		local parts = {}
 		for _, part in gun:GetDescendants() do
-			if part:IsA("BasePart") then
+			if part:IsA("BasePart") and part.Name == "Spare" then
+				part:Destroy()
+			elseif part:IsA("BasePart") then
+				if rests[part.Name] then
+					part.CFrame = gun:GetPivot() * rests[part.Name]
+				end
 				table.insert(parts, part)
 			end
 		end
@@ -615,11 +627,21 @@ local function drawSmear(camera: Camera, whole: any, base: CFrame, hold: CFrame)
 		smear.gun:PivotTo(hold * from.gun:Lerp(whole.gun, smear.share))
 		smear.gun.Parent = camera
 		if smear.arms and whole.bones and from.bones and clips then
+			-- Hands a coded reload has moved trail from where they were, like the gun.
+			local palms: { [string]: CFrame }? = nil
+			if whole.palms then
+				local between = {}
+				for side, palm in whole.palms do
+					local was = from.palms and from.palms[side] or palm
+					between[side] = was:Lerp(palm, smear.share)
+				end
+				palms = between
+			end
 			ViewArms.poseGhost(
 				smear.arms,
 				clips.meshOffset,
 				ArmClip.blendBones(from.bones, whole.bones, smear.share),
-				clipPalms
+				palms
 			)
 			ViewArms.placeGhost(smear.arms, camera, transparency, base)
 		elseif smear.arms then
@@ -816,7 +838,7 @@ function GunView.setGun(gunId: string, slot: string)
 	lever = nil
 	table.clear(leverParts)
 	codeReload, codeReloadAt, codeReloading, codePose = nil, nil, false, nil
-	codeTurn, spareShown = CFrame.identity, false
+	codeTurn, spareShown, smearFrame = CFrame.identity, false, nil
 	table.clear(codeParts)
 	table.clear(spareParts)
 	local coded = CODE_RELOADS[GunConfig.guns[gunId].name]
@@ -1014,6 +1036,7 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 		if not crushAt or now - crushAt >= CardFlourish.CRUSH then
 			cardAt, crushAt = nil, nil
 			shownFrame, shownBase, shownSnap = nil, nil, nil
+			smearFrame = nil
 			CardView.hide()
 			ViewArms.clearBlur()
 			return false
@@ -1230,6 +1253,8 @@ function GunView.update(
 		ViewArms.showFrame(clips.meshOffset, whole.bones, clipPalms)
 		-- Reloading and scoping still move the whole hold, on top of the clip.
 		shown = held * HIP:Inverse() * frame.gun * codeTurn
+		-- What the blur trails: the clip's pose with a coded reload's turn of the gun and its moved hands.
+		smearFrame = { gun = whole.gun * codeTurn, bones = whole.bones, palms = clipPalms }
 	else
 		local now = os.clock()
 		-- A gun drawn bigger moves forward by its extra length, so its stock stays clear of the camera.
@@ -1335,13 +1360,8 @@ function GunView.update(
 		end
 		return
 	end
-	if clips and codePose then
-		-- The blur copies don't turn with a reload keyed in code. What they remember is dropped too, or they'd come
-		-- back at the end trailing from wherever the gun was before the reload.
-		hideSmears()
-		table.clear(history)
-	elseif clips and shownFrame then
-		drawSmear(camera, shownFrame, base, base * held * HIP:Inverse())
+	if clips and smearFrame then
+		drawSmear(camera, smearFrame, base, base * held * HIP:Inverse())
 	elseif not clips then
 		-- Guns posed in code trail too, so the Longscope's reload spin and kick blur.
 		drawSmear(camera, { gun = shown }, base, base)
