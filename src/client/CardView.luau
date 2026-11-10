@@ -1,4 +1,5 @@
 -- The deck of cards held in view: one thin part per card, each showing one of the player's own cards.
+local GeometryService = game:GetService("GeometryService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
@@ -24,11 +25,54 @@ local faces: { Decal } = {}
 local holder: Folder? = nil
 local shown = false
 
-local function makeCard(): (BasePart, Decal)
+local CORNER = CardFlourish.CARD_SIZE.X * 10 / 150 -- the card art's corners (tools/make-card-art.py)
+local rounded: BasePart? = nil -- a card cut with those corners, once it's made
+
+local function block(size: Vector3, at: CFrame?): Part
 	local part = Instance.new("Part")
+	part.Size = size
+	part.CFrame = at or CFrame.identity
+	part.Anchored = true
+	return part
+end
+
+-- Cuts the rounded card: two slabs in a cross, and a disc in each corner. The cards stay solid, so the outline on
+-- the hands can't show through them, and they're square until this is done or if it can't be.
+local function cut()
+	local size = CardFlourish.CARD_SIZE
+	local inX, inZ = size.X / 2 - CORNER, size.Z / 2 - CORNER
+	local pieces: { Instance } = { block(Vector3.new(inX * 2, size.Y, size.Z)) }
+	for _, x in { -inX, inX } do
+		for _, z in { -inZ, inZ } do
+			local disc = block(Vector3.new(size.Y, CORNER * 2, CORNER * 2), CFrame.new(x, 0, z) * CFrame.Angles(0, 0, math.pi / 2))
+			disc.Shape = Enum.PartType.Cylinder
+			table.insert(pieces, disc)
+		end
+	end
+	local done, unions = pcall(function()
+		return GeometryService:UnionAsync(block(Vector3.new(size.X, size.Y, inZ * 2)), pieces, {
+			CollisionFidelity = Enum.CollisionFidelity.Box,
+			RenderFidelity = Enum.RenderFidelity.Precise,
+		})
+	end)
+	if not done or not unions[1] then
+		return
+	end
+	rounded = unions[1]
+	if holder then -- cards made square so far are made again
+		holder:Destroy()
+		holder, shown = nil, false
+		table.clear(parts)
+		table.clear(faces)
+	end
+end
+
+local function makeCard(): (BasePart, Decal)
+	local part: BasePart = if rounded then rounded:Clone() else Instance.new("Part")
 	part.Name = "Card"
 	part.Size = CardFlourish.CARD_SIZE
-	part.Transparency = 1 -- only its two images show, so the card has their rounded corners
+	part.Color = Palette.Bone
+	part.Material = Enum.Material.SmoothPlastic
 	part.Anchored = true
 	part.CanCollide = false
 	part.CanQuery = false
@@ -115,6 +159,8 @@ local function dress()
 		face.Texture = if #art > 0 then art[(index - CardFlourish.HALF + chosen - 1) % #art + 1] else ""
 	end
 end
+
+task.spawn(cut)
 
 local CardView = {}
 

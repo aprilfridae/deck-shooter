@@ -38,12 +38,16 @@ local FAN_AT = 3.55 -- the fan snaps open
 local SINK = Vector3.new(0, -1, 0.3) -- the way a hand gives, relative to the camera
 local CATCH = Vector3.new(0.7, -0.6, 0.2) -- and the way the right hand gives when the flipped card slaps into it
 
--- A knock: a quick dip that rings out, `since` seconds after something lands.
+local function smooth(share: number): number
+	return share * share * (3 - 2 * share)
+end
+
+-- A knock: a dip that rings out, `since` seconds after something lands. It eases in, so nothing jumps.
 local function knock(since: number): number
 	if since < 0 then
 		return 0
 	end
-	return math.exp(-since * 13) * math.sin(since * 32)
+	return math.exp(-since * 8) * math.sin(since * 17) * smooth(math.min(since / 0.1, 1))
 end
 
 type Key = { at: number, x: number, y: number, z: number, yaw: number, pitch: number, roll: number }
@@ -124,10 +128,6 @@ local FAN: { Key } = {
 	key(4.1, 1, 0, 0, 0),
 	key(4.4, 0, 0, 0, 0),
 }
-
-local function smooth(share: number): number
-	return share * share * (3 - 2 * share)
-end
 
 -- How far along a move is. It only half slows into each key, so one move runs on into the next.
 local function eased(share: number): number
@@ -408,7 +408,7 @@ function CardFlourish.at(elapsed: number): Pose
 	local cards = table.create(COUNT)
 	-- The left hand sinks as the deck piles into it, jumps as the top half is pulled off and flicked, and is knocked
 	-- down when the half is dropped back on.
-	local piled = math.clamp((at - SPRING_FROM - FLIGHT) / (SPRING_TO - SPRING_FROM), 0, 1)
+	local piled = smooth(math.clamp((at - SPRING_FROM - FLIGHT) / (SPRING_TO - SPRING_FROM), 0, 1))
 	local loaded = piled - smooth(math.clamp((at - LANDED_AT) / 0.4, 0, 1))
 	local dropped = SINK * (0.045 * knock(at - JOINED_AT + 0.03))
 	local leftGive = SINK
