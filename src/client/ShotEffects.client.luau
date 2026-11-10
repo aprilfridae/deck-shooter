@@ -308,6 +308,7 @@ local coins: { any } = {}
 -- Coins burst out of a body when it dies, hang for a moment, then are pulled to whoever made the kill.
 local function burstCoins(position: Vector3, killer: Player?)
 	GunAudio.playCoins(position)
+	local burst = { sucked = false } -- whether this burst's pull has made its sound yet
 	for index = 1, COINS do
 		local part = Instance.new("Part")
 		part.Name = "Coin"
@@ -349,6 +350,7 @@ local function burstCoins(position: Vector3, killer: Player?)
 		table.insert(coins, {
 			part = part,
 			pulling = false, -- whether code has taken it over from physics
+			burst = burst,
 			position = part.Position,
 			velocity = Vector3.zero,
 			turn = CFrame.identity,
@@ -372,6 +374,10 @@ local function stepCoins(dt: number)
 			if not coin.pulling then
 				-- Code takes it from wherever physics left it, still moving and spinning as it was.
 				coin.pulling = true
+				if not coin.burst.sucked then
+					coin.burst.sucked = true
+					GunAudio.playCoinSuck(root :: BasePart) -- once, as the first one goes
+				end
 				coin.position = coin.part.Position
 				coin.velocity = coin.part.AssemblyLinearVelocity
 				coin.turn = coin.part.CFrame.Rotation

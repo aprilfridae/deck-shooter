@@ -176,6 +176,7 @@ return {
 	["card-flourish-v3.wav"] = 133066073811053,
 	["card-flourish-v4.wav"] = 100369725877403,
 	["card-skip.wav"] = 86943457721698,
+	["coin-suck.wav"] = 94729858756188,
 	["gun-sniper-1.wav"] = 80989143421566,
 	["gun-sniper-base.wav"] = 137458622482508,
 	["gun-sniper-10.wav"] = 101900741207161,

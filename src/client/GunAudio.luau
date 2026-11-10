@@ -49,6 +49,7 @@ for _, soundId in {
 	GunSounds.lands.hard,
 	GunSounds.slideStart,
 	GunSounds.coinBurst,
+	GunSounds.coinSuck,
 	GunSounds.snap,
 	GunSounds.cardFlourish,
 	GunSounds.cardSkip,
@@ -227,6 +228,19 @@ end
 
 function GunAudio.playSnap()
 	task.delay(GunSounds.snapDelaySeconds, playCopy, others[GunSounds.snap], 0)
+end
+
+-- The coins being pulled in. It comes from the body they're going to and moves with it.
+function GunAudio.playCoinSuck(body: BasePart)
+	local copy = others[GunSounds.coinSuck]:Clone()
+	copy.RollOffMode = Enum.RollOffMode.InverseTapered
+	copy.RollOffMinDistance = COIN_NEAR
+	copy.RollOffMaxDistance = COIN_FAR
+	copy.Parent = body
+	copy.Ended:Once(function()
+		copy:Destroy()
+	end)
+	copy:Play()
 end
 
 function GunAudio.playCoins(position: Vector3)
