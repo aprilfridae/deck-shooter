@@ -25,14 +25,16 @@ local leftGrip = LEFT_GRIP_Z
 -- Where a gun's own shape needs the hands moved, in studs. The Longscope is a lever rifle: its right hand sits in
 -- the lever loop, behind and below the trigger, and its fore-end is shallow, so the left hand comes up to meet it.
 local GRIP_SHIFTS: { [string]: { right: Vector3, left: Vector3 } } = {
-	Longscope = { right = Vector3.new(0, 0, 0.54), left = Vector3.new(0, 0.08, 0) },
+	Longscope = { right = Vector3.new(0, 0, 0.54), left = Vector3.new(-0.07, 0.08, 0) },
 }
 local gripShift: { right: Vector3, left: Vector3 }? = nil
 -- Shoulders moved for a gun, in camera space. The Longscope's left arm comes up from below instead of
 -- reaching across the screen.
 local SHOULDERS: { [string]: { [string]: Vector3 } } = { Longscope = { Left = Vector3.new(-0.55, -1.8, 0.2) } }
 -- How far a thumb curls around the gun, in radians at the tip.
-local THUMB_WRAPS: { [string]: { [string]: number } } = { Longscope = { Left = math.rad(70) } }
+-- The lever rifle's fore-end is fat: the left hand sits a little to its left and its thumb only leans in, so the
+-- thumb rests up the side where it shows instead of curling into the wood.
+local THUMB_WRAPS: { [string]: { [string]: number } } = { Longscope = { Left = math.rad(25) } }
 -- Guns with a lever: the parts named Lever_... swing about `pivot` and the ones named Bolt_... slide back with it.
 -- pivot and slide are in the stored model's studs from its middle (see docs/HANDOFF.md for the lever rifle's
 -- numbers); swing is how far the lever opens, down and forward.
