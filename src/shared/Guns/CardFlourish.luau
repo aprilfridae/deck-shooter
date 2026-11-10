@@ -1,6 +1,6 @@
 -- The deck flourish played when a card comes out: the deck springs from the right hand to the left, the left hand
 -- tips it over and slides the top half off, the right hand takes that half, spins it, fans it open, then closes it
--- back onto the rest.
+-- back onto the rest. To finish, the left thumb flips the top card across and the right hand catches it.
 -- Everything is worked out on a stage: a flat plane in front of the camera, tilted to face it. On the stage x runs
 -- right, z runs down the screen and y comes toward the player. A card lying on it is upright with its face showing,
 -- and the hands stay behind the cards, with only thumbs and fingertips coming round to the front.
@@ -19,7 +19,11 @@ local FLIGHT_RISE = 0.07
 local SLIDE_AT = 1.85 -- the top half starts to slide off
 local CUT_AT = 2.2 -- the right hand has it
 local JOINED_AT = 4.75 -- and the halves are one deck again
-local LENGTH = 5.4
+local FLIP_AT = 4.95 -- the left thumb flips the top card off
+local CAUGHT_AT = 5.45 -- and the right hand has it
+local LENGTH = 5.9
+local CRUSH = 0.5 -- seconds the right hand takes to crush its card, once it's used
+local BURST_AT = 0.2 -- into the crush, the card is gone
 
 local FAN_PIVOT = Vector3.new(0.05, 0, 0.13) -- on the card, under the right thumb
 local FAN_TOP = -60 -- degrees the top card leans
@@ -54,6 +58,7 @@ local ASIDE = key(0, -0.34, 0.06, 0.04, -12, 0, -32) -- the left hand's half, ou
 local FINAL = key(0, -0.12, 0.04, 0.03, -12, 0, 0)
 local SPUN = key(0, 0.32, 0.18, -0.04, 15, 0, 0) -- the right hand's half after its spin
 local FANNED = key(0, 0.26, 0.2, -0.06, 0, 0, 0)
+local HELD = key(0, 0.3, 0.16, -0.02, 12, 0, 0) -- the card the right hand ends up holding
 local WAITING = key(0, 0.3, -0.02, 0.3, 10, 0, 0) -- where the right hand rests, low and out of the way
 
 -- The bottom half, which never leaves the left hand.
@@ -81,6 +86,14 @@ local RIGHT_HALF: { Key } = {
 	again(JOINED_AT, FINAL, 0, HALF_HEIGHT, 0, 1),
 	again(LENGTH, FINAL, 0, HALF_HEIGHT, 0, 1),
 }
+-- The top card's flip across to the right hand, turning over once on the way.
+local TOP = again(0, FINAL, 0, (COUNT - 1) * THICKNESS)
+local FLIP: { Key } = {
+	again(FLIP_AT, TOP),
+	key(5.2, 0.08, 0.38, -0.08, 0, 0, -180),
+	key(CAUGHT_AT, HELD.x, HELD.y, HELD.z, HELD.yaw, 0, -360),
+	key(LENGTH, HELD.x, HELD.y, HELD.z, HELD.yaw, 0, -360),
+}
 -- How far open the fan is, from 0 to 1, in a key's x.
 local FAN: { Key } = {
 	key(3.2, 0, 0, 0, 0),
@@ -93,6 +106,14 @@ local function smooth(share: number): number
 	return share * share * (3 - 2 * share)
 end
 
+-- How far along a move is. It only half slows into each key, so one move runs on into the next.
+local function eased(share: number): number
+	return (share + smooth(share)) / 2
+end
+
+-- Moments around a time, and how much each counts. Blending them rounds off the corner at every key.
+local TAPS = { { -0.1, 1 }, { -0.05, 2 }, { 0, 3 }, { 0.05, 2 }, { 0.1, 1 } }
+
 -- Where a keyed thing is at a time, easing in and out of every key.
 local function sample(keys: { Key }, at: number): Key
 	if at <= keys[1].at then
@@ -102,7 +123,7 @@ local function sample(keys: { Key }, at: number): Key
 		local to = keys[index]
 		if at <= to.at then
 			local from = keys[index - 1]
-			local share = smooth((at - from.at) / (to.at - from.at))
+			local share = eased((at - from.at) / (to.at - from.at))
 			local function mix(name: string): number
 				return (from :: any)[name] + ((to :: any)[name] - (from :: any)[name]) * share
 			end
@@ -110,6 +131,19 @@ local function sample(keys: { Key }, at: number): Key
 		end
 	end
 	return keys[#keys]
+end
+
+-- The same, with its corners rounded off.
+local function flowing(keys: { Key }, at: number): Key
+	local sum, total = key(at, 0, 0, 0, 0), 0
+	for _, tap in TAPS do
+		local there = sample(keys, at + tap[1])
+		for _, name in { "x", "y", "z", "yaw", "pitch", "roll" } do
+			(sum :: any)[name] += (there :: any)[name] * tap[2]
+		end
+		total += tap[2]
+	end
+	return key(at, sum.x / total, sum.y / total, sum.z / total, sum.yaw / total, sum.pitch / total, sum.roll / total)
 end
 
 -- Where a hand sits on a card, as its palm on the card's frame: the point `along` up its fingers from the wrist and
@@ -129,6 +163,7 @@ local LEFT_GRIP = grip("Left", Vector3.new(CARD_SIZE.X / 2, 0, 0.02), 0.5, 0.1, 
 -- The right hand before the spring: behind the deck, fingers hooked over its top edge.
 local SPRING_GRIP = grip("Right", Vector3.new(0, 0, -CARD_SIZE.Z / 2), 0.55, 0.1, -Vector3.zAxis, UP)
 -- The right hand on its half: behind it, reaching up from below, with the thumb round on its face.
+local CARD_GRIP = grip("Right", FAN_PIVOT, 0.38, 0.1, Vector3.new(-0.26, 0, -0.97), UP, 0.12) -- the same, on one card
 local PINCH_GRIP = grip("Right", FAN_PIVOT, 0.38, 0.1, Vector3.new(-0.26, 0, -0.97), UP, 0.12)
 
 type HandKey = { at: number, frame: CFrame }
@@ -151,7 +186,9 @@ local RIGHT_HAND: { HandKey } = {
 	held(4.1, FANNED, PINCH_GRIP),
 	held(4.45, again(0, RIGHT_HALF[8], 0, 0, 0, -1), PINCH_GRIP),
 	held(JOINED_AT, WAITING, PINCH_GRIP),
-	held(LENGTH, WAITING, PINCH_GRIP),
+	held(5.0, WAITING, PINCH_GRIP),
+	held(5.35, HELD, CARD_GRIP),
+	held(LENGTH, HELD, CARD_GRIP),
 }
 
 local function handAt(keys: { HandKey }, at: number): CFrame
@@ -162,14 +199,23 @@ local function handAt(keys: { HandKey }, at: number): CFrame
 		local to = keys[index]
 		if at <= to.at then
 			local from = keys[index - 1]
-			return from.frame:Lerp(to.frame, smooth((at - from.at) / (to.at - from.at)))
+			return from.frame:Lerp(to.frame, eased((at - from.at) / (to.at - from.at)))
 		end
 	end
 	return keys[#keys].frame
 end
 
+-- The same, with its corners rounded off.
+local function handFlowing(keys: { HandKey }, at: number): CFrame
+	local frame, total = CFrame.identity, 0
+	for _, tap in TAPS do
+		total += tap[2]
+		frame = frame:Lerp(handAt(keys, at + tap[1]), tap[2] / total)
+	end
+	return frame
+end
+
 local RIGHT_DECK_FRAME = frameOf(RIGHT_DECK)
-local PILE_FRAME = frameOf(PILE)
 local RISE = STAGE:VectorToWorldSpace(Vector3.new(0, FLIGHT_RISE, 0))
 
 -- How far up the squared deck a card sits. The left hand's half is the bottom one.
@@ -178,12 +224,12 @@ local function height(index: number): number
 end
 
 -- A card during the spring. They leave the face of the right hand's deck one by one and land from the bottom up.
-local function sprung(index: number, at: number): CFrame
+local function sprung(index: number, at: number, pile: CFrame): CFrame
 	local up = height(index)
 	local leaves = SPRING_FROM + (SPRING_TO - SPRING_FROM) * up / (COUNT - 1)
 	local share = math.clamp((at - leaves) / FLIGHT, 0, 1)
 	local from = RIGHT_DECK_FRAME * CFrame.new(0, (COUNT - 1 - up) * THICKNESS, 0)
-	local to = PILE_FRAME * CFrame.new(0, up * THICKNESS, 0)
+	local to = pile * CFrame.new(0, up * THICKNESS, 0)
 	local flying = from:Lerp(to, smooth(share))
 	return flying + RISE * math.sin(share * math.pi)
 end
@@ -248,6 +294,9 @@ local RIGHT_UNFOLD = shape("Right", { 0.8, 0.5, 0.2 }, { 0.6, 0.7, 0.1 }, 0.15, 
 local RIGHT_HOLD = shape("Right", { 0.7, 0.7, 0 }, { 0, 0.95, -0.3 }, 0.1, { 5, 3, 3 }) -- thumb on the face, fingers flat behind
 local RIGHT_SPIN = shape("Right", { 0.9, 0.35, 0.3 }, { 0.75, 0.6, 0.2 }, 0.32, { -4, 4, 6 }, { 0, 4, 6 }, { 3, 6, 6 }, { 8, 8, 8 }) -- thumb off, letting the half turn
 local RIGHT_FAN = shape("Right", { 0.7, 0.7, 0 }, { 0, 0.95, -0.3 }, 0.36, { 5, 3, 3 }) -- thumb on the pivot, fingers wide behind
+local RIGHT_CATCH = shape("Right", { 0.9, 0.4, 0.2 }, { 0.7, 0.6, 0.1 }, 0.14, { 8, 4, 4 }) -- open for the flipped card
+local RIGHT_CARD = shape("Right", { 0.7, 0.7, 0 }, { 0, 0.95, -0.3 }, 0.1, { 3, 2, 2 }) -- thumb down on one card
+local RIGHT_FIST = shape("Right", { 0.6, 0.7, -0.2 }, { 0.1, 0.6, -0.8 }, 0.02, { 60, 95, 70 })
 local RIGHT_REST = shape("Right", { 0.5, 0.7, 0.4 }, { 0.4, 0.85, 0.1 }, 0.08, { 12, 18, 14 })
 
 local RIGHT_FINGERS: { FingerKey } = {
@@ -268,6 +317,9 @@ local RIGHT_FINGERS: { FingerKey } = {
 	{ at = 4.4, shape = RIGHT_HOLD },
 	{ at = 4.5, shape = RIGHT_SPIN },
 	{ at = 4.9, shape = RIGHT_REST },
+	{ at = 5.05, shape = RIGHT_REST },
+	{ at = 5.35, shape = RIGHT_CATCH },
+	{ at = 5.52, shape = RIGHT_CARD },
 }
 local LEFT_FINGERS: { FingerKey } = {
 	{ at = 0, shape = LEFT_OPEN },
@@ -279,7 +331,10 @@ local LEFT_FINGERS: { FingerKey } = {
 	{ at = 4.3, shape = LEFT_HALVED },
 	{ at = 4.5, shape = LEFT_LIFT },
 	{ at = 4.75, shape = LEFT_LIFT },
-	{ at = 4.95, shape = LEFT_HOLD },
+	{ at = FLIP_AT, shape = LEFT_HOLD },
+	{ at = 5.05, shape = LEFT_PUSH },
+	{ at = 5.2, shape = LEFT_LIFT },
+	{ at = 5.55, shape = LEFT_HOLD },
 }
 
 -- One hand's fingers at a time, each finger a touch behind the one before it.
@@ -315,37 +370,85 @@ local CardFlourish = {
 	HALF = HALF,
 	LENGTH = LENGTH,
 	CARD_SIZE = CARD_SIZE,
+	CRUSH = CRUSH,
+	BURST_AT = BURST_AT,
 }
 
 export type Pose = { cards: { CFrame }, right: CFrame, left: CFrame, fingers: Hands }
 
 -- Every card, each hand's palm and how its fingers sit, relative to the camera, after elapsed seconds. It holds its
 -- end.
--- Cards 1 to HALF are the right hand's half, bottom up, and card HALF ends face up on top of the deck.
+-- Cards 1 to HALF are the right hand's half, bottom up, and card HALF is the one that ends in the right hand.
 function CardFlourish.at(elapsed: number): Pose
 	local at = math.clamp(elapsed, 0, LENGTH)
 	local cards = table.create(COUNT)
-	local leftHalf = frameOf(sample(LEFT_HALF, at))
+	local leftHalf = frameOf(flowing(LEFT_HALF, at))
 	if at < SPRING_TO + FLIGHT then
 		for index = 1, COUNT do
-			cards[index] = sprung(index, at)
+			cards[index] = sprung(index, at, leftHalf)
 		end
 	else
 		local rightHalf = if at < SLIDE_AT
 			then leftHalf * CFrame.new(0, HALF_HEIGHT, 0)
-			else frameOf(sample(RIGHT_HALF, at))
-		local open = sample(FAN, at).x
+			else frameOf(flowing(RIGHT_HALF, at))
+		local open = flowing(FAN, at).x
 		for index = 1, HALF do
 			cards[index] = fanned(rightHalf, index, open)
 			cards[HALF + index] = leftHalf * CFrame.new(0, (index - 1) * THICKNESS, 0)
 		end
+		if at > FLIP_AT then
+			cards[HALF] = frameOf(flowing(FLIP, at))
+		end
 	end
 	return {
 		cards = cards,
-		right = handAt(RIGHT_HAND, at),
+		right = handFlowing(RIGHT_HAND, at),
 		left = leftHalf * LEFT_GRIP,
 		fingers = { Right = fingersAt(RIGHT_FINGERS, at), Left = fingersAt(LEFT_FINGERS, at) },
 	}
+end
+
+local ended: Pose? = nil
+
+export type Crush = { pose: Pose, crushed: number, palm: Vector3 }
+
+-- The card being used: `since` seconds ago, with the flourish `elapsed` seconds in. Wherever things were, the right
+-- hand snatches its card and closes into a fist around it, and the rest of the deck squares up in the left.
+-- crushed is how far gone the card is, from 0 to 1, and palm is the middle of the fist.
+function CardFlourish.crush(elapsed: number, since: number): Crush
+	local pose = CardFlourish.at(elapsed)
+	local final = ended or CardFlourish.at(LENGTH)
+	ended = final
+	local grab = smooth(math.clamp(since / 0.12, 0, 1))
+	local fist = smooth(math.clamp((since - 0.06) / (BURST_AT - 0.06), 0, 1))
+	pose.right = pose.right:Lerp(final.right, grab)
+	pose.left = pose.left:Lerp(final.left, grab)
+	local holding: Shape = {}
+	for bone, aims in pose.fingers.Left do
+		local settled = {}
+		for joint, direction in aims do
+			settled[joint] = direction:Lerp(final.fingers.Left[bone][joint], grab).Unit
+		end
+		holding[bone] = settled
+	end
+	pose.fingers.Left = holding
+	local palm = (pose.right * CFrame.new(0.06, 0.32, 0)).Position
+	for index, frame in pose.cards do
+		pose.cards[index] = frame:Lerp(final.cards[index], grab) -- the deck snaps shut out of the fist's way
+	end
+	local card = pose.cards[HALF]
+	pose.cards[HALF] = card - card.Position + card.Position:Lerp(palm, fist)
+	local digits: Shape = {}
+	for bone, aims in pose.fingers.Right do
+		local closed = {}
+		for joint, direction in aims do
+			local open = direction:Lerp(final.fingers.Right[bone][joint], grab)
+			closed[joint] = open:Lerp(RIGHT_FIST[bone][joint], fist).Unit
+		end
+		digits[bone] = closed
+	end
+	pose.fingers.Right = digits
+	return { pose = pose, crushed = fist, palm = palm }
 end
 
 return CardFlourish

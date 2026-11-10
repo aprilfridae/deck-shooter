@@ -2,7 +2,7 @@
 local CardHand = {}
 
 function CardHand.new(): { [string]: any }
-	return { slot = nil, waitForRelease = false }
+	return { slot = nil, waitForRelease = false, used = 0 } -- used counts the cards used so far
 end
 
 -- A key press: pulls out a ready card, swaps to it, or puts away the one already held.
@@ -20,6 +20,7 @@ function CardHand.click(hand: any): number?
 	if slot then
 		hand.slot = nil
 		hand.waitForRelease = true
+		hand.used += 1
 	end
 	return slot
 end

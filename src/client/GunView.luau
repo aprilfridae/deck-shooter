@@ -8,6 +8,7 @@ local ArmClip = require(ReplicatedStorage.Guns.ArmClip)
 local ArmClips = require(ReplicatedStorage.Guns.ArmClips)
 local CardFlourish = require(ReplicatedStorage.Guns.CardFlourish)
 local GunConfig = require(ReplicatedStorage.Guns.GunConfig)
+local CardInHand = require(script.Parent.CardInHand)
 local CardView = require(script.Parent.CardView)
 local ViewArms = require(script.Parent.ViewArms)
 
@@ -465,6 +466,8 @@ local reloadShown, handShown = CFrame.identity, Vector3.zero -- a code-posed gun
 local holsterAt: number? = nil
 local snapAt: number? = nil
 local cardAt: number? = nil
+local cardUsed = 0 -- how many cards had been used when this one came out
+local crushAt: number? = nil -- when the card in hand was used
 local shownFrame: any = nil -- what's on screen, with any snap laid over it
 local shownBase: any = nil
 local shownSnap: any = nil
@@ -940,24 +943,36 @@ local function snapFrame(): (any, number)
 	return frame, weight * weight * (3 - 2 * weight)
 end
 
--- With a card out, the gun drops, then the hands play the deck flourish and hold the deck.
+-- With a card out, the gun drops, then the hands play the deck flourish and hold the deck. Using the card crushes it
+-- in the right hand before the gun comes back.
 -- Returns true while the card has the screen.
 local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boolean
+	local now = os.clock()
+	local drop = if clips then #clips.holster.frames / clips.holster.fps else 0
+	if cardOut and crushAt then
+		cardAt, crushAt = nil, nil -- another card came out mid-crush
+	end
 	if not cardOut then
-		if cardAt then
-			cardAt, holsterAt = nil, nil
-			equipAt = os.clock()
+		if not cardAt then
+			return false
+		end
+		if not crushAt and CardInHand.used ~= cardUsed and now - cardAt >= drop then
+			crushAt = now
+		end
+		if not crushAt or now - crushAt >= CardFlourish.CRUSH then
+			cardAt, holsterAt, crushAt = nil, nil, nil
+			equipAt = now
 			shownFrame, shownBase, shownSnap = nil, nil, nil
 			CardView.hide()
+			return false
 		end
-		return false
 	end
 	if not cardAt then
-		cardAt = os.clock()
+		cardAt = now
 		holsterAt = cardAt
+		cardUsed = CardInHand.used
 	end
-	local drop = if clips then #clips.holster.frames / clips.holster.fps else 0
-	local elapsed = os.clock() - (cardAt :: number) - drop
+	local elapsed = (crushAt or now) - (cardAt :: number) - drop
 	if elapsed < 0 then
 		return false
 	end
@@ -966,10 +981,11 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 		hideSmears()
 		table.clear(history)
 	end
-	local pose = CardFlourish.at(elapsed)
 	local held = camera.CFrame * cardSway
+	local crush = if crushAt then CardFlourish.crush(elapsed, now - crushAt) else nil
+	local pose = if crush then crush.pose else CardFlourish.at(elapsed)
 	ViewArms.holdCards(pose.right, pose.left, pose.fingers)
-	CardView.show(camera, held, pose.cards)
+	CardView.show(camera, held, pose.cards, crush)
 	ViewArms.place(camera, held)
 	return true
 end

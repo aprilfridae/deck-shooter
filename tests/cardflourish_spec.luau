@@ -17,15 +17,24 @@ describe("CardFlourish", function()
 		end
 	end)
 
-	it("ends as one squared deck with the right hand's half on top", function()
+	it("ends as one squared deck with one card flipped out of it", function()
 		local pose = CardFlourish.at(CardFlourish.LENGTH)
 		local bottom = pose.cards[CardFlourish.HALF + 1]
-		for _, frame in pose.cards do
+		for index, frame in pose.cards do
 			local offset = bottom:PointToObjectSpace(frame.Position)
-			expect(math.abs(offset.X) < 0.001 and math.abs(offset.Z) < 0.001).toBe(true)
+			local squared = math.abs(offset.X) < 0.001 and math.abs(offset.Z) < 0.001
+			expect(squared).toBe(index ~= CardFlourish.HALF)
 		end
-		local top = bottom:PointToObjectSpace(pose.cards[CardFlourish.HALF].Position)
+		local top = bottom:PointToObjectSpace(pose.cards[CardFlourish.HALF - 1].Position)
 		expect(top.Y > bottom:PointToObjectSpace(pose.cards[CardFlourish.COUNT].Position).Y).toBe(true)
+	end)
+
+	it("crushes the flipped card into the right hand from any moment", function()
+		for _, elapsed in { 0.5, 3.6, CardFlourish.LENGTH } do
+			local crush = CardFlourish.crush(elapsed, CardFlourish.CRUSH)
+			expect(crush.crushed).toBe(1)
+			expect((crush.pose.cards[CardFlourish.HALF].Position - crush.palm).Magnitude < 1e-4).toBe(true)
+		end
 	end)
 
 	it("holds its end", function()
