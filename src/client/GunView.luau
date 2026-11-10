@@ -6,6 +6,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ArmClip = require(ReplicatedStorage.Guns.ArmClip)
 local Loosen = require(ReplicatedStorage.Guns.Loosen)
+local AkReload = require(ReplicatedStorage.Guns.AkReload)
+local SoldierPose = require(ReplicatedStorage.Guns.SoldierPose)
 local ArmClips = require(ReplicatedStorage.Guns.ArmClips)
 local CardFlourish = require(ReplicatedStorage.Guns.CardFlourish)
 local GunConfig = require(ReplicatedStorage.Guns.GunConfig)
@@ -52,11 +54,19 @@ local BARREL_RISES: { [string]: number } = { Longscope = 0.098, M57 = 0.29 } -- 
 local modelShift = Vector3.zero -- the gun shown's, in view studs
 -- Hands moved along a gun from where its clips have them, in studs in the gun's own space. The M57's clips were made
 -- on the old model, whose fore-end was where the AK's magazine is, so the left hand goes forward to the handguard.
--- During a reload it eases back to where the clip has it, which is at the magazine.
 local CLIP_NUDGES: { [string]: { [string]: Vector3 } } = { M57 = { Left = Vector3.new(0, 0.05, -0.42) } }
-local NUDGE_EASE = 14 -- how fast it eases, a second
-local nudgeShare = 1
-local clipNudges: { [string]: CFrame }? = nil -- this frame's, in the clip's space
+local clipPalms: { [string]: CFrame }? = nil -- this frame's moved palms, in the clip's space
+-- The M57 is River's AK, and its reload's left hand, magazine and bolt are keyed in code on the AK's own shape
+-- (AkReload), over the old clip's gun and right hand. perMetre is the stored model's studs to a metre and middle
+-- is the model's middle in River's handoff (metres, +X muzzle, +Y left, +Z up).
+local CODE_RELOADS: { [string]: { reload: any, perMetre: number, middle: Vector3 } } = {
+	M57 = { reload = AkReload, perMetre = 91.09, middle = Vector3.new(0.137, -0.011, -0.0535) },
+}
+local codeReload: { reload: any, perMetre: number, origin: Vector3 }? = nil -- the gun shown's, in view studs
+local codeReloadAt: number? = nil -- when it started
+local codeReloading = false -- whether this reload has started it
+local codePose: any = nil -- this frame's
+local codeParts: { { part: BasePart, rest: CFrame, slides: boolean } } = {}
 local HIP = CFrame.new(0.9, -0.8, -2)
 local AIMED = CFrame.new(0, -0.55, -2)
 local RELOAD_DIP = CFrame.new(0, -0.7, 0) * CFrame.Angles(math.rad(-25), 0, 0)
@@ -635,7 +645,7 @@ local function drawSmear(camera: Camera, whole: any, base: CFrame, hold: CFrame)
 				smear.arms,
 				clips.meshOffset,
 				ArmClip.blendBones(from.bones, whole.bones, smear.share),
-				clipNudges
+				clipPalms
 			)
 			ViewArms.placeGhost(smear.arms, camera, transparency, base)
 		elseif smear.arms then
@@ -831,6 +841,26 @@ function GunView.setGun(gunId: string, slot: string)
 	view = makeModel(GunConfig.guns[gunId].name) or makeBlock()
 	lever = nil
 	table.clear(leverParts)
+	codeReload, codeReloadAt, codeReloading, codePose = nil, nil, false, nil
+	table.clear(codeParts)
+	local coded = CODE_RELOADS[GunConfig.guns[gunId].name]
+	if coded and view:IsA("Model") then
+		local perMetre = coded.perMetre * MODEL_SCALE * viewScale
+		local middle = coded.middle
+		codeReload = {
+			reload = coded.reload,
+			perMetre = perMetre,
+			-- Where the handoff's origin is from the spot the model turns about.
+			origin = modelShift + Vector3.new(middle.Y, -middle.Z, middle.X) * perMetre,
+		}
+		local pivot = view:GetPivot()
+		for _, part in view:GetDescendants() do
+			local swaps, slides = part.Name:find("^Mag_") ~= nil, part.Name:find("^Bolt_") ~= nil
+			if part:IsA("BasePart") and (swaps or slides) then
+				table.insert(codeParts, { part = part, rest = pivot:ToObjectSpace(part.CFrame), slides = slides })
+			end
+		end
+	end
 	local levered = LEVERS[GunConfig.guns[gunId].name]
 	if levered and view:IsA("Model") then
 		local scale = MODEL_SCALE * viewScale
@@ -1169,16 +1199,42 @@ function GunView.update(
 		local whole = if snap then ArmClip.overlay(frame, snap) else frame
 		shownFrame, shownBase, shownSnap = whole, frame, snap
 		local nudged = config and CLIP_NUDGES[config.name]
-		clipNudges = nil
+		local moved: { [string]: CFrame }? = nil
 		if nudged then
-			nudgeShare += ((if shownKind == "reload" then 0 else 1) - nudgeShare) * (1 - math.exp(-dt * NUDGE_EASE))
-			local moved = {}
+			local palms = SoldierPose.clipPalms(clips.meshOffset, whole.bones)
+			local nudgedPalms = {}
 			for side, by in nudged do
-				moved[side] = whole.gun * CFrame.new(by * nudgeShare) * whole.gun:Inverse()
+				nudgedPalms[side] = whole.gun * CFrame.new(by) * whole.gun:Inverse() * palms[side]
 			end
-			clipNudges = moved
+			moved = nudgedPalms
 		end
-		ViewArms.showFrame(clips.meshOffset, whole.bones, clipNudges)
+		-- A reload keyed in code takes the left hand off wherever the clip has it.
+		codePose = nil
+		if codeReload and config then
+			if reloading and not codeReloading then
+				codeReloadAt = os.clock()
+			end
+			codeReloading = reloading
+			local reload = codeReload.reload
+			local at = if codeReloadAt then (os.clock() - codeReloadAt) * reload.SOUND / config.reload else math.huge
+			if at >= reload.LENGTH or (not reloading and at < reload.SOUND * 0.95) then
+				codeReloadAt = nil -- done, or cut short
+			else
+				local pose = reload.at(at)
+				codePose = pose
+				if pose.weight > 0 then
+					local palms = moved or {}
+					local rest = palms.Left or SoldierPose.clipPalms(clips.meshOffset, whole.bones).Left
+					local onGun = whole.gun
+						* CFrame.new(codeReload.origin + pose.palm.Position * codeReload.perMetre)
+						* pose.palm.Rotation
+					palms.Left = rest:Lerp(onGun, pose.weight)
+					moved = palms
+				end
+			end
+		end
+		clipPalms = moved
+		ViewArms.showFrame(clips.meshOffset, whole.bones, clipPalms)
 		-- Reloading and scoping still move the whole hold, on top of the clip.
 		shown = held * HIP:Inverse() * frame.gun
 	else
@@ -1247,6 +1303,16 @@ function GunView.update(
 		local slid = middle * CFrame.new(0, 0, lever.slide * leverOpen)
 		for _, moving in leverParts do
 			moving.part.CFrame = (if moving.slides then slid else swung) * moving.rest
+		end
+	end
+	if codeReload and codePose and clips then
+		-- The magazine goes with the hand and the bolt carrier slides back, from where the gun's turn left them.
+		local pose, per, origin = codePose, codeReload.perMetre, codeReload.origin
+		local middle = base * shown
+		local swapped = middle * CFrame.new(origin + pose.mag.Position * per) * pose.mag.Rotation * CFrame.new(-origin)
+		local slid = middle * CFrame.new(0, 0, pose.bolt * per)
+		for _, moving in codeParts do
+			moving.part.CFrame = (if moving.slides then slid else swapped) * moving.rest
 		end
 	end
 	view.Parent = camera

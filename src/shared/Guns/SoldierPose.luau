@@ -182,22 +182,25 @@ function SoldierPose.palm(gun: CFrame, grip: Grip): CFrame
 end
 
 -- One clip frame, as a frame for each part. offset is the clip's meshOffset.
--- nudges moves a hand from where the clip has it, by side name, in the space the offset puts the clip in: for a gun
--- whose shape isn't the one the clip was made on.
-function SoldierPose.fromBones(pose: any, offset: CFrame, bones: any, nudges: { [string]: CFrame }?): { [string]: CFrame }
+-- palms puts a hand's palm somewhere other than where the clip has it, by side name, in the space the offset puts
+-- the clip in: for a gun whose shape isn't the one the clip was made on. Its fingers keep the clip's shape, turned
+-- with the palm.
+function SoldierPose.fromBones(pose: any, offset: CFrame, bones: any, palms: { [string]: CFrame }?): { [string]: CFrame }
 	local parts = {}
 	for _, side in { pose.right, pose.left } do
 		local palm = offset * palmOf(bones, side.prefix)
-		local nudge = nudges and nudges[side.name]
-		if nudge then
-			palm = nudge * palm
+		local turned = CFrame.identity
+		local moved = palms and palms[side.name]
+		if moved then
+			turned = moved.Rotation * palm.Rotation:Inverse()
+			palm = moved
 		end
 		local hand = palm * side.handOnPalm
 		poseArm(side, hand, palm, parts)
 		for _, digit in side.digits do
 			local aims = digitAims(bones, side.prefix, digit.bone)
 			for index, aim in aims do
-				aims[index] = offset:VectorToWorldSpace(aim)
+				aims[index] = turned * offset:VectorToWorldSpace(aim)
 			end
 			poseDigit(digit.segments, hand, aims, parts)
 		end
