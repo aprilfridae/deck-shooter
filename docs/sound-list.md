@@ -23,7 +23,7 @@ What the game already plays and what it still needs. Checked against the code on
 | Energy Pistol shots | `gun-pistol-1` to `30` | Each shot, 150ms apart |
 | Assault reload | `reload-assault-v4` | B33 reload (0.985s; the file runs on with a silent tail) |
 | Card skip | `card-skip` | Every right click with the cards out, which turns to the next card and cuts the flourish short if it's still playing (River's "RIGHT CLICK SKIP", 0.86s) |
-| Card flourish | `card-flourish-v3` | Taking the cards out (River's "CARD ANIMATION 3", 6.9s). Starts with the flourish; faded over 0.15s when the cards go away or the flourish is skipped |
+| Card flourish | `card-flourish-v4` | Taking the cards out (River's "CARD ANIMATION TEST 1", 3.64s, about the flourish's 3.6s). Starts with the flourish; faded over 0.15s when the cards go away or the flourish is skipped |
 | AK reload | `reload-assault-v5` | M57 reload (River's "assult reload like deadass", 1.714s file, over by about 1.5s; the reload is 2s) |
 | Longscope shot base | `gun-sniper-base` | Every Longscope shot, under the take (the Longscope has no reload sound) |
 | Coin burst | `coin-burst` | A kill's coins, from the body |

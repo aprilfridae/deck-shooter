@@ -83,7 +83,7 @@ local GunSounds = {
 	-- The coins a body bursts into when it dies.
 	coinBurst = sound("coin-burst.wav"),
 	-- Taking the cards out: it plays under the flourish, and is cut when the cards go away or the flourish is skipped.
-	cardFlourish = sound("card-flourish-v3.wav"),
+	cardFlourish = sound("card-flourish-v4.wav"),
 	-- Right click cutting the flourish short.
 	cardSkip = sound("card-skip.wav"),
 	-- Each pack rarity's opening sound.
