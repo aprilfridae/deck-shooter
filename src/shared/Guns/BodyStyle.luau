@@ -4,8 +4,10 @@ local Palette = require(script.Parent.Palette)
 return {
 	skin = Palette.DeepNavy,
 	material = Enum.Material.SmoothPlastic,
-	glow = Palette.DeepNavy, -- the outline: Deep Navy, #29324F (it was Data Cyan)
+	-- The outline: Deep Navy (#29324F) brightened about two and a half times, so it shows against the navy bodies
+	-- and dark walls. It was Data Cyan.
+	glow = Color3.fromRGB(104, 127, 201),
 	glowFill = 1, -- how see-through the glow is over the body itself: there is none, only the outline (it was 0.82)
-	glowEdge = 0.3, -- and the outline
+	glowEdge = 0.1, -- and the outline
 	depthMode = Enum.HighlightDepthMode.Occluded,
 }
