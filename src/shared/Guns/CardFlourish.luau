@@ -10,6 +10,7 @@ local COUNT = 32 -- cards in the deck
 local HALF = COUNT / 2 -- cards in the half the right hand takes, which is the top one
 local THICKNESS = 0.003 -- of one card, so the deck is about 0.1 thick
 local CARD_SIZE = Vector3.new(0.28, 0.002, 0.448) -- sized to the soldier's hands
+local CHOSEN = 1 -- the card that ends in the right hand: the bottom of the right hand's half, until that turns over
 local HALF_HEIGHT = HALF * THICKNESS
 
 local SPRING_FROM = 0.1 -- the first card leaves the right hand
@@ -58,7 +59,7 @@ local ASIDE = key(0, -0.34, 0.06, 0.04, -12, 0, -32) -- the left hand's half, ou
 local FINAL = key(0, -0.12, 0.04, 0.03, -12, 0, 0)
 local SPUN = key(0, 0.32, 0.18, -0.04, 15, 0, 0) -- the right hand's half after its spin
 local FANNED = key(0, 0.26, 0.2, -0.06, 0, 0, 0)
-local HELD = key(0, 0.42, 0.16, -0.02, 12, 0, 0) -- the card the right hand ends up holding
+local HELD = key(0, 0.5, 0.16, -0.02, 12, 0, 0) -- the card the right hand ends up holding
 local WAITING = key(0, 0.3, -0.02, 0.3, 10, 0, 0) -- where the right hand rests, low and out of the way
 
 -- The bottom half, which never leaves the left hand.
@@ -74,6 +75,11 @@ local LEFT_HALF: { Key } = {
 }
 -- The top half from when it slides off: the right hand takes it, spins it once as it turns face up, fans it, then
 -- drops it back on.
+-- The same, turned face down.
+local function over(k: Key): Key
+	return key(k.at, k.x, k.y, k.z, k.yaw, k.pitch, k.roll + 180)
+end
+
 local RIGHT_HALF: { Key } = {
 	again(SLIDE_AT, TIPPED, 0, HALF_HEIGHT),
 	again(CUT_AT, TIPPED, 0.14, HALF_HEIGHT, 0.24),
@@ -83,16 +89,16 @@ local RIGHT_HALF: { Key } = {
 	again(3.65, FANNED, 0, 0, 0, 1),
 	again(4.1, FANNED, 0, 0, 0, 1),
 	key(4.45, -0.04, 0.34, 0.01, 360 + FINAL.yaw),
-	again(JOINED_AT, FINAL, 0, HALF_HEIGHT, 0, 1),
-	again(LENGTH, FINAL, 0, HALF_HEIGHT, 0, 1),
+	over(again(JOINED_AT, FINAL, 0, (COUNT - 1) * THICKNESS, 0, 1)), -- it lands face down
+	over(again(LENGTH, FINAL, 0, (COUNT - 1) * THICKNESS, 0, 1)),
 }
--- The top card's flip across to the right hand, turning over once on the way.
-local TOP = again(0, FINAL, 0, (COUNT - 1) * THICKNESS)
+-- The top card's flip across to the right hand, turning face up on the way.
+local TOP = over(again(0, FINAL, 0, (COUNT - 1) * THICKNESS))
 local FLIP: { Key } = {
 	again(FLIP_AT, TOP),
-	key(5.2, 0.15, 0.4, -0.08, 0, 0, -180),
-	key(CAUGHT_AT, HELD.x, HELD.y, HELD.z, HELD.yaw, 0, -360),
-	key(LENGTH, HELD.x, HELD.y, HELD.z, HELD.yaw, 0, -360),
+	key(5.2, 0.2, 0.4, -0.08, 0, 0, 90),
+	key(CAUGHT_AT, HELD.x, HELD.y, HELD.z, HELD.yaw, 0, 0),
+	key(LENGTH, HELD.x, HELD.y, HELD.z, HELD.yaw, 0, 0),
 }
 -- How far open the fan is, from 0 to 1, in a key's x.
 local FAN: { Key } = {
@@ -368,6 +374,7 @@ end
 local CardFlourish = {
 	COUNT = COUNT,
 	HALF = HALF,
+	CHOSEN = CHOSEN,
 	LENGTH = LENGTH,
 	CARD_SIZE = CARD_SIZE,
 	CRUSH = CRUSH,
@@ -378,7 +385,7 @@ export type Pose = { cards: { CFrame }, right: CFrame, left: CFrame, fingers: Ha
 
 -- Every card, each hand's palm and how its fingers sit, relative to the camera, after elapsed seconds. It holds its
 -- end.
--- Cards 1 to HALF are the right hand's half, bottom up, and card HALF is the one that ends in the right hand.
+-- Cards 1 to HALF are the right hand's half, bottom up, and card CHOSEN is the one that ends in the right hand.
 function CardFlourish.at(elapsed: number): Pose
 	local at = math.clamp(elapsed, 0, LENGTH)
 	local cards = table.create(COUNT)
@@ -397,7 +404,7 @@ function CardFlourish.at(elapsed: number): Pose
 			cards[HALF + index] = leftHalf * CFrame.new(0, (index - 1) * THICKNESS, 0)
 		end
 		if at > FLIP_AT then
-			cards[HALF] = frameOf(flowing(FLIP, at))
+			cards[CHOSEN] = frameOf(flowing(FLIP, at))
 		end
 	end
 	return {
@@ -436,8 +443,8 @@ function CardFlourish.crush(elapsed: number, since: number): Crush
 	for index, frame in pose.cards do
 		pose.cards[index] = frame:Lerp(final.cards[index], grab) -- the deck snaps shut out of the fist's way
 	end
-	local card = pose.cards[HALF]
-	pose.cards[HALF] = card - card.Position + card.Position:Lerp(palm, fist)
+	local card = pose.cards[CHOSEN]
+	pose.cards[CHOSEN] = card - card.Position + card.Position:Lerp(palm, fist)
 	local digits: Shape = {}
 	for bone, aims in pose.fingers.Right do
 		local closed = {}

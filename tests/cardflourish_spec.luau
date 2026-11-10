@@ -23,9 +23,9 @@ describe("CardFlourish", function()
 		for index, frame in pose.cards do
 			local offset = bottom:PointToObjectSpace(frame.Position)
 			local squared = math.abs(offset.X) < 0.001 and math.abs(offset.Z) < 0.001
-			expect(squared).toBe(index ~= CardFlourish.HALF)
+			expect(squared).toBe(index ~= CardFlourish.CHOSEN)
 		end
-		local top = bottom:PointToObjectSpace(pose.cards[CardFlourish.HALF - 1].Position)
+		local top = bottom:PointToObjectSpace(pose.cards[CardFlourish.CHOSEN + 1].Position)
 		expect(top.Y > bottom:PointToObjectSpace(pose.cards[CardFlourish.COUNT].Position).Y).toBe(true)
 	end)
 
@@ -33,7 +33,7 @@ describe("CardFlourish", function()
 		for _, elapsed in { 0.5, 3.6, CardFlourish.LENGTH } do
 			local crush = CardFlourish.crush(elapsed, CardFlourish.CRUSH)
 			expect(crush.crushed).toBe(1)
-			expect((crush.pose.cards[CardFlourish.HALF].Position - crush.palm).Magnitude < 1e-4).toBe(true)
+			expect((crush.pose.cards[CardFlourish.CHOSEN].Position - crush.palm).Magnitude < 1e-4).toBe(true)
 		end
 	end)
 

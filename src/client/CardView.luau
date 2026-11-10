@@ -129,6 +129,7 @@ local function dress()
 	for index, face in faces do
 		face.Texture = if #art > 0 then art[(index - CardFlourish.HALF + chosen - 1) % #art + 1] else ""
 	end
+	faces[CardFlourish.CHOSEN].Texture = faces[CardFlourish.HALF].Texture -- the card that gets flipped face up
 end
 
 local CardView = {}
@@ -136,7 +137,7 @@ local CardView = {}
 -- Puts the card in hand back to full size, ready for the next one.
 local function restore()
 	burst = false
-	local card = parts[CardFlourish.HALF]
+	local card = parts[CardFlourish.CHOSEN]
 	if card then
 		card.Size = CardFlourish.CARD_SIZE
 	end
@@ -151,14 +152,14 @@ function CardView.show(camera: Camera, view: CFrame, cards: { CFrame }, crush: C
 	end
 	if crush then
 		local left = math.max(1 - crush.crushed, 0.01)
-		parts[CardFlourish.HALF].Size = CardFlourish.CARD_SIZE * Vector3.new(left, 1, left);
+		parts[CardFlourish.CHOSEN].Size = CardFlourish.CARD_SIZE * Vector3.new(left, 1, left);
 		(fist :: BasePart).CFrame = view * CFrame.new(crush.palm)
 		if crush.crushed >= 1 and not burst then
 			burst = true;
 			(shards :: ParticleEmitter):Emit(SHARDS);
 			(sparks :: ParticleEmitter):Emit(SPARKS)
 		end
-	elseif burst or parts[CardFlourish.HALF].Size ~= CardFlourish.CARD_SIZE then
+	elseif burst or parts[CardFlourish.CHOSEN].Size ~= CardFlourish.CARD_SIZE then
 		restore()
 	end
 	local placed = table.create(#cards)
