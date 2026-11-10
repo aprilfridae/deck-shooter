@@ -76,7 +76,7 @@ local GunSounds = {
 		soft = sound("move-land-soft.wav"),
 		hard = sound("move-land-hard.wav"),
 	},
-	slideStart = sound("move-slide-start.wav"),
+	slideStart = sound("move-slide-start-v2.wav"),
 	-- The pistol hand's finger snap on a kill. The clip's fingers click together this far in.
 	snap = sound("pistol-snap.wav"),
 	snapDelaySeconds = 0.075, -- the click at 0.06s in the clip, which plays at 0.8 speed
