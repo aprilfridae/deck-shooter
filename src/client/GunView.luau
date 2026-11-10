@@ -20,7 +20,7 @@ local PRIMARY_LENGTH = 2.4
 local SIDEARM_LENGTH = 1
 local MODEL_SCALE = 0.031
 -- Guns that looked too small in the soldier's hands are drawn bigger. The grips move with them.
-local VIEW_SCALES: { [string]: number } = { Longscope = 1.35, M57 = 1.25, ["Energy Pistol"] = 1.25 }
+local VIEW_SCALES: { [string]: number } = { Longscope = 1.35, M57 = 1.25, ["Energy Pistol"] = 1.19 }
 -- Where the left hand holds a gun, as a share of its length from the middle, where the usual spot is out of reach.
 -- Too far forward and the arm locks straight with the shoulder sliding into view.
 local LEFT_GRIPS: { [string]: number } = { Longscope = -0.065 } -- under the lever rifle's fore-end
