@@ -49,9 +49,10 @@ local GunSounds = {
 		Sniper = sound("gun-sniper-base.wav"),
 	},
 	-- Each gun's reload time in GunConfig matches the length of its sound here. The Sniper has none: its base
-	-- shot sound covers it.
+	-- shot sound covers it. The M4 (the M57, River's AK) is the exception: its reload is 2s and River's sound for
+	-- it is over by about 1.5s, with the rip at 0.36 to 0.62s and the slam at about 1.08s, which AkReload is timed to.
 	reloads = {
-		M4 = sound("reload-assault-v4.wav"),
+		M4 = sound("reload-assault-v5.wav"),
 		AK47 = sound("reload-assault-v4.wav"),
 		Pistol = sound("reload-pistol-v4.wav"),
 	},

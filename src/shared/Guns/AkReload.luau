@@ -12,7 +12,9 @@
 -- Everything is in the model's own axes (+X the gun's right, +Y up, +Z back toward the butt), in metres from the
 -- origin of River's AK handoff, which is just above the trigger. "The hold" is that space before the gun's turn.
 --
--- The times stretch to the gun's reload time: SOUND of these seconds is one reload.
+-- The times stretch to the gun's reload time: SOUND of these seconds is one reload. With the 2s reload, a second
+-- here is 1.59s on screen, which puts the rip (0.21 to 0.33) on reload-assault-v5.wav's first rattle (0.36 to 0.62s),
+-- the slam (0.68) on its big hit (1.08s), and the bolt flying home (0.93) on its last click (about 1.47s).
 local AkReload = {}
 
 -- A point from the handoff, whose axes are +X muzzle, +Y the gun's left, +Z up.
@@ -36,12 +38,12 @@ local FETCH_AT = 0.45 -- and starts up with it
 local HOOK_AT = 0.57 -- the new one's lug is hooked
 local ROCK_AT = 0.63 -- it starts to rock home
 local IN_AT = 0.68 -- and slams in
-local BACK_FROM, BACK_TO = 0.7, 0.86 -- the left hand goes from the magazine back to the handguard
-local REACH_FROM, REACH_TO = 0.8, 0.91 -- the right hand goes from the grip to the knob
-local PULL_AT = 0.92 -- the handle is pulled
-local FREE_AT = 0.99 -- and let go
-local HOME_AT = 1.02 -- the bolt is home
-local GRIP_FROM, GRIP_TO = 1.01, 1.17 -- the right hand goes back to the grip
+local BACK_FROM, BACK_TO = 0.7, 0.82 -- the left hand goes from the magazine back to the handguard
+local REACH_FROM, REACH_TO = 0.75, 0.86 -- the right hand goes from the grip to the knob
+local PULL_AT = 0.87 -- the handle is pulled
+local FREE_AT = 0.93 -- and let go
+local HOME_AT = 0.96 -- the bolt is home
+local GRIP_FROM, GRIP_TO = 0.95, 1.11 -- the right hand goes back to the grip
 local LENGTH = 1.28 -- the gun is back down
 local GONE_AT = 0.6 -- the old magazine has fallen out of view
 local GRAVITY = 30 -- metres a second a second, in these seconds
@@ -99,12 +101,12 @@ local GUN_KEYS = {
 	{ 0.675, -66, 44, 10, 0.03, 0 },
 	{ 0.71, -57, 38, 9, 0.04, 0.014 }, -- the slam drives it up and back
 	{ 0.78, -66, 46, 10, 0.03, -0.004 }, -- and it rebounds past
-	{ 0.9, 14, 18, 3, 0.02, 0 }, -- down in the left hand, tipped a little the other way so the knob faces the right hand
+	{ 0.86, 14, 18, 3, 0.02, 0 }, -- down in the left hand, tipped a little the other way so the knob faces the right hand
 	{ FREE_AT, 16, 20, 2, 0.034, 0.004 }, -- dragged back by the pull
-	{ 1.035, 12, 13, 2, 0.004, -0.006 }, -- thrown forward, muzzle dipping, as the bolt flies home
-	{ 1.1, 8, 10, 1, 0.01, 0 },
-	{ 1.19, -2, -3, 0, -0.004, -0.008 }, -- it comes down heavy, dipping past ready
-	{ 1.23, 0.5, 0.5, 0, 0, 0.002 },
+	{ 0.975, 12, 13, 2, 0.004, -0.006 }, -- thrown forward, muzzle dipping, as the bolt flies home
+	{ 1.04, 8, 10, 1, 0.01, 0 },
+	{ 1.15, -2, -3, 0, -0.004, -0.008 }, -- it comes down heavy, dipping past ready
+	{ 1.21, 0.5, 0.5, 0, 0, 0.002 },
 	{ 1.26, 0, 0, 0, 0, 0 },
 }
 -- How fast a value is changing at a key: the slope between its neighbours, and still at either end.
