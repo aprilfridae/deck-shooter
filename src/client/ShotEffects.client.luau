@@ -18,21 +18,19 @@ local deathRemote = remotes:WaitForChild("DeathBurst") :: RemoteEvent
 
 local TRACER_SPEED = 600
 -- Coins burst out of a body when it dies, hang for a moment, then are pulled to whoever made the kill. They're
--- small wireframes in Signal Acid, moved in code (no physics), with a streak behind each for motion blur.
+-- small wireframes in Signal Acid with a streak behind each for motion blur. They burst, fall and bounce with real
+-- physics; the pull to the killer is done in code.
 local COINS = 16
 local COIN_RADIUS = 0.2
 local COIN_THICK = 0.06
 local COIN_SIDES = 12 -- straight edges round each rim
 local COIN_LINE = 1.5 -- pixels
 local COIN_COLOR = Palette.SignalAcid
-local COIN_UP = { 14, 26 }
-local COIN_OUT = { 6, 16 }
-local COIN_SPIN = 14 -- radians a second
-local COIN_GRAVITY = 60
-local COIN_DRAG = 1.6 -- how fast they lose speed in the air
-local COIN_BOUNCE = 0.45 -- of their speed kept off the floor
-local COIN_HANG = 0.45 -- seconds before the first is pulled
-local COIN_STAGGER = 0.3 -- and the last, this much later
+local COIN_UP = { 26, 44 }
+local COIN_OUT = { 10, 24 }
+local COIN_SPIN = 25 -- radians a second
+local COIN_HANG = 0.8 -- seconds of falling and bouncing before the first is pulled
+local COIN_STAGGER = 0.35 -- and the last, this much later
 local COIN_PULL = 160 -- studs a second gained each second of pull
 local COIN_PULL_TOP = 110
 local COIN_TAKEN = 1.6 -- studs from the killer where a coin is taken
@@ -67,8 +65,6 @@ local RING_TIME = 0.18
 local player = Players.LocalPlayer
 local random = Random.new()
 
-local floorParams = RaycastParams.new()
-floorParams.CollisionGroup = Collision.corpse -- what a body rests on
 local folder = Instance.new("Folder")
 folder.Name = "ShotEffects"
 folder.Parent = workspace
@@ -312,16 +308,13 @@ local coins: { any } = {}
 -- Coins burst out of a body when it dies, hang for a moment, then are pulled to whoever made the kill.
 local function burstCoins(position: Vector3, killer: Player?)
 	GunAudio.playCoins(position)
-	-- The floor under the body, which they bounce on.
-	local under = workspace:Raycast(position, Vector3.new(0, -12, 0), floorParams)
-	local floor = if under then under.Position.Y + COIN_RADIUS else position.Y - 3
 	for index = 1, COINS do
 		local part = Instance.new("Part")
 		part.Name = "Coin"
+		part.Shape = Enum.PartType.Cylinder -- lies along X, so this is a flat coin: what it lands and rolls on
 		part.Size = Vector3.new(COIN_THICK, COIN_RADIUS * 2, COIN_RADIUS * 2)
-		part.Transparency = 1
-		part.Anchored = true
-		part.CanCollide = false
+		part.Transparency = 1 -- only its wireframe shows
+		part.CollisionGroup = Collision.corpse
 		part.CanQuery = false
 		part.CanTouch = false
 		part.CastShadow = false
@@ -345,19 +338,23 @@ local function burstCoins(position: Vector3, killer: Player?)
 		blur.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.45), NumberSequenceKeypoint.new(1, 1) })
 		blur.Parent = part
 		local angle = random:NextNumber(0, 2 * math.pi)
-		local start = position + random:NextUnitVector() * 0.5
-		part.CFrame = CFrame.new(start)
+		part.CFrame = CFrame.new(position + random:NextUnitVector() * 0.5)
+			* CFrame.Angles(random:NextNumber(0, 2 * math.pi), random:NextNumber(0, 2 * math.pi), 0)
 		part.Parent = folder
+		-- Physics throws it, drops it and bounces it.
+		part.AssemblyLinearVelocity = Vector3.new(math.cos(angle), 0, math.sin(angle))
+				* random:NextNumber(COIN_OUT[1], COIN_OUT[2])
+			+ Vector3.new(0, random:NextNumber(COIN_UP[1], COIN_UP[2]), 0)
+		part.AssemblyAngularVelocity = random:NextUnitVector() * COIN_SPIN
 		table.insert(coins, {
 			part = part,
-			position = start,
-			velocity = Vector3.new(math.cos(angle), 0, math.sin(angle)) * random:NextNumber(COIN_OUT[1], COIN_OUT[2])
-				+ Vector3.new(0, random:NextNumber(COIN_UP[1], COIN_UP[2]), 0),
-			turn = CFrame.Angles(random:NextNumber(0, 2 * math.pi), random:NextNumber(0, 2 * math.pi), 0),
-			spin = random:NextUnitVector() * COIN_SPIN,
+			pulling = false, -- whether code has taken it over from physics
+			position = part.Position,
+			velocity = Vector3.zero,
+			turn = CFrame.identity,
+			spin = Vector3.zero,
 			age = 0,
 			pullAt = COIN_HANG + (index - 1) / COINS * COIN_STAGGER, -- they peel off one after another
-			floor = floor,
 			killer = killer,
 		})
 	end
@@ -372,6 +369,16 @@ local function stepCoins(dt: number)
 		local pulled = coin.age - coin.pullAt
 		local done = coin.age > COIN_LIFE
 		if pulled > 0 and root then
+			if not coin.pulling then
+				-- Code takes it from wherever physics left it, still moving and spinning as it was.
+				coin.pulling = true
+				coin.position = coin.part.Position
+				coin.velocity = coin.part.AssemblyLinearVelocity
+				coin.turn = coin.part.CFrame.Rotation
+				coin.spin = coin.part.AssemblyAngularVelocity
+				coin.part.Anchored = true
+				coin.part.CanCollide = false
+			end
 			-- Pulled in like a magnet: slowly at first, then faster and straighter the longer it goes.
 			local to = (root :: BasePart).Position - coin.position
 			local speed = math.min(COIN_PULL * pulled, COIN_PULL_TOP)
@@ -380,19 +387,12 @@ local function stepCoins(dt: number)
 			if to.Magnitude < COIN_TAKEN + speed * dt then
 				done = true
 			end
-		else
-			coin.velocity += Vector3.new(0, -COIN_GRAVITY * dt, 0)
-			coin.velocity *= math.exp(-dt * COIN_DRAG)
-		end
-		coin.position += coin.velocity * dt
-		if pulled <= 0 and coin.position.Y < coin.floor and coin.velocity.Y < 0 then
-			coin.position = Vector3.new(coin.position.X, coin.floor, coin.position.Z)
-			coin.velocity = Vector3.new(coin.velocity.X * 0.7, -coin.velocity.Y * COIN_BOUNCE, coin.velocity.Z * 0.7)
 		end
 		if done then
 			coin.part:Destroy()
 			table.remove(coins, index)
-		else
+		elseif coin.pulling then
+			coin.position += coin.velocity * dt
 			local spun = coin.spin * dt
 			if spun.Magnitude > 1e-4 then
 				coin.turn = CFrame.fromAxisAngle(spun.Unit, spun.Magnitude) * coin.turn
