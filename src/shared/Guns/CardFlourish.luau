@@ -158,6 +158,129 @@ local function fanned(half: CFrame, index: number, open: number): CFrame
 		* CFrame.new(0, (index - 1) * (THICKNESS + FAN_GAP * open), 0)
 end
 
+-- Finger shapes. Each is every digit's three joints as directions from the palm: y runs along the fingers, the
+-- thumb's side is -z, and a hand closes toward +x on the right and -x on the left.
+type Shape = { [string]: { Vector3 } }
+type Hands = { Right: Shape, Left: Shape }
+type FingerKey = { at: number, shape: Hands }
+
+local FINGERS = { "Indice", "DedoMedio", "Anular", "Menique" }
+local SPREADS = { -1, -0.3, 0.3, 1 } -- how far each finger leans when the hand spreads
+local LAGS = { Pulgar = 0, Indice = 0, DedoMedio = 0.025, Anular = 0.05, Menique = 0.075 } -- seconds behind, so moves ripple
+local THUMB_OVER = Vector3.new(0.5, 0.85, 0.1).Unit -- where a curled thumb's tip heads
+
+-- bends is degrees at the knuckle, then each joint after it.
+local function finger(sign: number, bends: { number }, lean: number): { Vector3 }
+	local aims, angle = {}, 0
+	for joint, bend in bends do
+		angle += math.rad(bend)
+		aims[joint] = Vector3.new(sign * math.sin(angle), math.cos(angle), lean).Unit
+	end
+	return aims
+end
+
+-- across is 0 with the thumb out to the side and 1 with it over the palm. curl is 0 to 1.
+local function thumb(sign: number, across: number, curl: number): { Vector3 }
+	local root = Vector3.new(across * 0.9, 0.5, -(1 - across) * 0.8 - 0.1).Unit
+	local aims = { root, root:Lerp(THUMB_OVER, curl * 0.6).Unit, root:Lerp(THUMB_OVER, curl).Unit }
+	for joint, aim in aims do
+		aims[joint] = Vector3.new(aim.X * sign, aim.Y, aim.Z)
+	end
+	return aims
+end
+
+-- One shape for both hands. Fingers left out copy the one before.
+local function shape(across: number, curl: number, spread: number, ...: { number }): Hands
+	local bends = { ... }
+	local hands = {}
+	for name, sign in { Right = 1, Left = -1 } do
+		local digits = { Pulgar = thumb(sign, across, curl) }
+		for index, bone in FINGERS do
+			digits[bone] = finger(sign, bends[math.min(index, #bends)], SPREADS[index] * spread)
+		end
+		hands[name] = digits
+	end
+	return hands :: any
+end
+
+local CUP = shape(0.15, 0.2, 0.12, { 15, 20, 15 }) -- open under the falling cards
+local DEALER = shape(0.35, 0.8, 0.05, { 8, 8, 55 }) -- the deck lying in the hand
+local BOWED = shape(0.7, 0.3, 0.05, { 25, 30, 25 }) -- squeezing the deck into a bow
+local SQUEEZED = shape(0.9, 0.5, 0.03, { 45, 50, 35 }) -- the last cards leaving
+local LOOSE = shape(0.3, 0.2, 0.1, { 12, 15, 10 })
+local EDGE = shape(0.8, 0.2, 0.04, { 22, 14, 10 }) -- pinching the deck stood on its edge
+local CUT = shape(0.3, 0.1, 0.08, { 2, 3, 3 }, { 28, 18, 12 }) -- the thumb lifts and the first finger kicks out
+local SPLAY = shape(0.1, 0, 0.3, { 0, 5, 5 }, { 8, 8, 5 }, { 14, 10, 8 }, { 20, 12, 10 }) -- letting the half spin
+local FLAT = shape(0.4, 0.7, 0.06, { 10, 12, 40 })
+local THUMB_BACK = shape(0.05, 0.1, 0.1, { 10, 10, 20 }) -- wound up to push the fan
+local FANNED = shape(0.75, 0.6, 0.28, { 4, 4, 2 }, { 6, 5, 3 }, { 8, 6, 4 }, { 10, 8, 5 }) -- thumb across, fingers wide behind
+local CLOSING = shape(0.6, 0.4, 0.05, { 35, 40, 30 }) -- sweeping the fan shut
+
+local RIGHT_FINGERS: { FingerKey } = {
+	{ at = 0, shape = BOWED },
+	{ at = SPRING_FROM, shape = BOWED },
+	{ at = SPRING_TO, shape = SQUEEZED },
+	{ at = 1.08, shape = LOOSE },
+	{ at = 1.35, shape = CUP },
+	{ at = 1.6, shape = EDGE },
+	{ at = CUT_AT - 0.05, shape = EDGE },
+	{ at = 2.35, shape = CUT },
+	{ at = 2.5, shape = EDGE },
+	{ at = 2.72, shape = SPLAY },
+	{ at = 3.0, shape = FLAT },
+	{ at = 3.2, shape = THUMB_BACK },
+	{ at = 3.65, shape = FANNED },
+	{ at = 4.1, shape = FANNED },
+	{ at = 4.4, shape = CLOSING },
+	{ at = JOINED_AT, shape = EDGE },
+	{ at = 5.05, shape = LOOSE },
+	{ at = LENGTH, shape = BOWED },
+}
+local LEFT_FINGERS: { FingerKey } = {
+	{ at = 0, shape = CUP },
+	{ at = 1.0, shape = CUP },
+	{ at = 1.2, shape = DEALER },
+	{ at = 1.6, shape = EDGE },
+	{ at = CUT_AT - 0.05, shape = EDGE },
+	{ at = 2.35, shape = CUT },
+	{ at = 2.6, shape = EDGE },
+	{ at = 3.25, shape = EDGE },
+	{ at = 3.5, shape = BOWED },
+	{ at = 3.8, shape = EDGE },
+	{ at = 4.3, shape = EDGE },
+	{ at = 4.6, shape = CUP },
+	{ at = 4.85, shape = DEALER },
+	{ at = LENGTH, shape = DEALER },
+}
+
+-- One hand's fingers at a time, each finger a touch behind the one before it.
+local function fingersAt(keys: { FingerKey }, side: string, at: number): Shape
+	local digits = {}
+	for bone, lag in LAGS do
+		local when = at - lag
+		local aims = (keys[#keys].shape :: any)[side][bone]
+		if when <= keys[1].at then
+			aims = (keys[1].shape :: any)[side][bone]
+		else
+			for index = 2, #keys do
+				local to = keys[index]
+				if when <= to.at then
+					local from = keys[index - 1]
+					local share = smooth((when - from.at) / (to.at - from.at))
+					local before, after = (from.shape :: any)[side][bone], (to.shape :: any)[side][bone]
+					aims = {}
+					for joint, aim in before do
+						aims[joint] = aim:Lerp(after[joint], share).Unit
+					end
+					break
+				end
+			end
+		end
+		digits[bone] = aims
+	end
+	return digits
+end
+
 local CardFlourish = {
 	COUNT = COUNT,
 	HALF = HALF,
@@ -165,9 +288,10 @@ local CardFlourish = {
 	CARD_SIZE = CARD_SIZE,
 }
 
-export type Pose = { cards: { CFrame }, right: CFrame, left: CFrame }
+export type Pose = { cards: { CFrame }, right: CFrame, left: CFrame, fingers: Hands }
 
--- Every card and what each hand holds, relative to the camera, after elapsed seconds. It holds its end.
+-- Every card, what each hand holds and how its fingers sit, relative to the camera, after elapsed seconds. It holds
+-- its end.
 -- Cards 1 to HALF are the right hand's half, bottom up, and card HALF ends face up on top of the deck.
 function CardFlourish.at(elapsed: number): Pose
 	local at = math.clamp(elapsed, 0, LENGTH)
@@ -191,7 +315,12 @@ function CardFlourish.at(elapsed: number): Pose
 			cards[HALF + index] = leftHalf * CFrame.new(0, (index - 1) * THICKNESS, 0)
 		end
 	end
-	return { cards = cards, right = frameOf(sample(RIGHT_HAND, at)), left = frameOf(sample(LEFT_HAND, at)) }
+	return {
+		cards = cards,
+		right = frameOf(sample(RIGHT_HAND, at)),
+		left = frameOf(sample(LEFT_HAND, at)),
+		fingers = { Right = fingersAt(RIGHT_FINGERS, "Right", at), Left = fingersAt(LEFT_FINGERS, "Left", at) },
+	}
 end
 
 return CardFlourish

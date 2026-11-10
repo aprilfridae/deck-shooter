@@ -83,12 +83,11 @@ local function placeRig(target: any, camera: Camera, view: CFrame?)
 	workspace:BulkMoveTo(target.meshes, target.frames, Enum.BulkMoveMode.FireCFrameChanged)
 end
 
--- How each hand sits on what it holds in the Card clip's hold, and its fingers there.
+-- How each hand sits on what it holds in the Card clip's hold.
 local CardClip = require(ReplicatedStorage.Guns.ArmClips.Card)
 local cardHold = CardClip.hold.frames[1]
 local cardPalms = SoldierPose.clipPalms(CardClip.meshOffset, cardHold.bones)
 local CARD_GRIPS = { Right = cardHold.card:ToObjectSpace(cardPalms.Right), Left = cardHold.deck:ToObjectSpace(cardPalms.Left) }
-local CARD_FINGERS = SoldierPose.clipFingers(cardHold.bones)
 
 local ViewArms = {}
 
@@ -111,12 +110,12 @@ function ViewArms.pose(
 	end
 end
 
--- Holds the deck of cards: each hand grips the frame it's given, relative to the camera, the way it does in the
--- Card clip's hold.
-function ViewArms.holdCards(right: CFrame, left: CFrame)
+-- Holds the deck of cards: each hand sits on the frame it's given, relative to the camera, the way it does in the
+-- Card clip's hold, with its fingers in the shape given.
+function ViewArms.holdCards(right: CFrame, left: CFrame, fingers: { [string]: SoldierPose.Fingers })
 	rig = rig or makeRig(true)
 	if rig then
-		rig.parts = SoldierPose.fromPalms(solver, right * CARD_GRIPS.Right, left * CARD_GRIPS.Left, nil, nil, nil, CARD_FINGERS)
+		rig.parts = SoldierPose.fromPalms(solver, right * CARD_GRIPS.Right, left * CARD_GRIPS.Left, nil, nil, nil, fingers)
 	end
 end
 

@@ -968,7 +968,7 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 	end
 	local pose = CardFlourish.at(elapsed)
 	local held = camera.CFrame * cardSway
-	ViewArms.holdCards(pose.right, pose.left)
+	ViewArms.holdCards(pose.right, pose.left, pose.fingers)
 	CardView.show(camera, held, pose.cards)
 	ViewArms.place(camera, held)
 	return true

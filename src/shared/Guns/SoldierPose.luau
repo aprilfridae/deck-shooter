@@ -223,37 +223,6 @@ function SoldierPose.clipPalms(offset: CFrame, bones: any): { [string]: CFrame }
 	return { Right = offset * palmOf(bones, PREFIXES.Right), Left = offset * palmOf(bones, PREFIXES.Left) }
 end
 
--- How a clip frame holds each hand's fingers, relative to its palm, by side name. fromPalms takes it as fingers.
-function SoldierPose.clipFingers(bones: any): { [string]: Fingers }
-	local sides = {}
-	for sideName, prefix in PREFIXES do
-		local palm = palmOf(bones, prefix)
-		local digits = {}
-		for _, digit in DIGITS do
-			local aims = digitAims(bones, prefix, digit.bone)
-			for index, aim in aims do
-				aims[index] = palm:VectorToObjectSpace(aim)
-			end
-			digits[digit.bone] = aims
-		end
-		sides[sideName] = digits
-	end
-	return sides
-end
-
--- Two finger shapes blended, share of the way from one to the other.
-function SoldierPose.blendFingers(from: Fingers, to: Fingers, share: number): Fingers
-	local blended = {}
-	for bone, aims in from do
-		local mixed = {}
-		for index, aim in aims do
-			mixed[index] = aim:Lerp(to[bone][index], share).Unit
-		end
-		blended[bone] = mixed
-	end
-	return blended
-end
-
 -- shoulders moves either shoulder from its usual place, in camera space, for a gun held differently.
 -- wraps curls either thumb around the gun by up to that many radians at the tip; it needs gun.
 -- fingers gives either hand another finger shape than the gun grip.
