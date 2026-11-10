@@ -26,8 +26,11 @@ local hitRemote = remotes:WaitForChild("HitConfirm") :: RemoteEvent
 local rewardRemote = remotes:WaitForChild("KillReward") :: RemoteEvent
 
 local BONE = Palette.Bone
+-- The crosshair is a small plus.
+local CROSSHAIR_LENGTH = 12 -- pixels, each bar
+local CROSSHAIR_WIDTH = 2
 -- The hit marker: four dashes in an X around the crosshair.
-local MARKER_COLOR = Palette.Bone
+local MARKER_COLOR = Palette.SignalAcid -- green
 local MARKER_SECONDS = 0.3
 local MARKER_GAP = 5 -- from the middle of the screen to the inner end of each dash
 local MARKER_LENGTH = 6
@@ -76,10 +79,19 @@ gui.Parent = player:WaitForChild("PlayerGui")
 local crosshair = Instance.new("Frame")
 crosshair.AnchorPoint = Vector2.new(0.5, 0.5)
 crosshair.Position = UDim2.fromScale(0.5, 0.5)
-crosshair.Size = UDim2.fromOffset(4, 4)
-crosshair.BackgroundColor3 = BONE
-crosshair.BorderSizePixel = 0
+crosshair.Size = UDim2.fromOffset(CROSSHAIR_LENGTH, CROSSHAIR_LENGTH)
+crosshair.BackgroundTransparency = 1
 crosshair.Parent = gui
+-- A plus: one bar across and one down.
+for _, size in { UDim2.fromOffset(CROSSHAIR_LENGTH, CROSSHAIR_WIDTH), UDim2.fromOffset(CROSSHAIR_WIDTH, CROSSHAIR_LENGTH) } do
+	local bar = Instance.new("Frame")
+	bar.AnchorPoint = Vector2.new(0.5, 0.5)
+	bar.Position = UDim2.fromScale(0.5, 0.5)
+	bar.Size = size
+	bar.BackgroundColor3 = BONE
+	bar.BorderSizePixel = 0
+	bar.Parent = crosshair
+end
 
 local marker = Instance.new("Frame")
 marker.AnchorPoint = Vector2.new(0.5, 0.5)

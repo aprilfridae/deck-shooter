@@ -70,7 +70,7 @@ The spread shows each equipped card's face, 60 by 96, drawn by `CardFace` with i
 
 Health and shield round up, so a player on 0.4 health shows 1.
 
-**Crosshair and hit marker:** the crosshair is a 4 by 4 Bone square. A hit shows 4 Bone dashes in an X around it for 0.3s. It starts 1.6 times bigger and shrinks, and a kill's marker is 1.5 times bigger. Neither is scaled with the rest of the HUD.
+**Crosshair and hit marker:** the crosshair is a Bone plus, two bars 12 long and 2 wide. A hit shows 4 Signal Acid (green) dashes in an X around it for 0.3s. It starts 1.6 times bigger and shrinks, and a kill's marker is 1.5 times bigger. Neither is scaled with the rest of the HUD.
 
 ## Scaling
 
