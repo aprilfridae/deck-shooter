@@ -172,6 +172,7 @@ return {
 	["reload-assault-v4.wav"] = 93573545598665,
 	["reload-assault-v5.wav"] = 91236377469339,
 	["card-flourish.wav"] = 117124309266025,
+	["card-flourish-v2.wav"] = 100906337358694,
 	["gun-sniper-1.wav"] = 80989143421566,
 	["gun-sniper-base.wav"] = 137458622482508,
 	["gun-sniper-10.wav"] = 101900741207161,
