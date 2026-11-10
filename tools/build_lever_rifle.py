@@ -19,10 +19,19 @@ import bmesh
 import bpy
 from mathutils import Matrix, Vector
 
-source, out = sys.argv[sys.argv.index("--") + 1:][:2]
+arguments = sys.argv[sys.argv.index("--") + 1:]
+source, out = arguments[:2]
 os.makedirs(out, exist_ok=True)
 
+# The same script builds River's AK (AK_v3_optimized.glb) when a third argument, ak, is given:
+#   blender -b --python tools/build_lever_rifle.py -- <AK_v3_optimized.glb> <out folder> ak
+# The AK is already light, so nothing is thinned; its moving groups are Bolt (carrier, charging handle and knob),
+# Mag (the magazine and everything on it) and Trigger. It writes AK_low.glb.
+AK = len(arguments) > 2 and arguments[2] == "ak"
+NAME = "AK_low.glb" if AK else "LeverRifle_low.glb"
 MOVING = {"Lever": "Lever", "LeverGrip": "Lever", "Bolt": "Bolt", "BoltIndicator": "Bolt", "Trigger": "Trigger"}
+if AK:
+    MOVING = {"BoltCarrier": "Bolt", "Magazine": "Mag", "Trigger": "Trigger"}
 BUDGET = 40  # a mesh of n triangles keeps about BUDGET * n ^ (1/3)
 SMALLEST = 120
 SOLID_FROM = 30000  # triangles: bigger meshes are the solid moulded ones (stock, fore-end, lever, receiver)
@@ -85,6 +94,8 @@ before = 0
 for o in meshes:
     count = triangles(o)
     before += count
+    if AK:
+        continue
     keep = max(SMALLEST, int(BUDGET * count ** (1 / 3)))
     if count < SOLID_FROM:
         # A small part is thin-walled metal: collapsing it tears tubes open and fills rings in (it did the scope),
@@ -119,7 +130,7 @@ for o in meshes:
     for piece in bpy.context.selected_objects:
         used = {piece.data.materials[p.material_index] for p in piece.data.polygons if piece.data.materials}
         material = next(iter(used), None)
-        name = material.name.replace("LR_", "") if material else "Plain"
+        name = material.name.replace("LR_", "").replace("AK_", "") if material else "Plain"
         if name.startswith("Neon"):
             # River doesn't want the glowing cyan and magenta strips, dots and rims: they're left off.
             bpy.data.objects.remove(piece)
@@ -177,7 +188,7 @@ high = [max((o.matrix_world @ Vector(c))[i] for o in bpy.context.selected_object
 print("TURNED", [round(v, 3) for v in low], [round(v, 3) for v in high])
 
 bpy.ops.export_scene.gltf(
-    filepath=os.path.join(out, "LeverRifle_low.glb"),
+    filepath=os.path.join(out, NAME),
     export_format="GLB",
     use_selection=True,
     export_apply=True,

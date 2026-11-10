@@ -45,7 +45,11 @@ local lever: { pivot: Vector3, swing: number, slide: number }? = nil -- the gun 
 local leverParts: { { part: BasePart, rest: CFrame, slides: boolean } } = {}
 local BLOCK_SECTION = Vector2.new(0.3, 0.4)
 local BARREL_RISE = 0.26 -- how far above the model's middle the barrel sits, as a share of its height
-local BARREL_RISES: { [string]: number } = { Longscope = 0.098 } -- guns whose barrel sits somewhere else
+local BARREL_RISES: { [string]: number } = { Longscope = 0.098, M57 = 0.29 } -- guns whose barrel sits somewhere else
+-- Where a gun's model sits from the spot the hold and the clips turn it about: the model's ViewShift attribute, in
+-- its own studs. Without one, that spot is the middle of the model. The M57 is River's AK now, held by clips made
+-- for the old model, so its ViewShift puts its trigger where the old one's was.
+local modelShift = Vector3.zero -- the gun shown's, in view studs
 local HIP = CFrame.new(0.9, -0.8, -2)
 local AIMED = CFrame.new(0, -0.55, -2)
 local RELOAD_DIP = CFrame.new(0, -0.7, 0) * CFrame.Angles(math.rad(-25), 0, 0)
@@ -541,7 +545,10 @@ local function makeModel(name: string): Model?
 		end
 	end
 	model:ScaleTo(MODEL_SCALE * viewScale)
-	model.WorldPivot = model:GetBoundingBox()
+	local middle = model:GetBoundingBox()
+	local shift = source:GetAttribute("ViewShift")
+	modelShift = (if typeof(shift) == "Vector3" then shift else Vector3.zero) * (MODEL_SCALE * viewScale)
+	model.WorldPivot = middle * CFrame.new(-modelShift)
 	local size = model:GetExtentsSize()
 	length = size.Z
 	barrelRise = size.Y * (BARREL_RISES[name] or BARREL_RISE)
@@ -808,6 +815,7 @@ function GunView.setGun(gunId: string, slot: string)
 	gripShift = GRIP_SHIFTS[GunConfig.guns[gunId].name]
 	length = if isSidearm then SIDEARM_LENGTH else PRIMARY_LENGTH
 	barrelRise = 0
+	modelShift = Vector3.zero
 	view = makeModel(GunConfig.guns[gunId].name) or makeBlock()
 	lever = nil
 	table.clear(leverParts)
@@ -868,7 +876,7 @@ function GunView.muzzle(): Vector3?
 	if not view or not view.Parent then
 		return nil
 	end
-	return view:GetPivot() * Vector3.new(0, barrelRise, -length / 2)
+	return view:GetPivot() * (modelShift + Vector3.new(0, barrelRise, -length / 2))
 end
 
 function GunView.kick()
@@ -1221,7 +1229,7 @@ function GunView.update(
 	end
 	view.Parent = camera
 	local pivot = view:GetPivot()
-	showFlash(camera, pivot * CFrame.new(0, barrelRise, -length / 2))
+	showFlash(camera, pivot * CFrame.new(modelShift + Vector3.new(0, barrelRise, -length / 2)))
 	ViewArms.place(camera, base)
 	if not clips and scopeShare >= SCOPE_SHOW_FROM then
 		-- Looking through the scope: the gun and arms would only block it.
