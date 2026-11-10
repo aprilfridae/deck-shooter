@@ -53,6 +53,7 @@ local listed = {
 	cardmotion_spec = true,
 	cardspin_spec = true,
 	cardflourish_spec = true,
+	loosen_spec = true,
 	cardtext_spec = true,
 	cardart_spec = true,
 	packs_spec = true,
@@ -70,6 +71,7 @@ require("./cardlook_spec")
 require("./cardmotion_spec")
 require("./cardspin_spec")
 require("./cardflourish_spec")
+require("./loosen_spec")
 require("./cardtext_spec")
 require("./cardart_spec")
 require("./packs_spec")

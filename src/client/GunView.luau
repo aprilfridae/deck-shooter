@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ArmClip = require(ReplicatedStorage.Guns.ArmClip)
+local Loosen = require(ReplicatedStorage.Guns.Loosen)
 local ArmClips = require(ReplicatedStorage.Guns.ArmClips)
 local CardFlourish = require(ReplicatedStorage.Guns.CardFlourish)
 local GunConfig = require(ReplicatedStorage.Guns.GunConfig)
@@ -466,6 +467,11 @@ local cardTurns = 0 -- CardInHand.turns as of the last look
 local turns = 0 -- how many times the card held has been changed since the cards came out
 local turnAt = 0 -- when it last was
 local cardLife = 0 -- where this time out starts in the hands' sway, so no two go alike
+-- The same for a gun's reload (and the Longscope's flip): its tempo and a little drift of the hold.
+local LOOSE_EASE = 8 -- how fast the drift comes on and goes
+local looseLife = 0
+local looseShare = 0
+local loosePlaying = false
 local shownFrame: any = nil -- what's on screen, with any snap laid over it
 local shownBase: any = nil
 local shownSnap: any = nil
@@ -881,6 +887,7 @@ local function clipFrame(reloading: boolean, sprinting: boolean): (any, string)
 				end
 			end
 		end
+		elapsed = Loosen.tempo(elapsed, #reloadClip.frames / reloadClip.fps, looseLife + os.clock())
 		local frame = ArmClip.sampleAt(reloadClip, elapsed)
 		if frame then
 			return frame, "reload"
@@ -1064,7 +1071,15 @@ function GunView.update(
 	-- A touch of smoothing, so a corner between two keys never shows as a step.
 	layerShown = layerShown:Lerp(layer, 1 - math.exp(-dt * 30))
 	local reach = (config and VIEW_REACH[config.name]) or CFrame.identity
-	local base = camera.CFrame * reach * sway * (if clips then recoil * layerShown else CFrame.identity)
+	-- A reload never goes quite the same way twice: the hold drifts a little while it plays.
+	local playing = reloadAt ~= nil or keyedReloadAt ~= nil
+	if playing and not loosePlaying then
+		looseLife = math.random() * 100
+	end
+	loosePlaying = playing
+	looseShare += ((if playing then 1 else 0) - looseShare) * (1 - math.exp(-dt * LOOSE_EASE))
+	local loose = Loosen.drift(HIP.Position, looseLife + os.clock(), looseShare)
+	local base = camera.CFrame * reach * sway * loose * (if clips then recoil * layerShown else CFrame.identity)
 	if showCard(camera, cardOut, sway) then
 		if flashModel then
 			flashModel.Parent = nil
@@ -1125,7 +1140,10 @@ function GunView.update(
 			keyedReloadAt = now
 		end
 		if keyedReloadAt and keyedReload and config then
-			reloadGun, reloadHand, spin = reloadPose(keyedReload, now - keyedReloadAt, config.reload)
+			local lead = keyedReload.lead or 0
+			local last = lead + (keyedReload.keys[#keyedReload.keys].at - lead) * config.reload / keyedReload.length
+			local at = Loosen.tempo(now - keyedReloadAt, last, looseLife + now)
+			reloadGun, reloadHand, spin = reloadPose(keyedReload, at, config.reload)
 			-- A touch of smoothing on the way back to ready, so a corner between two keys never shows as a step. The
 			-- clicks before that stay sharp.
 			local smooth = if now - keyedReloadAt >= (keyedReload.smoothFrom or 0) then 1 - math.exp(-dt * 25) else 1
