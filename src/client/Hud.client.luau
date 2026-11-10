@@ -149,7 +149,7 @@ local function small(style: string, right: boolean?, position: UDim2): any
 end
 
 -- The health and ammo numbers' colour: full to empty.
-local LEVEL_FULL = Palette.SignalAcid
+local LEVEL_FULL = Palette.DataCyan -- the spec's blue, for readouts
 local LEVEL_EMPTY = Palette.HazardRed
 local LEVEL_EASE = 8 -- how fast the colour follows, a second
 local FULL_HEALTH = 100
@@ -352,7 +352,7 @@ RunService.RenderStepped:Connect(function(step)
 	end
 	lastHealth = health
 	healthText:set(HudText.health(health))
-	-- Health and ammo are Signal Acid when full and run to Hazard Red as they empty, easing so a hit or a shot
+	-- Health and ammo are Data Cyan when full and run to Hazard Red as they empty, easing so a hit or a shot
 	-- slides the colour over instead of snapping it.
 	local ease = 1 - math.exp(-step * LEVEL_EASE)
 	healthShare += (math.clamp(health / FULL_HEALTH, 0, 1) - healthShare) * ease
