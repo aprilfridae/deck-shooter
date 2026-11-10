@@ -232,6 +232,7 @@ local VIEW_KICKS: { [string]: any } = {
 	["Energy Pistol"] = {
 		back = 0.24, drop = 0.06, up = 14, roll = 4, rise = 0.04, stiff = 70, damp = 12.5, sides = true, loose = 2,
 		left = 5, -- degrees the muzzle kicks to the left as well
+		stillLeft = true, -- the kick is the gun hand's: the left hand stays where it is
 		-- Its soft spring (it was 165 and 19.1) takes about twice as long to bring it home.
 	},
 	Shotgun = { back = 0.605, drop = 0.132, up = 14.3, roll = -6.6, rise = 0.081, stiff = 52.5, damp = 10.4 },
@@ -1391,13 +1392,23 @@ function GunView.update(
 		shownFrame, shownBase, shownSnap = whole, frame, snap
 		local nudged = config and CLIP_NUDGES[config.name]
 		local moved: { [string]: CFrame }? = nil
-		local palms = if nudged or codeReload then SoldierPose.clipPalms(clips.meshOffset, whole.bones) else nil
+		local viewKick = config and VIEW_KICKS[config.name]
+		local stillLeft = viewKick ~= nil and viewKick.stillLeft == true
+		local palms = if nudged or codeReload or stillLeft
+			then SoldierPose.clipPalms(clips.meshOffset, whole.bones)
+			else nil
 		if nudged and palms then
 			local nudgedPalms = {}
 			for side, by in nudged do
 				nudgedPalms[side] = whole.gun * CFrame.new(by) * whole.gun:Inverse() * palms[side]
 			end
 			moved = nudgedPalms
+		end
+		if stillLeft and palms then
+			-- The whole view kicks with the shot, so the left hand is moved back by as much to stay put.
+			local placed = moved or {}
+			placed.Left = layerShown:Inverse() * recoil:Inverse() * layerShown * (placed.Left or palms.Left)
+			moved = placed
 		end
 		-- A reload keyed in code takes the left hand off wherever the clip has it.
 		codePose, codeTurn = nil, CFrame.identity
