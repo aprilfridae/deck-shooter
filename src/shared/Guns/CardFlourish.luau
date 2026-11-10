@@ -195,7 +195,7 @@ local SPRING_GRIP = grip("Right", Vector3.new(0, 0, -CARD_SIZE.Z / 2), 0.55, 0.1
 local CARD_GRIP = grip("Right", FAN_PIVOT, 0.38, 0.1, Vector3.new(-0.26, 0, -0.97), UP, 0.12) -- the same, on one card
 local PINCH_GRIP = grip("Right", FAN_PIVOT, 0.38, 0.1, Vector3.new(-0.26, 0, -0.97), UP, 0.12)
 -- The same as it comes for its half: leaning in from the right, so its wrist and arm stay clear of the left arm.
-local SWOOP_GRIP = grip("Right", FAN_PIVOT, 0.38, 0.1, Vector3.new(-0.7, 0, -0.7), UP, 0.12)
+local SWOOP_GRIP = grip("Right", FAN_PIVOT, 0.38, 0.1, Vector3.new(-0.53, 0, -0.85), UP, 0.12)
 
 type HandKey = { at: number, frame: CFrame }
 
@@ -208,7 +208,9 @@ local RIGHT_HAND: { HandKey } = {
 	held(0, RIGHT_DECK, SPRING_GRIP),
 	held(1.05, RIGHT_DECK, SPRING_GRIP),
 	held(1.45, WAITING, PINCH_GRIP),
-	held(SLIDE_AT, again(0, TIPPED, 0.45, HALF_HEIGHT, 0.3), SWOOP_GRIP), -- out to the right of the deck, not under it
+	-- Out to the right of the deck, not under it, and low and back, so the half slides down over its fingers and
+	-- it closes up onto it from beyond its edge.
+	held(SLIDE_AT, again(0, TIPPED, 0.45, HALF_HEIGHT - 0.09, 0.3), SWOOP_GRIP, 0.1),
 	held(CUT_AT, RIGHT_HALF[2], SWOOP_GRIP),
 	held(2.5, RIGHT_HALF[3], PINCH_GRIP),
 	held(3.0, SPUN, PINCH_GRIP),
