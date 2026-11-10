@@ -52,6 +52,8 @@ local fieldOfView = FIELD_OF_VIEW
 local wasScoped = false
 local scopeEasing = false
 local landDip = 0
+local SLIDE_CAMERA_HOLD = 0.35 -- seconds the camera stays low after a slide blips into the air with crouch held
+local slidSeenAt = -math.huge
 local JUMP_SOUND_GAP = 0.3 -- seconds before the jump sound can play again
 local jumpSoundAt = -math.huge
 local airStartedAt = 0
@@ -391,7 +393,15 @@ local function onFrame(dt: number)
 	fieldOfView += (targetFov - fieldOfView) * (1 - math.exp(-dt * (if scopeEasing then (if scoped then SCOPE_IN_EASE else SCOPE_FOV_EASE) else FOV_EASE)))
 	workspace.CurrentCamera.FieldOfView = fieldOfView
 
-	local target = BODY_CAMERA + (if sliding then SLIDE_CAMERA_DROP else Vector3.zero) + LAND_CAMERA_DIP * landDip
+	-- The camera stays low through a slide's blips. A slide that loses the ground for a moment (a bump, a lip, the
+	-- start of a slope) becomes "Air" for at least MinAirTime before it can be a slide again, and with slides spammed
+	-- that happened over and over: the game had you sliding, mostly, while the camera kept being let back up and never
+	-- got down. So it also counts as low while crouch is still held just after a slide.
+	if sliding then
+		slidSeenAt = now
+	end
+	local low = sliding or (keys.crouch and state.mode == "Air" and now - slidSeenAt < SLIDE_CAMERA_HOLD)
+	local target = BODY_CAMERA + (if low then SLIDE_CAMERA_DROP else Vector3.zero) + LAND_CAMERA_DIP * landDip
 	humanoid.CameraOffset = humanoid.CameraOffset:Lerp(target, math.min(dt * CAMERA_EASE, 1))
 
 	-- In first person (the combat zones), manually rotate character to face camera direction.
