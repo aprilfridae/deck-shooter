@@ -318,8 +318,8 @@ local RIGHT_HOLD = shape("Right", { 0.7, 0.7, 0 }, { 0, 0.95, -0.3 }, 0.1, { 5, 
 local RIGHT_SPIN = shape("Right", { 0.9, 0.35, 0.3 }, { 0.75, 0.6, 0.2 }, 0.32, { -4, 4, 6 }, { 0, 4, 6 }, { 3, 6, 6 }, { 8, 8, 8 }) -- thumb off, letting the half turn
 local RIGHT_FAN = shape("Right", { 0.7, 0.7, 0 }, { 0, 0.95, -0.3 }, 0.36, { 5, 3, 3 }) -- thumb on the pivot, fingers wide behind
 local RIGHT_CATCH = shape("Right", { 0.9, 0.4, 0.2 }, { 0.7, 0.6, 0.1 }, 0.14, { 8, 4, 4 }) -- open for the flipped card
--- Thumb down on one card, fingers curled round behind it. The two behind the card curl less, so they don't poke through.
-local RIGHT_CARD = shape("Right", { 0.7, 0.7, 0 }, { 0, 0.95, -0.3 }, 0.08, { 5, 12, 10 }, { 6, 16, 12 }, { 10, 30, 22 }, { 14, 38, 26 })
+-- Thumb down on one card. The two fingers behind the card lie flat, or they poke through it; the two beside it curl.
+local RIGHT_CARD = shape("Right", { 0.7, 0.7, 0 }, { 0, 0.95, -0.3 }, 0.08, { 3, 2, 2 }, { 3, 4, 4 }, { 7, 18, 14 }, { 12, 32, 24 })
 local RIGHT_FIST = shape("Right", { 0.6, 0.7, -0.2 }, { 0.1, 0.6, -0.8 }, 0.02, { 60, 95, 70 })
 local RIGHT_REST = shape("Right", { 0.5, 0.7, 0.4 }, { 0.4, 0.85, 0.1 }, 0.08, { 12, 18, 14 })
 
