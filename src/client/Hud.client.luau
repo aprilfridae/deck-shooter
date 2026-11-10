@@ -63,6 +63,7 @@ local CARD_GLITCH_SPLIT = 12 -- how far its red and cyan ghosts pull apart
 local CARD_GLITCH_GHOST = 0.35 -- how see-through they are
 local CARD_GLITCH_BARS = 3 -- lines of static across it
 local CARD_GREY = Color3.fromRGB(86, 90, 98) -- what lies over a card on cooldown
+local CARD_OUTLINE = 1.5 -- how thick the white line round each card is
 local CARD_GREYED = 0.2 -- how see-through that grey is when the cooldown starts
 
 local player = Players.LocalPlayer
@@ -192,6 +193,17 @@ local function spreadCard(index: number)
 	corner.CornerRadius = UDim.new(CARD_CORNER, 0)
 	corner.Parent = grey
 	corner:Clone().Parent = flash
+	-- A white line round the card's edge.
+	local outline = Instance.new("Frame")
+	outline.Size = UDim2.fromScale(1, 1)
+	outline.BackgroundTransparency = 1
+	outline.ZIndex = 12
+	corner:Clone().Parent = outline
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.new(1, 1, 1)
+	stroke.Thickness = CARD_OUTLINE
+	stroke.Parent = outline
+	outline.Parent = image
 	local scale = Instance.new("UIScale")
 	scale.Parent = image
 	-- The card's shape in cyan and in red, behind it, which pull apart to either side while it glitches.
@@ -221,6 +233,7 @@ local function spreadCard(index: number)
 		image = image,
 		grey = grey,
 		flash = flash,
+		outline = outline,
 		scale = scale,
 		ghosts = ghosts,
 		bars = bars,
@@ -295,6 +308,7 @@ local function showCard(index: number, now: number, step: number)
 	card.flash.BackgroundColor3 = if glitch.over then Color3.new(1, 1, 1) else Palette.DataCyan
 	card.flash.BackgroundTransparency = if glitch.there then 1 - glitch.flash else 1
 	card.grey.Visible = glitch.there
+	card.outline.Visible = glitch.there
 	if card.face then
 		card.face.Visible = glitch.there
 	end
