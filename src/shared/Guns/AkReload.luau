@@ -250,6 +250,12 @@ function AkReload.at(t: number): Pose
 		rightSwing = rightSwing:Lerp(tapSwing, share)
 	end
 	local _, _, _, _, bolt = keyed(t) -- the bolt's snap is meant to be sharp
+	-- While the hand has a magazine it sits exactly on it, whatever the blend did to each.
+	if t < FLUNG_AT then
+		palm = old * ON_MAG
+	elseif t >= DOWN_AT then
+		palm = new * ON_MAG
+	end
 	-- The gun's magazine is the old one until it has fallen out of view, with the new one as the spare once the old
 	-- one is let go; then the new one is the gun's.
 	local mag: CFrame, spare: CFrame? = new, nil

@@ -77,7 +77,7 @@ describe("AkReload", function()
 		local grip = onMag(0.24)
 		for _, t in { 0.23, 0.28, 0.46, 0.5, 0.57, 0.62, 0.66 } do
 			expect(AkReload.at(t).weight > 0.99).toBe(true)
-			expect((onMag(t) - grip).Magnitude < 0.015).toBe(true) -- the blend lets it slip a touch on the fast swing up
+			expect((onMag(t) - grip).Magnitude < 1e-4).toBe(true)
 		end
 	end)
 
