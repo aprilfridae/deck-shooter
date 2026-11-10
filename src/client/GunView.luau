@@ -227,7 +227,11 @@ local VIEW_KICKS: { [string]: any } = {
 	},
 	B33 = { back = 0.154, drop = 0.022, up = 3.3, roll = 1.5, stiff = 270, damp = 24.4, auto = true },
 	SMG = { back = 0.099, drop = 0.011, up = 2.2, roll = 1.3, stiff = 360, damp = 29.6, auto = true },
-	["Energy Pistol"] = { back = 0.132, drop = 0.033, up = 7.7, roll = 2.2, rise = 0.04, stiff = 165, damp = 19.1 },
+	-- A hard, snappy kick that never goes the same way twice: it rolls to either side (sides), and each shot's
+	-- climb, shove, roll and twist vary twice as much as other guns' (loose).
+	["Energy Pistol"] = {
+		back = 0.24, drop = 0.06, up = 14, roll = 4, rise = 0.04, stiff = 165, damp = 19.1, sides = true, loose = 2,
+	},
 	Shotgun = { back = 0.605, drop = 0.132, up = 14.3, roll = -6.6, rise = 0.081, stiff = 52.5, damp = 10.4 },
 	Longscope = { back = 0.935, drop = 0.242, up = 20.9, roll = -12.1, rise = 0.103, stiff = 41.2, damp = 8.7 },
 }
@@ -1091,9 +1095,20 @@ function GunView.kick()
 	else
 		kick = 0
 		kickSpeed = 0
-		kickRoll = 1
+		kickRoll = if viewKick.sides and math.random() < 0.5 then -1 else 1
 	end
 	shot = Loosen.shot(math.random)
+	if viewKick.loose then
+		-- Further from the usual shot, by that many times.
+		local loose = viewKick.loose
+		shot = {
+			up = 1 + (shot.up - 1) * loose,
+			back = 1 + (shot.back - 1) * loose,
+			roll = 1 + (shot.roll - 1) * loose,
+			yaw = shot.yaw * loose,
+			speed = shot.speed,
+		}
+	end
 	firedAt = os.clock()
 	flashShownAt = firedAt
 	flashRoll = math.random() * math.pi * 2
