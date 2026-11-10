@@ -63,19 +63,12 @@ local SPRINT_HOLDS: { [string]: CFrame } = {
 }
 local BOB_DIPS: { [string]: number } = { ["Energy Pistol"] = 0.5, M57 = 0.7 }
 local EASE = 11
--- Breathing: standing still, the gun rises and settles with the chest and the hands drift a little. Running
--- leaves the player winded, so the breaths come bigger and quicker for a few seconds after.
-local BREATH_SECONDS = 3.8 -- one breath at rest
-local BREATH_LIFT = 0.014 -- studs the gun rises on the in-breath
-local BREATH_BACK = 0.006 -- and how far it draws in toward the chest
-local BREATH_PITCH = 0.4 -- degrees the muzzle tips up
-local BREATH_ROLL = 0.3
-local DRIFT_TURN = 0.22 -- degrees the hands wander, slower than the breath
-local DRIFT_MOVE = 0.004
+-- Idle: the gun is never quite still. It drifts and turns on the same slow wander as the hands holding the
+-- deck (Loosen.drift). Running leaves the player winded, so it wanders bigger and quicker for a few seconds after.
 local BREATH_MOVING = 0.3 -- the share left while walking, where the bob takes over
 local BREATH_AIMED = 0.35
 local WINDED_SIZE = 1.9 -- how much bigger, and
-local WINDED_SPEED = 1.5 -- how much quicker, the breaths are right after a sprint
+local WINDED_SPEED = 1.5 -- how much quicker, the wander is right after a sprint
 local WINDED_GAIN = 0.35 -- per second of sprinting
 local WINDED_FADE = 0.2 -- per second of rest
 -- A new clip fades in from the last pose over this long, so the end of a reload doesn't cut to idle.
@@ -608,28 +601,17 @@ local bobPhase = 0
 local bobWeight = 0
 local sprintWeight = 0
 
-local breathPhase = 0
+local idleLife = math.random() * 100 -- where the gun is in its idle wander
+local idleSize = 1 -- how much of that wander shows
 local winded = 0
 
--- The slow rise and fall of breathing, with a little wander in the hands.
-local function breathing(dt: number, aiming: boolean, running: boolean): CFrame
+-- Moves the idle wander on, and works out how much of it shows.
+local function idle(dt: number, aiming: boolean, running: boolean)
 	winded = math.clamp(winded + (if running then WINDED_GAIN else -WINDED_FADE) * dt, 0, 1)
-	breathPhase += dt * (1 + (WINDED_SPEED - 1) * winded) * 2 * math.pi / BREATH_SECONDS
-	-- In quicker than out, with a rest at the bottom, like a real breath.
-	local breath = math.sin(breathPhase) + 0.22 * math.sin(2 * breathPhase + 1.1)
-	local late = math.sin(breathPhase - 0.5) -- the tilt trails the lift, so it reads as weight
-	local size = (1 + (WINDED_SIZE - 1) * winded)
+	idleLife += dt * (1 + (WINDED_SPEED - 1) * winded)
+	idleSize = (1 + (WINDED_SIZE - 1) * winded)
 		* (1 - (1 - BREATH_MOVING) * math.min(bobWeight, 1))
 		* (if aiming then BREATH_AIMED else 1)
-	local clock = os.clock()
-	local driftX = math.sin(clock * 0.83) + 0.6 * math.sin(clock * 1.37 + 2)
-	local driftY = math.sin(clock * 0.61 + 1) + 0.6 * math.sin(clock * 1.13 + 4)
-	return CFrame.new(driftX * DRIFT_MOVE * size, (breath * BREATH_LIFT + driftY * DRIFT_MOVE) * size, breath * BREATH_BACK * size)
-		* CFrame.Angles(
-			math.rad((late * BREATH_PITCH + driftY * DRIFT_TURN) * size),
-			math.rad(driftX * DRIFT_TURN * size),
-			math.rad(late * BREATH_ROLL * size)
-		)
 end
 
 -- Lags the gun behind the camera's turning, and bobs it with the player's steps.
@@ -674,10 +656,10 @@ local function swayAndBob(dt: number, camera: Camera, aiming: boolean, sprinting
 		)
 	bob = CFrame.identity:Lerp(SPRINT_HOLDS[gunName] or SPRINT_HOLD, sprintWeight) * bob
 
+	idle(dt, aiming, running)
 	return CFrame.new(swayAngles.Y * SWAY_MOVE, swayAngles.X * SWAY_MOVE, 0)
 		* CFrame.Angles(swayAngles.X, swayAngles.Y, swayAngles.Y * 0.6)
 		* bob
-		* breathing(dt, aiming, running)
 end
 
 -- Muzzle flashes, by gun name: how big, in studs on screen, and how long they show.
@@ -1075,14 +1057,14 @@ function GunView.update(
 	-- A touch of smoothing, so a corner between two keys never shows as a step.
 	layerShown = layerShown:Lerp(layer, 1 - math.exp(-dt * 30))
 	local reach = (config and VIEW_REACH[config.name]) or CFrame.identity
-	-- A reload never goes quite the same way twice: the hold drifts a little while it plays.
+	-- The hold always drifts a little, and in full through a reload, which never goes quite the same way twice.
 	local playing = reloadAt ~= nil or keyedReloadAt ~= nil
 	if playing and not loosePlaying then
 		looseLife = math.random() * 100
 	end
 	loosePlaying = playing
 	looseShare += ((if playing then 1 else 0) - looseShare) * (1 - math.exp(-dt * LOOSE_EASE))
-	local loose = Loosen.drift(HIP.Position, looseLife + os.clock(), looseShare)
+	local loose = Loosen.drift(HIP.Position, idleLife, idleSize + (1 - math.min(idleSize, 1)) * looseShare)
 	local base = camera.CFrame * reach * sway * loose * (if clips then recoil * layerShown else CFrame.identity)
 	if showCard(camera, cardOut, sway) then
 		if flashModel then
