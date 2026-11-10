@@ -342,7 +342,7 @@ end)
 -- One coin: nothing but its edges, drawn as lines in Signal Acid. Two rims joined across the edge, and a diamond
 -- on each face.
 local function coinLines(wire: WireframeHandleAdornment)
-	-- Just proud of the coin's faces, so its black body doesn't cut into them.
+	-- Just proud of the coin's faces.
 	local faces = { -COIN_THICK / 2 - COIN_PROUD, COIN_THICK / 2 + COIN_PROUD }
 	local rims = { {}, {} }
 	for side = 1, COIN_SIDES do
@@ -376,8 +376,7 @@ local function burstCoins(position: Vector3, killer: Player?)
 		part.Name = "Coin"
 		part.Shape = Enum.PartType.Cylinder -- lies along X, so this is a flat coin: what it lands and rolls on
 		part.Size = Vector3.new(COIN_THICK, COIN_RADIUS * 2, COIN_RADIUS * 2)
-		part.Color = Color3.new(0, 0, 0) -- black between the lines, like the dark of a wireframe render
-		part.Material = Enum.Material.SmoothPlastic
+		part.Transparency = 1 -- only its wireframe shows: nothing is filled in
 		part.CollisionGroup = Collision.corpse
 		part.CanQuery = false
 		part.CanTouch = false
