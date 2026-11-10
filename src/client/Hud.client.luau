@@ -53,9 +53,11 @@ local CARD_TILT = 14 -- degrees the outer cards lean
 local CARD_DROP = 6 -- how much lower the outer cards sit
 local CARD_LIFT = 10 -- how far the card in hand rises
 local CARD_LIFT_TIME = 0.07 -- seconds it takes to get most of the way
-local CARD_GLITCH_TIME = 0.28 -- seconds a picked card glitches out and back in on top
-local CARD_GLITCH_SHIFT = 7 -- how far it jumps sideways while it does
-local CARD_GLITCH_FLASH = 0.45 -- how see-through the flash over it is
+local CARD_GLITCH_TIME = 0.42 -- seconds a picked card glitches out and back in on top
+local CARD_GLITCH_SHIFT = 8 -- how far it jumps sideways while it does
+local CARD_GLITCH_SPLIT = 9 -- how far its red and cyan ghosts pull apart
+local CARD_GLITCH_GHOST = 0.35 -- how see-through they are
+local CARD_GLITCH_BARS = 3 -- lines of static across it
 local CARD_GREY = Color3.fromRGB(86, 90, 98) -- what lies over a card on cooldown
 local CARD_GREYED = 0.2 -- how see-through that grey is when the cooldown starts
 
@@ -171,10 +173,38 @@ local function spreadCard(index: number)
 	corner.CornerRadius = UDim.new(CARD_CORNER, 0)
 	corner.Parent = grey
 	corner:Clone().Parent = flash
+	local scale = Instance.new("UIScale")
+	scale.Parent = image
+	-- The card's shape in cyan and in red, behind it, which pull apart to either side while it glitches.
+	local ghosts = {}
+	for which, color in { Palette.DataCyan, Palette.HazardRed } do
+		local ghost = flash:Clone()
+		ghost.AnchorPoint = Vector2.new(0.5, 0.5)
+		ghost.BackgroundColor3 = color
+		ghost.BackgroundTransparency = CARD_GLITCH_GHOST
+		ghost.ZIndex = 0
+		ghost.Visible = false
+		ghost.Parent = image
+		ghosts[which] = ghost
+	end
+	local bars = {}
+	for which = 1, CARD_GLITCH_BARS do
+		local bar = Instance.new("Frame")
+		bar.AnchorPoint = Vector2.new(0.5, 0.5)
+		bar.BackgroundColor3 = if which == 1 then Palette.DataCyan else BONE
+		bar.BorderSizePixel = 0
+		bar.ZIndex = 12
+		bar.Visible = false
+		bar.Parent = image
+		bars[which] = bar
+	end
 	return {
 		image = image,
 		grey = grey,
 		flash = flash,
+		scale = scale,
+		ghosts = ghosts,
+		bars = bars,
 		x = MARGIN + CARD_WIDTH / 2 + CARD_STEP + side * CARD_STEP,
 		y = CARD_LINE - CARD_HEIGHT / 2 + math.abs(side) * CARD_DROP,
 		shows = "",
@@ -236,17 +266,33 @@ local function showCard(index: number, now: number, step: number)
 	-- The card in hand slides up, and back down when it's put away.
 	local held = if CardInHand.slot == index then 1 else 0
 	card.lift += (held - card.lift) * (1 - math.exp(-step / CARD_LIFT_TIME))
-	local there, shift, over = HudText.glitch((os.clock() - card.pulledAt) / CARD_GLITCH_TIME)
-	if over and not card.pulled then
+	local glitch = HudText.glitch((os.clock() - card.pulledAt) / CARD_GLITCH_TIME)
+	if glitch.over and not card.pulled then
 		card.pulled = true
 		card.image.ZIndex = card.over -- it's gone here, and comes back over the others
 	end
-	card.flash.BackgroundTransparency = if shift ~= 0 then CARD_GLITCH_FLASH else 1
-	card.image.Position = UDim2.new(0, card.x + shift * CARD_GLITCH_SHIFT, 1, card.y - card.lift * CARD_LIFT)
-	if not there then
-		card.image.Visible = false
-		return
+	-- It breaks up lit cyan, and lands with a white flash and a little too big.
+	card.scale.Scale = glitch.scale
+	card.flash.BackgroundColor3 = if glitch.over then Color3.new(1, 1, 1) else Palette.DataCyan
+	card.flash.BackgroundTransparency = if glitch.there then 1 - glitch.flash else 1
+	card.grey.Visible = glitch.there
+	if card.face then
+		card.face.Visible = glitch.there
 	end
+	for which, ghost in card.ghosts do
+		-- While the card is gone its ghosts take turns, so something of it is always there.
+		ghost.Visible = glitch.split > 0 and (glitch.there or glitch.step % 2 == which - 1)
+		ghost.Position = UDim2.new(0.5, (which * 2 - 3) * glitch.split * CARD_GLITCH_SPLIT, 0.5, 0)
+	end
+	for which, bar in card.bars do
+		bar.Visible = glitch.step >= 0
+		if bar.Visible then
+			local at = glitch.step * CARD_GLITCH_BARS + which
+			bar.Position = UDim2.fromScale(0.5 + HudText.noise(at + 0.5) * 0.15, 0.5 + HudText.noise(at) * 0.48)
+			bar.Size = UDim2.new(0.9 + HudText.noise(at + 0.25) * 0.4, 0, 0, if which == 1 then 3 else 1)
+		end
+	end
+	card.image.Position = UDim2.new(0, card.x + glitch.shift * CARD_GLITCH_SHIFT, 1, card.y - card.lift * CARD_LIFT)
 	card.image.Visible = true
 end
 
