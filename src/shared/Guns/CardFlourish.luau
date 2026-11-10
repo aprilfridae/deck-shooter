@@ -58,7 +58,7 @@ local ASIDE = key(0, -0.34, 0.06, 0.04, -12, 0, -32) -- the left hand's half, ou
 local FINAL = key(0, -0.12, 0.04, 0.03, -12, 0, 0)
 local SPUN = key(0, 0.32, 0.18, -0.04, 15, 0, 0) -- the right hand's half after its spin
 local FANNED = key(0, 0.26, 0.2, -0.06, 0, 0, 0)
-local HELD = key(0, 0.3, 0.16, -0.02, 12, 0, 0) -- the card the right hand ends up holding
+local HELD = key(0, 0.42, 0.16, -0.02, 12, 0, 0) -- the card the right hand ends up holding
 local WAITING = key(0, 0.3, -0.02, 0.3, 10, 0, 0) -- where the right hand rests, low and out of the way
 
 -- The bottom half, which never leaves the left hand.
@@ -90,7 +90,7 @@ local RIGHT_HALF: { Key } = {
 local TOP = again(0, FINAL, 0, (COUNT - 1) * THICKNESS)
 local FLIP: { Key } = {
 	again(FLIP_AT, TOP),
-	key(5.2, 0.08, 0.38, -0.08, 0, 0, -180),
+	key(5.2, 0.15, 0.4, -0.08, 0, 0, -180),
 	key(CAUGHT_AT, HELD.x, HELD.y, HELD.z, HELD.yaw, 0, -360),
 	key(LENGTH, HELD.x, HELD.y, HELD.z, HELD.yaw, 0, -360),
 }
