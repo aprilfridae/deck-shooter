@@ -9,7 +9,7 @@
       "GunModels": { "$className": "Folder", "$ignoreUnknownInstances": true }
     },
     "Workspace": {
-      "$properties": { "Gravity": 150, "StreamingEnabled": false }
+      "$properties": { "Gravity": 100, "StreamingEnabled": false }
     },
     "ServerScriptService": {
       "CardCoreServer": { "$path": "src/server" }

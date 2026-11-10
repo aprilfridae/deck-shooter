@@ -7,7 +7,7 @@
 ## How it works
 
 - Each player's client moves its own Humanoid. `src/client/Movement.client.luau` runs the pure rules in `src/shared/Movement/MoveState.luau` every frame. Roblox Server Authority was considered and declined.
-- The camera is locked to first person (`StarterPlayer.CameraMode = LockFirstPerson`). Gravity is 150 for a slower arc. Both are set in `default.project.json`.
+- The camera is locked to first person (`StarterPlayer.CameraMode = LockFirstPerson`). Gravity is 100 (River lowered it from 150 on 2026-11-10; Roblox's own is 196.2), for a slow, floaty arc: jumps reach the same heights and take about 1.2 times as long. Both are set in `default.project.json`.
 - The character turns with the camera every frame. The client sends its pose (Normal, Crouch or Slide) to the server, which stores it as the character's `MovePose` attribute. `src/client/RemotePoses.client.luau` draws every body. Soldier bodies ease toward their gun pose every frame, at full framerate. Other bodies use the poses in `src/shared/Movement/BodyPose.luau`: crouching (root joint lowered 1.5 studs, knees bent) and sliding (lowered 1.5 studs and tilted back 50 degrees). Bodies don't jitter: that stays on the first-person arms only. Only the root part collides with the world.
 - Soldier bodies (the character model has the attribute `SoldierRig = true`) show gun poses from the pose files instead of the crouch and slide layers. `src/shared/Movement/BodyPoses/` holds one module per gun (made by `tools/build_body_poses.py` from `tools/export_body_poses.py`'s JSON; don't edit by hand) plus `Empty` for no gun, which also holds the soldier rig's joints (`rig`, root 3 studs above the feet). `src/shared/Movement/GunStance.luau` picks the pose each held frame: Reload, then Slide, Jump_Up or Fall in the air, Land for 0.25 seconds, Fire for 0.17 seconds after a shot, then a four-beat stride (contact, pass, then both with the legs mirrored) for crouch walk, walk and sprint (20 studs per second and up), else Stand or Crouch_Idle. Sidearms without poses use the Energy Pistol's. `src/client/HeldGuns.luau` puts the gun model in the hand, sized to the pose file's gun, and moves the magazine and charging handle or pump with the pose; your own held gun always hides in locked first person (the slide pose moves the head away from the camera, so distance alone wasn't enough). Bodies with no player, such as the soldier test dummy, are posed too: they carry the `PosedBody` tag and name their gun with a `GunId` attribute. A body's gun goes when the body is destroyed or leaves the game (a replaced body is only taken out, not destroyed). Fingers don't move in third person.
 - Only `src/client/Input.luau` reads keys, so touch and controller can be added later.
@@ -32,13 +32,13 @@ Speeds are studs per second.
 | --- | --- |
 | Walk | 16 |
 | Crouch | 8 |
-| Sprint | 24, in any direction, with no stamina |
-| Slide | Crouch while sprinting. Starts at 42 and slows to 24 over 0.9s, then holds 24 for as long as crouch is held. No cooldown. The direction is fixed when the slide starts. Letting go of crouch blends back to walk or sprint speed over 0.25s. |
+| Sprint | 27 (raised from 24 on 2026-11-10), in any direction, with no stamina |
+| Slide | Crouch while sprinting. Starts at 42 and slows to sprint speed (27) over 0.9s, then holds it for as long as crouch is held. No cooldown. The direction is fixed when the slide starts. Letting go of crouch blends back to walk or sprint speed over 0.25s. |
 | Jump | 6 studs high |
 | Slide jump | Jumping out of a slide adds 8 to the current speed. The air keeps that speed, and it fades over 0.6s after landing. |
 | Fast fall | Hold crouch in the air to fall faster: 350 per second per second, up to 110. Landing while moving with crouch and sprint held starts a slide. |
 | Chain jump | A jump from a slide that began by landing from the air goes 8 studs high and adds 16. |
-| Edge parry | Press jump at a fixed flat edge 1 to 4.5 studs above the feet, on the ground or in the air. Keeps the current speed (at least 24) and adds 6, up to 58. It goes in the slide direction while sliding (or in the air after a slide with no move key held), otherwise the move direction, otherwise the camera's. |
+| Edge parry | Press jump at a fixed flat edge 1 to 4.5 studs above the feet, on the ground or in the air. Keeps the current speed (at least sprint speed, 27) and adds 6, up to 58. It goes in the slide direction while sliding (or in the air after a slide with no move key held), otherwise the move direction, otherwise the camera's. |
 
 A **fixed flat edge** is an anchored part that isn't part of a character, with a top surface whose normal points at least 0.98 up. The edge check looks 1.5, 2.5 and 3.5 studs ahead (`src/client/Ledge.luau`).
 
