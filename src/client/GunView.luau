@@ -471,6 +471,7 @@ local crushAt: number? = nil -- when the card in hand was used
 local cardTurns = 0 -- CardInHand.turns as of the last look
 local turns = 0 -- how many times the card held has been changed since the cards came out
 local turnAt = 0 -- when it last was
+local cardLife = 0 -- where this time out starts in the hands' sway, so no two go alike
 local shownFrame: any = nil -- what's on screen, with any snap laid over it
 local shownBase: any = nil
 local shownSnap: any = nil
@@ -976,6 +977,7 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 		holsterAt = cardAt
 		cardUsed = CardInHand.used
 		cardTurns, turns = CardInHand.turns, 0
+		cardLife = math.random() * 100
 	end
 	local elapsed = (crushAt or now) - (cardAt :: number) - drop
 	if CardInHand.turns ~= cardTurns then
@@ -1002,7 +1004,12 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 	local pose = if crush
 		then crush.pose
 		elseif turns > 0 then CardFlourish.turn(turns, now - turnAt)
-		else CardFlourish.at(elapsed)
+		else CardFlourish.at(CardFlourish.tempo(elapsed, cardLife + now))
+	local rightMoved
+	pose, rightMoved = CardFlourish.sway(pose, cardLife + now)
+	if crush then
+		crush.palm = rightMoved * crush.palm
+	end
 	ViewArms.holdCards(pose.right, pose.left, pose.fingers)
 	CardView.show(camera, held, pose.cards, crush, CardFlourish.top(turns))
 	ViewArms.place(camera, held)

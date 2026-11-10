@@ -250,7 +250,8 @@ local function height(index: number): number
 end
 
 -- A card during the spring. They leave the face of the right hand's deck one by one and land from the bottom up.
-local function sprung(index: number, at: number, pile: CFrame): CFrame
+-- Also returns whose it is: 1 in the right hand, down to 0 in the left.
+local function sprung(index: number, at: number, pile: CFrame): (CFrame, number)
 	local up = height(index)
 	-- No two cards fly quite alike: each leaves a hair early or late, climbs its own height and flutters on the way.
 	local odd, other = math.sin(index * 12.9898), math.sin(index * 78.233)
@@ -260,7 +261,7 @@ local function sprung(index: number, at: number, pile: CFrame): CFrame
 	local to = pile * CFrame.new(0, up * THICKNESS, 0)
 	local arc = math.sin(share * math.pi)
 	local flying = from:Lerp(to, smooth(share)) * CFrame.Angles(math.rad(7) * other * arc, math.rad(11) * odd * arc, 0)
-	return flying + RISE * (arc * (1 + 0.25 * other))
+	return flying + RISE * (arc * (1 + 0.25 * other)), 1 - smooth(share)
 end
 
 -- A card of the right hand's half, turned about the thumb by how far the fan is open.
@@ -405,7 +406,35 @@ local CardFlourish = {
 	BURST_AT = BURST_AT,
 }
 
-export type Pose = { cards: { CFrame }, right: CFrame, left: CFrame, fingers: Hands }
+-- sides is whose each card is: 0 in the left hand, 1 in the right, and between on its way across.
+export type Pose = { cards: { CFrame }, sides: { number }, right: CFrame, left: CFrame, fingers: Hands }
+
+-- How far along a stretch of time a moment is, eased, from 0 to 1.
+local function through(at: number, from: number, to: number): number
+	return smooth(math.clamp((at - from) / (to - from), 0, 1))
+end
+
+-- A slow wander between -1 and 1 that never repeats itself. Each `which` wanders its own way.
+local function wander(life: number, which: number): number
+	return 0.55 * math.sin(life * 2.1 + which * 1.3)
+		+ 0.3 * math.sin(life * 4.9 + which * 2.9)
+		+ 0.15 * math.sin(life * 9.7 + which * 4.1)
+end
+
+local SWAY_MOVE = 0.012 -- studs a hand drifts
+local SWAY_TURN = math.rad(3) -- and how far its wrist rolls
+local TEMPO = 0.035 -- seconds the flourish runs ahead of or behind itself
+
+-- How a hand at `palm` has drifted and turned about itself.
+local function drift(palm: Vector3, life: number, which: number): CFrame
+	local move = Vector3.new(wander(life, which), wander(life, which + 1), wander(life, which + 2)) * SWAY_MOVE
+	local turn = CFrame.Angles(
+		wander(life, which + 3) * SWAY_TURN,
+		wander(life, which + 4) * SWAY_TURN,
+		wander(life, which + 5) * SWAY_TURN
+	)
+	return CFrame.new(palm + move) * turn * CFrame.new(-palm)
+end
 
 -- Every card, each hand's palm and how its fingers sit, relative to the camera, after elapsed seconds. It holds its
 -- end.
@@ -413,6 +442,7 @@ export type Pose = { cards: { CFrame }, right: CFrame, left: CFrame, fingers: Ha
 function CardFlourish.at(elapsed: number): Pose
 	local at = math.clamp(elapsed * SPEED, 0, LENGTH)
 	local cards = table.create(COUNT)
+	local sides = table.create(COUNT, 0)
 	-- The left hand sinks as the deck piles into it, jumps as the top half is pulled off and flicked, and is knocked
 	-- down when the half is dropped back on.
 	local piled = smooth(math.clamp((at - SPRING_FROM - FLIGHT) / (SPRING_TO - SPRING_FROM), 0, 1))
@@ -429,18 +459,20 @@ function CardFlourish.at(elapsed: number): Pose
 	local leftHalf = frameOf(flowing(LEFT_HALF, at)) + leftGive
 	if at < SPRING_TO + FLIGHT then
 		for index = 1, COUNT do
-			cards[index] = sprung(index, at, leftHalf)
+			cards[index], sides[index] = sprung(index, at, leftHalf)
 		end
 	else
 		local rightHalf = if at < SLIDE_AT
 			then leftHalf * CFrame.new(0, HALF_HEIGHT, 0)
 			else frameOf(flowing(RIGHT_HALF, at)) + rightGive + dropped
 		local fanning = at > 3.1 and at < 4.6
+		local taken = math.min(through(at, SLIDE_AT, CUT_AT), 1 - through(at, 4.45, JOINED_AT))
 		for index = 1, HALF do
 			-- The fan ripples open from its top card, and each card overshoots and springs back.
 			local when = at - FAN_RIPPLE * (HALF - index) / (HALF - 1)
 			local open = if fanning then flowing(FAN, when).x + 0.09 * knock(when - FAN_AT + 0.03) else 0
 			cards[index] = fanned(rightHalf, index, open)
+			sides[index] = taken
 			cards[HALF + index] = leftHalf * CFrame.new(0, (index - 1) * THICKNESS, 0)
 		end
 	end
@@ -450,9 +482,11 @@ function CardFlourish.at(elapsed: number): Pose
 	end
 	if at > FLIP_AT - FLIP_LEAD then
 		cards[CHOSEN] = frameOf(flowing(FLIP, at)) + rightGive
+		sides[CHOSEN] = through(at, FLIP_AT, CAUGHT_AT)
 	end
 	return {
 		cards = cards,
+		sides = sides,
 		right = handFlowing(RIGHT_HAND, at) + rightGive,
 		left = leftHalf * LEFT_GRIP,
 		fingers = { Right = fingersAt(RIGHT_FINGERS, at), Left = fingersAt(LEFT_FINGERS, at) },
@@ -491,20 +525,44 @@ function CardFlourish.turn(turns: number, since: number): Pose
 	local leftGive = SINK * (-0.012 * knock(at - FLIP_AT))
 	local rightGive = CATCH * (0.035 * knock(at - CAUGHT_AT + 0.04))
 	local cards = table.create(COUNT)
+	local sides = table.create(COUNT, 0)
 	for index, frame in done.cards do
 		cards[index] = frame + leftGive
 	end
+	sides[CHOSEN - over] = through(at, FLIP_AT, CAUGHT_AT)
 	for under = 0, over - 1 do
+		sides[CHOSEN - under] = 1
 		cards[CHOSEN - under] = done.cards[CHOSEN] * CFrame.new(0, under * THICKNESS, 0) + rightGive
 	end
 	-- A card's own y turns over with it, so the one offset starts it lower in the deck and lands it on top.
 	cards[CHOSEN - over] = frameOf(flowing(FLIP, at)) * CFrame.new(0, over * THICKNESS, 0) + rightGive
 	return {
 		cards = cards,
+		sides = sides,
 		right = done.right + rightGive,
 		left = done.left + leftGive,
 		fingers = { Right = fingersAt(TURN_FINGERS, at), Left = fingersAt(LEFT_FINGERS, at) },
 	}
+end
+
+-- The pose with life in it: each hand drifts and rolls a little on its own, never the same way twice, and its cards
+-- go with it. life is any clock that keeps running. Also returns how the right hand moved.
+function CardFlourish.sway(pose: Pose, life: number): (Pose, CFrame)
+	local left, right = drift(pose.left.Position, life, 1), drift(pose.right.Position, life, 7)
+	local cards = table.create(COUNT)
+	for index, frame in pose.cards do
+		local side = pose.sides[index]
+		cards[index] = (if side <= 0 then left elseif side >= 1 then right else left:Lerp(right, side)) * frame
+	end
+	return { cards = cards, sides = pose.sides, right = right * pose.right, left = left * pose.left, fingers = pose.fingers },
+		right
+end
+
+-- The flourish's time with its tempo loosened: it runs a touch ahead of itself and behind, differently every time.
+-- It starts and ends on time.
+function CardFlourish.tempo(elapsed: number, life: number): number
+	local length = LENGTH / SPEED
+	return elapsed + TEMPO * wander(life, 13) * through(elapsed, 0, 0.3) * (1 - through(elapsed, length - 0.5, length))
 end
 
 export type Crush = { pose: Pose, crushed: number, palm: Vector3, card: number }
@@ -540,6 +598,7 @@ function CardFlourish.crush(elapsed: number, since: number, turns: number?): Cru
 			to = TOP_FRAME
 		end
 		pose.cards[index] = frame:Lerp(to, grab) -- the deck snaps shut out of the fist's way
+		pose.sides[index] += ((if index == chosen then 1 else 0) - pose.sides[index]) * grab
 	end
 	local card = pose.cards[chosen]
 	pose.cards[chosen] = card - card.Position + card.Position:Lerp(palm, fist)

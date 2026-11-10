@@ -74,6 +74,37 @@ describe("CardFlourish", function()
 		expect((crush.pose.cards[crush.card].Position - crush.palm).Magnitude < 1e-4).toBe(true)
 	end)
 
+	it("sways each hand a little, with its cards", function()
+		for _, elapsed in { 0.3, 1.5, CardFlourish.LENGTH } do
+			local pose = CardFlourish.at(elapsed)
+			local swayed = CardFlourish.sway(pose, 12.3)
+			expect(#swayed.cards).toBe(CardFlourish.COUNT)
+			local moved = (swayed.left.Position - pose.left.Position).Magnitude
+			expect(moved > 0 and moved < 0.03).toBe(true)
+			for index, frame in pose.cards do
+				local hand, was = swayed.left, pose.left
+				if pose.sides[index] == 1 then
+					hand, was = swayed.right, pose.right
+				elseif pose.sides[index] ~= 0 then
+					continue
+				end
+				local slipped = hand:ToObjectSpace(swayed.cards[index]).Position - was:ToObjectSpace(frame).Position
+				expect(slipped.Magnitude < 1e-4).toBe(true)
+			end
+		end
+	end)
+
+	it("loosens the tempo but starts and ends on time", function()
+		expect(CardFlourish.tempo(0, 5)).toBe(0)
+		expect(CardFlourish.tempo(CardFlourish.LENGTH, 5)).toBe(CardFlourish.LENGTH)
+		local last = 0
+		for step = 1, 200 do
+			local now = CardFlourish.tempo(step * CardFlourish.LENGTH / 200, 5 + step * CardFlourish.LENGTH / 200)
+			expect(now > last).toBe(true)
+			last = now
+		end
+	end)
+
 	it("holds its end", function()
 		local last = CardFlourish.at(CardFlourish.LENGTH).cards[1]
 		local later = CardFlourish.at(CardFlourish.LENGTH + 10).cards[1]
