@@ -122,9 +122,9 @@ local RELOAD_SYNC: { [string]: { { number } } } = {
 }
 -- Motion blur: Roblox can't blur one object, so faded copies of the gun and arms trail behind them,
 -- spread between where they were SMEAR_TIME ago and where they are now. Only while the gun moves fast enough.
-local SMEAR_COPIES = 4
-local SMEAR_TIME = 0.06
-local SMEAR_OPACITY = 0.1
+local SMEAR_COPIES = 12 -- a lot of them, over a long trail: River wants it over the top
+local SMEAR_TIME = 0.14
+local SMEAR_OPACITY = 0.075
 local SMEAR_MIN_MOVE = 0.04 -- studs the gun must travel in SMEAR_TIME to blur
 local SMEAR_MIN_TURN = math.rad(4)
 local SNAPPY = { fire = true }
