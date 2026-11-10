@@ -21,23 +21,22 @@ local VAULT_IN = 20 -- its inner radius
 local SCREEN_TAG = "OutpostWiredScreen"
 local LED_TAG = "OutpostWiredLed"
 
--- Old plastic, yellowed to different degrees.
+-- Old plastic in different greys, none of them bright (River found the beige-white ones too bright).
 local CASES = {
-	Color3.fromRGB(196, 190, 170),
-	Color3.fromRGB(184, 178, 160),
-	Color3.fromRGB(206, 201, 184),
-	Color3.fromRGB(160, 156, 144),
-	Color3.fromRGB(62, 64, 70), -- the odd black one
+	Color3.fromRGB(118, 120, 124),
+	Color3.fromRGB(100, 102, 106),
+	Color3.fromRGB(86, 88, 92),
+	Color3.fromRGB(132, 132, 128),
+	Color3.fromRGB(70, 72, 76),
+	Color3.fromRGB(54, 56, 60),
 }
 local GLASS_DARK = Color3.fromRGB(14, 18, 24)
 local SCREEN_LIGHT = Color3.fromRGB(120, 170, 255)
-local CABLE_COLORS = {
+local CABLE_COLORS = { -- greys only
 	Color3.fromRGB(22, 24, 26),
-	Color3.fromRGB(22, 24, 26),
-	Color3.fromRGB(180, 178, 168),
-	Color3.fromRGB(180, 178, 168),
-	Color3.fromRGB(46, 70, 150),
-	Color3.fromRGB(150, 40, 36),
+	Color3.fromRGB(40, 42, 46),
+	Color3.fromRGB(64, 66, 70),
+	Color3.fromRGB(92, 94, 98),
 }
 
 local function v(x: number, y: number, z: number): Vector3
@@ -55,7 +54,8 @@ local function pick<T>(g, list: { T }): T
 	return list[g.random:NextInteger(1, #list)]
 end
 
--- A screen. kind is "Code" (lines of code scrolling) or "Glow" (a blank blue glow, humming).
+-- A screen. kind is "Code" (lines of code scrolling), "Wave" (a scope of red-to-blue waves sliding across),
+-- "Radar" (a sweep going round), "Bars" (a spectrum bouncing) or "Glow" (a blank blue glow, humming).
 local function screen(g, cframe: CFrame, width: number, height: number, kind: string)
 	local part = Kit.decor(g:block(v(width, height, 0.2), cframe, GLASS_DARK, M.Glass))
 	part:SetAttribute("WiredKind", kind)
@@ -69,10 +69,14 @@ local function crt(g, at: CFrame, size: number)
 	local height, depth = size * 0.82, size * 0.9
 	local color = g:vary(pick(g, CASES), 0.02)
 	g:block(v(size, height, depth), at * CFrame.new(0, height / 2, depth / 2), color, M.SmoothPlastic)
-	local kind = if g:chance(0.72) then "Code" else "Glow"
-	if g:chance(0.1) then
-		kind = "Off"
-	end
+	local roll = g.random:NextNumber()
+	local kind = if roll < 0.4
+		then "Code"
+		elseif roll < 0.58 then "Wave"
+		elseif roll < 0.68 then "Radar"
+		elseif roll < 0.8 then "Bars"
+		elseif roll < 0.92 then "Glow"
+		else "Off"
 	if kind ~= "Off" then
 		screen(g, at * CFrame.new(0, height * 0.55, -0.06), size * 0.76, height * 0.66, kind)
 	else
@@ -109,7 +113,7 @@ local function dangle(g, top: Vector3, length: number)
 	if g:chance(0.45) then
 		local board = g:chance(0.5)
 		local size = if board then v(1.6, 2.2, 0.1) else v(1, 1.5, 0.3)
-		local color = if board then Color3.fromRGB(34, 96, 64) else Color3.fromRGB(150, 154, 160)
+		local color = if board then Color3.fromRGB(52, 56, 58) else Color3.fromRGB(110, 112, 116)
 		Kit.decor(g:block(size, CFrame.new(bottom - v(0, size.Y / 2, 0)) * CFrame.Angles(0, g:range(0, math.pi), g:range(-0.2, 0.2)), color, M.Metal))
 	end
 end
