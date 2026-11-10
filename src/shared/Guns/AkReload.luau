@@ -44,12 +44,12 @@ local PULL_AT = 0.87 -- the handle is pulled
 local FREE_AT = 0.93 -- and let go
 local HOME_AT = 0.96 -- the bolt is home
 local GRIP_FROM, GRIP_TO = 0.95, 1.11 -- the right hand goes back to the grip
-local LENGTH = 1.28 -- the gun is back down
+local LENGTH = 1.42 -- the gun is back down, a moment after the reload itself is done
 local GONE_AT = 0.76 -- the old magazine has fallen out of view
 local GRAVITY = 30 -- metres a second a second, in these seconds
 local FLING = 1.1 -- how fast the old magazine leaves the hand, metres a second
--- It isn't just dropped: it's tossed up and off to the left, in the hold, so it flips over in an arc before it falls.
-local TOSS = Vector3.new(-0.9, 3, 0)
+-- It isn't just dropped: it's tossed up and back over the shoulder, in the hold, flipping over as it goes.
+local TOSS = Vector3.new(-0.5, 3.4, 1.8) -- up, and back over the shoulder
 -- Between the grip and the knob the right hand swings out from the gun's right side, so it clears the receiver.
 -- In the gun's space.
 local CLEAR = Vector3.new(0.09, 0.02, 0)
@@ -107,10 +107,12 @@ local GUN_KEYS = {
 	{ 0.88, 14, 18, 3, 0.02, 0 }, -- so the knob faces the right hand
 	{ FREE_AT, 17, 21, 2, 0.036, 0.004 }, -- dragged back by the pull
 	{ 0.975, 11, 12, 2, 0.002, -0.007 }, -- thrown forward, muzzle dipping, as the bolt flies home
-	{ 1.05, -12, 15, -3, 0.012, 0.008 }, -- a last flick: rolled the other way, muzzle up
-	{ 1.14, 5, -5, 1, -0.005, -0.012 }, -- and dropped in heavy, dipping past ready
-	{ 1.2, -1.5, 1, 0, 0, 0.003 },
-	{ 1.26, 0, 0, 0, 0, 0 },
+	{ 1.06, 58, 6, 4, -0.03, 0.02 }, -- then snapped over sideways and shoved out front, held flat like a threat
+	{ 1.12, 50, 9, 3, -0.022, 0.012 }, -- it bounces off the snap
+	{ 1.2, 52, 7, 3, -0.025, 0.014 }, -- and hangs there a beat
+	{ 1.3, -5, -5, -1, 0.004, -0.012 }, -- before it rolls back in heavy, dipping past ready
+	{ 1.35, 1, 1, 0, 0, 0.003 },
+	{ 1.4, 0, 0, 0, 0, 0 },
 }
 -- How fast a value is changing at a key: the slope between its neighbours, and still at either end.
 local function slope(index: number, value: number): number

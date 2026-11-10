@@ -56,7 +56,7 @@ describe("AkReload", function()
 		end
 		local let, up, down, gone = inHold(0.34), inHold(0.42), inHold(0.58), inHold(0.74)
 		expect(up.Y > let.Y + 0.05).toBe(true) -- up first
-		expect(up.X < let.X).toBe(true) -- and off to the left
+		expect(up.Z > let.Z).toBe(true) -- and back over the shoulder
 		expect(down.Y < up.Y and gone.Y < -0.7).toBe(true) -- then down out of view
 	end)
 
