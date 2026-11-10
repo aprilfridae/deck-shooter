@@ -14,6 +14,11 @@ pcall(function()
 	quality = UserSettings():GetService("UserGameSettings").SavedQualityLevel.Value
 end)
 local state = PerfLevel.new(quality)
+-- A phone or tablet starts a level down: it can earn its way up, but shouldn't open on the full load.
+local UserInputService = game:GetService("UserInputService")
+if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+	state.level = math.min(state.level, 2)
+end
 local level = state.level
 Players.LocalPlayer:SetAttribute("PerfLevel", level)
 

@@ -20,6 +20,7 @@ The world is light: shadows are off, and the maps are small and built at run tim
 - It follows the frame rate (`PerfLevel.luau`, tested): under 45 frames a second for 1.5s steps it down; over 57 for 8s steps it back up. A frame of a quarter of a second or more is a hitch and isn't counted.
 - If stepping up is followed by stepping down within 15s, that higher level is too much for the machine and isn't tried again for 3 minutes, so it doesn't flicker between two levels.
 - A player who has set Roblox's own graphics quality to 3 or less starts at level 1, and at 6 or less at level 2.
+- A touch device with no keyboard starts no higher than level 2.
 - The level is on the player as the attribute `PerfLevel`, to check while testing.
 - It only ever changes decoration. Nothing about how the game plays depends on it.
 
