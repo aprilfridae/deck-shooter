@@ -48,7 +48,7 @@ local GRAVITY = 30 -- metres a second a second, in these seconds
 local FLING = 1.1 -- how fast the old magazine leaves the hand, metres a second
 -- Between the grip and the knob the right hand swings out from the gun's right side, so it clears the receiver.
 -- In the gun's space.
-local CLEAR = Vector3.new(0.05, 0.01, 0)
+local CLEAR = Vector3.new(0.09, 0.02, 0)
 
 -- A hand's palm on something: the point `along` up its fingers from the wrist and `out` from its palm goes at
 -- `at`, with its fingers running one way and its palm facing another. The same idea as CardFlourish's grips. A left
@@ -60,11 +60,15 @@ local function grip(at: Vector3, along: number, out: number, fingers: Vector3, p
 	return CFrame.fromMatrix(at - y * along - facing * out, x, y, x:Cross(y))
 end
 
--- On a magazine: palm on its left side, fingers forward round its front.
-local ON_MAG = grip(MAG, 0.085, 0.035, Vector3.new(0.2, 0.3, -1), Vector3.new(1, 0, 0))
--- The right hand on the knob: outside the gun's right side, below the knob, fingers up to hook it, palm facing back to
--- pull.
-local ON_KNOB = grip(KNOB, 0.12, 0.01, Vector3.new(-0.25, 0.92, -0.3), Vector3.new(0, 0, 1), true)
+-- On a magazine: palm on its left side, fingers forward and up round its front. It holds the lower half, which
+-- curves forward, with its wrist below: higher up, the hand sat in the right hand's fingers at the trigger.
+local MAG_HOLD = h(0.107, 0, -0.125)
+local ON_MAG = grip(MAG_HOLD, 0.085, 0.035, Vector3.new(0.2, 0.6, -0.8), Vector3.new(1, 0, 0))
+-- The right hand on the knob: well out from the gun's right side and below the knob, reaching in with only its
+-- fingertips on the knob's end, palm facing back to pull. The hand is big next to the gun, so anything closer puts
+-- its palm through the receiver.
+local KNOB_END = KNOB + Vector3.new(0.014, 0, 0)
+local ON_KNOB = grip(KNOB_END, 0.14, 0.012, Vector3.new(-0.62, 0.74, -0.25), Vector3.new(0, 0, 1), true)
 -- A magazine in the hand down out of view, in the hold.
 local FETCHED = CFrame.new(-0.2, -0.36, 0.02) * CFrame.Angles(0, 0, math.rad(50))
 
