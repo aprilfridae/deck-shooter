@@ -51,6 +51,7 @@ function KillPopups.start(hud: Frame, rewardRemote: RemoteEvent)
 		tracking = TOTAL_TRACKING,
 		color = AMOUNT_COLOR,
 		position = UDim2.new(0.5, LEFT, 0.5, TOP - TOTAL_RISE),
+			shadow = false,
 	})
 	total:setVisible(false)
 	local totalFrom, totalTo, totalAt = 0, 0, -math.huge
@@ -69,6 +70,7 @@ function KillPopups.start(hud: Frame, rewardRemote: RemoteEvent)
 			tracking = LINE_TRACKING,
 			color = NAME_COLOR,
 			position = UDim2.fromOffset(0, 0),
+			shadow = false,
 		})
 		name:set(line.name)
 		local amount = TypeLabel.new(holder, {
@@ -77,6 +79,7 @@ function KillPopups.start(hud: Frame, rewardRemote: RemoteEvent)
 			tracking = LINE_TRACKING,
 			color = AMOUNT_COLOR,
 			position = UDim2.fromOffset(AMOUNT_AT, 0),
+			shadow = false,
 		})
 		amount:set(if line.amount then "+" .. withCommas(line.amount) else "")
 		fade(name, 1)

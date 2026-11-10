@@ -51,7 +51,7 @@ local LABEL_TRACKING = 3
 local CARD_HEIGHT = 132 -- River had them made bigger (they were 96); the spread's other sizes grew with them
 local CARD_WIDTH = CARD_HEIGHT * 0.625
 local CARD_CORNER = 10 / 150 -- the art's rounded corner, as a share of the card's width
-local CARD_LINE = LABEL_LINE - 26 -- the bottom of the middle card
+local CARD_LINE = LABEL_LINE - 32 -- the bottom of the middle card
 local CARD_STEP = 47 -- from one card's middle to the next
 local CARD_TILT = 14 -- degrees the outer cards lean
 local CARD_DROP = 8 -- how much lower the outer cards sit
@@ -137,14 +137,14 @@ KillPopups.start(hud, rewardRemote)
 local function number(style: string, color: Color3, right: boolean?, position: UDim2): any
 	return TypeLabel.new(
 		hud,
-		{ style = style, size = NUMBER_SIZE, tracking = 0, color = color, right = right, position = position }
+		{ style = style, size = NUMBER_SIZE, tracking = 0, color = color, right = right, position = position, shadow = false }
 	)
 end
 
 local function small(style: string, right: boolean?, position: UDim2): any
 	return TypeLabel.new(
 		hud,
-		{ style = style, size = LABEL_SIZE, tracking = LABEL_TRACKING, color = BONE, right = right, position = position }
+		{ style = style, size = LABEL_SIZE, tracking = LABEL_TRACKING, color = BONE, right = right, position = position, shadow = false }
 	)
 end
 
