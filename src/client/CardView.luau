@@ -56,6 +56,9 @@ local CORNER_AT = CardFlourish.CARD_SIZE / 2 -- a card's corner, which moves whe
 local ghosts: { BasePart } = {}
 local ghostFaces: { Decal } = {}
 local history: { { at: number, cards: { CFrame } } } = {} -- where the cards were lately, oldest first
+local BLUR_FADE = 14 -- how fast a card's blur fades in and out, a second
+local strengths: { [number]: number } = {} -- how much of each card's blur shows, 0 to 1
+local steppedAt = 0
 
 -- A bent card is shown as a few strips along its length, each with its slice of the card's two images, and the card
 -- itself is put away while they show.
@@ -313,10 +316,14 @@ local function blur(view: CFrame, cards: { CFrame }): { CFrame }
 	if was and now - was.at < 0.2 then
 		local span = now - was.at
 		local back = math.min(SHUTTER / span, 1)
+		local fadeStep = 1 - math.exp(-math.min(now - steppedAt, 0.1) * BLUR_FADE)
+		steppedAt = now
 		local blurred: { Vector3 } = {}
 		for index = #cards, 1, -1 do -- top cards first, so a stack's blur shows the card on top
 			local frame, old = cards[index], was.cards[index]
 			local moved = math.max((frame.Position - old.Position).Magnitude, (frame * CORNER_AT - old * CORNER_AT).Magnitude)
+			-- How much blur the card wants: none below BLUR_FROM, all of it at twice that.
+			local wanted = 0
 			if moved >= BLUR_FROM * span and index ~= shrunk then
 				local alone = true
 				for _, other in blurred do
@@ -327,9 +334,18 @@ local function blur(view: CFrame, cards: { CFrame }): { CFrame }
 				end
 				if alone then
 					table.insert(blurred, frame.Position)
-					for ghost = 1, GHOSTS do
-						trail[(index - 1) * GHOSTS + ghost] = view * frame:Lerp(old, back * ghost / GHOSTS)
-					end
+					wanted = math.clamp(moved / (BLUR_FROM * span) - 1, 0, 1)
+				end
+			end
+			-- It fades in and out over a few frames, so the copies never flicker on and off.
+			local shows = strengths[index] or 0
+			shows += (wanted - shows) * fadeStep
+			strengths[index] = shows
+			if shows > 0.02 then
+				for ghost = 1, GHOSTS do
+					local copy = (index - 1) * GHOSTS + ghost
+					trail[copy] = view * frame:Lerp(old, back * ghost / GHOSTS)
+					ghosts[copy].Transparency = 1 - (1 - FADES[ghost]) * shows
 				end
 			end
 		end

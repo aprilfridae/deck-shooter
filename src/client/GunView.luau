@@ -499,6 +499,9 @@ local shownBase: any = nil
 local shownSnap: any = nil
 local smears: { any } = {}
 local smearShown = false
+local SMEAR_FADE = 14 -- how fast the blur fades in and out, a second
+local smearStrength = 0 -- how much of it shows, 0 to 1
+local smearSteppedAt = 0
 local history: { { at: number, frame: any } } = {} -- recent poses, oldest first
 local shownKind: string? = nil -- which clip is playing
 local blendFrom: any = nil -- the pose a clip change fades out of
@@ -628,7 +631,15 @@ local function drawSmear(camera: Camera, whole: any, base: CFrame, hold: CFrame)
 	local from = history[1].frame
 	local moved = (from.gun.Position - whole.gun.Position).Magnitude
 	local _, turned = from.gun:ToObjectSpace(whole.gun):ToAxisAngle()
-	if moved < SMEAR_MIN_MOVE and math.abs(turned) < SMEAR_MIN_TURN then
+	-- The blur fades in as the gun gets going and out as it stops, over a few frames, so it never flickers on and
+	-- off. It's wanted in full once the gun moves twice as fast as the least that blurs.
+	local going = math.max(moved / SMEAR_MIN_MOVE, math.abs(turned) / SMEAR_MIN_TURN)
+	local wanted = math.clamp(going - 1, 0, 1)
+	local step = math.min(now - smearSteppedAt, 0.1)
+	smearSteppedAt = now
+	smearStrength += (wanted - smearStrength) * (1 - math.exp(-step * SMEAR_FADE))
+	if smearStrength < 0.02 then
+		smearStrength = 0
 		if smearShown then
 			hideSmears()
 		end
@@ -639,7 +650,7 @@ local function drawSmear(camera: Camera, whole: any, base: CFrame, hold: CFrame)
 	end
 	smearShown = true
 	for _, smear in smears do
-		local transparency = 1 - SMEAR_OPACITY * smear.share
+		local transparency = 1 - SMEAR_OPACITY * smear.share * smearStrength
 		for _, part in smear.parts do
 			part.Transparency = transparency
 		end

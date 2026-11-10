@@ -166,8 +166,10 @@ function ViewArms.placeGhost(ghost: any, camera: Camera, transparency: number, v
 	for index, mesh in ghost.meshes do
 		local group = ghost.groups[index]
 		local real = rig and rig.parts and rig.parts[group]
-		local still = real and (ghost.parts[group].Position - real.Position).Magnitude < GHOST_MIN_MOVE
-		mesh.Transparency = if still then 1 else transparency
+		-- It fades in over the next couple of GHOST_MIN_MOVEs, so it never pops on or off.
+		local away = if real then (ghost.parts[group].Position - real.Position).Magnitude else math.huge
+		local shows = math.clamp((away - GHOST_MIN_MOVE) / (GHOST_MIN_MOVE * 2), 0, 1)
+		mesh.Transparency = 1 - (1 - transparency) * shows
 	end
 	placeRig(ghost, camera, view)
 end
@@ -227,7 +229,9 @@ function ViewArms.blur(camera: Camera, view: CFrame?)
 			for index, mesh in ghost.meshes do
 				local group = ghost.groups[index]
 				local moved = (parts[group].Position - rig.parts[group].Position).Magnitude
-				mesh.Transparency = if moved < BLUR_MIN_MOVE then 1 else fade
+				-- It fades in as the part gets further from the real one, so it never pops on or off.
+				local shows = math.clamp((moved - BLUR_MIN_MOVE) / (BLUR_MIN_MOVE * 3), 0, 1)
+				mesh.Transparency = 1 - (1 - fade) * shows
 			end
 			placeRig(ghost, camera, view)
 		end
