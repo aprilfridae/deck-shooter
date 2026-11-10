@@ -11,11 +11,12 @@
 # +X muzzle, +Z up, origin at the trigger) to the out folder. Roblox moves each mesh's origin to the middle of its box,
 # so the boxes are what place the lever's pivot afterwards.
 import json
+import math
 import os
 import sys
 
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 source, out = sys.argv[sys.argv.index("--") + 1:][:2]
 os.makedirs(out, exist_ok=True)
@@ -128,7 +129,17 @@ for key, pieces in piles.items():
         "rough": rough if material else 0.5,
     }
 
+# Roblox brings +X in as -X, and the game's guns point down -Z with unturned parts, so turn the muzzle to -Y here.
 only([o for o in bpy.context.scene.objects if o.type == "MESH"])
+bpy.ops.object.origin_set(type="ORIGIN_CURSOR")
+for o in bpy.context.selected_objects:
+    o.matrix_world = Matrix.Rotation(-math.pi / 2, 4, "Z") @ o.matrix_world
+bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
+low = [min((o.matrix_world @ Vector(c))[i] for o in bpy.context.selected_objects for c in o.bound_box) for i in range(3)]
+high = [max((o.matrix_world @ Vector(c))[i] for o in bpy.context.selected_objects for c in o.bound_box) for i in range(3)]
+print("TURNED", [round(v, 3) for v in low], [round(v, 3) for v in high])
+
 bpy.ops.export_scene.gltf(
     filepath=os.path.join(out, "LeverRifle_low.glb"),
     export_format="GLB",
