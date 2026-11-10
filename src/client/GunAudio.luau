@@ -58,6 +58,9 @@ for _, soundId in {
 } do
 	others[soundId] = newSound(soundId)
 end
+for _, soundId in GunSounds.slideLayers do
+	others[soundId] = newSound(soundId)
+end
 for _, soundId in GunSounds.shotBases do
 	others[soundId] = others[soundId] or newSound(soundId)
 end
@@ -218,6 +221,8 @@ end
 
 function GunAudio.playSlideStart()
 	playCopy(others[GunSounds.slideStart], 0)
+	-- One of the layer takes on top, never the same one twice running.
+	playCopy(others[GunSounds.slideLayers[pickTake("slideLayer", #GunSounds.slideLayers)]], 0)
 end
 
 -- closest is the point on the bullet's path nearest your head, direction its unit direction.
