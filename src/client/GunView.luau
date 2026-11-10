@@ -165,7 +165,7 @@ local RELOADS: { [string]: any } = {
 			to = 0.62,
 			points = { { 0, 0, 2 }, { 0.15, 0.25, 1.3 }, { 0.26, 0.55, 3.4 }, { 0.62, 1, 0.6 } },
 		},
-		smoothFrom = 1.31, -- seconds in: only the return to ready is smoothed
+		smoothFrom = 1.31, -- seconds in: the return to ready gets a touch more smoothing on top
 		keys = {
 			key(0, CFrame.identity, Vector3.zero),
 			-- The shot heaves it back and up, slowly enough to feel the hit, knocking the left hand off; then it sinks
@@ -180,21 +180,21 @@ local RELOADS: { [string]: any } = {
 			key(0.56, tilt(1, -1, 1, 0.01, 0.76, 0.02), Vector3.new(0.01, -0.05, 0), "flow"), -- and comes back down, the hand already easing down to meet it
 			key(0.62, tilt(4, -2, 2, 0.02, 0.66, 0.02), Vector3.zero, "flow"), -- landing in the hand
 			key(0.68, tilt(9, -3, -8, -0.01, 0.4, 0.02), Vector3.new(0, -0.06, 0), "flow"), -- both hands drop with the weight straight away
-			key(0.79, tilt(14, -5, 0, -0.04, 0.2, 0.03), Vector3.new(0, -0.2, 0.15)), -- then sinks back down
+			key(0.79, tilt(14, -5, 0, -0.04, 0.2, 0.03), Vector3.new(0, -0.2, 0.15), "flow"), -- then sinks back down
 			-- CLICK: the gun tips to show the cell slot, the hand pulls back to load up, then drives the cell in on
 			-- the sound and the gun bumps up off the hit and settles.
-			key(0.86, tilt(18, -6, 2, -0.06, 0, 0.03), Vector3.new(0, -0.4, 0.32)),
-			key(0.98, tilt(20, -6, -2, -0.06, -0.04, 0.02), Vector3.new(0, -0.42, 0.36)), -- holds there, loaded, sagging under the hand
+			key(0.86, tilt(18, -6, 2, -0.06, 0, 0.03), Vector3.new(0, -0.4, 0.32), "flow"),
+			key(0.98, tilt(20, -6, -2, -0.06, -0.04, 0.02), Vector3.new(0, -0.42, 0.36), "flow"), -- holds there, loaded, sagging under the hand
 			key(1.03, tilt(18, -6, 2, -0.06, 0, 0.03), Vector3.new(0.02, -0.02, 0.24), "in"), -- CLICK: drives the cell in
 			key(1.08, tilt(12, -5, 15, -0.05, 0.17, 0.1), Vector3.new(0.02, 0.06, 0.24), "out"), -- and the hit shoves the gun up and back
 			key(1.15, tilt(21, -7, -3, -0.07, -0.05, 0.02), Vector3.new(0.02, -0.03, 0.24)), -- drops back past
-			key(1.22, tilt(20, -7, 1, -0.07, -0.01, 0.03), Vector3.new(0.02, -0.01, 0.24)),
+			key(1.22, tilt(20, -7, 1, -0.07, -0.01, 0.03), Vector3.new(0.02, -0.01, 0.24), "flow"),
 			-- CLICK release: a small wind-up further into the tilt, then the left hand drives forward and pushes the gun
 			-- with it as it eases back round to ready, and it settles.
-			key(1.31, tilt(24, -8, -1, -0.08, -0.03, 0.05), Vector3.new(0.02, -0.02, 0.3)),
-			key(1.5, tilt(3, -1, 3, -0.01, 0.04, -0.14), Vector3.new(0, 0, -0.06)), -- the hand shoves it forward as it turns back
-			key(1.64, tilt(-1, 0.3, -0.5, 0.002, -0.006, 0.015), Vector3.zero), -- and it rocks back a touch
-			key(1.77, CFrame.identity, Vector3.zero),
+			key(1.31, tilt(24, -8, -1, -0.08, -0.03, 0.05), Vector3.new(0.02, -0.02, 0.3), "flow"),
+			key(1.5, tilt(3, -1, 3, -0.01, 0.04, -0.14), Vector3.new(0, 0, -0.06), "flow"), -- the hand shoves it forward as it turns back
+			key(1.64, tilt(-1, 0.3, -0.5, 0.002, -0.006, 0.015), Vector3.zero, "flow"), -- and it rocks back a touch
+			key(1.77, CFrame.identity, Vector3.zero, "flow"),
 		},
 	},
 }
@@ -269,13 +269,21 @@ end
 local function placeOf(key: any): Vector3
 	return key.gun.Position
 end
+local function turnOf(key: any): Vector3
+	local axis, angle = key.gun:ToAxisAngle()
+	return axis * angle
+end
 function flowHand(keys: any, index: number, u: number): Vector3
 	return hermite(keys, index, u, handOf)
 end
 function flowing(keys: any, index: number, u: number): CFrame
 	local from, to = keys[index - 1], keys[index]
-	local turn = from.gun.Rotation:Lerp(to.gun.Rotation, u * u * (3 - 2 * u) * 0.5 + u * 0.5)
-	return CFrame.new(hermite(keys, index, u, placeOf)) * turn
+	-- The turn rides the same kind of curve as the move, as a turn vector (axis times angle), so the gun doesn't
+	-- change how fast it's turning at a key.
+	local turn = hermite(keys, index, u, turnOf)
+	local angle = turn.Magnitude
+	local turned = if angle > 1e-5 then CFrame.fromAxisAngle(turn / angle, angle) else CFrame.identity
+	return CFrame.new(hermite(keys, index, u, placeOf)) * turned
 end
 
 -- A reload with a lead counts from the shot before it, and only the part after the lead stretches.
