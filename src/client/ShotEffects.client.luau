@@ -17,15 +17,27 @@ local shotsRemote = remotes:WaitForChild("Shots") :: RemoteEvent
 local deathRemote = remotes:WaitForChild("DeathBurst") :: RemoteEvent
 
 local TRACER_SPEED = 600
--- Coins burst out of a body when it dies, bounce on the floor and shrink away.
+-- Coins burst out of a body when it dies, hang for a moment, then are pulled to whoever made the kill. They're
+-- small wireframes in Signal Acid, moved in code (no physics), with a streak behind each for motion blur.
 local COINS = 16
-local COIN_SIZE = Vector3.new(0.1, 0.65, 0.65) -- a cylinder lies along X, so this is a flat coin
-local COIN_COLOR = Color3.fromRGB(255, 196, 46)
-local COIN_UP = { 26, 44 }
-local COIN_OUT = { 10, 24 }
-local COIN_SPIN = 25
-local COIN_LIFE = 2.6
-local COIN_SHRINK = 0.4
+local COIN_RADIUS = 0.2
+local COIN_THICK = 0.06
+local COIN_SIDES = 12 -- straight edges round each rim
+local COIN_LINE = 1.5 -- pixels
+local COIN_COLOR = Palette.SignalAcid
+local COIN_UP = { 14, 26 }
+local COIN_OUT = { 6, 16 }
+local COIN_SPIN = 14 -- radians a second
+local COIN_GRAVITY = 60
+local COIN_DRAG = 1.6 -- how fast they lose speed in the air
+local COIN_BOUNCE = 0.45 -- of their speed kept off the floor
+local COIN_HANG = 0.45 -- seconds before the first is pulled
+local COIN_STAGGER = 0.3 -- and the last, this much later
+local COIN_PULL = 160 -- studs a second gained each second of pull
+local COIN_PULL_TOP = 110
+local COIN_TAKEN = 1.6 -- studs from the killer where a coin is taken
+local COIN_BLUR = 0.09 -- seconds of its path the streak covers
+local COIN_LIFE = 3 -- seconds at most, if there's nobody to go to
 local TRACER_LENGTH = 12
 local TRACER_WIDTH = 0.07
 local TRACER_COLOR = Palette.DataCyan
@@ -55,6 +67,8 @@ local RING_TIME = 0.18
 local player = Players.LocalPlayer
 local random = Random.new()
 
+local floorParams = RaycastParams.new()
+floorParams.CollisionGroup = Collision.corpse -- what a body rests on
 local folder = Instance.new("Folder")
 folder.Name = "ShotEffects"
 folder.Parent = workspace
@@ -267,41 +281,126 @@ RunService.RenderStepped:Connect(function(dt)
 	stepFlash(dt)
 end)
 
-local function burstCoins(position: Vector3)
-	GunAudio.playCoins(position)
-	for _ = 1, COINS do
-		local coin = Instance.new("Part")
-		coin.Name = "Coin"
-		coin.Shape = Enum.PartType.Cylinder
-		coin.Size = COIN_SIZE
-		coin.Color = COIN_COLOR
-		coin.Material = Enum.Material.Metal
-		coin.Reflectance = 0.2
-		coin.CanQuery = false
-		coin.CanTouch = false
-		coin.CastShadow = false
-		coin.CollisionGroup = Collision.corpse
-		coin.CFrame = CFrame.new(position + random:NextUnitVector() * 0.5) * CFrame.Angles(
-			random:NextNumber(0, 2 * math.pi),
-			random:NextNumber(0, 2 * math.pi),
-			0
-		)
-		local angle = random:NextNumber(0, 2 * math.pi)
-		coin.AssemblyLinearVelocity = Vector3.new(math.cos(angle), 0, math.sin(angle))
-				* random:NextNumber(COIN_OUT[1], COIN_OUT[2])
-			+ Vector3.new(0, random:NextNumber(COIN_UP[1], COIN_UP[2]), 0)
-		coin.AssemblyAngularVelocity = random:NextUnitVector() * COIN_SPIN
-		coin.Parent = folder
-		task.delay(COIN_LIFE, function()
-			local start = os.clock()
-			while coin.Parent and os.clock() - start < COIN_SHRINK do
-				local share = 1 - (os.clock() - start) / COIN_SHRINK
-				coin.Size = COIN_SIZE * math.max(share, 0.05)
-				task.wait()
-			end
-			coin:Destroy()
-		end)
+-- One coin: nothing but its edges, drawn as lines in Signal Acid. Two rims joined across the edge, and a diamond
+-- on each face.
+local function coinLines(wire: WireframeHandleAdornment)
+	local rims = { {}, {} }
+	for side = 1, COIN_SIDES do
+		local turn = side / COIN_SIDES * 2 * math.pi
+		local y, z = math.cos(turn) * COIN_RADIUS, math.sin(turn) * COIN_RADIUS
+		rims[1][side] = Vector3.new(-COIN_THICK / 2, y, z)
+		rims[2][side] = Vector3.new(COIN_THICK / 2, y, z)
+		if side % 3 == 0 then
+			wire:AddLine(rims[1][side], rims[2][side])
+		end
+	end
+	for face, rim in rims do
+		wire:AddPath(rim, true)
+		local x = rim[1].X
+		local mark = COIN_RADIUS * 0.5
+		wire:AddPath({
+			Vector3.new(x, mark, 0),
+			Vector3.new(x, 0, mark),
+			Vector3.new(x, -mark, 0),
+			Vector3.new(x, 0, -mark),
+		}, true)
 	end
 end
+
+local coins: { any } = {}
+
+-- Coins burst out of a body when it dies, hang for a moment, then are pulled to whoever made the kill.
+local function burstCoins(position: Vector3, killer: Player?)
+	GunAudio.playCoins(position)
+	-- The floor under the body, which they bounce on.
+	local under = workspace:Raycast(position, Vector3.new(0, -12, 0), floorParams)
+	local floor = if under then under.Position.Y + COIN_RADIUS else position.Y - 3
+	for index = 1, COINS do
+		local part = Instance.new("Part")
+		part.Name = "Coin"
+		part.Size = Vector3.new(COIN_THICK, COIN_RADIUS * 2, COIN_RADIUS * 2)
+		part.Transparency = 1
+		part.Anchored = true
+		part.CanCollide = false
+		part.CanQuery = false
+		part.CanTouch = false
+		part.CastShadow = false
+		local wire = Instance.new("WireframeHandleAdornment")
+		wire.Color3 = COIN_COLOR
+		wire.Thickness = COIN_LINE
+		wire.Adornee = part
+		coinLines(wire)
+		wire.Parent = part
+		-- Motion blur: a streak the width of the coin trails where it has just been.
+		local top, bottom = Instance.new("Attachment"), Instance.new("Attachment")
+		top.Position, bottom.Position = Vector3.new(0, COIN_RADIUS, 0), Vector3.new(0, -COIN_RADIUS, 0)
+		top.Parent, bottom.Parent = part, part
+		local blur = Instance.new("Trail")
+		blur.Attachment0, blur.Attachment1 = top, bottom
+		blur.Color = ColorSequence.new(COIN_COLOR)
+		blur.LightEmission = 1
+		blur.LightInfluence = 0
+		blur.Lifetime = COIN_BLUR
+		blur.MinLength = 0
+		blur.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.45), NumberSequenceKeypoint.new(1, 1) })
+		blur.Parent = part
+		local angle = random:NextNumber(0, 2 * math.pi)
+		local start = position + random:NextUnitVector() * 0.5
+		part.CFrame = CFrame.new(start)
+		part.Parent = folder
+		table.insert(coins, {
+			part = part,
+			position = start,
+			velocity = Vector3.new(math.cos(angle), 0, math.sin(angle)) * random:NextNumber(COIN_OUT[1], COIN_OUT[2])
+				+ Vector3.new(0, random:NextNumber(COIN_UP[1], COIN_UP[2]), 0),
+			turn = CFrame.Angles(random:NextNumber(0, 2 * math.pi), random:NextNumber(0, 2 * math.pi), 0),
+			spin = random:NextUnitVector() * COIN_SPIN,
+			age = 0,
+			pullAt = COIN_HANG + (index - 1) / COINS * COIN_STAGGER, -- they peel off one after another
+			floor = floor,
+			killer = killer,
+		})
+	end
+end
+
+local function stepCoins(dt: number)
+	for index = #coins, 1, -1 do
+		local coin = coins[index]
+		coin.age += dt
+		local character = coin.killer and coin.killer.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		local pulled = coin.age - coin.pullAt
+		local done = coin.age > COIN_LIFE
+		if pulled > 0 and root then
+			-- Pulled in like a magnet: slowly at first, then faster and straighter the longer it goes.
+			local to = (root :: BasePart).Position - coin.position
+			local speed = math.min(COIN_PULL * pulled, COIN_PULL_TOP)
+			local steer = 1 - math.exp(-dt * (4 + 30 * pulled))
+			coin.velocity = coin.velocity:Lerp(to.Unit * math.max(speed, coin.velocity.Magnitude * 0.6), steer)
+			if to.Magnitude < COIN_TAKEN + speed * dt then
+				done = true
+			end
+		else
+			coin.velocity += Vector3.new(0, -COIN_GRAVITY * dt, 0)
+			coin.velocity *= math.exp(-dt * COIN_DRAG)
+		end
+		coin.position += coin.velocity * dt
+		if pulled <= 0 and coin.position.Y < coin.floor and coin.velocity.Y < 0 then
+			coin.position = Vector3.new(coin.position.X, coin.floor, coin.position.Z)
+			coin.velocity = Vector3.new(coin.velocity.X * 0.7, -coin.velocity.Y * COIN_BOUNCE, coin.velocity.Z * 0.7)
+		end
+		if done then
+			coin.part:Destroy()
+			table.remove(coins, index)
+		else
+			local spun = coin.spin * dt
+			if spun.Magnitude > 1e-4 then
+				coin.turn = CFrame.fromAxisAngle(spun.Unit, spun.Magnitude) * coin.turn
+			end
+			coin.part.CFrame = CFrame.new(coin.position) * coin.turn
+		end
+	end
+end
+RunService.RenderStepped:Connect(stepCoins)
 
 deathRemote.OnClientEvent:Connect(burstCoins)

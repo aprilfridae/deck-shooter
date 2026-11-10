@@ -40,7 +40,7 @@ local swapRemote = remote("Swap")
 local hitRemote = remote("HitConfirm")
 local impactRemote = remote("Impacts")
 local shotsRemote = remote("Shots")
-local deathRemote = remote("DeathBurst") -- where someone died, for the coin burst
+local deathRemote = remote("DeathBurst") -- where someone died and who killed them, for the coin burst
 local loadoutRemote = remote("SetLoadout")
 remotes.Parent = ReplicatedStorage
 
@@ -194,7 +194,7 @@ local function onFire(player: Player, raw: any)
 		if amount > 0 then
 			local killed = if collaterals[target] then GunTargets.kill(target) else GunTargets.damage(target, amount)
 			if killed then
-				deathRemote:FireAllClients(target.root.Position)
+				deathRemote:FireAllClients(target.root.Position, player) -- the killer, who the coins fly to
 			end
 			hitRemote:FireClient(player, { headshot = headshot, killed = killed })
 		end
