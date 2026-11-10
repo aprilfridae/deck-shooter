@@ -88,6 +88,8 @@ local GunSounds = {
 	coinSuck = sound("coin-suck-v2.wav"),
 	-- Taking the cards out: it plays under the flourish, and is cut when the cards go away or the flourish is skipped.
 	cardFlourish = sound("card-flourish-v4.wav"),
+	-- Using a card: the right hand crushes it.
+	cardCrush = sound("card-crush.wav"),
 	-- Right click cutting the flourish short.
 	cardSkip = sound("card-skip.wav"),
 	-- Each pack rarity's opening sound.

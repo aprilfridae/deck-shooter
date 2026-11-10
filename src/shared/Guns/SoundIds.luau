@@ -179,6 +179,7 @@ return {
 	["coin-suck.wav"] = 94729858756188,
 	["coin-suck-v2.wav"] = 98234235249261,
 	["hit-collateral.wav"] = 118854429512016,
+	["card-crush.wav"] = 87528951290555,
 	["gun-sniper-1.wav"] = 80989143421566,
 	["gun-sniper-base.wav"] = 137458622482508,
 	["gun-sniper-10.wav"] = 101900741207161,

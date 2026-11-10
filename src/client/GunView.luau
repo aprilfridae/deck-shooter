@@ -1053,6 +1053,7 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 		end
 		if not crushAt and CardInHand.used ~= cardUsed then
 			crushAt = now
+			GunAudio.playCardCrush()
 		end
 		if not crushAt or now - crushAt >= CardFlourish.CRUSH then
 			cardAt, crushAt = nil, nil

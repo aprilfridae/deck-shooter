@@ -54,6 +54,7 @@ for _, soundId in {
 	GunSounds.snap,
 	GunSounds.cardFlourish,
 	GunSounds.cardSkip,
+	GunSounds.cardCrush,
 } do
 	others[soundId] = newSound(soundId)
 end
@@ -173,6 +174,13 @@ end
 function GunAudio.playCardSkip()
 	GunAudio.stopCards()
 	playCopy(others[GunSounds.cardSkip], 0)
+end
+
+-- A card being crushed in the fist: whatever is left of the flourish's sound is cut, and this rings out even after
+-- the cards are gone.
+function GunAudio.playCardCrush()
+	GunAudio.stopCards()
+	playCopy(others[GunSounds.cardCrush], 0)
 end
 
 function GunAudio.playCards()
