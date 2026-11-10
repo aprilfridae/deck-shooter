@@ -96,7 +96,7 @@ local SMEAR_TIME = 0.06
 local SMEAR_OPACITY = 0.5
 local SMEAR_MIN_MOVE = 0.04 -- studs the gun must travel in SMEAR_TIME to blur
 local SMEAR_MIN_TURN = math.rad(4)
-local SNAPPY = { fire = true, holster = true }
+local SNAPPY = { fire = true }
 -- How each gun moves when it fires: pushed back and dropped (studs), barrel up and rolled (degrees).
 -- A single shot pushes out over rise seconds, fast then easing into the peak. An automatic gets a shove each
 -- shot that stacks a little while spraying. Either way the gun comes home on a spring (stiff, damp) that swings
@@ -314,13 +314,9 @@ local function reloadPose(reload: any, elapsed: number, reloadTime: number): (CF
 	return CFrame.identity, Vector3.zero, 0
 end
 
--- Equipping a gun posed in code: it swings in from below and to the right.
-local EQUIP_TIME = 0.45
-local EQUIP_FROM = CFrame.new(0.6, -1.2, 0.3) * CFrame.Angles(math.rad(-40), math.rad(25), math.rad(-30))
 -- Scoping in and out is quick on a gun that can scope.
 local AIM_EASE = 24 -- lowering a scoped gun
 local SCOPE_IN_EASE = 13 -- raising it to the eye, about a quarter of a second
-local HOLSTER_WAIT = 0.3 -- how long the gun stays down waiting for the server to swap it
 
 -- Where the hands sit. Primary wrists sit along the gun as a share of its length.
 local RIGHT_GRIP_Z = 0.2
@@ -458,12 +454,10 @@ local clips: any = nil
 local firedAt: number? = nil
 local reloadAt: number? = nil
 local reloadClip: any = nil
-local equipAt: number? = nil
 local keyedReloadAt: number? = nil -- when a keyed reload started, or the shot that starts it
 local layerAt: number? = nil -- when a clip gun's reload layer started; it plays to its end even if the reload ends first
 local layerShown = CFrame.identity
 local reloadShown, handShown = CFrame.identity, Vector3.zero -- a code-posed gun's reload, smoothed
-local holsterAt: number? = nil
 local snapAt: number? = nil
 local cardAt: number? = nil
 local cardUsed = 0 -- how many cards had been used when this one came out
@@ -810,8 +804,6 @@ function GunView.setGun(gunId: string, slot: string)
 	keyedReloadAt = nil
 	reloadAt = nil
 	-- Swapping guns has no animation: the new gun is just there, in its hold, with nothing blending in.
-	holsterAt = nil
-	equipAt = nil
 	snapAt = nil
 	shownFrame = nil
 	shownBase = nil
@@ -870,24 +862,9 @@ function GunView.kick()
 	end
 end
 
--- The frame to show. Swapping guns beats everything, then reloading, then a shot, then running, then idle.
+-- The frame to show. Reloading beats everything, then a shot, then idle. Nothing plays for putting the gun away or
+-- bringing it back: those are to be reworked.
 local function clipFrame(reloading: boolean, sprinting: boolean): (any, string)
-	if holsterAt then
-		local elapsed = os.clock() - holsterAt
-		local frames = clips.holster.frames
-		local frame = ArmClip.sampleAt(clips.holster, elapsed)
-		if frame or elapsed < HOLSTER_WAIT then
-			return frame or frames[#frames], "holster"
-		end
-		holsterAt = nil
-	end
-	if equipAt then
-		local frame = ArmClip.sampleAt(clips.equip, os.clock() - equipAt)
-		if frame then
-			return frame, "equip"
-		end
-		equipAt = nil
-	end
 	if reloading and not reloadAt then
 		reloadClip = ArmClip.pickReload(clips, math.random())
 	end
@@ -947,12 +924,11 @@ local function snapFrame(): (any, number)
 	return frame, weight * weight * (3 - 2 * weight)
 end
 
--- With a card out, the gun drops, then the hands play the deck flourish and hold the deck. Using the card crushes it
--- in the right hand before the gun comes back.
+-- With a card out, the gun is gone at once and the hands play the deck flourish and hold the deck. Using the card
+-- crushes it in the right hand, and then the gun is back at once.
 -- Returns true while the card has the screen.
 local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boolean
 	local now = os.clock()
-	local drop = if clips then #clips.holster.frames / clips.holster.fps else 0
 	if cardOut and crushAt then
 		cardAt, crushAt = nil, nil -- another card came out mid-crush
 	end
@@ -960,12 +936,11 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 		if not cardAt then
 			return false
 		end
-		if not crushAt and CardInHand.used ~= cardUsed and now - cardAt >= drop then
+		if not crushAt and CardInHand.used ~= cardUsed then
 			crushAt = now
 		end
 		if not crushAt or now - crushAt >= CardFlourish.CRUSH then
-			cardAt, holsterAt, crushAt = nil, nil, nil
-			equipAt = now
+			cardAt, crushAt = nil, nil
 			shownFrame, shownBase, shownSnap = nil, nil, nil
 			CardView.hide()
 			ViewArms.clearBlur()
@@ -974,25 +949,20 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 	end
 	if not cardAt then
 		cardAt = now
-		holsterAt = cardAt
 		cardUsed = CardInHand.used
 		cardTurns, turns = CardInHand.turns, 0
 		cardLife = math.random() * 100
 	end
-	local elapsed = (crushAt or now) - (cardAt :: number) - drop
+	local elapsed = (crushAt or now) - (cardAt :: number)
 	if CardInHand.turns ~= cardTurns then
 		cardTurns = CardInHand.turns
-		if elapsed >= 0 then -- turning to another card skips what's left of the flourish and flips the next one over
-			turns += 1
-			turnAt = now
-			if elapsed < CardFlourish.LENGTH then
-				cardAt = now - drop - CardFlourish.LENGTH
-				elapsed = CardFlourish.LENGTH
-			end
+		-- Turning to another card skips what's left of the flourish and flips the next one over.
+		turns += 1
+		turnAt = now
+		if elapsed < CardFlourish.LENGTH then
+			cardAt = now - CardFlourish.LENGTH
+			elapsed = CardFlourish.LENGTH
 		end
-	end
-	if elapsed < 0 then
-		return false
 	end
 	if view and view.Parent then
 		view.Parent = nil
@@ -1136,16 +1106,6 @@ function GunView.update(
 		shown = held * HIP:Inverse() * frame.gun
 	else
 		local now = os.clock()
-		local equip = CFrame.identity
-		if equipAt then
-			local t = (now - equipAt) / EQUIP_TIME
-			if t < 1 then
-				local share = 1 - (1 - t) ^ 3
-				equip = EQUIP_FROM:Lerp(CFrame.identity, share)
-			else
-				equipAt = nil
-			end
-		end
 		-- A gun drawn bigger moves forward by its extra length, so its stock stays clear of the camera.
 		local forward = CFrame.new(0, 0, -length * (1 - 1 / viewScale) / 2)
 		local reloadGun, reloadHand, spin = CFrame.identity, Vector3.zero, 0
@@ -1178,10 +1138,10 @@ function GunView.update(
 		local right, left = grips()
 		-- The hands go by the gun before its spin: the right stays put with its finger in the trigger guard while the
 		-- gun spins round it, and the left lets go and catches it.
-		local hand = held * forward * equip * recoil * reloadGun * (turn or CFrame.identity)
+		local hand = held * forward * recoil * reloadGun * (turn or CFrame.identity)
 		-- The spin turns round the trigger guard, just ahead of the hand on the grip.
 		local pivot = right.wrist - (if gripShift then gripShift.right else Vector3.zero)
-		shown = held * forward * equip * recoil * reloadGun
+		shown = held * forward * recoil * reloadGun
 			* CFrame.new(pivot) * CFrame.Angles(spin, 0, 0) * CFrame.new(-pivot)
 			* (turn or CFrame.identity)
 		if reloadHand ~= Vector3.zero then
