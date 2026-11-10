@@ -952,6 +952,7 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 		turnAt = now
 		if elapsed < CardFlourish.LENGTH then
 			cardAt = now - CardFlourish.LENGTH
+			CardView.snap()
 			elapsed = CardFlourish.LENGTH
 		end
 	end

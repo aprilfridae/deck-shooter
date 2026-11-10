@@ -23,6 +23,12 @@ local fist: BasePart? = nil -- where the crushed card bursts from
 local shards: ParticleEmitter? = nil
 local sparks: ParticleEmitter? = nil
 local burst = false -- whether this card has burst yet
+-- Cutting the flourish short pops a burst off the deck in the left hand.
+local SNAP_STREAKS = 40 -- bright streaks thrown out
+local SNAP_FLECKS = 12 -- slower acid specks that hang a moment
+local snapAt: BasePart? = nil -- where it bursts from
+local snapEmitters: { [ParticleEmitter]: number } = {} -- each emitter and how many it throws
+local snapped = false -- whether one is waiting to go off
 local faces: { Decal } = {}
 local holder: Folder? = nil
 local shown = false
@@ -199,6 +205,51 @@ local function makeBurst(folder: Folder)
 	specks.Rate = 0
 	specks.Parent = anchor
 	fist, shards, sparks = anchor, bits, specks
+
+	local deck = anchor:Clone()
+	deck.Name = "Snap"
+	deck:ClearAllChildren()
+	deck.Parent = folder
+	table.clear(snapEmitters)
+	local flash = Instance.new("ParticleEmitter") -- one bright bloom that's gone at once
+	flash.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	flash.Color = ColorSequence.new(Color3.new(1, 1, 1), Palette.DataCyan)
+	flash.LightEmission = 1
+	flash.LightInfluence = 0
+	flash.Lifetime = NumberRange.new(0.14)
+	flash.Speed = NumberRange.new(0)
+	flash.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.25), NumberSequenceKeypoint.new(1, 1.1) })
+	flash.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) })
+	snapEmitters[flash] = 2
+	local streaks = Instance.new("ParticleEmitter")
+	streaks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	streaks.Color = ColorSequence.new(Color3.new(1, 1, 1), Palette.DataCyan)
+	streaks.LightEmission = 1
+	streaks.LightInfluence = 0
+	streaks.Lifetime = NumberRange.new(0.25, 0.5)
+	streaks.Speed = NumberRange.new(3, 8)
+	streaks.SpreadAngle = Vector2.new(180, 180)
+	streaks.Drag = 7
+	streaks.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 0) })
+	snapEmitters[streaks] = SNAP_STREAKS
+	local flecks = Instance.new("ParticleEmitter")
+	flecks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	flecks.Color = ColorSequence.new(Palette.SignalAcid)
+	flecks.LightEmission = 0.8
+	flecks.LightInfluence = 0
+	flecks.Lifetime = NumberRange.new(0.5, 0.9)
+	flecks.Speed = NumberRange.new(1, 3)
+	flecks.SpreadAngle = Vector2.new(180, 180)
+	flecks.Drag = 5
+	flecks.Acceleration = Vector3.new(0, 1.2, 0) -- they drift up
+	flecks.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.07), NumberSequenceKeypoint.new(1, 0) })
+	snapEmitters[flecks] = SNAP_FLECKS
+	for emitter in snapEmitters do
+		emitter.LockedToPart = true
+		emitter.Rate = 0
+		emitter.Parent = deck
+	end
+	snapAt = deck
 end
 
 local function make(): Folder
@@ -400,6 +451,15 @@ function CardView.show(
 	for index, frame in cards do
 		placed[index] = view * frame
 	end
+	if snapAt then
+		snapAt.CFrame = placed[CardFlourish.COUNT] -- the top of the deck in the left hand
+		if snapped then
+			snapped = false
+			for emitter, count in snapEmitters do
+				emitter:Emit(count)
+			end
+		end
+	end
 	if bends or stripsOut then
 		local pieces = table.create(#strips, AWAY)
 		stripsOut = false
@@ -418,6 +478,11 @@ function CardView.show(
 	workspace:BulkMoveTo(ghosts, blur(view, cards), Enum.BulkMoveMode.FireCFrameChanged)
 	local folder = holder :: Folder
 	folder.Parent = camera
+end
+
+-- Pops the burst for a flourish cut short, the next time the cards are shown.
+function CardView.snap()
+	snapped = true
 end
 
 function CardView.hide()
