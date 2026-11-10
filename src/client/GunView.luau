@@ -449,6 +449,7 @@ end
 local kick = 0
 local kickSpeed = 0
 local kickRoll = 1 -- which way this shot rolls
+local shot: Loosen.Shot = Loosen.STEADY -- how this shot differs from the usual
 local settle, settleSpeed, settleGoal = 0, 0, 0
 local shown = HIP
 local clips: any = nil
@@ -857,6 +858,7 @@ function GunView.kick()
 		kickSpeed = 0
 		kickRoll = 1
 	end
+	shot = Loosen.shot(math.random)
 	firedAt = os.clock()
 	flashShownAt = firedAt
 	flashRoll = math.random() * math.pi * 2
@@ -894,7 +896,7 @@ local function clipFrame(reloading: boolean, sprinting: boolean): (any, string)
 		end
 	end
 	if firedAt then
-		local frame = ArmClip.sampleAt(clips.fire, os.clock() - firedAt)
+		local frame = ArmClip.sampleAt(clips.fire, (os.clock() - firedAt) * shot.speed)
 		if frame then
 			return frame, "fire"
 		end
@@ -1034,8 +1036,10 @@ function GunView.update(
 	if keyedKick then
 		kick, kickSpeed = 0, 0 -- the reload's keys carry this shot's kick
 	end
-	local recoil = CFrame.new(0, -viewKick.drop * kick, viewKick.back * kick)
-		* CFrame.Angles(math.rad(viewKick.up * kick), 0, math.rad(viewKick.roll * kickRoll * kick))
+	-- No two shots kick quite alike: each climbs, shoves, rolls and twists a little more or less.
+	local climb = viewKick.up * shot.up * kick
+	local recoil = CFrame.new(0, -viewKick.drop * kick, viewKick.back * shot.back * kick)
+		* CFrame.Angles(math.rad(climb), math.rad(climb * shot.yaw), math.rad(viewKick.roll * shot.roll * kickRoll * kick))
 	local slow = viewKick.settle
 	if slow and config then
 		-- Still spraying while the next shot is due; a beat after that the gun starts home.

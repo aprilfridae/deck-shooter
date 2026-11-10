@@ -32,6 +32,25 @@ describe("Loosen", function()
 		expect(Loosen.tempo(0.5, 2, 3) ~= Loosen.tempo(0.5, 2, 40)).toBe(true)
 	end)
 
+	it("makes each shot a little different, within bounds", function()
+		local low = Loosen.shot(function()
+			return 0
+		end)
+		local high = Loosen.shot(function()
+			return 1
+		end)
+		local middle = Loosen.shot(function()
+			return 0.5
+		end)
+		expect(low.up).toBe(0.85)
+		expect(high.up).toBe(1.15)
+		expect(low.yaw).toBe(-0.15)
+		expect(high.speed).toBe(1.08)
+		for key, value in Loosen.STEADY do
+			expect(middle[key]).toBe(value)
+		end
+	end)
+
 	it("drifts a little, and not at all with none showing", function()
 		local pivot = Vector3.new(0.3, -0.4, -1)
 		local still = Loosen.drift(pivot, 12.3, 0)

@@ -42,4 +42,28 @@ function Loosen.drift(pivot: Vector3, life: number, share: number): CFrame
 		* CFrame.new(-pivot)
 end
 
+export type Shot = { up: number, back: number, roll: number, yaw: number, speed: number }
+
+local SHOT_UP = 0.15 -- how much more or less a shot climbs than the usual, as a share
+local SHOT_BACK = 0.1 -- and shoves back
+local SHOT_ROLL = 0.3 -- and rolls
+local SHOT_YAW = 0.15 -- how far it twists to one side, as a share of its climb
+local SHOT_SPEED = 0.08 -- how much faster or slower the hands' fire clip plays
+
+-- How one shot differs from the usual, so no two kick alike. `random` gives numbers from 0 up to 1.
+function Loosen.shot(random: () -> number): Shot
+	local function about(spread: number): number
+		return 1 + (random() * 2 - 1) * spread
+	end
+	return {
+		up = about(SHOT_UP),
+		back = about(SHOT_BACK),
+		roll = about(SHOT_ROLL),
+		yaw = (random() * 2 - 1) * SHOT_YAW,
+		speed = about(SHOT_SPEED),
+	}
+end
+
+Loosen.STEADY = { up = 1, back = 1, roll = 1, yaw = 0, speed = 1 } :: Shot
+
 return Loosen
