@@ -50,6 +50,13 @@ local BARREL_RISES: { [string]: number } = { Longscope = 0.098, M57 = 0.29 } -- 
 -- its own studs. Without one, that spot is the middle of the model. The M57 is River's AK now, held by clips made
 -- for the old model, so its ViewShift puts its trigger where the old one's was.
 local modelShift = Vector3.zero -- the gun shown's, in view studs
+-- Hands moved along a gun from where its clips have them, in studs in the gun's own space. The M57's clips were made
+-- on the old model, whose fore-end was where the AK's magazine is, so the left hand goes forward to the handguard.
+-- During a reload it eases back to where the clip has it, which is at the magazine.
+local CLIP_NUDGES: { [string]: { [string]: Vector3 } } = { M57 = { Left = Vector3.new(0, 0.05, -0.42) } }
+local NUDGE_EASE = 14 -- how fast it eases, a second
+local nudgeShare = 1
+local clipNudges: { [string]: CFrame }? = nil -- this frame's, in the clip's space
 local HIP = CFrame.new(0.9, -0.8, -2)
 local AIMED = CFrame.new(0, -0.55, -2)
 local RELOAD_DIP = CFrame.new(0, -0.7, 0) * CFrame.Angles(math.rad(-25), 0, 0)
@@ -624,7 +631,12 @@ local function drawSmear(camera: Camera, whole: any, base: CFrame, hold: CFrame)
 		smear.gun:PivotTo(hold * from.gun:Lerp(whole.gun, smear.share))
 		smear.gun.Parent = camera
 		if smear.arms and whole.bones and from.bones and clips then
-			ViewArms.poseGhost(smear.arms, clips.meshOffset, ArmClip.blendBones(from.bones, whole.bones, smear.share))
+			ViewArms.poseGhost(
+				smear.arms,
+				clips.meshOffset,
+				ArmClip.blendBones(from.bones, whole.bones, smear.share),
+				clipNudges
+			)
 			ViewArms.placeGhost(smear.arms, camera, transparency, base)
 		elseif smear.arms then
 			ViewArms.hideGhost(smear.arms)
@@ -1156,7 +1168,17 @@ function GunView.update(
 		end
 		local whole = if snap then ArmClip.overlay(frame, snap) else frame
 		shownFrame, shownBase, shownSnap = whole, frame, snap
-		ViewArms.showFrame(clips.meshOffset, whole.bones)
+		local nudged = config and CLIP_NUDGES[config.name]
+		clipNudges = nil
+		if nudged then
+			nudgeShare += ((if shownKind == "reload" then 0 else 1) - nudgeShare) * (1 - math.exp(-dt * NUDGE_EASE))
+			local moved = {}
+			for side, by in nudged do
+				moved[side] = whole.gun * CFrame.new(by * nudgeShare) * whole.gun:Inverse()
+			end
+			clipNudges = moved
+		end
+		ViewArms.showFrame(clips.meshOffset, whole.bones, clipNudges)
 		-- Reloading and scoping still move the whole hold, on top of the clip.
 		shown = held * HIP:Inverse() * frame.gun
 	else

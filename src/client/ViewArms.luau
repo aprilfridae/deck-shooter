@@ -121,10 +121,10 @@ function ViewArms.holdCards(right: CFrame, left: CFrame, fingers: { [string]: So
 end
 
 -- Shows one exported frame.
-function ViewArms.showFrame(offset: CFrame, bones: { [string]: { number } })
+function ViewArms.showFrame(offset: CFrame, bones: { [string]: { number } }, nudges: { [string]: CFrame }?)
 	rig = rig or makeRig(true)
 	if rig then
-		rig.parts = SoldierPose.fromBones(solver, offset, bones)
+		rig.parts = SoldierPose.fromBones(solver, offset, bones, nudges)
 	end
 end
 
@@ -133,8 +133,8 @@ function ViewArms.makeGhost(): any
 	return makeRig()
 end
 
-function ViewArms.poseGhost(ghost: any, offset: CFrame, bones: { [string]: { number } })
-	ghost.parts = SoldierPose.fromBones(solver, offset, bones)
+function ViewArms.poseGhost(ghost: any, offset: CFrame, bones: { [string]: { number } }, nudges: { [string]: CFrame }?)
+	ghost.parts = SoldierPose.fromBones(solver, offset, bones, nudges)
 end
 
 function ViewArms.placeGhost(ghost: any, camera: Camera, transparency: number, view: CFrame?)
