@@ -54,9 +54,9 @@ Sizes are in pixels on a 720-pixel-tall screen. All text is capitals.
 | --- | --- | --- | --- |
 | Health | Bottom left, baseline 32 from the bottom, 32 from the left | `Number` 46 | Signal Acid at full, running to Hazard Red at none |
 | Shield `+40` | 8 after the health number, only while shielded | `NumberThin` 46 | Bone |
-| `HEALTH` | 44 above the baseline, 34 from the left | `Label` 12, tracking 3 | Bone |
+| `HEALTH` | 44 above the baseline, 34 from the left | `LabelBold` 12, tracking 3 | Bone |
 | Ammo | Bottom right, same baseline and margin | `Number` 46 | Signal Acid with a full magazine, running to Hazard Red at empty |
-| Gun label `M57  /  30` | 44 above the ammo baseline, right aligned 34 from the edge | `Label` 12, tracking 3 | Bone |
+| Gun label `M57  /  30` | 44 above the ammo baseline, right aligned 34 from the edge | `LabelBold` 12, tracking 3 | Bone |
 | `RELOADING` | Replaces the gun label. The ammo number stays. | `LabelBold` 12, tracking 3 | Bone |
 | Card spread | The equipped cards fanned out above `HEALTH` | See below | |
 
