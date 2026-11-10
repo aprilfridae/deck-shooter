@@ -57,18 +57,22 @@ local VIEW_NUDGES: { [string]: Vector3 } = { ["Energy Pistol"] = Vector3.new(0, 
 local modelShift = Vector3.zero -- the gun shown's, in view studs
 -- Hands moved along a gun from where its clips have them, in studs in the gun's own space. The M57's clips were made
 -- on the old model, whose fore-end was where the AK's magazine is, so the left hand goes forward to the handguard.
-local CLIP_NUDGES: { [string]: { [string]: Vector3 } } = { M57 = { Left = Vector3.new(0, 0.05, -0.42) } }
+-- Its right hand sat a little too far up the gun, which bent the trigger finger back on itself, so it goes back.
+local CLIP_NUDGES: { [string]: { [string]: Vector3 } } = {
+	M57 = { Left = Vector3.new(0, 0.05, -0.42), Right = Vector3.new(0, 0, 0.08) },
+}
 local clipPalms: { [string]: CFrame }? = nil -- this frame's moved palms, in the clip's space
 -- Fingers given another shape than the clips', by side and digit bone: which way each joint points, in the gun's own
 -- space. The M57's clips were made on the old model, and on the AK they left the trigger finger lying straight along
--- the outside of the trigger guard. It now runs down past the trigger, hooks back in, and lays its tip across the
--- front of the blade (measured against the AK's trigger: the tip crosses it within about 0.01 studs).
+-- the outside of the trigger guard. With the hand back a little (CLIP_NUDGES), it runs forward along the side, turns
+-- down and in, and lays its tip across the front of the blade (measured against the AK's trigger: the tip crosses
+-- it within about 0.01 studs).
 local CLIP_FINGERS: { [string]: { [string]: { [string]: { Vector3 } } } } = {
 	M57 = {
 		Right = {
 			Indice = {
-				Vector3.new(-0.003, -0.082, -0.128).Unit, -- forward and down along the outside of the guard
-				Vector3.new(-0.05, 0, 0.063).Unit, -- hooking back in toward the trigger
+				Vector3.new(0.014, -0.023, -0.147).Unit, -- straight forward along the side of the gun
+				Vector3.new(-0.079, -0.058, 0.019).Unit, -- then down and in to the trigger
 				Vector3.new(-1, 0, 0.05).Unit, -- and its tip across the front of the blade
 			},
 		},
