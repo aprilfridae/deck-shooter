@@ -5,7 +5,7 @@ return {
 	skin = Palette.DeepNavy,
 	material = Enum.Material.SmoothPlastic,
 	glow = Palette.DataCyan,
-	glowFill = 0.82, -- how see-through the glow is over the body itself
+	glowFill = 1, -- how see-through the glow is over the body itself: there is none, only the outline (it was 0.82)
 	glowEdge = 0.3, -- and the outline
 	depthMode = Enum.HighlightDepthMode.Occluded,
 }
