@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local GunAudio = require(script.Parent.GunAudio)
+local Perf = require(script.Parent.Perf)
 local GunSounds = require(ReplicatedStorage.Guns.GunSounds)
 local GunView = require(script.Parent.GunView)
 local Collision = require(ReplicatedStorage.Guns.Collision)
@@ -222,10 +223,11 @@ local function stepBolts(dt: number)
 end
 
 local function bleed(shot: any)
-	local scale = if shot.head then HEADSHOT_SCALE else 1
+	-- A slower machine gets a smaller burst: the same shape, with fewer pieces.
+	local scale = (if shot.head then HEADSHOT_SCALE else 1) * Perf.pick(1, 0.6, 0.35)
 	mistAnchor.CFrame = CFrame.lookAt(shot.to, shot.to + shot.direction)
-	mist:Emit(MIST_BURST * scale)
-	sparks:Emit(SPARKS * scale)
+	mist:Emit(math.ceil(MIST_BURST * scale))
+	sparks:Emit(math.ceil(SPARKS * scale))
 	flashAt = os.clock()
 	for _ = 1, DROPS * scale do
 		addDrop(shot.to, -shot.direction, DROP_SPEED, 0.8)
@@ -371,7 +373,10 @@ local coins: { any } = {}
 local function burstCoins(position: Vector3, killer: Player?)
 	GunAudio.playCoins(position)
 	local burst = { sucked = false } -- whether this burst's pull has made its sound yet
-	for index = 1, COINS do
+	-- Fewer coins, each drawn with fewer passes of its lines, on a slower machine.
+	local count = Perf.pick(COINS, 18, 10)
+	local passes = Perf.pick(#COIN_PASSES, 2, 1)
+	for index = 1, count do
 		local part = Instance.new("Part")
 		part.Name = "Coin"
 		part.Shape = Enum.PartType.Cylinder -- lies along X, so this is a flat coin: what it lands and rolls on
@@ -382,7 +387,10 @@ local function burstCoins(position: Vector3, killer: Player?)
 		part.CanTouch = false
 		part.CastShadow = false
 		-- The lines are drawn twice: a wide, faint pass for their glow, and a thin bright one on top.
-		for _, pass in COIN_PASSES do
+		for which, pass in COIN_PASSES do
+			if which <= #COIN_PASSES - passes then
+				continue -- the widest, faintest glow goes first; the bright line always stays
+			end
 			local wire = Instance.new("WireframeHandleAdornment")
 			wire.Color3 = pass.color
 			wire.Thickness = pass.thickness
@@ -422,7 +430,7 @@ local function burstCoins(position: Vector3, killer: Player?)
 			turn = CFrame.identity,
 			spin = Vector3.zero,
 			age = 0,
-			pullAt = COIN_HANG + (index - 1) / COINS * COIN_STAGGER, -- they peel off one after another
+			pullAt = COIN_HANG + (index - 1) / count * COIN_STAGGER, -- they peel off one after another
 			killer = killer,
 		})
 	end

@@ -13,6 +13,7 @@ local Palette = require(Guns:WaitForChild("Palette"))
 local Cards = require(CardCore:WaitForChild("Cards"))
 local CardData = require(script.Parent.CardData)
 local CardFace = require(script.Parent.CardFace)
+local Perf = require(script.Parent.Perf)
 local CardInHand = require(script.Parent.CardInHand)
 
 
@@ -342,9 +343,11 @@ local function blur(view: CFrame, cards: { CFrame }): { CFrame }
 			shows += (wanted - shows) * fadeStep
 			strengths[index] = shows
 			if shows > 0.02 then
-				for ghost = 1, GHOSTS do
+				-- How many of each card's copies are used follows the machine; the rest stay put away.
+				local used = Perf.pick(GHOSTS, 3, 1)
+				for ghost = 1, used do
 					local copy = (index - 1) * GHOSTS + ghost
-					trail[copy] = view * frame:Lerp(old, back * ghost / GHOSTS)
+					trail[copy] = view * frame:Lerp(old, back * ghost / used)
 					ghosts[copy].Transparency = 1 - (1 - FADES[ghost]) * shows
 				end
 			end

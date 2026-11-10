@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ArmClip = require(ReplicatedStorage.Guns.ArmClip)
 local Loosen = require(ReplicatedStorage.Guns.Loosen)
 local GunAudio = require(script.Parent.GunAudio)
+local Perf = require(script.Parent.Perf)
 local AkReload = require(ReplicatedStorage.Guns.AkReload)
 local SoldierPose = require(ReplicatedStorage.Guns.SoldierPose)
 local ArmClips = require(ReplicatedStorage.Guns.ArmClips)
@@ -766,8 +767,19 @@ local function drawSmear(camera: Camera, whole: any, base: CFrame, hold: CFrame)
 		makeSmears()
 	end
 	smearShown = true
-	for _, smear in smears do
-		local transparency = 1 - SMEAR_OPACITY * smear.share * smearStrength
+	-- How many of the copies are drawn follows the machine: all of them, every other one, or every fourth. Copies
+	-- of the arms are the dearest part (a whole pair of arms posed and drawn again), so only some copies get them.
+	local every = Perf.pick(1, 2, 4)
+	local armsEvery = Perf.pick(3, 6, 0)
+	for index, smear in smears do
+		if index % every ~= 0 then
+			smear.gun.Parent = nil
+			if smear.arms then
+				ViewArms.hideGhost(smear.arms)
+			end
+			continue
+		end
+		local transparency = 1 - SMEAR_OPACITY * smear.share * smearStrength * every
 		for _, part in smear.parts do
 			part.Transparency = transparency
 		end
@@ -786,7 +798,7 @@ local function drawSmear(camera: Camera, whole: any, base: CFrame, hold: CFrame)
 			end
 		end
 		smear.gun.Parent = camera
-		if smear.arms and whole.bones and from.bones and clips then
+		if smear.arms and whole.bones and from.bones and clips and armsEvery > 0 and index % armsEvery == 0 then
 			-- Hands a coded reload has moved trail from where they were, like the gun.
 			local palms: { [string]: CFrame }? = nil
 			if whole.palms then

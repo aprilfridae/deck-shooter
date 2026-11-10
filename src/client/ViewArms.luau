@@ -7,6 +7,7 @@ local ArmPose = require(ReplicatedStorage.Guns.ArmPose)
 local SoldierArmsData = require(ReplicatedStorage.Guns.SoldierArmsData)
 local SoldierPose = require(ReplicatedStorage.Guns.SoldierPose)
 local Palette = require(ReplicatedStorage.Guns.Palette)
+local Perf = require(script.Parent.Perf)
 
 local FINGER_JITTER = 1.2 -- degrees at every finger and thumb joint
 local ARM_JITTER = 0.4
@@ -215,20 +216,38 @@ function ViewArms.blur(camera: Camera, view: CFrame?)
 	local was = blurHistory[1]
 	if was and now - was.at < 0.2 then
 		local back = math.min(BLUR_SHUTTER / (now - was.at), 1)
+		-- How many copies follows the machine. Fewer copies are each a little stronger and cover the same trail.
+		local copies = Perf.pick(#BLUR_FADES, 4, 2)
+		-- Nothing is drawn at all unless some part of the arms has moved enough to blur: a still hand costs nothing.
+		local furthest = 0
+		for group, frame in rig.parts do
+			local old = was.parts[group]
+			if old then
+				furthest = math.max(furthest, (frame.Position - old.Position).Magnitude)
+			end
+		end
+		local moving = furthest * back > BLUR_MIN_MOVE
 		for copy, fade in BLUR_FADES do
 			local ghost = blurRigs[copy]
+			if copy > copies or not moving then
+				if ghost then
+					ghost.model.Parent = nil
+				end
+				continue
+			end
 			if not ghost then
 				ghost = makeRig()
 				if not ghost then
 					break
 				end
 				tint(ghost, 1 - (copy - 1) / math.max(#BLUR_FADES - 1, 1))
+				ghost.fades = table.create(#ghost.meshes, -1)
 				blurRigs[copy] = ghost
 			end
 			local parts = {}
 			for group, frame in rig.parts do
 				local old = was.parts[group]
-				parts[group] = if old then frame:Lerp(old, back * copy / #BLUR_FADES) else frame
+				parts[group] = if old then frame:Lerp(old, back * copy / copies) else frame
 			end
 			ghost.parts = parts
 			for index, mesh in ghost.meshes do
@@ -236,7 +255,11 @@ function ViewArms.blur(camera: Camera, view: CFrame?)
 				local moved = (parts[group].Position - rig.parts[group].Position).Magnitude
 				-- It fades in as the part gets further from the real one, so it never pops on or off.
 				local shows = math.clamp((moved - BLUR_MIN_MOVE) / (BLUR_MIN_MOVE * 3), 0, 1)
-				mesh.Transparency = 1 - (1 - fade) * shows
+				local transparency = 1 - (1 - fade) * shows
+				if math.abs(transparency - ghost.fades[index]) > 0.004 then
+					ghost.fades[index] = transparency
+					mesh.Transparency = transparency
+				end
 			end
 			placeRig(ghost, camera, view)
 		end
