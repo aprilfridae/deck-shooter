@@ -20,6 +20,12 @@ local VIEW_SCALES: { [string]: number } = { Longscope = 1.35 }
 -- Too far forward and the arm locks straight with the shoulder sliding into view.
 local LEFT_GRIPS: { [string]: number } = { Longscope = 0 }
 local leftGrip = LEFT_GRIP_Z
+-- Where a gun's own shape needs the hands moved, in studs. The Longscope's pistol grip sits behind its trigger,
+-- further back and lower than the usual hold, and its fore-end is shallow, so the left hand comes up to meet it.
+local GRIP_SHIFTS: { [string]: { right: Vector3, left: Vector3 } } = {
+	Longscope = { right = Vector3.new(0, -0.09, 0.56), left = Vector3.new(0, 0.08, 0) },
+}
+local gripShift: { right: Vector3, left: Vector3 }? = nil
 -- Shoulders moved for a gun, in camera space. The Longscope's left arm comes up from below instead of
 -- reaching across the screen.
 local SHOULDERS: { [string]: { [string]: Vector3 } } = { Longscope = { Left = Vector3.new(-0.55, -1.8, 0.2) } }
@@ -170,17 +176,17 @@ local RELOADS: { [string]: any } = {
 			key(0, CFrame.identity, Vector3.zero),
 			-- The shot heaves it back and up, slowly enough to feel the hit, knocking the left hand off; then it sinks
 			-- back down slowly while it spins.
-			key(0.15, tilt(-9, 0, 0, 0, 0.55, 0.6), Vector3.new(0, 0.05, -0.4), "out"),
+			key(0.15, tilt(-9, 0, 0, 0, 0.34, 0.6), Vector3.new(0, 0.03, -0.4), "out"),
 			-- The left hand drives the gun up into the flip and stops there, held up in the air; the gun turns over above
 			-- it and drops back down into it (each key's gun and hand add up to the same spot), then hand and gun sink
 			-- back down together.
-			key(0.2, tilt(-7, 0, 0, 0, 0.54, 0.45), Vector3.new(0, -0.18, -0.05), "flow"), -- the hand gets under it
-			key(0.28, tilt(-4, 0, 0, 0, 0.55, 0.2), Vector3.new(0.02, 0.2, -0.18), "out"), -- shoves it up and stops
-			key(0.44, tilt(-2, 0, 0, 0, 0.85, 0.05), Vector3.new(0.02, -0.1, -0.03), "flow"), -- it flips up above the hand
-			key(0.56, tilt(1, -1, 1, 0.01, 0.76, 0.02), Vector3.new(0.01, -0.05, 0), "flow"), -- and comes back down, the hand already easing down to meet it
-			key(0.62, tilt(4, -2, 2, 0.02, 0.66, 0.02), Vector3.zero, "flow"), -- landing in the hand
-			key(0.68, tilt(9, -3, -8, -0.01, 0.4, 0.02), Vector3.new(0, -0.06, 0), "flow"), -- both hands drop with the weight straight away
-			key(0.79, tilt(14, -5, 0, -0.04, 0.2, 0.03), Vector3.new(0, -0.2, 0.15), "flow"), -- then sinks back down
+			key(0.2, tilt(-7, 0, 0, 0, 0.33, 0.45), Vector3.new(0, -0.11, -0.05), "flow"), -- the hand gets under it
+			key(0.28, tilt(-4, 0, 0, 0, 0.34, 0.2), Vector3.new(0.02, 0.12, -0.18), "out"), -- shoves it up and stops
+			key(0.44, tilt(-2, 0, 0, 0, 0.53, 0.05), Vector3.new(0.02, -0.06, -0.03), "flow"), -- it flips up above the hand
+			key(0.56, tilt(1, -1, 1, 0.01, 0.47, 0.02), Vector3.new(0.01, -0.03, 0), "flow"), -- and comes back down, the hand already easing down to meet it
+			key(0.62, tilt(4, -2, 2, 0.02, 0.41, 0.02), Vector3.zero, "flow"), -- landing in the hand
+			key(0.68, tilt(9, -3, -8, -0.01, 0.25, 0.02), Vector3.new(0, -0.04, 0), "flow"), -- both hands drop with the weight straight away
+			key(0.79, tilt(14, -5, 0, -0.04, 0.12, 0.03), Vector3.new(0, -0.2, 0.15), "flow"), -- then sinks back down
 			-- CLICK: the gun tips to show the cell slot, the hand pulls back to load up, then drives the cell in on
 			-- the sound and the gun bumps up off the hit and settles.
 			key(0.86, tilt(18, -6, 2, -0.06, 0, 0.03), Vector3.new(0, -0.4, 0.32), "flow"),
@@ -758,6 +764,10 @@ local function grips(): (any, any)
 	right.along, right.thumb = PRIMARY_RIGHT.along, PRIMARY_RIGHT.thumb
 	local left = { wrist = Vector3.new(PRIMARY_LEFT.x * viewScale, PRIMARY_LEFT.y * viewScale, length * leftGrip) }
 	left.along, left.thumb = PRIMARY_LEFT.along, PRIMARY_LEFT.thumb
+	if gripShift then
+		right.wrist += gripShift.right
+		left.wrist += gripShift.left
+	end
 	return right, left
 end
 
@@ -774,6 +784,7 @@ function GunView.setGun(gunId: string, slot: string)
 	layerAt = nil
 	viewScale = VIEW_SCALES[GunConfig.guns[gunId].name] or 1
 	leftGrip = LEFT_GRIPS[GunConfig.guns[gunId].name] or LEFT_GRIP_Z
+	gripShift = GRIP_SHIFTS[GunConfig.guns[gunId].name]
 	length = if isSidearm then SIDEARM_LENGTH else PRIMARY_LENGTH
 	barrelRise = 0
 	view = makeModel(GunConfig.guns[gunId].name) or makeBlock()
@@ -1125,7 +1136,8 @@ function GunView.update(
 		-- The hands go by the gun before its spin: the right stays put with its finger in the trigger guard while the
 		-- gun spins round it, and the left lets go and catches it.
 		local hand = held * forward * equip * recoil * reloadGun * (turn or CFrame.identity)
-		local pivot = right.wrist
+		-- The spin turns round the trigger guard, just ahead of the hand on the grip.
+		local pivot = right.wrist - (if gripShift then gripShift.right else Vector3.zero)
 		shown = held * forward * equip * recoil * reloadGun
 			* CFrame.new(pivot) * CFrame.Angles(spin, 0, 0) * CFrame.new(-pivot)
 			* (turn or CFrame.identity)
