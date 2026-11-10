@@ -52,6 +52,14 @@ local ghosts: { BasePart } = {}
 local ghostFaces: { Decal } = {}
 local history: { { at: number, cards: { CFrame } } } = {} -- where the cards were lately, oldest first
 
+-- A bent card is shown as a few strips along its length, each with its slice of the card's two images, and the card
+-- itself is put away while they show.
+local STRIPS = CardFlourish.STRIPS
+local BENT_FROM = 0.01 -- radians a card has to be bent before it's shown in strips
+local strips: { BasePart } = {}
+local stripFaces: { Texture } = {}
+local stripsOut = false -- whether any strips are showing
+
 local CORNER = CardFlourish.CARD_SIZE.X * 10 / 150 -- the card art's corners (tools/make-card-art.py)
 local rounded: BasePart? = nil -- a card cut with those corners, once it's made
 
@@ -93,6 +101,8 @@ local function cut()
 		table.clear(faces)
 		table.clear(ghosts)
 		table.clear(ghostFaces)
+		table.clear(strips)
+		table.clear(stripFaces)
 		table.clear(prints)
 		table.clear(printed)
 	end
@@ -117,6 +127,34 @@ local function makeCard(): (BasePart, Decal)
 	back.Texture = CardArt.HAND_BACK
 	back.Parent = part
 	return part, face
+end
+
+-- One strip of a bent card: `piece` of STRIPS along its length, showing that slice of the face and of the back.
+local function makeStrip(piece: number): (BasePart, Texture)
+	local size = CardFlourish.CARD_SIZE
+	local part = Instance.new("Part")
+	part.Name = "Strip"
+	part.Size = Vector3.new(size.X, size.Y, size.Z / STRIPS)
+	part.Color = Palette.Bone
+	part.Material = Enum.Material.SmoothPlastic
+	part.Anchored = true
+	part.CanCollide = false
+	part.CanQuery = false
+	part.CanTouch = false
+	part.CastShadow = false
+	part.CFrame = AWAY
+	local images = {}
+	for _, side in { Enum.NormalId.Top, Enum.NormalId.Bottom } do
+		local image = Instance.new("Texture")
+		image.Face = side
+		image.StudsPerTileU = size.X
+		image.StudsPerTileV = size.Z
+		image.OffsetStudsV = (STRIPS - piece) * size.Z / STRIPS
+		image.Parent = part
+		table.insert(images, image)
+	end
+	images[2].Texture = CardArt.HAND_BACK
+	return part, images[1]
 end
 
 -- Bits of card and bright specks that fly out of the closing fist. They ride along with the hand.
@@ -183,6 +221,12 @@ local function make(): Folder
 			table.insert(ghosts, copy)
 			table.insert(ghostFaces, copyFace)
 		end
+		for piece = 1, STRIPS do
+			local strip, stripFace = makeStrip(piece)
+			strip.Parent = folder
+			table.insert(strips, strip)
+			table.insert(stripFaces, stripFace)
+		end
 	end
 	return folder
 end
@@ -231,6 +275,9 @@ local function setFace(index: number, slot: number?)
 	faces[index].Texture = texture
 	for ghost = 1, GHOSTS do
 		ghostFaces[(index - 1) * GHOSTS + ghost].Texture = texture
+	end
+	for piece = 1, STRIPS do
+		stripFaces[(index - 1) * STRIPS + piece].Texture = texture
 	end
 end
 
@@ -310,8 +357,15 @@ local function restore()
 end
 
 -- cards is where each card is, relative to view. crush is the card in hand being crushed, if it is. top is the card
--- that's face up on top in the right hand, which shows the card held.
-function CardView.show(camera: Camera, view: CFrame, cards: { CFrame }, crush: CardFlourish.Crush?, top: number)
+-- that's face up on top in the right hand, which shows the card held. bends is how far each card is bent, if any are.
+function CardView.show(
+	camera: Camera,
+	view: CFrame,
+	cards: { CFrame },
+	crush: CardFlourish.Crush?,
+	top: number,
+	bends: { number }?
+)
 	holder = holder or make()
 	if not shown then
 		shown = true
@@ -345,6 +399,20 @@ function CardView.show(camera: Camera, view: CFrame, cards: { CFrame }, crush: C
 	local placed = table.create(#cards)
 	for index, frame in cards do
 		placed[index] = view * frame
+	end
+	if bends or stripsOut then
+		local pieces = table.create(#strips, AWAY)
+		stripsOut = false
+		for index, bend in bends or {} do
+			if math.abs(bend) >= BENT_FROM then
+				stripsOut = true
+				for piece, at in CardFlourish.strips(placed[index], bend) do
+					pieces[(index - 1) * STRIPS + piece] = at
+				end
+				placed[index] = AWAY
+			end
+		end
+		workspace:BulkMoveTo(strips, pieces, Enum.BulkMoveMode.FireCFrameChanged)
 	end
 	workspace:BulkMoveTo(parts, placed, Enum.BulkMoveMode.FireCFrameChanged)
 	workspace:BulkMoveTo(ghosts, blur(view, cards), Enum.BulkMoveMode.FireCFrameChanged)

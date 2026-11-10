@@ -105,6 +105,42 @@ describe("CardFlourish", function()
 		end
 	end)
 
+	it("bends the deck in the right hand and lets every card go flat", function()
+		local squeezed = CardFlourish.at(0.055).bends
+		for index = 1, CardFlourish.COUNT do
+			expect(squeezed[index] > 0.5).toBe(true)
+		end
+		expect(CardFlourish.at(CardFlourish.LENGTH).bends).toBe(nil)
+		local landing = CardFlourish.at(0.718).bends
+		for index = 1, CardFlourish.COUNT do
+			expect(math.abs(landing[index]) < 0.01).toBe(true)
+		end
+		expect(CardFlourish.sway(CardFlourish.at(0.055), 3).bends).toBe(squeezed)
+	end)
+
+	it("shows a bent card as an arc between its two ends", function()
+		local frame = CFrame.new(1, 2, 3) * CFrame.Angles(0.3, 0.2, 0.1)
+		local length = CardFlourish.CARD_SIZE.Z
+		local flat = CardFlourish.strips(frame, 0)
+		expect(#flat).toBe(CardFlourish.STRIPS)
+		for piece, at in flat do
+			local offset = frame:PointToObjectSpace(at.Position)
+			expect(math.abs(offset.Y) < 1e-5).toBe(true)
+			expect(math.abs(offset.Z - ((piece - 0.5) / CardFlourish.STRIPS - 0.5) * length) < 1e-5).toBe(true)
+		end
+		local bent = CardFlourish.strips(frame, 0.7)
+		local first = frame:ToObjectSpace(bent[1])
+		local last = frame:ToObjectSpace(bent[CardFlourish.STRIPS])
+		local middle = frame:PointToObjectSpace(bent[CardFlourish.STRIPS / 2].Position)
+		expect(middle.Y > first.Position.Y and first.Position.Y > 0).toBe(true) -- bowed toward its face
+		expect(math.abs(first.Position.Y - last.Position.Y) < 1e-5).toBe(true)
+		-- The first piece's outer end is where the flat card's end is.
+		local tip = first * Vector3.new(0, 0, -length / CardFlourish.STRIPS / 2)
+		expect(math.abs(tip.Y) < 0.004 and math.abs(tip.Z + length / 2) < 0.012).toBe(true)
+		local other = frame:PointToObjectSpace(CardFlourish.strips(frame, -0.7)[2].Position)
+		expect(other.Y < 0).toBe(true)
+	end)
+
 	it("holds its end", function()
 		local last = CardFlourish.at(CardFlourish.LENGTH).cards[1]
 		local later = CardFlourish.at(CardFlourish.LENGTH + 10).cards[1]

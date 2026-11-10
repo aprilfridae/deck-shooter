@@ -16,6 +16,9 @@ local HALF_HEIGHT = HALF * THICKNESS
 local SPRING_FROM = 0.1 -- the first card leaves the right hand
 local SPRING_TO = 0.9 -- the last one leaves
 local FLIGHT = 0.25 -- seconds each card is in the air
+local BOW = math.rad(40) -- how far round the deck is bent in the right hand before it springs, end to end
+local BOW_TIME = 0.08 -- seconds the hand takes to bend it
+local STRIPS = 4 -- pieces a bent card is shown in, along its length
 local FLIGHT_RISE = 0.07
 local SLIDE_AT = 1.85 -- the top half starts to slide off
 local CUT_AT = 2.2 -- the right hand has it
@@ -251,7 +254,9 @@ end
 
 -- A card during the spring. They leave the face of the right hand's deck one by one and land from the bottom up.
 -- Also returns whose it is: 1 in the right hand, down to 0 in the left.
-local function sprung(index: number, at: number, pile: CFrame): (CFrame, number)
+-- Last, how far the card is bent: the deck is bowed toward the palm while it's squeezed, and each card snaps straight
+-- as it leaves, whipping a little past flat.
+local function sprung(index: number, at: number, pile: CFrame): (CFrame, number, number)
 	local up = height(index)
 	-- No two cards fly quite alike: each leaves a hair early or late, climbs its own height and flutters on the way.
 	local odd, other = math.sin(index * 12.9898), math.sin(index * 78.233)
@@ -261,7 +266,8 @@ local function sprung(index: number, at: number, pile: CFrame): (CFrame, number)
 	local to = pile * CFrame.new(0, up * THICKNESS, 0)
 	local arc = math.sin(share * math.pi)
 	local flying = from:Lerp(to, smooth(share)) * CFrame.Angles(math.rad(7) * other * arc, math.rad(11) * odd * arc, 0)
-	return flying + RISE * (arc * (1 + 0.25 * other)), 1 - smooth(share)
+	local bend = BOW * smooth(math.clamp(at / BOW_TIME, 0, 1)) * math.cos(share * math.pi * 1.5) * (1 - share)
+	return flying + RISE * (arc * (1 + 0.25 * other)), 1 - smooth(share), bend
 end
 
 -- A card of the right hand's half, turned about the thumb by how far the fan is open.
@@ -400,6 +406,7 @@ end
 
 local CardFlourish = {
 	COUNT = COUNT,
+	STRIPS = STRIPS,
 	HALF = HALF,
 	CHOSEN = CHOSEN,
 	LENGTH = LENGTH / SPEED, -- seconds it takes to play
@@ -409,7 +416,15 @@ local CardFlourish = {
 }
 
 -- sides is whose each card is: 0 in the left hand, 1 in the right, and between on its way across.
-export type Pose = { cards: { CFrame }, sides: { number }, right: CFrame, left: CFrame, fingers: Hands }
+-- bends is how far round each card is bent along its length, in radians end to end, toward its face. None means flat.
+export type Pose = {
+	cards: { CFrame },
+	sides: { number },
+	right: CFrame,
+	left: CFrame,
+	fingers: Hands,
+	bends: { number }?,
+}
 
 -- How far along a stretch of time a moment is, eased, from 0 to 1.
 local function through(at: number, from: number, to: number): number
@@ -445,6 +460,7 @@ function CardFlourish.at(elapsed: number): Pose
 	local at = math.clamp(elapsed * SPEED, 0, LENGTH)
 	local cards = table.create(COUNT)
 	local sides = table.create(COUNT, 0)
+	local bends: { number }? = nil
 	-- The left hand sinks as the deck piles into it, jumps as the top half is pulled off and flicked, and is knocked
 	-- down when the half is dropped back on.
 	local piled = smooth(math.clamp((at - SPRING_FROM - FLIGHT) / (SPRING_TO - SPRING_FROM), 0, 1))
@@ -460,9 +476,11 @@ function CardFlourish.at(elapsed: number): Pose
 		+ CATCH * (0.035 * knock(at - CAUGHT_AT + 0.04))
 	local leftHalf = frameOf(flowing(LEFT_HALF, at)) + leftGive
 	if at < SPRING_TO + FLIGHT then
+		local bent = table.create(COUNT, 0)
 		for index = 1, COUNT do
-			cards[index], sides[index] = sprung(index, at, leftHalf)
+			cards[index], sides[index], bent[index] = sprung(index, at, leftHalf)
 		end
+		bends = bent
 	else
 		local rightHalf = if at < SLIDE_AT
 			then leftHalf * CFrame.new(0, HALF_HEIGHT, 0)
@@ -492,7 +510,27 @@ function CardFlourish.at(elapsed: number): Pose
 		right = handFlowing(RIGHT_HAND, at) + rightGive,
 		left = leftHalf * LEFT_GRIP,
 		fingers = { Right = fingersAt(RIGHT_FINGERS, at), Left = fingersAt(LEFT_FINGERS, at) },
+		bends = bends,
 	}
+end
+
+-- Where the pieces of a bent card go: an arc along its length with its two ends where they'd be flat and its middle
+-- pushed out toward its face. Piece 1 is at the card's -Z end.
+function CardFlourish.strips(frame: CFrame, bend: number): { CFrame }
+	local pieces = table.create(STRIPS)
+	local length = CARD_SIZE.Z
+	for piece = 1, STRIPS do
+		local along = (piece - 0.5) / STRIPS - 0.5
+		if math.abs(bend) < 1e-4 then
+			pieces[piece] = frame * CFrame.new(0, 0, along * length)
+		else
+			local radius, angle = length / bend, bend * along
+			pieces[piece] = frame
+				* CFrame.new(0, radius * (math.cos(angle) - math.cos(bend / 2)), radius * math.sin(angle))
+				* CFrame.Angles(angle, 0, 0)
+		end
+	end
+	return pieces
 end
 
 local ended: Pose? = nil
@@ -556,7 +594,14 @@ function CardFlourish.sway(pose: Pose, life: number): (Pose, CFrame)
 		local side = pose.sides[index]
 		cards[index] = (if side <= 0 then left elseif side >= 1 then right else left:Lerp(right, side)) * frame
 	end
-	return { cards = cards, sides = pose.sides, right = right * pose.right, left = left * pose.left, fingers = pose.fingers },
+	return {
+		cards = cards,
+		sides = pose.sides,
+		right = right * pose.right,
+		left = left * pose.left,
+		fingers = pose.fingers,
+		bends = pose.bends,
+	},
 		right
 end
 

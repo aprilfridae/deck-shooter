@@ -972,7 +972,7 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 		crush.palm = rightMoved * crush.palm
 	end
 	ViewArms.holdCards(pose.right, pose.left, pose.fingers)
-	CardView.show(camera, held, pose.cards, crush, CardFlourish.top(turns))
+	CardView.show(camera, held, pose.cards, crush, CardFlourish.top(turns), if crush then nil else pose.bends)
 	ViewArms.place(camera, held)
 	ViewArms.blur(camera, held)
 	return true
