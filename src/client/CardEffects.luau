@@ -9,6 +9,12 @@ local CardMotion = require(Guns:WaitForChild("Hud"):WaitForChild("CardMotion"))
 local Palette = require(Guns:WaitForChild("Palette"))
 
 local STRIPE_TILE = 28
+-- The stripes image is 112 pixels square and holds two repeats of the pattern side by side. Only one repeat is shown
+-- as the tile, and the stripes move by sliding which 56 pixels of the image that is. The label itself never moves or
+-- sticks out of its block, so nothing depends on clipping, which Roblox drops for anything rotated (the HUD's tilted
+-- cards) and which let the stripes run off the card.
+local STRIPE_PIXELS = 112
+local STRIPE_REPEAT = 56
 local STRIPE_TIME = 1.4 -- seconds for stripes to move one tile
 local RING_THICKNESS = 1.2
 local SHINE_ROTATION = 20 -- degrees, so the band leans as it crosses
@@ -103,15 +109,18 @@ function CardEffects.stripes(root: GuiObject, unit: number, color: Color3, area:
 	image.Image = CardArt.STRIPES
 	image.ImageColor3 = color
 	image.ScaleType = Enum.ScaleType.Tile
-	image.TileSize = UDim2.fromOffset(STRIPE_TILE * unit, STRIPE_TILE * unit)
-	image.Size = UDim2.new(1, STRIPE_TILE * unit, 1, 0)
+	image.ImageRectSize = Vector2.new(STRIPE_REPEAT, STRIPE_PIXELS)
+	image.TileSize = UDim2.fromOffset(STRIPE_TILE * unit * STRIPE_REPEAT / STRIPE_PIXELS, STRIPE_TILE * unit)
+	image.Size = UDim2.fromScale(1, 1)
 	image.Parent = block
 	return image
 end
 
 function CardEffects.scrolling(image: ImageLabel, unit: number): (number) -> ()
 	return function(elapsed: number)
-		image.Position = UDim2.fromOffset(-STRIPE_TILE * unit * ((elapsed % STRIPE_TIME) / STRIPE_TIME), 0)
+		-- The same speed as before: one whole tile, two repeats, every STRIPE_TIME.
+		local repeatTime = STRIPE_TIME * STRIPE_REPEAT / STRIPE_PIXELS
+		image.ImageRectOffset = Vector2.new(STRIPE_REPEAT * ((elapsed % repeatTime) / repeatTime), 0)
 	end
 end
 
