@@ -20,7 +20,7 @@ local TRACER_SPEED = 600
 -- Coins burst out of a body when it dies, hang for a moment, then are pulled to whoever made the kill. They're
 -- small wireframes in Signal Acid with a streak behind each for motion blur. They burst, fall and bounce with real
 -- physics; the pull to the killer is done in code.
-local COINS = 16
+local COINS = 30
 local COIN_RADIUS = 0.28
 local COIN_THICK = 0.08
 local COIN_SIDES = 12 -- straight edges round each rim
