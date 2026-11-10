@@ -939,7 +939,8 @@ local function clipFrame(reloading: boolean, sprinting: boolean): (any, string)
 		reloadClip = ArmClip.pickReload(clips, math.random())
 	end
 	reloadAt = if reloading then reloadAt or os.clock() else nil
-	if reloadAt then
+	-- A reload keyed in code plays over the idle clip, not the old reload clip.
+	if reloadAt and not codeReload then
 		local elapsed = os.clock() - reloadAt
 		local sync = RELOAD_SYNC[GunConfig.guns[shownGun :: string].name]
 		if sync and elapsed < sync[#sync][1] then

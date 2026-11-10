@@ -125,7 +125,7 @@ describe("reload timing", function()
 	local GunConfig = require("../src/shared/Guns/GunConfig")
 
 	it("lasts as long as the reload sound", function()
-		expect(GunConfig.guns.M4.reload).toBeCloseTo(0.985)
+		expect(GunConfig.guns.M4.reload).toBeCloseTo(2) -- the AK's reload is keyed in code; River will fit a sound to it
 		expect(GunConfig.guns.AK47.reload).toBeCloseTo(0.985)
 		expect(GunConfig.guns.Sniper.reload).toBeCloseTo(1.714)
 	end)

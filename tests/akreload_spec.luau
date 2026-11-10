@@ -25,10 +25,18 @@ describe("AkReload", function()
 		end
 	end)
 
-	it("rolls the gun over, top to the right, for the magazines and back for the charge", function()
-		local over = AkReload.at(0.35).gun
-		expect(over.UpVector.X > 0.85).toBe(true)
-		expect(math.abs(AkReload.at(0.9).gun.UpVector.X) < 0.35).toBe(true)
+	it("tips the muzzle up and rolls the gun over, top to the right, until the charge is done", function()
+		for _, t in { 0.35, 0.6, 0.9 } do
+			local over = AkReload.at(t).gun
+			expect(over.UpVector.X > 0.5).toBe(true)
+			expect(over.LookVector.Y > 0.4).toBe(true)
+		end
+	end)
+
+	it("keeps the hand outside the gun's right side on the charging knob", function()
+		local pose = AkReload.at(0.86)
+		local wrist = pose.gun:ToObjectSpace(pose.palm).Position
+		expect(wrist.X > 0.06 and wrist.Y < -0.05).toBe(true)
 	end)
 
 	it("keeps the old magazine in the gun until the new one knocks it out", function()

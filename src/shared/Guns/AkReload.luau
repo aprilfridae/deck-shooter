@@ -4,10 +4,12 @@
 -- 0.64s, and the charging handle is pulled at 0.86s and let go at 0.93s.
 --
 -- It follows a fast real AK reload River gave as a reference. The left hand drops off the handguard to fetch a new
--- magazine while the right hand rolls the gun over, top to the right, so the mag well faces the left hand. The hand
--- comes up with the new magazine and knocks the old one out with it, hooks the new one's front lug and rocks it home.
--- The gun rolls back as the hand goes under it to the charging knob on the right side, rips it back and lets it fly,
--- and the hand goes back to the handguard.
+-- magazine while the right hand tips the muzzle up and rolls the gun over, top to the right, so the mag well faces
+-- the left hand. The hand comes up with the new magazine and knocks the old one out with it, hooks the new one's
+-- front lug and rocks it home. With the gun still rolled over, the hand swings round under it to the charging knob
+-- on the right side, rips it back and lets it fly, and the gun comes back down as the hand goes to the handguard.
+--
+-- The times are for a reload of SOUND seconds and stretch with the gun's reload time, which is longer.
 --
 -- Everything is in the model's own axes (+X the gun's right, +Y up, +Z back toward the butt), in metres from the
 -- origin of River's AK handoff, which is just above the trigger. "The hold" is that space before the gun's turn.
@@ -50,8 +52,12 @@ end
 
 -- On a magazine: palm on its left side, fingers forward round its front.
 local ON_MAG = grip(MAG, 0.085, 0.035, Vector3.new(0.2, 0.3, -1), Vector3.new(1, 0, 0))
--- On the knob: up from under the gun, fingers hooked over it, palm facing back to pull.
-local ON_KNOB = grip(KNOB, 0.15, 0.01, Vector3.new(0.8, 0.6, 0), Vector3.new(0, 0, 1))
+-- On the knob. The gun is still rolled over, right side down, so the hand comes up from under it and stays outside
+-- its right side: wrist below and clear of the receiver, fingers up the side to hook the knob, palm facing back to
+-- pull. (With the wrist on the left and the fingers on the right, the hand went straight through the gun.)
+local ON_KNOB = grip(KNOB, 0.15, 0.01, Vector3.new(-0.49, 0.86, 0), Vector3.new(0, 0, 1))
+-- Between the magazine and the knob the hand swings out round the bottom of the magazine.
+local ROUND = Vector3.new(0.3, -1, 0.3).Unit * 0.14
 -- A magazine in the hand down out of view, in the hold.
 local FETCHED = CFrame.new(-0.2, -0.36, 0.02) * CFrame.Angles(0, 0, math.rad(50))
 
@@ -70,16 +76,16 @@ local STRIKE = CFrame.new(0, -0.05, -0.04) * rocked(ROCK + 14)
 -- left), and metres pulled back.
 local GUN_KEYS = {
 	{ 0, 0, 0, 0, 0 },
-	{ 0.07, 3, -2, 0, 0 }, -- a small wind-up the other way
-	{ 0.28, -70, 10, 8, 0.03 }, -- rolled over, mag well to the left hand
-	{ 0.4, -72, 10, 8, 0.03 },
-	{ 0.45, -79, 7, 9, 0.036 }, -- the knock shoves it further
-	{ 0.52, -70, 10, 8, 0.03 },
-	{ 0.62, -68, 11, 8, 0.03 },
-	{ 0.67, -60, 6, 7, 0.04 }, -- the slam bumps it back
-	{ 0.84, 12, 4, 3, 0.02 }, -- rolled back past upright, right side down to the hand
-	{ FREE_AT, 14, 6, 2, 0.038 }, -- dragged back by the pull
-	{ 0.98, 8, 1, 1, 0.005 }, -- and thrown forward as the bolt flies home
+	{ 0.07, 3, -3, 0, 0 }, -- a small wind-up the other way
+	{ 0.28, -65, 45, 10, 0.03 }, -- muzzle up and rolled over, mag well to the left hand
+	{ 0.4, -68, 46, 10, 0.03 },
+	{ 0.45, -76, 42, 11, 0.036 }, -- the knock shoves it further
+	{ 0.52, -66, 45, 10, 0.03 },
+	{ 0.62, -64, 46, 10, 0.03 },
+	{ 0.67, -58, 40, 9, 0.04 }, -- the slam bumps it back
+	{ 0.84, -55, 30, 6, 0.03 }, -- still rolled over for the charge, coming down
+	{ FREE_AT, -52, 33, 5, 0.045 }, -- dragged back by the pull
+	{ 0.98, -48, 26, 4, 0.01 }, -- and thrown forward as the bolt flies home
 	{ 1.12, 0, 0, 0, 0 },
 }
 local function gunAt(t: number): CFrame
@@ -159,7 +165,7 @@ function AkReload.at(t: number): Pose
 		palm = onKnob
 	elseif t > CROSS_FROM then
 		local u = smooth((t - CROSS_FROM) / (CROSS_TO - CROSS_FROM))
-		palm = onMag:Lerp(onKnob, u) + Vector3.new(0, -0.06 * math.sin(u * math.pi), 0)
+		palm = onMag:Lerp(onKnob, u) + ROUND * math.sin(u * math.pi)
 	end
 
 	local weight = 0
