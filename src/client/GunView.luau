@@ -1216,7 +1216,13 @@ function GunView.update(
 				placed.Right = turned * (placed.Right or palms.Right)
 				local rest = turned * (placed.Left or palms.Left)
 				local onGun = whole.gun * CFrame.new(origin + pose.palm.Position * per) * pose.palm.Rotation
-				placed.Left = rest:Lerp(onGun, pose.weight) + whole.gun.Rotation * (pose.swing * per)
+				placed.Left = rest:Lerp(onGun, pose.weight)
+				if pose.rightWeight > 0 then
+					-- The right hand comes off the grip.
+					local away = whole.gun * CFrame.new(origin + pose.right.Position * per) * pose.right.Rotation
+					placed.Right = placed.Right:Lerp(away, pose.rightWeight)
+						+ whole.gun.Rotation * (pose.rightSwing * per)
+				end
 				moved = placed
 			end
 		end

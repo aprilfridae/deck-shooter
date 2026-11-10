@@ -22,15 +22,18 @@ describe("AkReload", function()
 			expect(pose.spare).toBe(nil)
 			expect(pose.bolt).toBe(0)
 			expect(pose.weight).toBe(0)
+			expect(pose.rightWeight).toBe(0)
 		end
 	end)
 
-	it("tips the muzzle up and rolls the gun over, top to the right, until the charge is done", function()
-		for _, t in { 0.3, 0.6, 0.94 } do
+	it("tips the muzzle up and rolls the gun over, top to the right, for the magazines", function()
+		for _, t in { 0.3, 0.5, 0.66 } do
 			local over = AkReload.at(t).gun
 			expect(over.UpVector.X > 0.5).toBe(true)
 			expect(over.LookVector.Y > 0.4).toBe(true)
 		end
+		-- And has it down again, near upright, for the charge.
+		expect(math.abs(AkReload.at(0.95).gun.UpVector.X) < 0.4).toBe(true)
 	end)
 
 	it("rips the old magazine out before the new one comes up", function()
@@ -78,25 +81,26 @@ describe("AkReload", function()
 		end
 	end)
 
-	it("keeps the hand outside the gun's right side on the charging knob", function()
-		local pose = AkReload.at(0.9)
-		local wrist = pose.gun:ToObjectSpace(pose.palm).Position
-		expect(wrist.X > 0.06 and wrist.Y < -0.05).toBe(true)
-	end)
-
-	it("swings the hand out under the gun on its way back from the knob", function()
-		local pose = AkReload.at(1.08)
-		local out = pose.gun.Rotation:Inverse() * pose.swing
-		expect(out.X > 0.05 and out.Y < -0.06).toBe(true)
-		expect(AkReload.at(0.94).swing.Magnitude).toBe(0)
-		expect(AkReload.at(1.23).swing.Magnitude).toBe(0)
+	it("has the left hand back on the handguard before the right hand charges", function()
+		expect(AkReload.at(0.69).weight > 0.99).toBe(true)
+		expect(AkReload.at(0.9).weight).toBe(0)
+		expect(AkReload.at(0.76).rightWeight).toBe(0)
+		local pulling = AkReload.at(0.95)
+		expect(pulling.rightWeight > 0.99).toBe(true)
+		-- The right hand is outside the gun's right side, and goes back with the handle.
+		local wrist = pulling.gun:ToObjectSpace(pulling.right).Position
+		expect(wrist.X > 0.03).toBe(true)
+		local before, after = AkReload.at(0.915), AkReload.at(0.99)
+		local moved = after.gun:ToObjectSpace(after.right).Position.Z - before.gun:ToObjectSpace(before.right).Position.Z
+		expect(moved > AkReload.TRAVEL * 0.7).toBe(true)
+		expect(AkReload.at(1.2).rightWeight).toBe(0)
 	end)
 
 	it("pulls the bolt back on the charge and lets it fly home", function()
-		expect(AkReload.at(0.89).bolt).toBe(0)
-		expect(math.abs(AkReload.at(0.97).bolt - AkReload.TRAVEL) < 1e-6).toBe(true)
-		expect(AkReload.at(0.94).bolt > 0.03).toBe(true)
-		expect(AkReload.at(1.01).bolt).toBe(0)
+		expect(AkReload.at(0.91).bolt).toBe(0)
+		expect(math.abs(AkReload.at(0.99).bolt - AkReload.TRAVEL) < 1e-6).toBe(true)
+		expect(AkReload.at(0.96).bolt > 0.03).toBe(true)
+		expect(AkReload.at(1.03).bolt).toBe(0)
 	end)
 
 	it("never jumps", function()
