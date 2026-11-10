@@ -21,8 +21,8 @@ local SLIDE_AT = 1.85 -- the top half starts to slide off
 local CUT_AT = 2.2 -- the right hand has it
 local JOINED_AT = 4.75 -- and the halves are one deck again
 local FLIP_AT = 4.95 -- the left thumb flips the top card off
-local CAUGHT_AT = 5.45 -- and the right hand has it
-local LENGTH = 5.9
+local CAUGHT_AT = 5.25 -- and the right hand has it: a quick flick, as it is in real life
+local LENGTH = 5.7
 local SPEED = 1.6 -- how much faster than its keys the whole flourish plays
 local LANDED_AT = SPRING_TO + FLIGHT -- the last card is in the left hand
 local CRUSH = 0.4 -- seconds the right hand takes to crush its card, once it's used
@@ -119,7 +119,7 @@ local RIGHT_HALF: { Key } = {
 local TOP = over(again(0, FINAL, 0, (COUNT - 1) * THICKNESS))
 local FLIP: { Key } = {
 	again(FLIP_AT, TOP),
-	key(5.2, 0.2, 0.4, -0.08, 0, 0, 90),
+	key(FLIP_AT + 0.14, 0.2, 0.4, -0.08, 0, 0, 90),
 	key(CAUGHT_AT, HELD.x, HELD.y, HELD.z, HELD.yaw, 0, 0),
 	key(LENGTH, HELD.x, HELD.y, HELD.z, HELD.yaw, 0, 0),
 }
@@ -212,8 +212,8 @@ local RIGHT_HAND: { HandKey } = {
 	held(4.1, FANNED, PINCH_GRIP),
 	held(4.45, again(0, RIGHT_HALF[8], 0, 0, 0, -2), PINCH_GRIP),
 	held(JOINED_AT, WAITING, PINCH_GRIP),
-	held(5.0, WAITING, PINCH_GRIP),
-	held(5.35, HELD, CARD_GRIP),
+	held(4.85, WAITING, PINCH_GRIP),
+	held(5.2, HELD, CARD_GRIP),
 	held(LENGTH, HELD, CARD_GRIP),
 }
 
@@ -348,9 +348,9 @@ local RIGHT_FINGERS: { FingerKey } = {
 	{ at = 4.4, shape = RIGHT_HOLD },
 	{ at = 4.5, shape = RIGHT_SPIN },
 	{ at = 4.9, shape = RIGHT_REST },
-	{ at = 5.05, shape = RIGHT_REST },
-	{ at = 5.35, shape = RIGHT_CATCH },
-	{ at = 5.52, shape = RIGHT_CARD },
+	{ at = 4.95, shape = RIGHT_REST },
+	{ at = 5.15, shape = RIGHT_CATCH },
+	{ at = 5.32, shape = RIGHT_CARD },
 }
 local LEFT_FINGERS: { FingerKey } = {
 	{ at = 0, shape = LEFT_OPEN },
@@ -363,9 +363,9 @@ local LEFT_FINGERS: { FingerKey } = {
 	{ at = 4.5, shape = LEFT_LIFT },
 	{ at = 4.75, shape = LEFT_LIFT },
 	{ at = FLIP_AT, shape = LEFT_HOLD },
-	{ at = 5.05, shape = LEFT_PUSH },
-	{ at = 5.2, shape = LEFT_LIFT },
-	{ at = 5.55, shape = LEFT_HOLD },
+	{ at = 5.03, shape = LEFT_PUSH },
+	{ at = 5.12, shape = LEFT_LIFT },
+	{ at = 5.4, shape = LEFT_HOLD },
 }
 
 -- One hand's fingers at a time, each finger a touch behind the one before it.
@@ -505,8 +505,8 @@ end
 local TOP_FRAME = frameOf(TOP) -- the chosen card back on top of the deck
 local TURN_FINGERS: { FingerKey } = { -- the right thumb lifts to let the next card land, then comes down on it
 	{ at = FLIP_AT, shape = RIGHT_CARD },
-	{ at = 5.2, shape = RIGHT_CATCH },
-	{ at = 5.52, shape = RIGHT_CARD },
+	{ at = 5.1, shape = RIGHT_CATCH },
+	{ at = 5.32, shape = RIGHT_CARD },
 }
 
 -- The card that's face up on top in the right hand after the held card has been turned `turns` times. Each turn
