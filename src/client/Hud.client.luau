@@ -43,7 +43,6 @@ local MARGIN = 32
 local BASELINE = -32 -- the big numbers, from the bottom
 local LABEL_LINE = BASELINE - 44
 local LABEL_INSET = 2 -- lines the thin labels up with the numbers' edge
-local CLASS_X = 108
 local SHIELD_GAP = 8
 local NUMBER_SIZE = 46
 local LABEL_SIZE = 12
@@ -158,7 +157,6 @@ local healthText = number("Number", LEVEL_FULL, false, UDim2.new(0, MARGIN, 1, B
 local shieldText = number("NumberThin", BONE, false, UDim2.new(0, MARGIN, 1, BASELINE))
 local ammoText = number("Number", LEVEL_FULL, true, UDim2.new(1, -MARGIN, 1, BASELINE))
 local healthLabel = small("Label", false, UDim2.new(0, MARGIN + LABEL_INSET, 1, LABEL_LINE))
-local classText = small("Label", false, UDim2.new(0, CLASS_X, 1, LABEL_LINE))
 local gunText = small("Label", true, UDim2.new(1, -MARGIN - LABEL_INSET, 1, LABEL_LINE))
 local reloadText = small("LabelBold", true, UDim2.new(1, -MARGIN - LABEL_INSET, 1, LABEL_LINE))
 reloadText:setColor(BONE)
@@ -349,7 +347,6 @@ RunService.RenderStepped:Connect(function(step)
 	shieldText:set(shield)
 	shieldText:setVisible(shield ~= "")
 	shieldText:setPosition(UDim2.new(0, MARGIN + healthText:width() + SHIELD_GAP, 1, BASELINE))
-	classText:set(player:GetAttribute("Class") or "")
 	crosshair.Visible = player:GetAttribute("ScopeShown") ~= true -- the scope has its own reticle
 	local gun = GunConfig.guns[player:GetAttribute("GunId")]
 	local reloading = gun ~= nil and player:GetAttribute("Reloading") == true
