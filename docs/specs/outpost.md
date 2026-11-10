@@ -30,7 +30,7 @@ A concrete building at sea. Everything you can walk through is indoors, and wind
 
 ## Layout
 
-The Outpost is built at (4000, 0, 0), far from the test room at the world's origin. Positions here are local to that point and at full size: the whole place is built at 75% of them, set by `src/server/Outpost/OutpostScale.luau`. Local +Z runs along the main hall toward the Market, and X along the side halls. The floors are at 6.
+The Outpost is built at (4000, 0, 0), far from the test room at the world's origin. Positions here are local to that point and at full size: the whole place is built at full size (it was 75% until River had it made bigger), set by `src/server/Outpost/OutpostScale.luau`. Local +Z runs along the main hall toward the Market, and X along the side halls. The floors are at 6.
 
 | Area | What's there |
 | --- | --- |
@@ -40,7 +40,7 @@ The Outpost is built at (4000, 0, 0), far from the test room at the world's orig
 | Outside | Terrain sea with its surface at 0 and a ring of rocks at least 35 studs from the building. Seen only through the windows. |
 | Matchmaking booth | A market stall against the main hall's south wall, opposite the Market: scaffold frame, corrugated walls, a ragged navy and Bone awning, junk on a railed roof, cables to the walls and warm light inside. Three screens on its back wall, a `MATCHMAKING` sign and a short `PLAY` sign hung off its corner. Its prompt says "Soon" and does nothing yet. |
 | Market | The same stall at the far end of the hall, with shelves of blank navy and Bone cards, a `MARKET` sign and a short `CARDS` sign. Its prompt opens the packs menu until the player market exists. |
-| Test Range corridor | Flooded tiled corridor off the far end of the East Hall, with fluorescent ceiling lights and lift doors. The doors' prompt (hold 0.4s) takes you to the test room. |
+| Test Range corridor | Flooded tiled corridor off the far end of the East Hall, 16 wide and 13 tall, through a 12-wide doorway, with fluorescent ceiling lights and lift doors. The doors' prompt (hold 0.4s) takes you to the test room. |
 
 Movement matters here too: low walls to vault, a catwalk overhead.
 
@@ -78,6 +78,7 @@ Everything works as normal in the test room.
 - **Sign and screen text:** the server tags parts `OutpostSign` and `OutpostScreen` with attributes (text, style, colours). The client draws them with the HUD's image fonts on a `SurfaceGui` that ignores the scene's light.
 - **Lighting:** while you're in the Outpost, the client applies its preset (fog, sky, colour correction, bloom) and takes out the place's own Atmosphere, Sky, Bloom, Blur, ColorCorrection, DepthOfField and SunRays effects, including the group place's `Bloom`. In the test room it puts them back. The group place's `ColorGrading` isn't on that list, so it stays on in the Outpost; that's going by the local export in `assets/models/`, which is a `ColorGradingEffect`. The group's place uses `LightingStyle` Soft (read on 2026-11-05, recorded in `tools/build-place.luau`), and River confirmed the lamp shadows work.
 - **Textures:** the drip, grime, water-streak, crack and puddle images are Fridae Studios group assets, with their ids in `src/shared/Guns/OutpostAssets.luau`. Puddles and paint are drawn on the floor rather than built from parts, so they can't flicker against it. Floor slabs are turned so their front face points up, which fixes where painted marks land.
+- **Flicker:** every light in the Outpost shimmers faintly, and now and then one dips for a moment (`Flicker.luau`, run by `OutpostFlicker.client.luau` a few times a second, only while you are there).
 - **Lights with shadows:** only a few cast shadows: the skylight and the middle corridor panel.
 
 ## Testing
