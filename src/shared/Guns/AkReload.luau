@@ -145,8 +145,10 @@ export type Pose = {
 	swing: Vector3, -- how far out of the straight line between the two the hand swings, in the hold
 }
 
--- The reload t seconds in.
-function AkReload.at(t: number): Pose
+-- The reload t seconds in, exactly as keyed: the gun's turn, the new magazine in the gun's space, the old one in
+-- the hold once it's falling, the bolt, the palm from the new magazine, the hand's weight and its swing in the
+-- gun's space.
+local function keyed(t: number): (CFrame, CFrame, CFrame?, number, CFrame, number, Vector3)
 	local gun = gunAt(t)
 
 	-- The new magazine, from the hand's fetch to its place in the gun (in the gun's space).
@@ -177,13 +179,7 @@ function AkReload.at(t: number): Pose
 		local thrown = knocked.Rotation * (Vector3.new(0, -1, -0.3).Unit * KNOCK)
 		local drift = thrown * fall + Vector3.new(0, -GRAVITY * fall * fall / 2, 0)
 		local tumble = CFrame.new(MAG) * CFrame.Angles(math.rad(260 * fall), 0, math.rad(140 * fall)) * CFrame.new(-MAG)
-		old = gun:Inverse() * CFrame.new(drift) * knocked * rocked(math.min(ROCK, 700 * fall)) * tumble
-	end
-	-- Until the knock the magazine in the gun is the old one and the spare is the new one in the hand; then the new
-	-- one is the gun's, and the spare is the old one falling.
-	local mag, spare = new, old
-	if t < OUT_AT then
-		mag, spare = CFrame.identity, if t >= LEAVE_TO then new else nil
+		old = CFrame.new(drift) * knocked * rocked(math.min(ROCK, 700 * fall)) * tumble
 	end
 
 	local bolt = 0
@@ -211,10 +207,50 @@ function AkReload.at(t: number): Pose
 		else
 			local u = (t - BACK_FROM) / (BACK_TO - BACK_FROM)
 			weight = 1 - smooth(u)
-			swing = gun.Rotation * (UNDER * math.sin(u * math.pi))
+			swing = UNDER * math.sin(u * math.pi)
 		end
 	end
-	return { gun = gun, mag = mag, spare = spare, bolt = bolt, palm = gun * palm, weight = weight, swing = swing }
+	return gun, new, old, bolt, new:Inverse() * palm, weight, swing
+end
+
+-- Each moment is blended with the moments just before and after it, which rounds every corner where one move meets
+-- the next: nothing starts or stops in an instant. The blend narrows to nothing at the two ends, so it starts and
+-- ends exactly at rest.
+local TAPS = { { -1, 1 }, { -0.5, 2 }, { 0, 3 }, { 0.5, 2 }, { 1, 1 } } -- how far along the window, and how much it counts
+local WINDOW = 0.035 -- seconds either side
+
+-- The reload t seconds in.
+function AkReload.at(t: number): Pose
+	local window = math.clamp(math.min(t, LENGTH - t), 0, WINDOW)
+	local gun, new, rel, weight, swing = CFrame.identity, CFrame.identity, CFrame.identity, 0, Vector3.zero
+	local total = 0
+	for _, tap in TAPS do
+		local tapGun, tapNew, _, _, tapRel, tapWeight, tapSwing = keyed(t + tap[1] * window)
+		total += tap[2]
+		local share = tap[2] / total
+		gun, new, rel = gun:Lerp(tapGun, share), new:Lerp(tapNew, share), rel:Lerp(tapRel, share)
+		weight += (tapWeight - weight) * share
+		swing = swing:Lerp(tapSwing, share)
+	end
+	-- The bolt's snap and the old magazine's fall aren't blended: one is meant to be sharp, the other is already
+	-- smooth.
+	local _, _, fallen, bolt = keyed(t)
+	local old = if fallen then gun:Inverse() * fallen else nil
+	-- Until the knock the magazine in the gun is the old one and the spare is the new one in the hand; then the new
+	-- one is the gun's, and the spare is the old one falling.
+	local mag, spare = new, old
+	if t < OUT_AT then
+		mag, spare = CFrame.identity, if t >= LEAVE_TO then new else nil
+	end
+	return {
+		gun = gun,
+		mag = mag,
+		spare = spare,
+		bolt = bolt,
+		palm = gun * new * rel,
+		weight = weight,
+		swing = gun.Rotation * swing,
+	}
 end
 
 AkReload.LENGTH = LENGTH

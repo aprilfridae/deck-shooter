@@ -51,7 +51,7 @@ describe("AkReload", function()
 		local hooked = AkReload.at(0.55).mag
 		expect(math.abs(math.deg(math.asin(hooked.UpVector.Z)) - AkReload.ROCK) < 0.5).toBe(true)
 		expect((hooked * AkReload.LUG - AkReload.LUG).Magnitude < 1e-4).toBe(true) -- about the lug
-		expect(still(AkReload.at(0.64).mag)).toBe(true)
+		expect(still(AkReload.at(0.68).mag)).toBe(true)
 	end)
 
 	it("lets the old magazine fall straight down in the hold, whatever the gun does", function()
@@ -70,7 +70,7 @@ describe("AkReload", function()
 		local out = pose.gun.Rotation:Inverse() * pose.swing
 		expect(out.X > 0.05 and out.Y < -0.06).toBe(true)
 		expect(AkReload.at(0.9).swing.Magnitude).toBe(0)
-		expect(AkReload.at(1.15).swing.Magnitude).toBe(0)
+		expect(AkReload.at(1.19).swing.Magnitude).toBe(0)
 	end)
 
 	it("pulls the bolt back on the charge and lets it fly home", function()
@@ -87,7 +87,7 @@ describe("AkReload", function()
 			return (pose.gun * held):ToObjectSpace(pose.palm).Position
 		end
 		local grip = onMag(0.3)
-		for _, t in { 0.2, 0.36, 0.44, 0.5, 0.6, 0.64 } do
+		for _, t in { 0.26, 0.36, 0.44, 0.5, 0.6, 0.62 } do
 			expect(AkReload.at(t).weight).toBe(1)
 			expect((onMag(t) - grip).Magnitude < 1e-4).toBe(true)
 		end
