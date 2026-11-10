@@ -41,7 +41,7 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 ## What's built
 
 - Movement: sprint, slide, chain jumps, parry, and the server's cheat checks. Climbing was removed on 2026-11-07. `docs/specs/movement.md`.
-- Guns, with first-person arms, reloads and sounds. Each of the M57 and pistol has 3 reload takes that differ only in position. `docs/specs/guns.md`. Once `GunModels.FirstPersonArms` is imported (from `FirstPersonArms.fbx`), all six guns use the soldier's own arms in first person instead, with aim down sights on every gun (`FirstPersonArms.luau`, `PoseGun.luau`, `FirstPersonClips/`, built by `tools/build_first_person_clips.py`).
+- Guns, with first-person arms, reloads and sounds. Each of the M57 and pistol has 3 reload takes that differ only in position. `docs/specs/guns.md`. Once `GunModels.FirstPersonArms` is imported (from `FirstPersonArms.fbx`), all six guns use the soldier's own arms in first person instead (`FirstPersonArms.luau`, `PoseGun.luau`, `FirstPersonClips/`, built by `tools/build_first_person_clips.py`).
 - Abilities and the card core: 4 cards, fusion, Deck Power Rating, income, saves through ProfileStore. `docs/specs/cards.md`.
 - HUD in River's fonts, using image text (`TypeLabel`). `docs/specs/hud.md`.
 - The doc's palette across the game: `src/shared/Guns/Palette.luau`.

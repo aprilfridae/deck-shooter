@@ -22,7 +22,6 @@ end
 GunConfig.guns = {
 	M4 = gun({
 		name = "M57",
-		aimFov = 55,
 		body = 24,
 		rpm = 600,
 		mag = 30,
@@ -52,7 +51,6 @@ GunConfig.guns = {
 	}),
 	AK47 = gun({
 		name = "B33",
-		aimFov = 55,
 		body = 24,
 		headshot = "Kill",
 		rpm = 540,
@@ -83,7 +81,6 @@ GunConfig.guns = {
 	}),
 	SMG = gun({
 		name = "SMG",
-		aimFov = 60,
 		body = 17,
 		rpm = 800,
 		mag = 32,
@@ -123,11 +120,10 @@ GunConfig.guns = {
 		hipSpread = 7,
 		pattern = { { 1, 5, 0.4 }, { 2, 6.4, -0.3 } },
 		recovery = 1.6,
-		aimFov = 30, -- the camera's field of view while aiming down sights
+		aimFov = 30, -- only guns with this can aim down sights
 	}),
 	Shotgun = gun({
 		name = "Shotgun",
-		aimFov = 60,
 		body = 14,
 		pellets = 8,
 		rpm = 75,
@@ -143,7 +139,6 @@ GunConfig.guns = {
 	}),
 	Pistol = gun({
 		name = "Energy Pistol",
-		aimFov = 60,
 		body = 20,
 		rpm = 400,
 		mag = 12,
@@ -154,7 +149,6 @@ GunConfig.guns = {
 	}),
 	MachinePistol = gun({
 		name = "Machine pistol",
-		aimFov = 60,
 		body = 13,
 		rpm = 900,
 		mag = 20,
@@ -176,7 +170,6 @@ GunConfig.guns = {
 	}),
 	Revolver = gun({
 		name = "Revolver",
-		aimFov = 55,
 		body = 45,
 		rpm = 150,
 		mag = 6,
@@ -187,7 +180,6 @@ GunConfig.guns = {
 	}),
 	AutoPistol = gun({
 		name = "Auto-pistol",
-		aimFov = 60,
 		body = 16,
 		rpm = 550,
 		mag = 15,
