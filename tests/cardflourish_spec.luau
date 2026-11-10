@@ -25,8 +25,21 @@ describe("CardFlourish", function()
 			local squared = math.abs(offset.X) < 0.001 and math.abs(offset.Z) < 0.001
 			expect(squared).toBe(index ~= CardFlourish.CHOSEN)
 		end
-		local top = bottom:PointToObjectSpace(pose.cards[CardFlourish.CHOSEN + 1].Position)
-		expect(top.Y > bottom:PointToObjectSpace(pose.cards[CardFlourish.COUNT].Position).Y).toBe(true)
+		local top = bottom:PointToObjectSpace(pose.cards[CardFlourish.CHOSEN - 1].Position)
+		-- The cards lie face down, so further up the deck is further down a card's own axis.
+		expect(top.Y < bottom:PointToObjectSpace(pose.cards[CardFlourish.COUNT].Position).Y).toBe(true)
+	end)
+
+	it("shows only backs until the chosen card is flipped face up at the end", function()
+		for _, elapsed in { 0, 0.6, 2.4, 3.7, 4.9 } do
+			for _, frame in CardFlourish.at(elapsed).cards do
+				expect(frame.UpVector:Dot(-frame.Position) < 0).toBe(true) -- the face points away from the eye
+			end
+		end
+		local pose = CardFlourish.at(CardFlourish.LENGTH)
+		for index, frame in pose.cards do
+			expect(frame.UpVector:Dot(-frame.Position) > 0).toBe(index == CardFlourish.CHOSEN)
+		end
 	end)
 
 	it("crushes the flipped card into the right hand from any moment", function()

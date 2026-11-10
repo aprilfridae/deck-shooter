@@ -10,7 +10,7 @@ local COUNT = 32 -- cards in the deck
 local HALF = COUNT / 2 -- cards in the half the right hand takes, which is the top one
 local THICKNESS = 0.003 -- of one card, so the deck is about 0.1 thick
 local CARD_SIZE = Vector3.new(0.28, 0.002, 0.448) -- sized to the soldier's hands
-local CHOSEN = 1 -- the card that ends in the right hand: the bottom of the right hand's half, until that turns over
+local CHOSEN = HALF -- the card that ends in the right hand: the top one
 local HALF_HEIGHT = HALF * THICKNESS
 
 local SPRING_FROM = 0.1 -- the first card leaves the right hand
@@ -75,6 +75,8 @@ local LEFT_HALF: { Key } = {
 }
 -- The top half from when it slides off: the right hand takes it, spins it once as it turns face up, fans it, then
 -- drops it back on.
+local FACE_DOWN = CFrame.Angles(0, 0, math.pi)
+
 -- The same, turned face down.
 local function over(k: Key): Key
 	return key(k.at, k.x, k.y, k.z, k.yaw, k.pitch, k.roll + 180)
@@ -89,8 +91,8 @@ local RIGHT_HALF: { Key } = {
 	again(3.65, FANNED, 0, 0, 0, 1),
 	again(4.1, FANNED, 0, 0, 0, 1),
 	key(4.45, -0.04, 0.34, 0.01, 360 + FINAL.yaw),
-	over(again(JOINED_AT, FINAL, 0, (COUNT - 1) * THICKNESS, 0, 1)), -- it lands face down
-	over(again(LENGTH, FINAL, 0, (COUNT - 1) * THICKNESS, 0, 1)),
+	again(JOINED_AT, FINAL, 0, HALF_HEIGHT, 0, 1),
+	again(LENGTH, FINAL, 0, HALF_HEIGHT, 0, 1),
 }
 -- The top card's flip across to the right hand, turning face up on the way.
 local TOP = over(again(0, FINAL, 0, (COUNT - 1) * THICKNESS))
@@ -403,9 +405,13 @@ function CardFlourish.at(elapsed: number): Pose
 			cards[index] = fanned(rightHalf, index, open)
 			cards[HALF + index] = leftHalf * CFrame.new(0, (index - 1) * THICKNESS, 0)
 		end
-		if at > FLIP_AT then
-			cards[CHOSEN] = frameOf(flowing(FLIP, at))
-		end
+	end
+	-- Every card shows its back, until the flip turns the chosen one face up.
+	for index, frame in cards do
+		cards[index] = frame * FACE_DOWN
+	end
+	if at > FLIP_AT then
+		cards[CHOSEN] = frameOf(flowing(FLIP, at))
 	end
 	return {
 		cards = cards,

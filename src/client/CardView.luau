@@ -126,7 +126,6 @@ local function dress()
 	for index, face in faces do
 		face.Texture = if #art > 0 then art[(index - CardFlourish.HALF + chosen - 1) % #art + 1] else ""
 	end
-	faces[CardFlourish.CHOSEN].Texture = faces[CardFlourish.HALF].Texture -- the card that gets flipped face up
 end
 
 local CardView = {}
