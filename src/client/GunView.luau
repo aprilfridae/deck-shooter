@@ -62,6 +62,29 @@ local modelShift = Vector3.zero -- the gun shown's, in view studs
 local CLIP_NUDGES: { [string]: { [string]: Vector3 } } = {
 	M57 = { Left = Vector3.new(0, 0.05, -0.42), Right = Vector3.new(0, -0.05, 0.08) },
 }
+-- Digits shaped in their own palm's space (+Y along the fingers; for a left hand -X is the way the palm faces and
+-- -Z is the thumb's side): rest is on the gun, held is with something in the hand in a coded reload, and it blends
+-- between them with the reload's hold on the hand. The M57's clips curled the left thumb over the top of the old
+-- fore-end, which on the AK put it into the handguard. Resting, it now lies straight forward along the handguard
+-- beside the fingers; holding a magazine, it wraps round the back of it, opposite the fingers.
+local PALM_FINGERS: { [string]: { [string]: { [string]: { rest: { Vector3 }, held: { Vector3 } } } } } = {
+	M57 = {
+		Left = {
+			Pulgar = {
+				rest = {
+					Vector3.new(0.1, 0.9, -0.35).Unit,
+					Vector3.new(0.05, 0.98, -0.15).Unit,
+					Vector3.new(0, 1, 0),
+				},
+				held = {
+					Vector3.new(-0.3, 0.5, -0.8).Unit,
+					Vector3.new(-0.8, 0.5, -0.3).Unit,
+					Vector3.new(-0.95, 0.3, 0).Unit,
+				},
+			},
+		},
+	},
+}
 local clipPalms: { [string]: CFrame }? = nil -- this frame's moved palms, in the clip's space
 -- Fingers given another shape than the clips', by side and digit bone: which way each joint points, in the gun's own
 -- space. The M57's clips were made on the old model, and on the AK they left the trigger finger lying straight along
@@ -1405,6 +1428,25 @@ function GunView.update(
 				end
 			end
 			fingers = turnedFingers
+		end
+		-- And digits shaped by their own palm, which is wherever the hand is: resting on the gun, or holding
+		-- something in a coded reload.
+		local palmShaped = config and PALM_FINGERS[config.name]
+		if palmShaped and palms then
+			local shapedFingers = fingers or {}
+			local holding = if codePose then codePose.weight else 0
+			for side, digits in palmShaped do
+				local palm = (clipPalms and clipPalms[side] or palms[side]).Rotation
+				shapedFingers[side] = shapedFingers[side] or {}
+				for digit, shapes in digits do
+					local aims = table.create(#shapes.rest)
+					for joint, rest in shapes.rest do
+						aims[joint] = palm * rest:Lerp(shapes.held[joint], holding).Unit
+					end
+					shapedFingers[side][digit] = aims
+				end
+			end
+			fingers = shapedFingers
 		end
 		ViewArms.showFrame(clips.meshOffset, whole.bones, clipPalms, fingers)
 		-- Reloading and scoping still move the whole hold, on top of the clip.
