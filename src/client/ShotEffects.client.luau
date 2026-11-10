@@ -21,8 +21,8 @@ local TRACER_SPEED = 600
 -- small wireframes in Signal Acid with a streak behind each for motion blur. They burst, fall and bounce with real
 -- physics; the pull to the killer is done in code.
 local COINS = 16
-local COIN_RADIUS = 0.2
-local COIN_THICK = 0.06
+local COIN_RADIUS = 0.28
+local COIN_THICK = 0.08
 local COIN_SIDES = 12 -- straight edges round each rim
 local COIN_LINE = 1.5 -- pixels
 local COIN_COLOR = Palette.SignalAcid
