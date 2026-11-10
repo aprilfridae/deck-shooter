@@ -52,11 +52,11 @@ Sizes are in pixels on a 720-pixel-tall screen. All text is capitals.
 
 | Item | Place | Style | Colour |
 | --- | --- | --- | --- |
-| Health | Bottom left, baseline 32 from the bottom, 32 from the left | `Number` 46 | Bone |
+| Health | Bottom left, baseline 32 from the bottom, 32 from the left | `Number` 46 | Signal Acid at full, running to Hazard Red at none |
 | Shield `+40` | 8 after the health number, only while shielded | `NumberThin` 46 | Bone |
 | `HEALTH` | 44 above the baseline, 34 from the left | `Label` 12, tracking 3 | Bone |
 | Class | Same line, 108 from the left | `Label` 12, tracking 3 | Bone |
-| Ammo | Bottom right, same baseline and margin | `Number` 46 | Bone |
+| Ammo | Bottom right, same baseline and margin | `Number` 46 | Signal Acid with a full magazine, running to Hazard Red at empty |
 | Gun label `M57  /  30` | 44 above the ammo baseline, right aligned 34 from the edge | `Label` 12, tracking 3 | Bone |
 | `RELOADING` | Replaces the gun label. The ammo number stays. | `LabelBold` 12, tracking 3 | Bone |
 | Card spread | The equipped cards fanned out above `HEALTH` | See below | |
@@ -69,6 +69,8 @@ The spread shows each equipped card's face, 60 by 96, drawn by `CardFace` with i
 - An empty slot shows nothing.
 
 Health and shield round up, so a player on 0.4 health shows 1.
+
+**Health and ammo colour:** each number is blended between Signal Acid and Hazard Red by how much is left (health out of 100, ammo out of the magazine), and the colour eases to its new place over about a quarter of a second instead of snapping.
 
 **Crosshair and hit marker:** the crosshair is a Bone plus, two bars 12 long and 2 wide. A hit shows 4 Signal Acid (green) dashes in an X around it for 0.3s. It starts 1.6 times bigger and shrinks, and a kill's marker is 1.5 times bigger. Neither is scaled with the rest of the HUD.
 

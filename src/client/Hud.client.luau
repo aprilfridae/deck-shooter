@@ -148,9 +148,15 @@ local function small(style: string, right: boolean?, position: UDim2): any
 	)
 end
 
-local healthText = number("Number", BONE, false, UDim2.new(0, MARGIN, 1, BASELINE))
+-- The health and ammo numbers' colour: full to empty.
+local LEVEL_FULL = Palette.SignalAcid
+local LEVEL_EMPTY = Palette.HazardRed
+local LEVEL_EASE = 8 -- how fast the colour follows, a second
+local FULL_HEALTH = 100
+local healthShare, ammoShare = 1, 1
+local healthText = number("Number", LEVEL_FULL, false, UDim2.new(0, MARGIN, 1, BASELINE))
 local shieldText = number("NumberThin", BONE, false, UDim2.new(0, MARGIN, 1, BASELINE))
-local ammoText = number("Number", BONE, true, UDim2.new(1, -MARGIN, 1, BASELINE))
+local ammoText = number("Number", LEVEL_FULL, true, UDim2.new(1, -MARGIN, 1, BASELINE))
 local healthLabel = small("Label", false, UDim2.new(0, MARGIN + LABEL_INSET, 1, LABEL_LINE))
 local classText = small("Label", false, UDim2.new(0, CLASS_X, 1, LABEL_LINE))
 local gunText = small("Label", true, UDim2.new(1, -MARGIN - LABEL_INSET, 1, LABEL_LINE))
@@ -334,6 +340,11 @@ RunService.RenderStepped:Connect(function(step)
 	end
 	lastHealth = health
 	healthText:set(HudText.health(health))
+	-- Health and ammo are Signal Acid when full and run to Hazard Red as they empty, easing so a hit or a shot
+	-- slides the colour over instead of snapping it.
+	local ease = 1 - math.exp(-step * LEVEL_EASE)
+	healthShare += (math.clamp(health / FULL_HEALTH, 0, 1) - healthShare) * ease
+	healthText:setColor(LEVEL_EMPTY:Lerp(LEVEL_FULL, healthShare))
 	local shield = HudText.shield(character and character:GetAttribute("ShieldHp"))
 	shieldText:set(shield)
 	shieldText:setVisible(shield ~= "")
@@ -347,6 +358,10 @@ RunService.RenderStepped:Connect(function(step)
 	reloadText:setVisible(reloading)
 	if gun then
 		ammoText:set(HudText.ammo(player:GetAttribute("Ammo")))
+		local ammo = player:GetAttribute("Ammo")
+		local left = if type(ammo) == "number" and gun.mag > 0 then math.clamp(ammo / gun.mag, 0, 1) else 0
+		ammoShare += (left - ammoShare) * ease
+		ammoText:setColor(LEVEL_EMPTY:Lerp(LEVEL_FULL, ammoShare))
 		gunText:set(HudText.gunLabel(gun.name, gun.mag, false))
 		reloadText:set(HudText.gunLabel(gun.name, gun.mag, true))
 	end
