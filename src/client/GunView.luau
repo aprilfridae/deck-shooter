@@ -53,7 +53,7 @@ local BARREL_RISES: { [string]: number } = { Longscope = 0.098, M57 = 0.29, ["En
 -- its own studs. Without one, that spot is the middle of the model. The M57 is River's AK now, held by clips made
 -- for the old model, so its ViewShift puts its trigger where the old one's was.
 -- Small moves of a gun in the hands on top of that, by eye, in view studs (-Z is forward).
-local VIEW_NUDGES: { [string]: Vector3 } = { ["Energy Pistol"] = Vector3.new(-0.12, 0, -0.12) }
+local VIEW_NUDGES: { [string]: Vector3 } = { ["Energy Pistol"] = Vector3.new(0, 0.12, -0.12) }
 local modelShift = Vector3.zero -- the gun shown's, in view studs
 -- Hands moved along a gun from where its clips have them, in studs in the gun's own space. The M57's clips were made
 -- on the old model, whose fore-end was where the AK's magazine is, so the left hand goes forward to the handguard.
