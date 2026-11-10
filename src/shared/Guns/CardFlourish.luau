@@ -4,7 +4,7 @@
 -- Everything is worked out on a stage: a flat plane in front of the camera, tilted to face it. On the stage x runs
 -- right, z runs down the screen and y comes toward the player. A card lying on it is upright with its face showing,
 -- and the hands stay behind the cards, with only thumbs and fingertips coming round to the front.
-local STAGE = CFrame.new(0, -0.25, -1.05) * CFrame.Angles(math.rad(63), 0, 0)
+local STAGE = CFrame.new(0, -0.36, -1.4) * CFrame.Angles(math.rad(63), 0, 0) -- far and low enough to leave most of the screen clear
 
 local COUNT = 32 -- cards in the deck
 local HALF = COUNT / 2 -- cards in the half the right hand takes, which is the top one
