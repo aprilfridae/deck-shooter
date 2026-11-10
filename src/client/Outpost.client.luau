@@ -26,11 +26,13 @@ local VERTICAL_FILL = 0.86
 
 -- While you're in the Outpost. The test room keeps the place's own lighting.
 -- RELAY_LIGHTING must set the same keys, so leaving either puts every one back.
+-- A dim blue evening, so the monitors' glow carries the room (River wanted it to feel wired, like a room
+-- full of old screens at night). It was a grey morning at ClockTime 8.
 local OUTPOST_LIGHTING = {
-	Ambient = Color3.fromRGB(38, 46, 50),
-	OutdoorAmbient = Color3.fromRGB(96, 110, 112),
-	Brightness = 1.4,
-	ClockTime = 8,
+	Ambient = Color3.fromRGB(30, 36, 54),
+	OutdoorAmbient = Color3.fromRGB(70, 84, 112),
+	Brightness = 1,
+	ClockTime = 18.4,
 	EnvironmentDiffuseScale = 0.45,
 	EnvironmentSpecularScale = 1,
 	ExposureCompensation = -0.1,
@@ -74,17 +76,17 @@ local outpostEffects = {
 	effect("Atmosphere", {
 		Density = 0.44,
 		Offset = 0.12,
-		Color = Color3.fromRGB(148, 170, 170),
-		Decay = Color3.fromRGB(88, 106, 110),
+		Color = Color3.fromRGB(110, 130, 168),
+		Decay = Color3.fromRGB(56, 68, 100),
 		Glare = 0,
 		Haze = 2.6,
 	}),
 	effect("Sky", { CelestialBodiesShown = false, StarCount = 0 }),
 	effect("ColorCorrectionEffect", {
-		Saturation = -0.2,
-		Contrast = 0.1,
-		Brightness = -0.02,
-		TintColor = Color3.fromRGB(226, 240, 238),
+		Saturation = -0.12,
+		Contrast = 0.12,
+		Brightness = -0.03,
+		TintColor = Color3.fromRGB(208, 222, 248),
 	}),
 	effect("BloomEffect", { Intensity = 0.9, Size = 28, Threshold = 1.3 }),
 }

@@ -10,6 +10,7 @@ local Palette = require(Guns:WaitForChild("Palette"))
 local Gable = require(script.Parent.Gable)
 local Kit = require(script.Parent.Kit)
 local OutpostScale = require(script.Parent.OutpostScale)
+local Wired = require(script.Parent.Wired)
 
 local M = Enum.Material
 
@@ -711,6 +712,8 @@ function Map.build(origin: CFrame)
 	hallShell(kit)
 	sideHall(kit, "WestHall")
 	sideHall(kit, "EastHall", EAST_TURN)
+	Wired.sideHall(kit, "WestHall")
+	Wired.sideHall(kit, "EastHall", EAST_TURN)
 	local market = hallInside(kit)
 	local matchmaking = matchmakingBooth(kit)
 	local testRoomDoor = rangeCorridor(kit)
