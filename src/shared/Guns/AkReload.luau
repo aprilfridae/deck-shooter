@@ -1,19 +1,18 @@
 --!strict
 -- The AK's reload (the gun the game calls the M57): how the gun turns in the right hand, and the left hand, the
--- magazines and the bolt. Timed to reload-assault-v4.wav: the old mag is knocked out at 0.42s, the new one slams in at
--- 0.64s, and the charging handle is pulled at 0.86s and let go at 0.93s.
+-- magazines and the bolt.
 --
--- It follows a fast real AK reload River gave as a reference. The left hand drops off the handguard to fetch a new
--- magazine while the right hand tips the muzzle up and rolls the gun over, top to the right, so the mag well faces
--- the left hand. The hand comes up with the new magazine and knocks the old one out with it, hooks the new one's
--- front lug and rocks it home. With the gun still rolled over, the hand swings round under it to the charging knob
--- on the right side, rips it back and lets it fly, and the gun comes back down as the hand goes to the handguard.
---
--- The times were set to the old 0.985s reload sound and now stretch to the gun's reload time: SOUND of these
--- seconds is one reload.
+-- It follows a fast real AK reload River gave as a reference, except that the old magazine is ripped out by hand
+-- first. The right hand tips the muzzle up and rolls the gun over, top to the right, so the mag well faces the left
+-- hand. The left hand comes off the handguard onto the magazine, rocks it forward off its lug, rips it out and flings
+-- it away, and carries on down out of view for a new one. It comes back up with the new magazine, hooks its front lug
+-- and rocks it home. With the gun still rolled over, the hand swings round under it to the charging knob on the
+-- right side, rips it back and lets it fly, and the gun comes back down as the hand goes to the handguard.
 --
 -- Everything is in the model's own axes (+X the gun's right, +Y up, +Z back toward the butt), in metres from the
 -- origin of River's AK handoff, which is just above the trigger. "The hold" is that space before the gun's turn.
+--
+-- The times stretch to the gun's reload time: SOUND of these seconds is one reload.
 local AkReload = {}
 
 -- A point from the handoff, whose axes are +X muzzle, +Y the gun's left, +Z up.
@@ -25,24 +24,27 @@ local LUG = h(0.103, 0, -0.012) -- the magazine's front lug, which it rocks abou
 local MAG = h(0.09, 0, -0.09) -- the middle of the magazine, where the hand holds it
 local KNOB = h(0.066, -0.033, 0.036) -- the charging knob
 local GRIP = h(-0.06, 0, -0.05) -- in the right hand, which the gun turns about
-local ROCK = 20 -- degrees a magazine is rocked forward when its lug hooks
+local ROCK = 20 -- degrees a magazine is rocked forward when its lug is unhooked
 local TRAVEL = 0.07 -- how far back the bolt carrier goes
 
-local OUT_AT = 0.42 -- the old mag is knocked out
-local HOOK_AT = 0.52 -- the new one's lug is hooked
-local ROCK_AT = 0.58 -- it starts to rock home
-local IN_AT = 0.64 -- and slams in
-local PULL_AT = 0.86 -- the handle is pulled
-local FREE_AT = 0.93 -- and let go
-local HOME_AT = 0.96 -- the bolt is home
-local LEAVE_FROM, LEAVE_TO = 0.04, 0.2 -- the hand comes off the handguard
-local FETCH_AT = 0.24 -- it has the new magazine, down out of view, and starts up
-local CROSS_FROM, CROSS_TO = 0.66, 0.84 -- from the magazine to the knob, under the gun
-local BACK_FROM, BACK_TO = 0.95, 1.14 -- and back to the handguard, round under the gun
-local LENGTH = 1.22 -- the gun is back down
-local GONE_AT = 0.72 -- the old magazine has fallen out of view
-local GRAVITY = 30 -- metres a second a second, in these seconds (they're stretched to the gun's reload time)
-local KNOCK = 0.7 -- how fast the old magazine leaves the well, metres a second
+local LEAVE_FROM, LEAVE_TO = 0.04, 0.19 -- the hand goes from the handguard to the magazine
+local RIP_AT = 0.21 -- it starts to rock the magazine off its lug
+local OUT_AT = 0.27 -- the lug is free
+local FLUNG_AT = 0.33 -- the magazine is ripped clear and let go
+local DOWN_AT = 0.42 -- the hand is down out of view, on the new one
+local FETCH_AT = 0.45 -- and starts up with it
+local HOOK_AT = 0.57 -- the new one's lug is hooked
+local ROCK_AT = 0.63 -- it starts to rock home
+local IN_AT = 0.68 -- and slams in
+local CROSS_FROM, CROSS_TO = 0.7, 0.88 -- from the magazine to the knob, under the gun
+local PULL_AT = 0.9 -- the handle is pulled
+local FREE_AT = 0.97 -- and let go
+local HOME_AT = 1 -- the bolt is home
+local BACK_FROM, BACK_TO = 0.99, 1.18 -- and back to the handguard, round under the gun
+local LENGTH = 1.26 -- the gun is back down
+local GONE_AT = 0.6 -- the old magazine has fallen out of view
+local GRAVITY = 30 -- metres a second a second, in these seconds
+local FLING = 1.1 -- how fast the old magazine leaves the hand, metres a second
 -- On its way back from the knob the hand swings out below the gun's right side, so it goes round the gun and not
 -- through it. In the gun's space.
 local UNDER = Vector3.new(0.6, -0.8, 0).Unit * 0.13
@@ -75,32 +77,32 @@ end
 local function rocked(degrees: number): CFrame
 	return CFrame.new(LUG) * CFrame.Angles(math.rad(degrees), 0, 0) * CFrame.new(-LUG)
 end
--- The new magazine as it strikes the old one: below and ahead of the well, tipped well forward.
-local STRIKE = CFrame.new(0, -0.05, -0.04) * rocked(ROCK + 14)
+-- The old magazine ripped clear of the well: straight out of it and a little ahead, tipped further.
+local RIPPED = CFrame.new(0, -0.11, -0.03) * rocked(ROCK + 10)
 
 -- The gun's turn: seconds, degrees of roll (negative tips its top to the right), pitch (muzzle up) and yaw (muzzle
 -- left), and metres pulled back and lifted. It rides one smooth curve through these, so it never stops dead at one and
 -- every move carries into the next. For weight, the big swings carry a little past where they're going and settle
--- back, and each knock shoves the gun and it rebounds past where it was.
+-- back, and each yank and knock shoves the gun and it rebounds past where it was.
 local GUN_KEYS = {
 	{ 0, 0, 0, 0, 0, 0 },
-	{ 0.06, 2, -3, 0, 0, -0.012 }, -- the left hand lets go and the muzzle sags
-	{ 0.26, -70, 48, 11, 0.03, 0.01 }, -- swung up and over, carrying past
-	{ 0.34, -65, 45, 10, 0.03, 0 }, -- and settling back, mag well to the left hand
-	{ 0.41, -66, 45, 10, 0.03, 0 },
-	{ 0.45, -75, 41, 12, 0.036, -0.012 }, -- the knock shoves it over and down
-	{ 0.51, -64, 46, 10, 0.03, 0.004 }, -- and it comes back past
-	{ 0.58, -65, 45, 10, 0.03, 0 },
-	{ 0.635, -66, 44, 10, 0.03, 0 },
-	{ 0.67, -57, 38, 9, 0.04, 0.014 }, -- the slam drives it up and back
-	{ 0.74, -66, 46, 10, 0.03, -0.004 }, -- and it rebounds past
-	{ 0.84, -56, 31, 6, 0.03, 0 }, -- still rolled over for the charge, coming down
+	{ 0.05, 2, -3, 0, 0, -0.012 }, -- the left hand lets go and the muzzle sags
+	{ 0.19, -70, 48, 11, 0.03, 0.01 }, -- swung up and over, carrying past
+	{ 0.25, -65, 45, 10, 0.03, 0 }, -- and settling back, mag well to the left hand
+	{ 0.31, -74, 41, 12, 0.03, -0.016 }, -- the rip drags it over and down after the magazine
+	{ 0.38, -63, 47, 10, 0.03, 0.006 }, -- and it springs back past as the magazine comes free
+	{ 0.46, -65, 45, 10, 0.03, 0 },
+	{ 0.6, -65, 45, 10, 0.03, 0 },
+	{ 0.675, -66, 44, 10, 0.03, 0 },
+	{ 0.71, -57, 38, 9, 0.04, 0.014 }, -- the slam drives it up and back
+	{ 0.78, -66, 46, 10, 0.03, -0.004 }, -- and it rebounds past
+	{ 0.88, -56, 31, 6, 0.03, 0 }, -- still rolled over for the charge, coming down
 	{ FREE_AT, -52, 34, 5, 0.047, 0.004 }, -- dragged back by the pull
-	{ 0.975, -49, 25, 4, 0.004, -0.006 }, -- thrown forward, muzzle dipping, as the bolt flies home
-	{ 1.03, -47, 28, 4, 0.02, 0 },
-	{ 1.13, 4, -4, -1, -0.006, -0.012 }, -- it comes down heavy, dipping past ready
-	{ 1.18, -1, 1, 0, 0, 0.003 },
-	{ 1.2, 0, 0, 0, 0, 0 },
+	{ 1.015, -49, 25, 4, 0.004, -0.006 }, -- thrown forward, muzzle dipping, as the bolt flies home
+	{ 1.07, -47, 28, 4, 0.02, 0 },
+	{ 1.17, 4, -4, -1, -0.006, -0.012 }, -- it comes down heavy, dipping past ready
+	{ 1.22, -1, 1, 0, 0, 0.003 },
+	{ 1.24, 0, 0, 0, 0, 0 },
 }
 -- How fast a value is changing at a key: the slope between its neighbours, and still at either end.
 local function slope(index: number, value: number): number
@@ -145,41 +147,42 @@ export type Pose = {
 	swing: Vector3, -- how far out of the straight line between the two the hand swings, in the hold
 }
 
--- The reload t seconds in, exactly as keyed: the gun's turn, the new magazine in the gun's space, the old one in
--- the hold once it's falling, the bolt, the palm from the new magazine, the hand's weight and its swing in the
--- gun's space.
-local function keyed(t: number): (CFrame, CFrame, CFrame?, number, CFrame, number, Vector3)
+-- The reload t seconds in, exactly as keyed: the gun's turn, then in the gun's space the old magazine, the new one
+-- and the left palm, then the bolt, the hand's weight and its swing (in the gun's space too).
+local function keyed(t: number): (CFrame, CFrame, CFrame, CFrame, number, number, Vector3)
 	local gun = gunAt(t)
 
-	-- The new magazine, from the hand's fetch to its place in the gun (in the gun's space).
+	-- The old magazine: rocked off its lug, ripped out of the well and let go. Then it's on its own: it flies on the
+	-- way it was being pulled and falls straight down in the hold whatever the gun does after, tumbling.
+	local old = CFrame.identity
+	if t >= FLUNG_AT then
+		local fall = t - FLUNG_AT
+		local flung = gunAt(FLUNG_AT)
+		local thrown = flung.Rotation * (Vector3.new(0, -1, -0.25).Unit * FLING)
+		local drift = thrown * fall + Vector3.new(0, -GRAVITY * fall * fall / 2, 0)
+		local tumble = CFrame.new(MAG) * CFrame.Angles(math.rad(260 * fall), 0, math.rad(140 * fall)) * CFrame.new(-MAG)
+		old = gun:Inverse() * CFrame.new(drift) * flung * RIPPED * tumble
+	elseif t >= OUT_AT then
+		local u = (t - OUT_AT) / (FLUNG_AT - OUT_AT)
+		old = rocked(ROCK):Lerp(RIPPED, u * (0.6 + 0.4 * u)) -- still speeding up as it's let go
+	elseif t > RIP_AT then
+		local u = (t - RIP_AT) / (OUT_AT - RIP_AT)
+		old = rocked(ROCK * u * u) -- a yank
+	end
+
+	-- The new one: down out of view in the hand, then up to hook its lug, and rocked home.
 	local fetched = gun:Inverse() * FETCHED
 	local new = CFrame.identity
 	if t < FETCH_AT then
 		new = fetched
-	elseif t < OUT_AT then
-		-- It speeds up into the old magazine and carries on through it, slowing only as its lug hooks: one swing,
-		-- with the hit in the middle of it.
-		local u = (t - FETCH_AT) / (OUT_AT - FETCH_AT)
-		new = fetched:Lerp(STRIKE, u * u * (2 - u))
 	elseif t < HOOK_AT then
-		local u = (t - OUT_AT) / (HOOK_AT - OUT_AT)
-		new = STRIKE:Lerp(rocked(ROCK), 1 - (1 - u) ^ 2)
+		local u = (t - FETCH_AT) / (HOOK_AT - FETCH_AT)
+		new = fetched:Lerp(rocked(ROCK), u * u * (3 - 2 * u))
 	elseif t < ROCK_AT then
 		new = rocked(ROCK)
 	elseif t < IN_AT then
 		local u = (t - ROCK_AT) / (IN_AT - ROCK_AT)
 		new = rocked(ROCK * (1 - u * u)) -- the slam speeds up into the stop
-	end
-	-- The old one sits in the gun until it's knocked out. Then it's on its own: it leaves the well the way the well
-	-- was facing, and falls straight down in the hold whatever the gun does after, tumbling as it goes.
-	local old: CFrame? = nil
-	if t >= OUT_AT and t < GONE_AT then
-		local fall = t - OUT_AT
-		local knocked = gunAt(OUT_AT)
-		local thrown = knocked.Rotation * (Vector3.new(0, -1, -0.3).Unit * KNOCK)
-		local drift = thrown * fall + Vector3.new(0, -GRAVITY * fall * fall / 2, 0)
-		local tumble = CFrame.new(MAG) * CFrame.Angles(math.rad(260 * fall), 0, math.rad(140 * fall)) * CFrame.new(-MAG)
-		old = CFrame.new(drift) * knocked * rocked(math.min(ROCK, 700 * fall)) * tumble
 	end
 
 	local bolt = 0
@@ -190,14 +193,19 @@ local function keyed(t: number): (CFrame, CFrame, CFrame?, number, CFrame, numbe
 	end
 	-- The hand goes back with the handle and stays back when it lets go.
 	local pulled = if t < FREE_AT then bolt else TRAVEL
-	local onMag = new * ON_MAG
+	local onNew = new * ON_MAG
 	local onKnob = CFrame.new(0, 0, pulled) * ON_KNOB
-	local palm = onMag
-	if t >= CROSS_TO then
+	local palm = onNew
+	if t < FLUNG_AT then
+		palm = old * ON_MAG
+	elseif t < DOWN_AT then
+		-- Having let go, it carries on down the way it was going to the new one.
+		palm = (RIPPED * ON_MAG):Lerp(onNew, smooth((t - FLUNG_AT) / (DOWN_AT - FLUNG_AT)))
+	elseif t >= CROSS_TO then
 		palm = onKnob
 	elseif t > CROSS_FROM then
 		local u = smooth((t - CROSS_FROM) / (CROSS_TO - CROSS_FROM))
-		palm = onMag:Lerp(onKnob, u) + ROUND * math.sin(u * math.pi)
+		palm = onNew:Lerp(onKnob, u) + ROUND * math.sin(u * math.pi)
 	end
 
 	local weight, swing = 0, Vector3.zero
@@ -210,51 +218,49 @@ local function keyed(t: number): (CFrame, CFrame, CFrame?, number, CFrame, numbe
 			swing = UNDER * math.sin(u * math.pi)
 		end
 	end
-	return gun, new, old, bolt, new:Inverse() * palm, weight, swing
+	return gun, old, new, palm, bolt, weight, swing
 end
 
 -- Each moment is blended with the moments just before and after it, which rounds every corner where one move meets
 -- the next: nothing starts or stops in an instant. The blend narrows to nothing at the two ends, so it starts and
 -- ends exactly at rest.
 local TAPS = { { -1, 1 }, { -0.5, 2 }, { 0, 3 }, { 0.5, 2 }, { 1, 1 } } -- how far along the window, and how much it counts
-local WINDOW = 0.035 -- seconds either side
+local WINDOW = 0.03 -- seconds either side
 
 -- The reload t seconds in.
 function AkReload.at(t: number): Pose
 	local window = math.clamp(math.min(t, LENGTH - t), 0, WINDOW)
-	local gun, new, rel, weight, swing = CFrame.identity, CFrame.identity, CFrame.identity, 0, Vector3.zero
-	local total = 0
+	local gun, old, new, palm = CFrame.identity, CFrame.identity, CFrame.identity, CFrame.identity
+	local weight, swing, total = 0, Vector3.zero, 0
 	for _, tap in TAPS do
-		local tapGun, tapNew, _, _, tapRel, tapWeight, tapSwing = keyed(t + tap[1] * window)
+		local tapGun, tapOld, tapNew, tapPalm, _, tapWeight, tapSwing = keyed(t + tap[1] * window)
 		total += tap[2]
 		local share = tap[2] / total
-		gun, new, rel = gun:Lerp(tapGun, share), new:Lerp(tapNew, share), rel:Lerp(tapRel, share)
+		gun, old = gun:Lerp(tapGun, share), old:Lerp(tapOld, share)
+		new, palm = new:Lerp(tapNew, share), palm:Lerp(tapPalm, share)
 		weight += (tapWeight - weight) * share
 		swing = swing:Lerp(tapSwing, share)
 	end
-	-- The bolt's snap and the old magazine's fall aren't blended: one is meant to be sharp, the other is already
-	-- smooth.
-	local _, _, fallen, bolt = keyed(t)
-	local old = if fallen then gun:Inverse() * fallen else nil
-	-- Until the knock the magazine in the gun is the old one and the spare is the new one in the hand; then the new
-	-- one is the gun's, and the spare is the old one falling.
-	local mag, spare = new, old
-	if t < OUT_AT then
-		mag, spare = CFrame.identity, if t >= LEAVE_TO then new else nil
+	local _, _, _, _, bolt = keyed(t) -- the bolt's snap is meant to be sharp
+	-- The gun's magazine is the old one until it has fallen out of view, with the new one as the spare once the old
+	-- one is let go; then the new one is the gun's.
+	local mag: CFrame, spare: CFrame? = new, nil
+	if t < GONE_AT then
+		mag, spare = old, if t >= FLUNG_AT then new else nil
 	end
 	return {
 		gun = gun,
 		mag = mag,
 		spare = spare,
 		bolt = bolt,
-		palm = gun * new * rel,
+		palm = gun * palm,
 		weight = weight,
 		swing = gun.Rotation * swing,
 	}
 end
 
 AkReload.LENGTH = LENGTH
-AkReload.SOUND = 1.2 -- the times above are for a reload this long, so all of it fits in the gun's reload time
+AkReload.SOUND = 1.24 -- one reload: all of it fits in the gun's reload time
 AkReload.TRAVEL = TRAVEL
 AkReload.ROCK = ROCK
 AkReload.LUG = LUG
