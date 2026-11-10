@@ -23,13 +23,28 @@ local JOINED_AT = 4.75 -- and the halves are one deck again
 local FLIP_AT = 4.95 -- the left thumb flips the top card off
 local CAUGHT_AT = 5.45 -- and the right hand has it
 local LENGTH = 5.9
-local CRUSH = 0.5 -- seconds the right hand takes to crush its card, once it's used
-local BURST_AT = 0.2 -- into the crush, the card is gone
+local SPEED = 1.35 -- how much faster than its keys the whole flourish plays
+local LANDED_AT = SPRING_TO + FLIGHT -- the last card is in the left hand
+local CRUSH = 0.4 -- seconds the right hand takes to crush its card, once it's used
+local BURST_AT = 0.16 -- into the crush, the card is gone
 
 local FAN_PIVOT = Vector3.new(0.05, 0, 0.13) -- on the card, under the right thumb
 local FAN_TOP = -60 -- degrees the top card leans
 local FAN_BOTTOM = 125 -- and the bottom card
 local FAN_GAP = 0.0012 -- extra space between fanned cards, so they don't flicker
+local FAN_AT = 3.55 -- the fan snaps open
+
+-- Weight. Whatever lands in a hand knocks it down and it rings back, and the cards in it go with it.
+local SINK = Vector3.new(0, -1, 0.3) -- the way a hand gives, relative to the camera
+local CATCH = Vector3.new(0.7, -0.6, 0.2) -- and the way the right hand gives when the flipped card slaps into it
+
+-- A knock: a quick dip that rings out, `since` seconds after something lands.
+local function knock(since: number): number
+	if since < 0 then
+		return 0
+	end
+	return math.exp(-since * 13) * math.sin(since * 32)
+end
 
 type Key = { at: number, x: number, y: number, z: number, yaw: number, pitch: number, roll: number }
 
@@ -105,7 +120,7 @@ local FLIP: { Key } = {
 -- How far open the fan is, from 0 to 1, in a key's x.
 local FAN: { Key } = {
 	key(3.2, 0, 0, 0, 0),
-	key(3.65, 1, 0, 0, 0),
+	key(FAN_AT, 1, 0, 0, 0),
 	key(4.1, 1, 0, 0, 0),
 	key(4.4, 0, 0, 0, 0),
 }
@@ -377,7 +392,7 @@ local CardFlourish = {
 	COUNT = COUNT,
 	HALF = HALF,
 	CHOSEN = CHOSEN,
-	LENGTH = LENGTH,
+	LENGTH = LENGTH / SPEED, -- seconds it takes to play
 	CARD_SIZE = CARD_SIZE,
 	CRUSH = CRUSH,
 	BURST_AT = BURST_AT,
@@ -389,9 +404,22 @@ export type Pose = { cards: { CFrame }, right: CFrame, left: CFrame, fingers: Ha
 -- end.
 -- Cards 1 to HALF are the right hand's half, bottom up, and card CHOSEN is the one that ends in the right hand.
 function CardFlourish.at(elapsed: number): Pose
-	local at = math.clamp(elapsed, 0, LENGTH)
+	local at = math.clamp(elapsed * SPEED, 0, LENGTH)
 	local cards = table.create(COUNT)
-	local leftHalf = frameOf(flowing(LEFT_HALF, at))
+	-- The left hand sinks as the deck piles into it, jumps as the top half is pulled off and flicked, and is knocked
+	-- down when the half is dropped back on.
+	local piled = math.clamp((at - SPRING_FROM - FLIGHT) / (SPRING_TO - SPRING_FROM), 0, 1)
+	local loaded = piled - smooth(math.clamp((at - LANDED_AT) / 0.4, 0, 1))
+	local dropped = SINK * (0.045 * knock(at - JOINED_AT + 0.03))
+	local leftGive = SINK
+			* (0.022 * loaded + 0.035 * knock(at - LANDED_AT + 0.04) - 0.014 * knock(at - CUT_AT) - 0.012 * knock(at - FLIP_AT))
+		+ dropped
+	-- The right hand kicks as the deck springs out of it, and takes the weight of the half, its spin stopping, the
+	-- fan snapping open and the flipped card.
+	local rightGive = SINK * (0.02 * knock(at - CUT_AT) + 0.022 * knock(at - 3.0) + 0.016 * knock(at - FAN_AT))
+		- SINK * (0.012 * math.sin(piled * math.pi))
+		+ CATCH * (0.035 * knock(at - CAUGHT_AT + 0.04))
+	local leftHalf = frameOf(flowing(LEFT_HALF, at)) + leftGive
 	if at < SPRING_TO + FLIGHT then
 		for index = 1, COUNT do
 			cards[index] = sprung(index, at, leftHalf)
@@ -399,8 +427,8 @@ function CardFlourish.at(elapsed: number): Pose
 	else
 		local rightHalf = if at < SLIDE_AT
 			then leftHalf * CFrame.new(0, HALF_HEIGHT, 0)
-			else frameOf(flowing(RIGHT_HALF, at))
-		local open = flowing(FAN, at).x
+			else frameOf(flowing(RIGHT_HALF, at)) + rightGive + dropped
+		local open = flowing(FAN, at).x + 0.09 * knock(at - FAN_AT + 0.03) -- it overshoots and springs back
 		for index = 1, HALF do
 			cards[index] = fanned(rightHalf, index, open)
 			cards[HALF + index] = leftHalf * CFrame.new(0, (index - 1) * THICKNESS, 0)
@@ -411,11 +439,11 @@ function CardFlourish.at(elapsed: number): Pose
 		cards[index] = frame * FACE_DOWN
 	end
 	if at > FLIP_AT then
-		cards[CHOSEN] = frameOf(flowing(FLIP, at))
+		cards[CHOSEN] = frameOf(flowing(FLIP, at)) + rightGive
 	end
 	return {
 		cards = cards,
-		right = handFlowing(RIGHT_HAND, at),
+		right = handFlowing(RIGHT_HAND, at) + rightGive,
 		left = leftHalf * LEFT_GRIP,
 		fingers = { Right = fingersAt(RIGHT_FINGERS, at), Left = fingersAt(LEFT_FINGERS, at) },
 	}
@@ -434,7 +462,7 @@ function CardFlourish.crush(elapsed: number, since: number): Crush
 	ended = final
 	local grab = smooth(math.clamp(since / 0.12, 0, 1))
 	local fist = smooth(math.clamp((since - 0.06) / (BURST_AT - 0.06), 0, 1))
-	pose.right = pose.right:Lerp(final.right, grab)
+	pose.right = pose.right:Lerp(final.right, grab) + SINK * (0.04 * knock(since - BURST_AT + 0.03)) -- the fist jolts shut
 	pose.left = pose.left:Lerp(final.left, grab)
 	local holding: Shape = {}
 	for bone, aims in pose.fingers.Left do

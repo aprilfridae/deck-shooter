@@ -31,8 +31,8 @@ describe("CardFlourish", function()
 	end)
 
 	it("shows only backs until the chosen card is flipped face up at the end", function()
-		for _, elapsed in { 0, 0.6, 2.4, 3.7, 4.9 } do
-			for _, frame in CardFlourish.at(elapsed).cards do
+		for _, share in { 0, 0.1, 0.4, 0.63, 0.83 } do
+			for _, frame in CardFlourish.at(share * CardFlourish.LENGTH).cards do
 				expect(frame.UpVector:Dot(-frame.Position) < 0).toBe(true) -- the face points away from the eye
 			end
 		end
@@ -43,7 +43,7 @@ describe("CardFlourish", function()
 	end)
 
 	it("crushes the flipped card into the right hand from any moment", function()
-		for _, elapsed in { 0.5, 3.6, CardFlourish.LENGTH } do
+		for _, elapsed in { 0, 0.5, 3.6, CardFlourish.LENGTH } do
 			local crush = CardFlourish.crush(elapsed, CardFlourish.CRUSH)
 			expect(crush.crushed).toBe(1)
 			expect((crush.pose.cards[CardFlourish.CHOSEN].Position - crush.palm).Magnitude < 1e-4).toBe(true)

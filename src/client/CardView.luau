@@ -28,8 +28,7 @@ local function makeCard(): (BasePart, Decal)
 	local part = Instance.new("Part")
 	part.Name = "Card"
 	part.Size = CardFlourish.CARD_SIZE
-	part.Color = Palette.Bone
-	part.Material = Enum.Material.SmoothPlastic
+	part.Transparency = 1 -- only its two images show, so the card has their rounded corners
 	part.Anchored = true
 	part.CanCollide = false
 	part.CanQuery = false

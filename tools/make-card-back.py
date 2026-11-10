@@ -31,5 +31,13 @@ d=int(cx*0.75)
 cv2.fillPoly(img,[np.array([(c[0],c[1]-d),(c[0]+d,c[1]),(c[0],c[1]+d),(c[0]-d,c[1])])],acid,cv2.LINE_AA)
 # border
 cv2.rectangle(img,(m,m),(W-m,H-m),bone,int(1.5*S),cv2.LINE_AA)
+# clear corners, the same size as the card art's (tools/make-card-art.py)
+r=10*S
+mask=np.zeros((H,W),np.uint8)
+cv2.rectangle(mask,(r,0),(W-1-r,H-1),255,-1)
+cv2.rectangle(mask,(0,r),(W-1,H-1-r),255,-1)
+for x,y in ((r,r),(W-1-r,r),(r,H-1-r),(W-1-r,H-1-r)):
+    cv2.circle(mask,(x,y),r,255,-1,cv2.LINE_AA)
+img=np.dstack([img,mask])
 os.makedirs("assets/cards", exist_ok=True)
 cv2.imwrite("assets/cards/hand_back.png", img)
