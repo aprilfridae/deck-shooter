@@ -15,22 +15,35 @@ end
 
 describe("AkReload", function()
 	it("starts and ends with everything in place and the hand on the handguard", function()
-		for _, t in { 0, 0.05, AkReload.LENGTH, 3 } do
+		for _, t in { 0, AkReload.LENGTH, 3 } do
 			local pose = AkReload.at(t)
+			expect(still(pose.gun)).toBe(true)
 			expect(still(pose.mag)).toBe(true)
+			expect(pose.spare).toBe(nil)
 			expect(pose.bolt).toBe(0)
 			expect(pose.weight).toBe(0)
 		end
 	end)
 
-	it("rocks the magazine off its lug on the click and has it home on the slam", function()
-		local out = AkReload.at(0.42).mag
-		expect(math.abs(math.deg(math.asin(out.UpVector.Z)) - AkReload.ROCK) < 0.5).toBe(true)
-		-- The lug itself hasn't moved: it rocks about it.
-		expect((out * AkReload.LUG - AkReload.LUG).Magnitude < 1e-4).toBe(true)
-		expect(AkReload.at(0.52).mag.Position.Y < -0.2).toBe(true) -- gone, down out of view
+	it("rolls the gun over, top to the right, for the magazines and back for the charge", function()
+		local over = AkReload.at(0.35).gun
+		expect(over.UpVector.X > 0.85).toBe(true)
+		expect(math.abs(AkReload.at(0.9).gun.UpVector.X) < 0.35).toBe(true)
+	end)
+
+	it("keeps the old magazine in the gun until the new one knocks it out", function()
+		expect(still(AkReload.at(0.41).mag)).toBe(true)
+		expect(AkReload.at(0.3).spare ~= nil).toBe(true) -- the new one, coming up in the hand
+		local knocked = AkReload.at(0.5)
+		expect(knocked.spare ~= nil and knocked.spare.Position.Magnitude > 0.05).toBe(true) -- the old one, falling
+		expect(AkReload.at(0.63).spare).toBe(nil)
+	end)
+
+	it("hooks the new magazine's lug and rocks it home on the slam", function()
+		local hooked = AkReload.at(0.55).mag
+		expect(math.abs(math.deg(math.asin(hooked.UpVector.Z)) - AkReload.ROCK) < 0.5).toBe(true)
+		expect((hooked * AkReload.LUG - AkReload.LUG).Magnitude < 1e-4).toBe(true) -- about the lug
 		expect(still(AkReload.at(0.64).mag)).toBe(true)
-		expect(still(AkReload.at(0.29).mag)).toBe(true)
 	end)
 
 	it("pulls the bolt back on the charge and lets it fly home", function()
@@ -40,25 +53,26 @@ describe("AkReload", function()
 		expect(AkReload.at(0.97).bolt).toBe(0)
 	end)
 
-	it("keeps the hand on the magazine while it moves, then on the handle", function()
-		local held = AkReload.at(0.3).mag:ToObjectSpace(AkReload.at(0.3).palm)
-		for _, t in { 0.36, 0.42, 0.5, 0.6, 0.64 } do
+	it("keeps the hand on the new magazine from the fetch to the slam", function()
+		local function onMag(t: number): Vector3
 			local pose = AkReload.at(t)
-			expect(pose.weight).toBe(1)
-			local now = pose.mag:ToObjectSpace(pose.palm)
-			expect((now.Position - held.Position).Magnitude < 1e-4).toBe(true)
+			local held = if t < 0.42 then pose.spare else pose.mag
+			return (pose.gun * held):ToObjectSpace(pose.palm).Position
 		end
-		local before, pulled = AkReload.at(0.84).palm, AkReload.at(0.93).palm
-		expect(math.abs(pulled.Position.Z - before.Position.Z - AkReload.TRAVEL) < 1e-5).toBe(true)
+		local grip = onMag(0.3)
+		for _, t in { 0.2, 0.36, 0.44, 0.5, 0.6, 0.64 } do
+			expect(AkReload.at(t).weight).toBe(1)
+			expect((onMag(t) - grip).Magnitude < 1e-4).toBe(true)
+		end
 	end)
 
 	it("never jumps", function()
 		local last = AkReload.at(0)
-		for step = 1, 300 do
-			local pose = AkReload.at(step * AkReload.LENGTH / 300)
+		for step = 1, 400 do
+			local pose = AkReload.at(step * AkReload.LENGTH / 400)
 			expect((pose.palm.Position - last.palm.Position).Magnitude < 0.05).toBe(true)
+			expect((pose.gun.Position - last.gun.Position).Magnitude < 0.02).toBe(true)
 			expect(math.abs(pose.weight - last.weight) < 0.06).toBe(true)
-			expect(math.abs(pose.bolt - last.bolt) < 0.03).toBe(true)
 			last = pose
 		end
 	end)

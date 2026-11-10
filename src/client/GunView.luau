@@ -66,7 +66,10 @@ local codeReload: { reload: any, perMetre: number, origin: Vector3 }? = nil -- t
 local codeReloadAt: number? = nil -- when it started
 local codeReloading = false -- whether this reload has started it
 local codePose: any = nil -- this frame's
+local codeTurn = CFrame.identity -- this frame's turn of the gun, in view studs
 local codeParts: { { part: BasePart, rest: CFrame, slides: boolean } } = {}
+local spareParts: { { part: BasePart, rest: CFrame } } = {} -- a second magazine, for while there are two
+local spareShown = false
 local HIP = CFrame.new(0.9, -0.8, -2)
 local AIMED = CFrame.new(0, -0.55, -2)
 local RELOAD_DIP = CFrame.new(0, -0.7, 0) * CFrame.Angles(math.rad(-25), 0, 0)
@@ -154,35 +157,6 @@ local function tilt(roll: number, yaw: number, pitch: number, x: number, y: numb
 	return CFrame.new(x, y, z) * CFrame.Angles(math.rad(pitch), math.rad(yaw), math.rad(roll))
 end
 local RELOADS: { [string]: any } = {
-	-- reload-assault-v4.wav: a rattle from 0.09s, the mag clicks out at 0.42s, slams in at 0.64s, and the charge is
-	-- pulled at 0.86s and lets go at 0.93s. The M57 has a reload clip, so this layers on top of it: the whole hold,
-	-- arms and all, turns round the gun with a jolt on each hit. Only the gun's turn is used.
-	M57 = {
-		length = 0.985,
-		layer = true,
-		keys = {
-			key(0, CFrame.identity, Vector3.zero),
-			key(0.2, tilt(-3, 0, -4, 0, -0.05, 0), Vector3.zero), -- dips to wind up, taking its time
-			key(0.34, tilt(14, -6, 4, -0.03, 0.02, 0), Vector3.zero), -- rolls the mag well toward the hand
-			key(0.42, tilt(15, -6, 3, -0.03, 0.01, 0), Vector3.zero, "in"),
-			key(0.46, tilt(17, -7, -3, -0.03, -0.05, 0), Vector3.zero, "out"), -- mag out: jolts down
-			key(0.53, tilt(15, -6, 3, -0.03, 0.01, 0), Vector3.zero),
-			key(0.6, tilt(16, -6, 1, -0.03, -0.03, 0), Vector3.zero), -- winds up for the new one
-			key(0.64, tilt(15, -6, 2, -0.03, -0.01, 0), Vector3.zero, "in"),
-			key(0.68, tilt(12, -5, 8, -0.03, 0.06, 0), Vector3.zero, "out"), -- mag in: bumps up hard
-			key(0.77, tilt(15, -6, 3, -0.03, 0.01, 0), Vector3.zero),
-			key(0.93, tilt(17, -7, 2, -0.04, 0, 0), Vector3.zero, "in"), -- the slap
-			key(0.96, tilt(18, -7, -1, -0.045, -0.02, 0), Vector3.zero, "out"),
-			key(0.985, tilt(17, -7, 1, -0.04, 0, 0), Vector3.zero, "in"),
-			key(1.04, tilt(-6, 2.5, 4, 0.015, 0.04, 0), Vector3.zero, "out"), -- let go: heaves back up past ready
-			-- then its weight takes over: it sinks past ready, hangs low a moment, and is lifted back up slowly
-			key(1.24, tilt(-5, 2, 3.2, 0.012, 0.03, 0), Vector3.zero, "out"),
-			key(1.62, tilt(-1, 0.5, -5, 0.004, -0.09, 0.02), Vector3.zero),
-			key(1.86, tilt(0, 0.3, -5.5, 0.002, -0.1, 0.02), Vector3.zero),
-			key(2.34, tilt(0.5, -0.1, 0.8, 0, 0.008, 0), Vector3.zero),
-			key(2.7, CFrame.identity, Vector3.zero),
-		},
-	},
 	-- gun-sniper-base.wav, from the shot: the blast, a rising click from 1s peaking at 1.04s, a clunk at 1.32s and a
 	-- whirr to 1.6s. The gun spins once backwards round the trigger finger while the blast rings out and the left
 	-- hand catches it; the right hand throws the lever open on the click, slams it shut on the clunk, and the gun
@@ -842,7 +816,9 @@ function GunView.setGun(gunId: string, slot: string)
 	lever = nil
 	table.clear(leverParts)
 	codeReload, codeReloadAt, codeReloading, codePose = nil, nil, false, nil
+	codeTurn, spareShown = CFrame.identity, false
 	table.clear(codeParts)
+	table.clear(spareParts)
 	local coded = CODE_RELOADS[GunConfig.guns[gunId].name]
 	if coded and view:IsA("Model") then
 		local perMetre = coded.perMetre * MODEL_SCALE * viewScale
@@ -858,6 +834,15 @@ function GunView.setGun(gunId: string, slot: string)
 			local swaps, slides = part.Name:find("^Mag_") ~= nil, part.Name:find("^Bolt_") ~= nil
 			if part:IsA("BasePart") and (swaps or slides) then
 				table.insert(codeParts, { part = part, rest = pivot:ToObjectSpace(part.CFrame), slides = slides })
+			end
+		end
+		for _, moving in table.clone(codeParts) do
+			if not moving.slides then
+				local copy = moving.part:Clone()
+				copy.Name = "Spare"
+				copy.Transparency = 1
+				copy.Parent = view
+				table.insert(spareParts, { part = copy, rest = moving.rest })
 			end
 		end
 	end
@@ -1200,8 +1185,8 @@ function GunView.update(
 		shownFrame, shownBase, shownSnap = whole, frame, snap
 		local nudged = config and CLIP_NUDGES[config.name]
 		local moved: { [string]: CFrame }? = nil
-		if nudged then
-			local palms = SoldierPose.clipPalms(clips.meshOffset, whole.bones)
+		local palms = if nudged or codeReload then SoldierPose.clipPalms(clips.meshOffset, whole.bones) else nil
+		if nudged and palms then
 			local nudgedPalms = {}
 			for side, by in nudged do
 				nudgedPalms[side] = whole.gun * CFrame.new(by) * whole.gun:Inverse() * palms[side]
@@ -1209,8 +1194,8 @@ function GunView.update(
 			moved = nudgedPalms
 		end
 		-- A reload keyed in code takes the left hand off wherever the clip has it.
-		codePose = nil
-		if codeReload and config then
+		codePose, codeTurn = nil, CFrame.identity
+		if codeReload and config and palms then
 			if reloading and not codeReloading then
 				codeReloadAt = os.clock()
 			end
@@ -1221,22 +1206,23 @@ function GunView.update(
 				codeReloadAt = nil -- done, or cut short
 			else
 				local pose = reload.at(at)
+				local per, origin = codeReload.perMetre, codeReload.origin
 				codePose = pose
-				if pose.weight > 0 then
-					local palms = moved or {}
-					local rest = palms.Left or SoldierPose.clipPalms(clips.meshOffset, whole.bones).Left
-					local onGun = whole.gun
-						* CFrame.new(codeReload.origin + pose.palm.Position * codeReload.perMetre)
-						* pose.palm.Rotation
-					palms.Left = rest:Lerp(onGun, pose.weight)
-					moved = palms
-				end
+				-- The gun turns in the right hand, which goes round with it, and so does the left hand's rest.
+				codeTurn = CFrame.new(origin + pose.gun.Position * per) * pose.gun.Rotation * CFrame.new(-origin)
+				local turned = whole.gun * codeTurn * whole.gun:Inverse()
+				local placed = moved or {}
+				placed.Right = turned * (placed.Right or palms.Right)
+				local rest = turned * (placed.Left or palms.Left)
+				local onGun = whole.gun * CFrame.new(origin + pose.palm.Position * per) * pose.palm.Rotation
+				placed.Left = rest:Lerp(onGun, pose.weight)
+				moved = placed
 			end
 		end
 		clipPalms = moved
 		ViewArms.showFrame(clips.meshOffset, whole.bones, clipPalms)
 		-- Reloading and scoping still move the whole hold, on top of the clip.
-		shown = held * HIP:Inverse() * frame.gun
+		shown = held * HIP:Inverse() * frame.gun * codeTurn
 	else
 		local now = os.clock()
 		-- A gun drawn bigger moves forward by its extra length, so its stock stays clear of the camera.
@@ -1314,6 +1300,19 @@ function GunView.update(
 		for _, moving in codeParts do
 			moving.part.CFrame = (if moving.slides then slid else swapped) * moving.rest
 		end
+		local spare = pose.spare
+		if spare then
+			local second = middle * CFrame.new(origin + spare.Position * per) * spare.Rotation * CFrame.new(-origin)
+			for _, moving in spareParts do
+				moving.part.CFrame = second * moving.rest
+			end
+		end
+	end
+	if spareShown ~= (codePose ~= nil and codePose.spare ~= nil) then
+		spareShown = not spareShown
+		for _, moving in spareParts do
+			moving.part.Transparency = if spareShown then 0 else 1
+		end
 	end
 	view.Parent = camera
 	local pivot = view:GetPivot()
@@ -1329,7 +1328,9 @@ function GunView.update(
 		end
 		return
 	end
-	if clips and shownFrame then
+	if clips and codePose then
+		hideSmears() -- the blur copies don't turn with a reload keyed in code
+	elseif clips and shownFrame then
 		drawSmear(camera, shownFrame, base, base * held * HIP:Inverse())
 	elseif not clips then
 		-- Guns posed in code trail too, so the Longscope's reload spin and kick blur.
