@@ -1,4 +1,4 @@
--- Bullet tracers and blood: a dark, glowing red mist and drops, with no splats left behind. The server sends where each
+-- Bullet tracers and what a hit throws off: no blood, but a burst of electricity, with nothing left behind. The server sends where each
 -- bullet really went, spread included.
 local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
 local Players = game:GetService("Players")
@@ -40,25 +40,32 @@ local TRACER_LENGTH = 12
 local TRACER_WIDTH = 0.07
 local TRACER_COLOR = Palette.DataCyan
 
--- Blood is a dark, dark red that glows: the mist is the dark body of it, the drops and the headshot ring are a deep
--- red that shines (Neon), and the sparks and the light it throws on things nearby are the brightest red.
-local BLOOD_COLOR = Color3.fromRGB(92, 0, 8)
-local BLOOD_GLOW = Color3.fromRGB(190, 0, 16)
-local BLOOD_LIGHT = Palette.HazardRed
-local MIST_BURST = 30
-local SPARKS = 14
-local DROPS = 14 -- back toward the shooter
-local EXIT_DROPS = 12 -- out the far side, faster and tighter
-local HEADSHOT_SCALE = 2 -- headshots throw this much more blood
-local DROP_SPEED = 26
-local EXIT_SPEED = 48
-local DROP_LIFE = 0.45
-local DROP_SIZE = 0.13
-local STREAK = 0.022 -- a drop stretches this many studs along its path per stud a second it moves
-local GRAVITY = 110
-local FLASH_BRIGHTNESS = 2.2
-local FLASH_RANGE = 7
-local FLASH_TIME = 0.14
+-- A hit doesn't bleed: it shorts out. A white-hot pop, a shower of sparks, hot streaks that arc away and fall, a few
+-- jagged bolts that crackle out of it for an instant, and a hard flash of light on everything nearby. White at the
+-- core and Data Cyan as it cools. (The names below still say blood, mist and drops from when it was blood.)
+local BLOOD_COLOR = Color3.new(1, 1, 1) -- the pop
+local BLOOD_GLOW = Palette.DataCyan -- streaks, bolts and the headshot ring
+local BLOOD_LIGHT = Color3.fromRGB(170, 240, 255) -- the light it throws
+local MIST_BURST = 6 -- puffs in the pop
+local SPARKS = 40
+local DROPS = 18 -- streaks back toward the shooter
+local EXIT_DROPS = 14 -- and out the far side, faster and tighter
+local HEADSHOT_SCALE = 2 -- headshots throw this much more
+local DROP_SPEED = 42
+local EXIT_SPEED = 72
+local DROP_LIFE = 0.3
+local DROP_SIZE = 0.07
+local STREAK = 0.03 -- a streak stretches this many studs along its path per stud a second it moves
+local GRAVITY = 90
+local FLASH_BRIGHTNESS = 5
+local FLASH_RANGE = 11
+local FLASH_TIME = 0.1
+local BOLTS = 3 -- jagged bolts out of a hit
+local BOLT_REACH = { 1.5, 4 } -- studs
+local BOLT_KINKS = 4 -- straight pieces in each
+local BOLT_JITTER = 0.5 -- how far each kink strays
+local BOLT_WIDTH = 0.05
+local BOLT_TIME = 0.07 -- seconds a bolt shows, redrawn once on the way so it crackles
 local RING_SIZE = 5 -- a headshot's ring grows to this wide
 local RING_TIME = 0.18
 
@@ -88,34 +95,34 @@ mistAnchor.Transparency = 1
 mistAnchor.Parent = folder
 local mist = Instance.new("ParticleEmitter")
 mist.Texture = "rbxasset://textures/particles/smoke_main.dds"
-mist.Color = ColorSequence.new(BLOOD_COLOR)
-mist.LightEmission = 0.15 -- mostly its own dark colour, so it reads as dark red and doesn't wash out
-mist.Lifetime = NumberRange.new(0.2, 0.4)
-mist.Speed = NumberRange.new(5, 16)
-mist.SpreadAngle = Vector2.new(35, 35)
-mist.Drag = 7
-mist.Acceleration = Vector3.new(0, -20, 0)
-mist.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 1.7) })
-mist.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) })
+mist.Color = ColorSequence.new(BLOOD_COLOR, BLOOD_GLOW)
+mist.LightEmission = 1
+mist.LightInfluence = 0
+mist.Lifetime = NumberRange.new(0.06, 0.14)
+mist.Speed = NumberRange.new(2, 9)
+mist.SpreadAngle = Vector2.new(180, 180)
+mist.Drag = 6
+mist.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.8), NumberSequenceKeypoint.new(1, 2.6) })
+mist.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.15), NumberSequenceKeypoint.new(1, 1) })
 mist.EmissionDirection = Enum.NormalId.Back
 mist.Rate = 0
 mist.Parent = mistAnchor
 -- Bright specks that spit out of the wound and glow.
 local sparks = Instance.new("ParticleEmitter")
 sparks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-sparks.Color = ColorSequence.new(BLOOD_LIGHT, BLOOD_GLOW)
+sparks.Color = ColorSequence.new(BLOOD_COLOR, BLOOD_GLOW)
 sparks.LightEmission = 1
 sparks.LightInfluence = 0
-sparks.Lifetime = NumberRange.new(0.15, 0.35)
-sparks.Speed = NumberRange.new(14, 34)
-sparks.SpreadAngle = Vector2.new(60, 60)
-sparks.Drag = 4
-sparks.Acceleration = Vector3.new(0, -40, 0)
-sparks.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 0) })
+sparks.Lifetime = NumberRange.new(0.15, 0.45)
+sparks.Speed = NumberRange.new(20, 62)
+sparks.SpreadAngle = Vector2.new(180, 180)
+sparks.Drag = 3
+sparks.Acceleration = Vector3.new(0, -60, 0)
+sparks.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 0) })
 sparks.EmissionDirection = Enum.NormalId.Back
 sparks.Rate = 0
 sparks.Parent = mistAnchor
--- A red flash lights up whatever is around the hit.
+-- A hard flash lights up whatever is around the hit.
 local flash = Instance.new("PointLight")
 flash.Color = BLOOD_LIGHT
 flash.Range = FLASH_RANGE
@@ -141,7 +148,12 @@ end
 -- A glowing drop that streaks along its path as it flies.
 local function addDrop(position: Vector3, direction: Vector3, speed: number, cone: number)
 	local spread = direction + random:NextUnitVector() * cone
-	local part = makePart(Vector3.one * DROP_SIZE, BLOOD_GLOW, Enum.Material.Neon)
+	-- Some streaks are white-hot, the rest already cooling.
+	local part = makePart(
+		Vector3.one * DROP_SIZE,
+		if random:NextNumber() < 0.4 then BLOOD_COLOR else BLOOD_GLOW,
+		Enum.Material.Neon
+	)
 	part.Shape = Enum.PartType.Ball
 	part.CFrame = CFrame.new(position)
 	part.Parent = folder
@@ -163,6 +175,45 @@ local function addRing(position: Vector3, direction: Vector3)
 	table.insert(rings, { part = part, age = 0 })
 end
 
+-- Jagged bolts that crackle out of a hit for an instant.
+local bolts: { any } = {}
+local function drawBolt(bolt: any)
+	local at = bolt.from
+	for kink, part in bolt.parts do
+		local share = kink / #bolt.parts
+		local to = bolt.from + bolt.reach * share + (if kink < #bolt.parts then random:NextUnitVector() * BOLT_JITTER else Vector3.zero)
+		part.Size = Vector3.new(BOLT_WIDTH, BOLT_WIDTH, (to - at).Magnitude)
+		part.CFrame = CFrame.lookAt((at + to) / 2, to)
+		at = to
+	end
+end
+local function addBolt(position: Vector3, away: Vector3)
+	local reach = (away + random:NextUnitVector() * 1.4).Unit * random:NextNumber(BOLT_REACH[1], BOLT_REACH[2])
+	local bolt = { from = position, reach = reach, parts = {}, age = 0, redrawn = false }
+	for kink = 1, BOLT_KINKS do
+		local part = makePart(Vector3.one * BOLT_WIDTH, if kink % 2 == 0 then BLOOD_COLOR else BLOOD_GLOW, Enum.Material.Neon)
+		part.Parent = folder
+		bolt.parts[kink] = part
+	end
+	drawBolt(bolt)
+	table.insert(bolts, bolt)
+end
+local function stepBolts(dt: number)
+	for index = #bolts, 1, -1 do
+		local bolt = bolts[index]
+		bolt.age += dt
+		if bolt.age >= BOLT_TIME then
+			for _, part in bolt.parts do
+				part:Destroy()
+			end
+			table.remove(bolts, index)
+		elseif not bolt.redrawn and bolt.age >= BOLT_TIME / 2 then
+			bolt.redrawn = true
+			drawBolt(bolt) -- a new jagged path to the same place
+		end
+	end
+end
+
 local function bleed(shot: any)
 	local scale = if shot.head then HEADSHOT_SCALE else 1
 	mistAnchor.CFrame = CFrame.lookAt(shot.to, shot.to + shot.direction)
@@ -174,6 +225,9 @@ local function bleed(shot: any)
 	end
 	for _ = 1, EXIT_DROPS * scale do
 		addDrop(shot.to, shot.direction, EXIT_SPEED, 0.35)
+	end
+	for _ = 1, BOLTS * scale do
+		addBolt(shot.to, -shot.direction)
 	end
 	if shot.head then
 		addRing(shot.to, shot.direction)
@@ -274,6 +328,7 @@ end
 RunService.RenderStepped:Connect(function(dt)
 	stepTracers(dt)
 	stepDrops(dt)
+	stepBolts(dt)
 	stepFlash(dt)
 end)
 
