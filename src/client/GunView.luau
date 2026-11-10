@@ -195,6 +195,27 @@ local function tilt(roll: number, yaw: number, pitch: number, x: number, y: numb
 	return CFrame.new(x, y, z) * CFrame.Angles(math.rad(pitch), math.rad(yaw), math.rad(roll))
 end
 local RELOADS: { [string]: any } = {
+	-- reload-pistol-v4.wav is quiet until the new cell slams in at 0.58s, with the slide racked at 0.68s and home by
+	-- about 0.74s. The pistol has a reload clip, so this layers on top of it and turns the whole hold, arms and all,
+	-- for weight: the gun sags as the old cell leaves and winds down further before the slam, the slam drives it up
+	-- and back hard and it drops past, the rack yanks it back with the muzzle dipping, and the slide flying home throws
+	-- it forward before it settles.
+	["Energy Pistol"] = {
+		length = 0.964,
+		layer = true,
+		keys = {
+			key(0, CFrame.identity, Vector3.zero),
+			key(0.12, tilt(6, -3, 5, 0, 0.02, 0.01), Vector3.zero, "flow"), -- lifts as the cell is let go
+			key(0.3, tilt(10, -5, -4, -0.02, -0.05, 0), Vector3.zero, "flow"), -- and sags, lighter in the hand
+			key(0.5, tilt(13, -6, -7, -0.02, -0.08, 0.01), Vector3.zero, "flow"), -- winds down before the slam
+			key(0.58, tilt(7, -3, 13, -0.01, 0.1, 0.06), Vector3.zero, "in"), -- SLAM: driven up and back
+			key(0.63, tilt(11, -5, -6, -0.02, -0.07, 0), Vector3.zero, "out"), -- and drops past
+			key(0.68, tilt(4, -2, -10, 0, -0.04, 0.08), Vector3.zero, "in"), -- the rack yanks it back, muzzle dipping
+			key(0.74, tilt(2, -1, 9, 0, 0.05, -0.06), Vector3.zero, "out"), -- the slide flies home and throws it forward
+			key(0.84, tilt(-2, 1, -3, 0, -0.02, 0.01), Vector3.zero, "flow"), -- it rocks back past ready
+			key(0.964, CFrame.identity, Vector3.zero, "flow"),
+		},
+	},
 	-- gun-sniper-base.wav, from the shot: the blast, a rising click from 1s peaking at 1.04s, a clunk at 1.32s and a
 	-- whirr to 1.6s. The gun spins once backwards round the trigger finger while the blast rings out and the left
 	-- hand catches it; the right hand throws the lever open on the click, slams it shut on the clunk, and the gun
