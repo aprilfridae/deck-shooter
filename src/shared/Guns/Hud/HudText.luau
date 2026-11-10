@@ -30,13 +30,12 @@ function HudText.key(slot: number, label: string?): string
 	return label or tostring(slot + FIRST_KEY - 1)
 end
 
--- How many cooldown segments are lit, with left seconds of the cooldown to go.
-function HudText.filled(left: number, cooldown: number, segments: number): number
+-- How much of a card's colour is back, from 0 to 1, with left seconds of the cooldown to go.
+function HudText.colour(left: number, cooldown: number): number
 	if cooldown <= 0 then
-		return segments
+		return 1
 	end
-	local share = 1 - math.clamp(left / cooldown, 0, 1)
-	return math.floor(share * segments)
+	return 1 - math.clamp(left / cooldown, 0, 1)
 end
 
 -- The HUD's size for a screen this tall.

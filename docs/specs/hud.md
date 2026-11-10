@@ -31,7 +31,7 @@ Roblox can't import font files, so `TextLabel` can't use these fonts. Text is dr
 | `tools/export_font_atlas.py` | Run with Python and Pillow on a folder of font files. Writes one 1024 by 1024 sheet per style to `assets/hud/<style>.png` (local only, 4 pixels between glyphs) and generates `src/shared/Guns/Hud/GlyphData.luau`. Never edit `GlyphData.luau` by hand. |
 | `src/shared/Guns/Hud/FontImages.luau` | One group image id per style, kept by hand, so a re-export never wipes the ids. |
 | `src/shared/Guns/Hud/TypeLayout.luau` | Pure layout: `lay(text, style, size, tracking)` returns the width and the placed glyphs. Uppercases the text. Tracking goes between characters only. |
-| `src/shared/Guns/Hud/HudText.luau` | Pure formatting: health, shield, ammo, gun label, ability key and cooldown segments, and the HUD's scale. |
+| `src/shared/Guns/Hud/HudText.luau` | Pure formatting: health, shield, ammo, gun label, ability key and how much of a card's colour is back, and the HUD's scale. |
 | `src/client/TypeLabel.luau` | Text on screen. `new(parent, options)` takes style, size, tracking, colour and left or right alignment. `:set(text)` redraws only when the text changes. Also `:width()`, `:setColor()`, `:setPosition()` and `:setVisible()`. |
 
 - Every character has a Deep Navy shadow behind it, offset by (1, 2). `:setColor()` recolours the glyph, not the shadow.
@@ -59,14 +59,13 @@ Sizes are in pixels on a 720-pixel-tall screen. All text is capitals.
 | Ammo | Bottom right, same baseline and margin | `Number` 46 | Bone |
 | Gun label `M57  /  30` | 44 above the ammo baseline, right aligned 34 from the edge | `Label` 12, tracking 3 | Bone |
 | `RELOADING` | Replaces the gun label. The ammo number stays. | `LabelBold` 12, tracking 3 | Bone |
-| Ability rows | 3 rows above health, the first 130 above the baseline, 25 apart | See below | |
+| Card spread | The equipped cards fanned out above `HEALTH` | See below | |
 
-Each ability row is 220 wide, starting 34 from the left, with tracking 2 throughout:
+The spread shows each equipped card's own art, 60 by 96, with no names, keys or bars:
 
-- The key (3, 4 or 5) in `LabelBold` 12, in Bone.
-- The card name, 18 from the row's left edge, in `Label` 12.
-- The tier on the right edge in `Label` 10, in Bone.
-- 5 below the baseline, a cooldown bar of 10 segments, 2 tall and 2 apart. Filled segments are Bone, empty ones Deep Navy.
+- Slot 2 stands upright in the middle and in front, its bottom 26 above the `HEALTH` line. Slots 1 and 3 sit 34 to its left and right, lean 14 degrees outward and sit 6 lower.
+- A card on cooldown is greyed out: its colours are dimmed and a grey lies over it. The colour comes back evenly over the cooldown (`HudText.colour`), and is all back when the card is ready.
+- The card in hand rises 10.
 - An empty slot shows nothing.
 
 Health and shield round up, so a player on 0.4 health shows 1.

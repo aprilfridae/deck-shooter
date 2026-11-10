@@ -44,7 +44,6 @@ local Config = {
 	PushRadius = 15,
 	PushSpeed = 60, -- under the guard's 63 speed limit
 	PushRise = 35,
-	CooldownSegments = 10,
 
 	StarterDeck = { "phase_dash", "overclock", "recon_pulse" },
 

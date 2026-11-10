@@ -11,19 +11,20 @@ local MenuState = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("M
 local Zones = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Zones"))
 local GunAudio = require(script.Parent.GunAudio)
 local GunView = require(script.Parent.GunView)
-local PlayerSettings = require(script.Parent.PlayerSettings)
+local CardData = require(script.Parent.CardData)
+local CardInHand = require(script.Parent.CardInHand)
 local TypeLabel = require(script.Parent.TypeLabel)
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local Cards = require(CardCore:WaitForChild("Cards"))
-local Config = require(CardCore:WaitForChild("Config"))
-local Settings = require(CardCore:WaitForChild("Settings"))
+local CardArt = require(CardCore:WaitForChild("CardArt"))
+local CardIndex = require(CardCore:WaitForChild("CardIndex"))
+local CardLook = require(CardCore:WaitForChild("CardLook"))
 local HudText = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Hud"):WaitForChild("HudText"))
 
 local remotes = ReplicatedStorage:WaitForChild("GunRemotes")
 local hitRemote = remotes:WaitForChild("HitConfirm") :: RemoteEvent
 
 local BONE = Palette.Bone
-local EMPTY = Palette.DeepNavy
 -- The hit marker: four dashes in an X around the crosshair.
 local MARKER_COLOR = Palette.Bone
 local MARKER_SECONDS = 0.3
@@ -42,16 +43,19 @@ local CLASS_X = 108
 local SHIELD_GAP = 8
 local NUMBER_SIZE = 46
 local LABEL_SIZE = 12
-local TIER_SIZE = 10
 local LABEL_TRACKING = 3
-local ROW_TRACKING = 2
-local ROW_TOP = BASELINE - 130
-local ROW_SPACING = 25
-local ROW_WIDTH = 220
-local ROW_NAME_X = 18
-local BAR_DROP = 5
-local BAR_HEIGHT = 2
-local BAR_GAP = 2
+-- The spread of equipped cards above the health.
+local CARD_HEIGHT = 96
+local CARD_WIDTH = CARD_HEIGHT * 0.625
+local CARD_CORNER = 10 / 150 -- the art's rounded corner, as a share of the card's width
+local CARD_LINE = LABEL_LINE - 26 -- the bottom of the middle card
+local CARD_STEP = 34 -- from one card's middle to the next
+local CARD_TILT = 14 -- degrees the outer cards lean
+local CARD_DROP = 6 -- how much lower the outer cards sit
+local CARD_LIFT = 10 -- how far the card in hand rises
+local CARD_GREY = Color3.fromRGB(86, 90, 98) -- what lies over a card on cooldown
+local CARD_GREYED = 0.3 -- how see-through that grey is when the cooldown starts
+local CARD_DIM = Color3.fromRGB(120, 120, 120) -- and what the card's own colours are multiplied by
 
 local player = Players.LocalPlayer
 local lastHealth = 0
@@ -137,73 +141,67 @@ healthLabel:set("HEALTH")
 local markerAt = 0
 local markerSize = 1
 
-local function abilityRow(index: number)
-	local line = ROW_TOP + (index - 1) * ROW_SPACING
-	local left = MARGIN + LABEL_INSET
-	local function rowText(style: string, size: number, right: boolean?, x: number): any
-		return TypeLabel.new(hud, {
-			style = style,
-			size = size,
-			tracking = ROW_TRACKING,
-			color = BONE,
-			right = right,
-			position = UDim2.new(0, x, 1, line),
-		})
-	end
-	local key = rowText("LabelBold", LABEL_SIZE, false, left)
-	local name = rowText("Label", LABEL_SIZE, false, left + ROW_NAME_X)
-	local tier = rowText("Label", TIER_SIZE, true, left + ROW_WIDTH)
-	local function showKey()
-		key:set(HudText.key(index, Settings.keyLabel(PlayerSettings.get().keys[`slot{index}`])))
-	end
-	showKey()
-	PlayerSettings.changed:Connect(showKey)
-
-	local bar = Instance.new("Frame")
-	bar.BackgroundTransparency = 1
-	bar.Position = UDim2.new(0, left, 1, line + BAR_DROP)
-	bar.Size = UDim2.fromOffset(ROW_WIDTH, BAR_HEIGHT)
-	bar.Parent = hud
-
-	local segments = {}
-	local count = Config.CooldownSegments
-	local gap = BAR_GAP / ROW_WIDTH
-	local width = (1 - gap * (count - 1)) / count
-	for i = 1, count do
-		local segment = Instance.new("Frame")
-		segment.Position = UDim2.fromScale((i - 1) * (width + gap), 0)
-		segment.Size = UDim2.fromScale(width, 1)
-		segment.BorderSizePixel = 0
-		segment.Parent = bar
-		segments[i] = segment
-	end
-	return { key = key, name = name, tier = tier, bar = bar, segments = segments }
+-- The equipped cards, fanned out above the health: slot 1 on the left, slot 2 upright in the middle and in front.
+local function spreadCard(index: number)
+	local side = index - (SLOTS + 1) / 2 -- -1, 0, 1
+	local image = Instance.new("ImageLabel")
+	image.AnchorPoint = Vector2.new(0.5, 0.5)
+	image.Size = UDim2.fromOffset(CARD_WIDTH, CARD_HEIGHT)
+	image.Rotation = side * CARD_TILT
+	image.BackgroundTransparency = 1
+	image.ZIndex = if side == 0 then 2 else 1
+	image.Visible = false
+	image.Parent = hud
+	-- The grey that lies over a card on cooldown.
+	local grey = Instance.new("Frame")
+	grey.Size = UDim2.fromScale(1, 1)
+	grey.BackgroundColor3 = CARD_GREY
+	grey.BackgroundTransparency = 1
+	grey.BorderSizePixel = 0
+	grey.Parent = image
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(CARD_CORNER, 0)
+	corner.Parent = grey
+	return {
+		image = image,
+		grey = grey,
+		x = MARGIN + CARD_WIDTH / 2 + CARD_STEP + side * CARD_STEP,
+		y = CARD_LINE - CARD_HEIGHT / 2 + math.abs(side) * CARD_DROP,
+		shows = "",
+	}
 end
 
-local rows = {}
+local spread = {}
 for index = 1, SLOTS do
-	rows[index] = abilityRow(index)
+	spread[index] = spreadCard(index)
 end
+CardData.changed:Connect(function()
+	for _, card in spread do
+		card.shows = "" -- its look may have changed
+	end
+end)
 
-local function showRow(index: number, now: number)
-	local row = rows[index]
-	local card = Cards.byId[player:GetAttribute(`Ability{index}Id`) or ""]
-	local shown = card ~= nil
-	row.key:setVisible(shown)
-	row.name:setVisible(shown)
-	row.tier:setVisible(shown)
-	row.bar.Visible = shown
-	if not card then
+local function showCard(index: number, now: number)
+	local card = spread[index]
+	local id = player:GetAttribute(`Ability{index}Id`) or ""
+	if not Cards.byId[id] then
+		card.image.Visible = false
 		return
 	end
-	row.name:set(card.name)
-	local tier = player:GetAttribute(`Ability{index}Tier`)
-	row.tier:set(tostring(tier))
-	local left = player:GetAttribute(`Ability{index}ReadyAt`) - now
-	local filled = HudText.filled(left, player:GetAttribute(`Ability{index}Cooldown`), #row.segments)
-	for i, segment in row.segments do
-		segment.BackgroundColor3 = if i <= filled then BONE else EMPTY
+	local tier = tostring(player:GetAttribute(`Ability{index}Tier`))
+	if card.shows ~= id .. tier then
+		card.shows = id .. tier
+		local snapshot = CardData.get()
+		local variant = if snapshot then CardIndex.variant(snapshot.stacks, id, tier) else ""
+		card.image.Image = CardArt.base(id, CardLook.look(tier, variant)) or CardArt.HAND_BACK
 	end
+	local left = (player:GetAttribute(`Ability{index}ReadyAt`) or 0) - now
+	local colour = HudText.colour(left, player:GetAttribute(`Ability{index}Cooldown`) or 0)
+	card.image.ImageColor3 = CARD_DIM:Lerp(Color3.new(1, 1, 1), colour)
+	card.grey.BackgroundTransparency = CARD_GREYED + (1 - CARD_GREYED) * colour
+	local lift = if CardInHand.slot == index then CARD_LIFT else 0
+	card.image.Position = UDim2.new(0, card.x, 1, card.y - lift)
+	card.image.Visible = true
 end
 
 hitRemote.OnClientEvent:Connect(function(info)
@@ -244,7 +242,7 @@ RunService.RenderStepped:Connect(function()
 	end
 	local now = workspace:GetServerTimeNow()
 	for index = 1, SLOTS do
-		showRow(index, now)
+		showCard(index, now)
 	end
 	if marker.Visible then
 		local scale, transparency = HitMarker.look(os.clock() - markerAt, MARKER_SECONDS, MARKER_POP)
