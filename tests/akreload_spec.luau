@@ -44,7 +44,7 @@ describe("AkReload", function()
 		expect(AkReload.at(0.3).spare ~= nil).toBe(true) -- the new one, coming up in the hand
 		local knocked = AkReload.at(0.5)
 		expect(knocked.spare ~= nil and knocked.spare.Position.Magnitude > 0.05).toBe(true) -- the old one, falling
-		expect(AkReload.at(0.63).spare).toBe(nil)
+		expect(AkReload.at(0.73).spare).toBe(nil)
 	end)
 
 	it("hooks the new magazine's lug and rocks it home on the slam", function()
@@ -52,6 +52,25 @@ describe("AkReload", function()
 		expect(math.abs(math.deg(math.asin(hooked.UpVector.Z)) - AkReload.ROCK) < 0.5).toBe(true)
 		expect((hooked * AkReload.LUG - AkReload.LUG).Magnitude < 1e-4).toBe(true) -- about the lug
 		expect(still(AkReload.at(0.64).mag)).toBe(true)
+	end)
+
+	it("lets the old magazine fall straight down in the hold, whatever the gun does", function()
+		local function inHold(t: number): Vector3
+			local pose = AkReload.at(t)
+			return (pose.gun * pose.spare).Position
+		end
+		local early, later, last = inHold(0.46), inHold(0.56), inHold(0.66)
+		expect(later.Y < early.Y and last.Y < later.Y).toBe(true)
+		expect(early.Y - later.Y < later.Y - last.Y).toBe(true) -- it speeds up
+		expect(last.Y < -0.5).toBe(true)
+	end)
+
+	it("swings the hand out under the gun on its way back from the knob", function()
+		local pose = AkReload.at(1.04)
+		local out = pose.gun.Rotation:Inverse() * pose.swing
+		expect(out.X > 0.05 and out.Y < -0.06).toBe(true)
+		expect(AkReload.at(0.9).swing.Magnitude).toBe(0)
+		expect(AkReload.at(1.15).swing.Magnitude).toBe(0)
 	end)
 
 	it("pulls the bolt back on the charge and lets it fly home", function()

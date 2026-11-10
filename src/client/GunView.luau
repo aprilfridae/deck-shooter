@@ -1216,7 +1216,7 @@ function GunView.update(
 				placed.Right = turned * (placed.Right or palms.Right)
 				local rest = turned * (placed.Left or palms.Left)
 				local onGun = whole.gun * CFrame.new(origin + pose.palm.Position * per) * pose.palm.Rotation
-				placed.Left = rest:Lerp(onGun, pose.weight)
+				placed.Left = rest:Lerp(onGun, pose.weight) + whole.gun.Rotation * (pose.swing * per)
 				moved = placed
 			end
 		end
