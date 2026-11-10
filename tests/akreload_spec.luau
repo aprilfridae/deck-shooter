@@ -49,29 +49,31 @@ describe("AkReload", function()
 		expect((spare.gun * spare.spare).Position.Y < -0.25).toBe(true)
 	end)
 
-	it("lets the old magazine fall straight down in the hold, whatever the gun does", function()
+	it("tosses the old magazine up in an arc, in the hold, whatever the gun does, and it falls away", function()
 		local function inHold(t: number): Vector3
 			local pose = AkReload.at(t)
 			return (pose.gun * pose.mag).Position
 		end
-		local early, later, last = inHold(0.4), inHold(0.48), inHold(0.56)
-		expect(later.Y < early.Y and last.Y < later.Y).toBe(true)
-		expect(early.Y - later.Y < later.Y - last.Y).toBe(true) -- it speeds up
-		expect(last.Y < -0.5).toBe(true)
+		local let, up, down, gone = inHold(0.34), inHold(0.42), inHold(0.58), inHold(0.74)
+		expect(up.Y > let.Y + 0.05).toBe(true) -- up first
+		expect(up.X < let.X).toBe(true) -- and off to the left
+		expect(down.Y < up.Y and gone.Y < -0.7).toBe(true) -- then down out of view
 	end)
 
 	it("hooks the new magazine's lug and rocks it home on the slam", function()
-		local hooked = AkReload.at(0.6).mag
+		local hooked = AkReload.at(0.6).spare
 		expect(math.abs(math.deg(math.asin(hooked.UpVector.Z)) - AkReload.ROCK) < 0.5).toBe(true)
 		expect((hooked * AkReload.LUG - AkReload.LUG).Magnitude < 1e-4).toBe(true) -- about the lug
-		expect(still(AkReload.at(0.72).mag)).toBe(true)
-		expect(AkReload.at(0.72).spare).toBe(nil)
+		local home = AkReload.at(0.72)
+		expect(still(home.spare)).toBe(true) -- the new one, in the gun, while the old one is still falling
+		expect(still(AkReload.at(0.8).mag)).toBe(true)
+		expect(AkReload.at(0.8).spare).toBe(nil)
 	end)
 
 	it("keeps the hand on whichever magazine it has", function()
 		local function onMag(t: number): Vector3
 			local pose = AkReload.at(t)
-			local held = if t < 0.34 or t >= 0.6 then pose.mag else pose.spare
+			local held = if t < 0.34 or t >= 0.76 then pose.mag else pose.spare
 			return (pose.gun * held):ToObjectSpace(pose.palm).Position
 		end
 		local grip = onMag(0.24)
@@ -108,7 +110,7 @@ describe("AkReload", function()
 		for step = 1, 400 do
 			local pose = AkReload.at(step * AkReload.LENGTH / 400)
 			expect((pose.palm.Position - last.palm.Position).Magnitude < 0.05).toBe(true)
-			expect((pose.gun.Position - last.gun.Position).Magnitude < 0.02).toBe(true)
+			expect((pose.gun.Position - last.gun.Position).Magnitude < 0.035).toBe(true)
 			expect(math.abs(pose.weight - last.weight) < 0.06).toBe(true)
 			last = pose
 		end

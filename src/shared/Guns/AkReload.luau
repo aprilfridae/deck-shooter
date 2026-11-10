@@ -45,9 +45,11 @@ local FREE_AT = 0.93 -- and let go
 local HOME_AT = 0.96 -- the bolt is home
 local GRIP_FROM, GRIP_TO = 0.95, 1.11 -- the right hand goes back to the grip
 local LENGTH = 1.28 -- the gun is back down
-local GONE_AT = 0.6 -- the old magazine has fallen out of view
+local GONE_AT = 0.76 -- the old magazine has fallen out of view
 local GRAVITY = 30 -- metres a second a second, in these seconds
 local FLING = 1.1 -- how fast the old magazine leaves the hand, metres a second
+-- It isn't just dropped: it's tossed up and off to the left, in the hold, so it flips over in an arc before it falls.
+local TOSS = Vector3.new(-0.9, 3, 0)
 -- Between the grip and the knob the right hand swings out from the gun's right side, so it clears the receiver.
 -- In the gun's space.
 local CLEAR = Vector3.new(0.09, 0.02, 0)
@@ -91,9 +93,9 @@ local RIPPED = CFrame.new(0, -0.11, -0.03) * rocked(ROCK + 10)
 -- back, and each yank and knock shoves the gun and it rebounds past where it was.
 local GUN_KEYS = {
 	{ 0, 0, 0, 0, 0, 0 },
-	{ 0.05, 2, -3, 0, 0, -0.012 }, -- the left hand lets go and the muzzle sags
-	{ 0.19, -70, 48, 11, 0.03, 0.01 }, -- swung up and over, carrying past
-	{ 0.25, -65, 45, 10, 0.03, 0 }, -- and settling back, mag well to the left hand
+	{ 0.05, 7, -6, -2, 0, -0.016 }, -- a wind-up: it dips and rolls the other way first
+	{ 0.19, -80, 53, 14, 0.03, 0.014 }, -- then it's whipped up and over, carrying well past
+	{ 0.25, -65, 45, 10, 0.03, 0 }, -- and snapping back, mag well to the left hand
 	{ 0.31, -74, 41, 12, 0.03, -0.016 }, -- the rip drags it over and down after the magazine
 	{ 0.38, -63, 47, 10, 0.03, 0.006 }, -- and it springs back past as the magazine comes free
 	{ 0.46, -65, 45, 10, 0.03, 0 },
@@ -101,12 +103,13 @@ local GUN_KEYS = {
 	{ 0.675, -66, 44, 10, 0.03, 0 },
 	{ 0.71, -57, 38, 9, 0.04, 0.014 }, -- the slam drives it up and back
 	{ 0.78, -66, 46, 10, 0.03, -0.004 }, -- and it rebounds past
-	{ 0.86, 14, 18, 3, 0.02, 0 }, -- down in the left hand, tipped a little the other way so the knob faces the right hand
-	{ FREE_AT, 16, 20, 2, 0.034, 0.004 }, -- dragged back by the pull
-	{ 0.975, 12, 13, 2, 0.004, -0.006 }, -- thrown forward, muzzle dipping, as the bolt flies home
-	{ 1.04, 8, 10, 1, 0.01, 0 },
-	{ 1.15, -2, -3, 0, -0.004, -0.008 }, -- it comes down heavy, dipping past ready
-	{ 1.21, 0.5, 0.5, 0, 0, 0.002 },
+	{ 0.84, 24, 15, 4, 0.02, 0.004 }, -- flicked down into the left hand and over the other way, past where it's going
+	{ 0.88, 14, 18, 3, 0.02, 0 }, -- so the knob faces the right hand
+	{ FREE_AT, 17, 21, 2, 0.036, 0.004 }, -- dragged back by the pull
+	{ 0.975, 11, 12, 2, 0.002, -0.007 }, -- thrown forward, muzzle dipping, as the bolt flies home
+	{ 1.05, -12, 15, -3, 0.012, 0.008 }, -- a last flick: rolled the other way, muzzle up
+	{ 1.14, 5, -5, 1, -0.005, -0.012 }, -- and dropped in heavy, dipping past ready
+	{ 1.2, -1.5, 1, 0, 0, 0.003 },
 	{ 1.26, 0, 0, 0, 0, 0 },
 }
 -- How fast a value is changing at a key: the slope between its neighbours, and still at either end.
@@ -167,8 +170,8 @@ local function keyed(t: number): (CFrame, CFrame, CFrame, CFrame, number, number
 		local fall = t - FLUNG_AT
 		local flung = gunAt(FLUNG_AT)
 		local thrown = flung.Rotation * (Vector3.new(0, -1, -0.25).Unit * FLING)
-		local drift = thrown * fall + Vector3.new(0, -GRAVITY * fall * fall / 2, 0)
-		local tumble = CFrame.new(MAG) * CFrame.Angles(math.rad(260 * fall), 0, math.rad(140 * fall)) * CFrame.new(-MAG)
+		local drift = (thrown + TOSS) * fall + Vector3.new(0, -GRAVITY * fall * fall / 2, 0)
+		local tumble = CFrame.new(MAG) * CFrame.Angles(math.rad(520 * fall), 0, math.rad(160 * fall)) * CFrame.new(-MAG)
 		old = gun:Inverse() * CFrame.new(drift) * flung * RIPPED * tumble
 	elseif t >= OUT_AT then
 		local u = (t - OUT_AT) / (FLUNG_AT - OUT_AT)
@@ -223,7 +226,8 @@ local function keyed(t: number): (CFrame, CFrame, CFrame, CFrame, number, number
 			then (t - REACH_FROM) / (REACH_TO - REACH_FROM)
 			else 1 - (t - GRIP_FROM) / (GRIP_TO - GRIP_FROM)
 		rightWeight = smooth(u)
-		rightSwing = CLEAR * math.sin(math.clamp(u, 0, 1) * math.pi)
+		-- It flicks further out as it comes off the knob than it did going to it.
+		rightSwing = CLEAR * (math.sin(math.clamp(u, 0, 1) * math.pi) * (if t < GRIP_FROM then 1 else 1.7))
 	end
 	return gun, old, new, palm, bolt, weight, right, rightWeight, rightSwing
 end
@@ -252,10 +256,11 @@ function AkReload.at(t: number): Pose
 		rightSwing = rightSwing:Lerp(tapSwing, share)
 	end
 	local _, _, _, _, bolt = keyed(t) -- the bolt's snap is meant to be sharp
-	-- While the hand has a magazine it sits exactly on it, whatever the blend did to each.
-	if t < FLUNG_AT then
+	-- While the hand has a magazine it sits exactly on it, whatever the blend did to each. Not within the blend of
+	-- letting one go or taking the other, where the two would disagree.
+	if t < FLUNG_AT - WINDOW then
 		palm = old * ON_MAG
-	elseif t >= DOWN_AT then
+	elseif t >= DOWN_AT + WINDOW then
 		palm = new * ON_MAG
 	end
 	-- The gun's magazine is the old one until it has fallen out of view, with the new one as the spare once the old
