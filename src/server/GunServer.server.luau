@@ -79,17 +79,54 @@ local function firstWall(origin: Vector3, direction: Vector3): RaycastResult?
 	return workspace:Raycast(origin, direction, params)
 end
 
--- A shot must start near the shooter, with no wall between their body and its origin.
+-- A shot must start near the shooter, with no wall between their body and its origin. "Near" grows with how fast
+-- they're moving: the server's copy of a player trails them, so at speed or in a fall their camera is well ahead of
+-- it, and a fixed 6 studs threw those shots away without a word.
+local SPEED_OVER = 0.15 -- seconds of their recorded path their speed is measured over
+local lastRefusalWarned = 0
 local function originValid(shooter: GunTargets.Target, shot: any, ping: number, now: number): boolean
 	local origin = Vector3.new(shot.origin.x, shot.origin.y, shot.origin.z)
+	-- Their speed comes from where the server recorded them, not from a velocity their client could make up.
+	local latest, before = History.at(shooter.history, now), History.at(shooter.history, now - SPEED_OVER)
+	local velocity = Vector3.zero
+	if latest and before then
+		velocity = Vector3.new(latest.x - before.x, latest.y - before.y, latest.z - before.z) / SPEED_OVER
+	end
+	local slack = ShotRequest.originSlack(velocity.Magnitude, ping)
+	local ahead = velocity * ShotRequest.lead(ping)
+	local nearest = math.huge
+	local walled = false
 	for _, time in { ShotRequest.shooterTime(shot.firedAt, ping, now), now } do
 		local past = History.at(shooter.history, time)
-		if past and ShotRequest.originAllowed(shot.origin, past) then
+		if past then
+			nearest = math.min(nearest, ShotRequest.originDistance(shot.origin, past))
+		end
+		if past and ShotRequest.originAllowed(shot.origin, past, slack) then
 			local body = Vector3.new(past.x, past.y, past.z)
 			if not firstWall(body, origin - body) then
 				return true
 			end
+			-- Round a corner at speed, the straight line from where they were cuts the corner. So it may also be
+			-- reached by way of where their movement was carrying them, if nothing was in the way of that.
+			local carried = body + ahead
+			if ahead.Magnitude > 0.5 and not firstWall(body, ahead) and not firstWall(carried, origin - carried) then
+				return true
+			end
+			walled = true
 		end
+	end
+	if os.clock() - lastRefusalWarned > 1 then
+		lastRefusalWarned = os.clock()
+		warn(
+			string.format(
+				"[Guns] refused a shot from %s: %s (%.1f studs from their body, %.1f allowed, moving %.0f)",
+				shooter.model.Name,
+				if walled then "a wall between their body and where it started" else "it started too far from their body",
+				nearest,
+				slack,
+				velocity.Magnitude
+			)
+		)
 	end
 	return false
 end

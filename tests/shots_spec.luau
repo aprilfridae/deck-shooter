@@ -141,6 +141,19 @@ describe("ShotRequest", function()
 		expect(ShotRequest.originAllowed({ x = 0, y = 5.9, z = 0 }, rewound)).toBe(true)
 		expect(ShotRequest.originAllowed({ x = 0, y = 6.1, z = 0 }, rewound)).toBe(false)
 	end)
+
+	it("lets a fast shooter's shot start further from their recorded body", function()
+		local rewound = { x = 0, y = 0, z = 0 }
+		expect(ShotRequest.originSlack(0, 0)).toBe(6)
+		-- Sprinting at 30 with no ping, the server trails by about a tenth of a second: 3 studs more.
+		expect(ShotRequest.originSlack(30, 0)).toBeCloseTo(9)
+		expect(ShotRequest.originAllowed({ x = 8, y = 2, z = 0 }, rewound, ShotRequest.originSlack(30, 0))).toBe(true)
+		expect(ShotRequest.originAllowed({ x = 8, y = 2, z = 0 }, rewound, ShotRequest.originSlack(0, 0))).toBe(false)
+		-- Ping adds to it, up to a limit, and so does speed.
+		expect(ShotRequest.originSlack(30, 0.1)).toBeCloseTo(12)
+		expect(ShotRequest.originSlack(30, 5)).toBeCloseTo(15)
+		expect(ShotRequest.originSlack(9999, 0)).toBeCloseTo(17)
+	end)
 end)
 
 describe("Lag compensation times", function()
