@@ -190,13 +190,16 @@ local function onFire(player: Player, raw: any)
 	for target in collaterals do
 		totals[target] = math.huge
 	end
+	local announced = false -- a collateral is told to the shooter once, however many bodies it went through
 	for target, amount in totals do
 		if amount > 0 then
 			local killed = if collaterals[target] then GunTargets.kill(target) else GunTargets.damage(target, amount)
 			if killed then
 				deathRemote:FireAllClients(target.root.Position, player) -- the killer, who the coins fly to
 			end
-			hitRemote:FireClient(player, { headshot = headshot, killed = killed })
+			local collateral = collaterals[target] == true and not announced
+			announced = announced or collateral
+			hitRemote:FireClient(player, { headshot = headshot, killed = killed, collateral = collateral })
 		end
 	end
 end

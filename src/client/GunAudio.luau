@@ -50,6 +50,7 @@ for _, soundId in {
 	GunSounds.slideStart,
 	GunSounds.coinBurst,
 	GunSounds.coinSuck,
+	GunSounds.collateral,
 	GunSounds.snap,
 	GunSounds.cardFlourish,
 	GunSounds.cardSkip,
@@ -139,6 +140,10 @@ function GunAudio.playShot(gunId: string, lateness: number)
 	if base then
 		playCopy(others[base], GunSounds.startOffset(lateness), gunId)
 	end
+end
+
+function GunAudio.playCollateral()
+	task.delay(GunSounds.hitDelaySeconds, playCopy, others[GunSounds.collateral], 0)
 end
 
 function GunAudio.playHit(headshot: boolean, killed: boolean)
