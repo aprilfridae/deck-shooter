@@ -61,7 +61,7 @@ Sizes are in pixels on a 720-pixel-tall screen. All text is capitals.
 | `RELOADING` | Replaces the gun label. The ammo number stays. | `LabelBold` 12, tracking 3 | Bone |
 | Card spread | The equipped cards fanned out above `HEALTH` | See below | |
 
-The spread shows each equipped card's face, 60 by 96, drawn by `CardFace` with its name and rarity printed on it. There are no keys or bars:
+The spread shows each equipped card's face, 82.5 by 132 (it was 60 by 96), drawn by `CardFace` with its name and rarity printed on it. There are no keys or bars:
 
 - To start, slot 1 is on top, slot 2 under it and slot 3 under that. A card taken in hand glitches out of the spread and back in on top of the others, in 0.42s (`HudText.glitch`), and stays on top after. First half: it flickers lit Data Cyan and jumps up to 8 sideways, harder as it goes, while a Data Cyan and a Hazard Red copy of its shape pull up to 9 apart behind it and 3 lines of static jump about over it; then it's gone, with only the copies taking turns. Second half: it snaps back in over the others 1.2 times its size with a white flash, drops out for one more beat, and settles as the copies close up. Slot 2 stands upright in the middle, its bottom 26 above the `HEALTH` line. Slots 1 and 3 sit 34 to its left and right, lean 14 degrees outward and sit 6 lower.
 - A card on cooldown is greyed out: a grey lies over it. The colour comes back evenly over the cooldown (`HudText.colour`), and is all back when the card is ready.
