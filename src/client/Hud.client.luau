@@ -53,6 +53,8 @@ local CARD_TILT = 14 -- degrees the outer cards lean
 local CARD_DROP = 6 -- how much lower the outer cards sit
 local CARD_LIFT = 10 -- how far the card in hand rises
 local CARD_LIFT_TIME = 0.07 -- seconds it takes to get most of the way
+local CARD_PULL = 46 -- how far a picked card is drawn up out of the spread on its way to the top
+local CARD_PULL_TIME = 0.3 -- seconds that takes, up and back down
 local CARD_GREY = Color3.fromRGB(86, 90, 98) -- what lies over a card on cooldown
 local CARD_GREYED = 0.2 -- how see-through that grey is when the cooldown starts
 
@@ -63,6 +65,7 @@ local gui = Instance.new("ScreenGui")
 gui.Name = "DeckHud"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- so each card's face and grey stay with their own card
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local crosshair = Instance.new("Frame")
@@ -170,6 +173,9 @@ local function spreadCard(index: number)
 		shows = "",
 		face = nil :: GuiObject?,
 		lift = 0, -- how far it has risen, from 0 to 1
+		over = SLOTS + 1 - index, -- how high it lies in the spread
+		pulledAt = -1, -- when it was last picked
+		pulled = false, -- whether it's on top yet since
 	}
 end
 
@@ -182,6 +188,22 @@ CardData.changed:Connect(function()
 		card.shows = "" -- its look may have changed
 	end
 end)
+
+local heldShown: number? = nil -- the card in hand the spread has caught up with
+
+-- The picked card is drawn up out of the spread and laid back down on top of the rest.
+local function pick(index: number)
+	local card = spread[index]
+	local top = 0
+	for _, other in spread do
+		top = math.max(top, other.over)
+	end
+	if card.over < top then
+		card.over = top + 1
+		card.pulledAt = os.clock()
+		card.pulled = false
+	end
+end
 
 local function showCard(index: number, now: number, step: number)
 	local card = spread[index]
@@ -207,7 +229,12 @@ local function showCard(index: number, now: number, step: number)
 	-- The card in hand slides up, and back down when it's put away.
 	local held = if CardInHand.slot == index then 1 else 0
 	card.lift += (held - card.lift) * (1 - math.exp(-step / CARD_LIFT_TIME))
-	card.image.Position = UDim2.new(0, card.x, 1, card.y - card.lift * CARD_LIFT)
+	local rise, over = HudText.pull((os.clock() - card.pulledAt) / CARD_PULL_TIME)
+	if over and not card.pulled then
+		card.pulled = true
+		card.image.ZIndex = card.over -- it's clear of the others' tops here, so it goes over them
+	end
+	card.image.Position = UDim2.new(0, card.x, 1, card.y - card.lift * CARD_LIFT - rise * CARD_PULL)
 	card.image.Visible = true
 end
 
@@ -248,6 +275,12 @@ RunService.RenderStepped:Connect(function(step)
 		reloadText:set(HudText.gunLabel(gun.name, gun.mag, true))
 	end
 	local now = workspace:GetServerTimeNow()
+	if CardInHand.slot ~= heldShown then
+		heldShown = CardInHand.slot
+		if heldShown and spread[heldShown] then
+			pick(heldShown)
+		end
+	end
 	for index = 1, SLOTS do
 		showCard(index, now, step)
 	end

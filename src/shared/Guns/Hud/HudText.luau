@@ -30,6 +30,13 @@ function HudText.key(slot: number, label: string?): string
 	return label or tostring(slot + FIRST_KEY - 1)
 end
 
+-- A picked card being drawn up out of the spread and laid back on top: how far up it is, from 0 to 1, and whether it
+-- has gone over the others yet. share is how far through the move it is.
+function HudText.pull(share: number): (number, boolean)
+	local at = math.clamp(share, 0, 1)
+	return math.sin(at * math.pi) ^ 0.8, at >= 0.5
+end
+
 -- How much of a card's colour is back, from 0 to 1, with left seconds of the cooldown to go.
 function HudText.colour(left: number, cooldown: number): number
 	if cooldown <= 0 then
