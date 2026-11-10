@@ -1,4 +1,4 @@
--- Bullet tracers and blood: an acid green mist and drops, with no splats left behind. The server sends where each
+-- Bullet tracers and blood: a dark, glowing red mist and drops, with no splats left behind. The server sends where each
 -- bullet really went, spread included.
 local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
 local Players = game:GetService("Players")
@@ -30,7 +30,11 @@ local TRACER_LENGTH = 12
 local TRACER_WIDTH = 0.07
 local TRACER_COLOR = Palette.DataCyan
 
-local BLOOD_COLOR = Palette.SignalAcid -- acid green, not red
+-- Blood is a dark, dark red that glows: the mist is the dark body of it, the drops and the headshot ring are a deep
+-- red that shines (Neon), and the sparks and the light it throws on things nearby are the brightest red.
+local BLOOD_COLOR = Color3.fromRGB(92, 0, 8)
+local BLOOD_GLOW = Color3.fromRGB(190, 0, 16)
+local BLOOD_LIGHT = Palette.HazardRed
 local MIST_BURST = 30
 local SPARKS = 14
 local DROPS = 14 -- back toward the shooter
@@ -42,8 +46,8 @@ local DROP_LIFE = 0.45
 local DROP_SIZE = 0.13
 local STREAK = 0.022 -- a drop stretches this many studs along its path per stud a second it moves
 local GRAVITY = 110
-local FLASH_BRIGHTNESS = 1
-local FLASH_RANGE = 5
+local FLASH_BRIGHTNESS = 2.2
+local FLASH_RANGE = 7
 local FLASH_TIME = 0.14
 local RING_SIZE = 5 -- a headshot's ring grows to this wide
 local RING_TIME = 0.18
@@ -75,7 +79,7 @@ mistAnchor.Parent = folder
 local mist = Instance.new("ParticleEmitter")
 mist.Texture = "rbxasset://textures/particles/smoke_main.dds"
 mist.Color = ColorSequence.new(BLOOD_COLOR)
-mist.LightEmission = 0.5
+mist.LightEmission = 0.15 -- mostly its own dark colour, so it reads as dark red and doesn't wash out
 mist.Lifetime = NumberRange.new(0.2, 0.4)
 mist.Speed = NumberRange.new(5, 16)
 mist.SpreadAngle = Vector2.new(35, 35)
@@ -89,7 +93,7 @@ mist.Parent = mistAnchor
 -- Bright specks that spit out of the wound and glow.
 local sparks = Instance.new("ParticleEmitter")
 sparks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-sparks.Color = ColorSequence.new(Color3.new(1, 1, 1), BLOOD_COLOR)
+sparks.Color = ColorSequence.new(BLOOD_LIGHT, BLOOD_GLOW)
 sparks.LightEmission = 1
 sparks.LightInfluence = 0
 sparks.Lifetime = NumberRange.new(0.15, 0.35)
@@ -101,9 +105,9 @@ sparks.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSe
 sparks.EmissionDirection = Enum.NormalId.Back
 sparks.Rate = 0
 sparks.Parent = mistAnchor
--- A green flash lights up whatever is around the hit.
+-- A red flash lights up whatever is around the hit.
 local flash = Instance.new("PointLight")
-flash.Color = BLOOD_COLOR
+flash.Color = BLOOD_LIGHT
 flash.Range = FLASH_RANGE
 flash.Brightness = 0
 flash.Shadows = false
@@ -127,7 +131,7 @@ end
 -- A glowing drop that streaks along its path as it flies.
 local function addDrop(position: Vector3, direction: Vector3, speed: number, cone: number)
 	local spread = direction + random:NextUnitVector() * cone
-	local part = makePart(Vector3.one * DROP_SIZE, BLOOD_COLOR, Enum.Material.Neon)
+	local part = makePart(Vector3.one * DROP_SIZE, BLOOD_GLOW, Enum.Material.Neon)
 	part.Shape = Enum.PartType.Ball
 	part.CFrame = CFrame.new(position)
 	part.Parent = folder
@@ -142,7 +146,7 @@ end
 
 -- A thin shell of light that snaps outward from a headshot.
 local function addRing(position: Vector3, direction: Vector3)
-	local part = makePart(Vector3.new(0.05, 1, 1), BLOOD_COLOR, Enum.Material.Neon)
+	local part = makePart(Vector3.new(0.05, 1, 1), BLOOD_GLOW, Enum.Material.Neon)
 	part.Shape = Enum.PartType.Cylinder
 	part.CFrame = CFrame.lookAt(position, position + direction) * CFrame.Angles(0, math.rad(90), 0)
 	part.Parent = folder
