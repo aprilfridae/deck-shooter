@@ -10,13 +10,10 @@ local StarterPlayer = game:GetService("StarterPlayer")
 local Zones = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Zones"))
 local Map = require(script.Parent.Map)
 local Relay = require(script.Parent.Relay)
-local Junction = require(script.Parent.Junction)
-local SpawnPick = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("SpawnPick"))
 local MoveGrace = require(script.Parent.Parent.MoveGrace)
 
 local ORIGIN = CFrame.new(4000, 0, 0) -- far from the test room, which sits at the world origin
 local RELAY_ORIGIN = CFrame.new(-4000, 300, 0) -- the Relay map's centre, high enough to fall from
-local JUNCTION_ORIGIN = CFrame.new(0, 100, -4000) -- the free-for-all arena's centre
 local TRAVEL_GRACE_SECONDS = 1
 local TRAVEL_COOLDOWN_SECONDS = 1
 local STREAM_TIMEOUT_SECONDS = 2
@@ -38,9 +35,6 @@ local testSpawn = testRoom:WaitForChild("Spawn") :: SpawnLocation
 local testRoomTerminal = Map.buildReturnTerminal(testRoom, testSpawn)
 local relay = Relay.build(RELAY_ORIGIN)
 local relayTerminal = Relay.buildTerminal(testRoom, testSpawn.Position + Vector3.new(-9, -testSpawn.Size.Y / 2, 0), Vector3.xAxis)
-local junction = Junction.build(JUNCTION_ORIGIN)
-local junctionTerminal =
-	Junction.buildTerminal(testRoom, testSpawn.Position + Vector3.new(9, -testSpawn.Size.Y / 2, 0), -Vector3.xAxis)
 
 local spawns: { [string]: SpawnLocation } = {
 	[Zones.Outpost] = outpost.spawn,
@@ -62,36 +56,9 @@ local function emptierRelaySide(): number
 	return if counts[2] < counts[1] then 2 else 1
 end
 
--- Which Junction spawn each player there comes in at next. Picked again on every death.
-local junctionSpawn: { [Player]: SpawnLocation } = {}
-local spawnRandom = Random.new()
-
--- The Junction spawn furthest from everyone else in the arena.
-local function pickJunctionSpawn(player: Player): SpawnLocation
-	local others = {}
-	for _, other in Players:GetPlayers() do
-		local root = other.Character and other.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		local humanoid = other.Character and other.Character:FindFirstChildOfClass("Humanoid")
-		if other ~= player and root and humanoid and humanoid.Health > 0 and Zones.of(other) == Zones.Junction then
-			table.insert(others, root.Position)
-		end
-	end
-	local positions = {}
-	for index, spawn in junction.spawns do
-		positions[index] = spawn.Position
-	end
-	return junction.spawns[SpawnPick.farthest(positions, others, function(count)
-		return spawnRandom:NextInteger(1, count)
-	end)]
-end
-
 local function spawnFor(player: Player, zone: string): SpawnLocation
 	if zone == Zones.Relay then
 		return relay.spawns[relaySide[player] or 1]
-	elseif zone == Zones.Junction then
-		local spawn = junctionSpawn[player] or pickJunctionSpawn(player)
-		junctionSpawn[player] = spawn
-		return spawn
 	end
 	return spawns[zone]
 end
@@ -148,7 +115,6 @@ local function setZone(player: Player, zone: string)
 	elseif not relaySide[player] then
 		relaySide[player] = emptierRelaySide()
 	end
-	junctionSpawn[player] = if zone == Zones.Junction then pickJunctionSpawn(player) else nil
 	player:SetAttribute("Zone", zone)
 	player.RespawnLocation = spawnFor(player, zone)
 end
@@ -178,14 +144,6 @@ for _, prompt in relay.terminals do
 		travel(player, Zones.Outpost)
 	end)
 end
-junctionTerminal.Triggered:Connect(function(player)
-	travel(player, Zones.Junction)
-end)
-for _, prompt in junction.terminals do
-	prompt.Triggered:Connect(function(player)
-		travel(player, Zones.Outpost)
-	end)
-end
 
 -- A new character can land on the wrong spawn if it loaded before RespawnLocation was set.
 local function onCharacter(player: Player, character: Model)
@@ -194,11 +152,6 @@ local function onCharacter(player: Player, character: Model)
 		humanoid.Died:Once(function()
 			task.wait(Players.RespawnTime)
 			if player.Character == character then
-				-- In the free-for-all, come back wherever is furthest from everyone now.
-				if Zones.of(player) == Zones.Junction then
-					junctionSpawn[player] = pickJunctionSpawn(player)
-					player.RespawnLocation = junctionSpawn[player]
-				end
 				loadBody(player)
 			end
 		end)
@@ -233,7 +186,6 @@ Players.PlayerRemoving:Connect(function(player)
 	lastTravel[player] = nil
 	moving[player] = nil
 	relaySide[player] = nil
-	junctionSpawn[player] = nil
 end)
 
 -- Getting out of the building somehow sends you back to the spawn.

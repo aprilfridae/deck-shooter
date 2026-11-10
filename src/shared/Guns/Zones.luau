@@ -1,23 +1,20 @@
 -- Which part of the world a player is in. The server sets each player's Zone attribute.
--- The Outpost is a safe zone: guns and cards only work in the test room, on the Relay map and in the Junction arena.
+-- The Outpost is a safe zone: guns and cards only work in the test room and on the Relay map.
 local Zones = {
 	Outpost = "Outpost",
 	TestRoom = "TestRoom",
 	Relay = "Relay",
-	Junction = "Junction",
 }
 
 local KNOWN = {
 	[Zones.Outpost] = true,
 	[Zones.TestRoom] = true,
 	[Zones.Relay] = true,
-	[Zones.Junction] = true,
 }
 
 local COMBAT = {
 	[Zones.TestRoom] = true,
 	[Zones.Relay] = true,
-	[Zones.Junction] = true,
 }
 
 -- Anything missing or unknown counts as the Outpost, so a late attribute never allows shooting.
