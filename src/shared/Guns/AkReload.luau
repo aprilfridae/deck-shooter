@@ -35,7 +35,7 @@ local IN_AT = 0.64 -- and slams in
 local PULL_AT = 0.86 -- the handle is pulled
 local FREE_AT = 0.93 -- and let go
 local HOME_AT = 0.96 -- the bolt is home
-local LEAVE_FROM, LEAVE_TO = 0.05, 0.15 -- the hand comes off the handguard
+local LEAVE_FROM, LEAVE_TO = 0.04, 0.2 -- the hand comes off the handguard
 local FETCH_AT = 0.24 -- it has the new magazine, down out of view, and starts up
 local CROSS_FROM, CROSS_TO = 0.66, 0.84 -- from the magazine to the knob, under the gun
 local BACK_FROM, BACK_TO = 0.95, 1.14 -- and back to the handguard, round under the gun
@@ -79,40 +79,59 @@ end
 local STRIKE = CFrame.new(0, -0.05, -0.04) * rocked(ROCK + 14)
 
 -- The gun's turn: seconds, degrees of roll (negative tips its top to the right), pitch (muzzle up) and yaw (muzzle
--- left), and metres pulled back.
+-- left), and metres pulled back and lifted. It rides one smooth curve through these, so it never stops dead at one and
+-- every move carries into the next. For weight, the big swings carry a little past where they're going and settle
+-- back, and each knock shoves the gun and it rebounds past where it was.
 local GUN_KEYS = {
-	{ 0, 0, 0, 0, 0 },
-	{ 0.07, 3, -3, 0, 0 }, -- a small wind-up the other way
-	{ 0.28, -65, 45, 10, 0.03 }, -- muzzle up and rolled over, mag well to the left hand
-	{ 0.4, -68, 46, 10, 0.03 },
-	{ 0.45, -76, 42, 11, 0.036 }, -- the knock shoves it further
-	{ 0.52, -66, 45, 10, 0.03 },
-	{ 0.62, -64, 46, 10, 0.03 },
-	{ 0.67, -58, 40, 9, 0.04 }, -- the slam bumps it back
-	{ 0.84, -55, 30, 6, 0.03 }, -- still rolled over for the charge, coming down
-	{ FREE_AT, -52, 33, 5, 0.045 }, -- dragged back by the pull
-	{ 0.98, -48, 26, 4, 0.01 }, -- and thrown forward as the bolt flies home
-	{ 1.05, -46, 27, 4, 0.02 }, -- it waits there while the hand gets clear
-	{ 1.2, 0, 0, 0, 0 },
+	{ 0, 0, 0, 0, 0, 0 },
+	{ 0.06, 2, -3, 0, 0, -0.012 }, -- the left hand lets go and the muzzle sags
+	{ 0.26, -70, 48, 11, 0.03, 0.01 }, -- swung up and over, carrying past
+	{ 0.34, -65, 45, 10, 0.03, 0 }, -- and settling back, mag well to the left hand
+	{ 0.41, -66, 45, 10, 0.03, 0 },
+	{ 0.45, -75, 41, 12, 0.036, -0.012 }, -- the knock shoves it over and down
+	{ 0.51, -64, 46, 10, 0.03, 0.004 }, -- and it comes back past
+	{ 0.58, -65, 45, 10, 0.03, 0 },
+	{ 0.635, -66, 44, 10, 0.03, 0 },
+	{ 0.67, -57, 38, 9, 0.04, 0.014 }, -- the slam drives it up and back
+	{ 0.74, -66, 46, 10, 0.03, -0.004 }, -- and it rebounds past
+	{ 0.84, -56, 31, 6, 0.03, 0 }, -- still rolled over for the charge, coming down
+	{ FREE_AT, -52, 34, 5, 0.047, 0.004 }, -- dragged back by the pull
+	{ 0.975, -49, 25, 4, 0.004, -0.006 }, -- thrown forward, muzzle dipping, as the bolt flies home
+	{ 1.03, -47, 28, 4, 0.02, 0 },
+	{ 1.13, 4, -4, -1, -0.006, -0.012 }, -- it comes down heavy, dipping past ready
+	{ 1.18, -1, 1, 0, 0, 0.003 },
+	{ 1.2, 0, 0, 0, 0, 0 },
 }
+-- How fast a value is changing at a key: the slope between its neighbours, and still at either end.
+local function slope(index: number, value: number): number
+	local keys = GUN_KEYS
+	if index == 1 or index == #keys then
+		return 0
+	end
+	return (keys[index + 1][value] - keys[index - 1][value]) / (keys[index + 1][1] - keys[index - 1][1])
+end
 local function gunAt(t: number): CFrame
 	local keys = GUN_KEYS
-	local roll, pitch, yaw, back = 0, 0, 0, 0
+	local now = { 0, 0, 0, 0, 0 }
 	if t > 0 and t < keys[#keys][1] then
 		for index = 2, #keys do
 			local from, to = keys[index - 1], keys[index]
 			if t < to[1] then
-				local u = smooth((t - from[1]) / (to[1] - from[1]))
-				roll = from[2] + (to[2] - from[2]) * u
-				pitch = from[3] + (to[3] - from[3]) * u
-				yaw = from[4] + (to[4] - from[4]) * u
-				back = from[5] + (to[5] - from[5]) * u
+				local span = to[1] - from[1]
+				local u = (t - from[1]) / span
+				local u2, u3 = u * u, u * u * u
+				for value = 2, 6 do
+					now[value - 1] = from[value] * (2 * u3 - 3 * u2 + 1)
+						+ slope(index - 1, value) * span * (u3 - 2 * u2 + u)
+						+ to[value] * (-2 * u3 + 3 * u2)
+						+ slope(index, value) * span * (u3 - u2)
+				end
 				break
 			end
 		end
 	end
-	return CFrame.new(GRIP + Vector3.new(0, 0, back))
-		* CFrame.Angles(math.rad(pitch), math.rad(yaw), math.rad(roll))
+	return CFrame.new(GRIP + Vector3.new(0, now[5], now[4]))
+		* CFrame.Angles(math.rad(now[2]), math.rad(now[3]), math.rad(now[1]))
 		* CFrame.new(-GRIP)
 end
 
@@ -136,9 +155,13 @@ function AkReload.at(t: number): Pose
 	if t < FETCH_AT then
 		new = fetched
 	elseif t < OUT_AT then
-		new = fetched:Lerp(STRIKE, smooth((t - FETCH_AT) / (OUT_AT - FETCH_AT)))
+		-- It speeds up into the old magazine and carries on through it, slowing only as its lug hooks: one swing,
+		-- with the hit in the middle of it.
+		local u = (t - FETCH_AT) / (OUT_AT - FETCH_AT)
+		new = fetched:Lerp(STRIKE, u * u * (2 - u))
 	elseif t < HOOK_AT then
-		new = STRIKE:Lerp(rocked(ROCK), smooth((t - OUT_AT) / (HOOK_AT - OUT_AT)))
+		local u = (t - OUT_AT) / (HOOK_AT - OUT_AT)
+		new = STRIKE:Lerp(rocked(ROCK), 1 - (1 - u) ^ 2)
 	elseif t < ROCK_AT then
 		new = rocked(ROCK)
 	elseif t < IN_AT then
@@ -160,7 +183,7 @@ function AkReload.at(t: number): Pose
 	-- one is the gun's, and the spare is the old one falling.
 	local mag, spare = new, old
 	if t < OUT_AT then
-		mag, spare = CFrame.identity, if t > LEAVE_TO then new else nil
+		mag, spare = CFrame.identity, if t >= LEAVE_TO then new else nil
 	end
 
 	local bolt = 0
