@@ -1,6 +1,6 @@
 # Relay (the 1v1 map)
 
-**Status:** built as a free-play combat zone. River has been through it in Play twice on 2026-11-07, and each look led to a clean-up pass. The latest pass (one central ladder with big floor holes, no flats balcony, a wider way onto the flats stair) hasn't been checked in Play yet. Checked against the code on 2026-11-07. There are no rounds or scoring yet (`matches.md`); two players can travel there and fight.
+**Status:** built as a free-play combat zone. River has been through it in Play twice on 2026-11-07, and each look led to a clean-up pass. The latest pass (one central ladder with big floor holes, no flats balcony, a wider way onto the flats stair) hasn't been checked in Play yet. Checked against the code on 2026-11-10. There are no rounds or scoring yet (`matches.md`); two players can travel there and fight.
 
 **Code:** `src/server/Outpost/Relay.luau` builds the map at server start, using the Outpost's `Kit`. `src/server/Outpost/Outpost.server.luau` handles travel, spawns and falls. `src/client/Outpost.client.luau` applies the fog and lighting. `tests/relay_spec.luau` builds the map under Lune and checks its shape.
 
@@ -13,6 +13,8 @@ River wants it clean and easy to move around: rooms are left empty, props stay o
 ## Layout
 
 The map is point-symmetric. One side is built, then the same build runs again turned 180 degrees about the centre with the same seed, so both sides match exactly. In a side's own axes the tower is toward -X, the bridge runs along X to the centre at X = 0, and the bridge deck is at Y = 0. The map's centre is at (-4000, 300, 0) in the world.
+
+**Scale:** every number in this spec and in `Relay.luau` is at full size. The map is built 1.25 times bigger (`SCALE` at the top of `Relay.luau`), because the soldier looked too big for it at full size. Players stay the same size, so heights a jump has to reach grow too. The ladder's climbable part is snapped to whole 2-stud steps (36 at 1.25). The fall line scales with the map.
 
 | Level | Height | What's there |
 | --- | --- | --- |
@@ -36,7 +38,7 @@ The map is point-symmetric. One side is built, then the same build runs again tu
 - **Stairs** walk on an invisible ramp under the treads (at most about 39.4 degrees, on the flats stair; the spec checks under 40).
 - **Decoration** (pipes, cables, dishes, masts, signs, snow) never collides and never stops bullets (`Kit.decor`).
 - **No z-fighting:** no two visible faces may share a plane. Slabs end at the walls' inside faces, trims and painted-on windows stand at least 0.1 clear of the wall behind them, railing posts are thinner than their rails and drawn once per spot, and the round wing's panels meet only at their inside corners. Floors that sit under another floor are 0.12 lower. A checker in the build session found every face pair in the same plane; check new parts against these rules.
-- **Falling:** below 60 studs under the deck, the server kills the player and they respawn in their tower.
+- **Falling:** below 60 full-size studs (75 as built) under the deck, the server kills the player and they respawn in their tower.
 
 ## Spawns and travel
 
@@ -55,13 +57,13 @@ The map is point-symmetric. One side is built, then the same build runs again tu
 
 | What | Value |
 | --- | --- |
-| Tower to tower (facades) | 80 studs; spawn to spawn about 132 |
-| Bridge deck to undercity | 16 |
+| Tower to tower (facades) | 80 studs at full size, 100 as built; spawn to spawn about 165 as built |
+| Bridge deck to undercity | 16 at full size, 20 as built |
 | Parts | About 2,700 for the whole map, most of them decoration. The spec allows up to 9,000. |
 | Lights | 46 |
 
 ## Not done
 
-- Not checked in Play: climbing the ladders with the soldier body (only its root part touches the world), the fog density, the light levels, parrying onto the stair house, and how sightlines feel on the open bridge with the M57 and Longscope.
+- Not checked in Play: the 1.25 scale (whether the stair house roof, 10 studs above the roof as built, can still be reached with a jump and parry), climbing the ladders with the soldier body (only its root part touches the world), the fog density, the light levels, parrying onto the stair house, and how sightlines feel on the open bridge with the M57 and Longscope.
 - No rounds, score or match flow. That waits on `matches.md`.
 - No sounds of its own yet: wind, hum and creaking would fit.

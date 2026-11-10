@@ -14,6 +14,9 @@ local Kit = require(script.Parent.Kit)
 local M = Enum.Material
 
 local SEED = 41
+-- How big the map is built. Every number in this file is at full size; Kit grows them all by this,
+-- so this is the one number to change. Players are the same size at any scale.
+local SCALE = 1.25
 local T = 1 -- wall thickness
 local STEP = 0.75 -- stair riser height
 
@@ -400,6 +403,11 @@ local function ladder(g, base: Vector3, out: Vector3, height: number)
 	local truss = Instance.new("TrussPart")
 	truss.Style = Enum.Style.NoSupports
 	g:place(truss, Vector3.new(2, height, 2), look * CFrame.new(0, height / 2, 0), DARK_STEEL, M.Metal)
+	-- Roblox keeps a truss 2 wide and snaps its height to 2-stud steps, so set the scaled height
+	-- to a whole step itself and keep its foot on the floor.
+	local climb = 2 * math.ceil(height * g.scale / 2)
+	truss.Size = Vector3.new(2, climb, 2)
+	truss.CFrame = g:frame(look) * CFrame.new(0, climb / 2, 0)
 	ghost(truss, false)
 	local color = g:vary(DARK_STEEL, 0.03)
 	local front = -0.85
@@ -1089,7 +1097,8 @@ local function side(kit)
 end
 
 local Relay = {}
-Relay.fallDepth = FALL_DEPTH
+Relay.scale = SCALE
+Relay.fallDepth = FALL_DEPTH * SCALE -- in world studs below the centre
 
 -- Builds the map with its centre at origin. Returns a spawn and a return terminal for each side.
 function Relay.build(origin: CFrame)
@@ -1101,7 +1110,7 @@ function Relay.build(origin: CFrame)
 		local sideFolder = Instance.new("Folder")
 		sideFolder.Name = "Side" .. index
 		sideFolder.Parent = folder
-		local kit = Kit.new(sideFolder, origin * turn, SEED)
+		local kit = Kit.new(sideFolder, origin * turn, SEED, SCALE)
 		spawns[index], terminals[index] = side(kit)
 		kit:finish(sideFolder)
 	end

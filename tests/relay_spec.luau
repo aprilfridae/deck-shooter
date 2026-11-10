@@ -165,6 +165,21 @@ describe("Relay map", function()
 		expect(blocking).toBe(0)
 	end)
 
+	it("builds at its scale, with a climbable ladder from lobby past the top floor", function()
+		expect(Relay.scale >= 1).toBe(true)
+		local found = 0
+		for _, part in side1 do
+			if part:IsA("TrussPart") then
+				found += 1
+				local foot = origin:PointToObjectSpace(part.CFrame.Position).Y - part.Size.Y / 2
+				expect(part.Size.Y % 2).toBe(0)
+				expect(math.abs(foot) < 0.01).toBe(true)
+				expect(foot + part.Size.Y >= 24 * Relay.scale).toBe(true)
+			end
+		end
+		expect(found).toBe(1)
+	end)
+
 	it("keeps stairs walkable", function()
 		local steepest = 0
 		for _, part in side1 do
