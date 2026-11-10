@@ -9,7 +9,9 @@ local CardIndex = require(CardCore:WaitForChild("CardIndex"))
 local CardLook = require(CardCore:WaitForChild("CardLook"))
 local CardFlourish = require(Guns:WaitForChild("CardFlourish"))
 local Palette = require(Guns:WaitForChild("Palette"))
+local Cards = require(CardCore:WaitForChild("Cards"))
 local CardData = require(script.Parent.CardData)
+local CardFace = require(script.Parent.CardFace)
 local CardInHand = require(script.Parent.CardInHand)
 
 
@@ -28,6 +30,14 @@ local art: { string } = {} -- the image of the card in each deck slot
 local topShown: number? = nil -- the card showing the held card's art
 local slotShown: number? = nil -- and the slot it shows
 local shrunk: number? = nil -- the card the crush has shrunk
+
+-- A card that's face up gets its whole face printed on it, text and all, the same as in the menus. The rest show
+-- only the baked image, which is all a card on its way over needs.
+local PRINT_WIDTH = 300 -- pixels across a printed face
+local entries: { any } = {} -- the card in each deck slot
+local slots: { [number]: number } = {} -- the deck slot each card shows
+local prints: { [number]: SurfaceGui } = {}
+local printed: { [number]: string } = {} -- what each card has printed on it
 
 -- Motion blur: each card has a few faint copies of itself, and while it moves fast they trail back along the way it
 -- came.
@@ -83,6 +93,8 @@ local function cut()
 		table.clear(faces)
 		table.clear(ghosts)
 		table.clear(ghostFaces)
+		table.clear(prints)
+		table.clear(printed)
 	end
 end
 
@@ -175,8 +187,38 @@ local function make(): Folder
 	return folder
 end
 
--- Sets the image on a card and its blur.
-local function setFace(index: number, texture: string)
+-- Prints a card's face on it, if it isn't already.
+local function printFace(index: number)
+	local entry = entries[slots[index] or 0]
+	local key = if entry then entry.cardId .. entry.tier .. entry.variant else ""
+	if printed[index] == key then
+		return
+	end
+	printed[index] = key
+	if prints[index] then
+		prints[index]:Destroy()
+		prints[index] = nil
+	end
+	faces[index].Transparency = 0
+	if not entry or not Cards.byId[entry.cardId] then
+		return
+	end
+	local gui = Instance.new("SurfaceGui")
+	gui.Name = "Print"
+	gui.Face = Enum.NormalId.Top
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
+	gui.CanvasSize = Vector2.new(PRINT_WIDTH, PRINT_WIDTH * 240 / 150)
+	gui.LightInfluence = 1
+	gui.Parent = parts[index]
+	CardFace.new(gui, { cardId = entry.cardId, tier = entry.tier, variant = entry.variant, width = PRINT_WIDTH })
+	prints[index] = gui
+	faces[index].Transparency = 1 -- the print has the image too
+end
+
+-- Sets which deck slot's card a card and its blur show.
+local function setFace(index: number, slot: number?)
+	local texture = slot and art[slot] or ""
+	slots[index] = slot :: number
 	faces[index].Texture = texture
 	for ghost = 1, GHOSTS do
 		ghostFaces[(index - 1) * GHOSTS + ghost].Texture = texture
@@ -223,16 +265,24 @@ end
 local function dress()
 	local snapshot = CardData.get()
 	table.clear(art)
+	table.clear(entries)
+	for index, gui in prints do
+		gui:Destroy()
+		faces[index].Transparency = 0
+	end
+	table.clear(prints)
+	table.clear(printed)
 	topShown, slotShown = nil, nil
 	if snapshot then
 		for slot, entry in snapshot.deck do
 			local variant = CardIndex.variant(snapshot.stacks, entry.cardId, entry.tier)
 			art[slot] = CardArt.base(entry.cardId, CardLook.look(entry.tier, variant)) or ""
+			entries[slot] = { cardId = entry.cardId, tier = entry.tier, variant = variant }
 		end
 	end
 	local chosen = CardInHand.slot or 1
 	for index in faces do
-		setFace(index, if #art > 0 then art[(index - CardFlourish.HALF + chosen - 1) % #art + 1] else "")
+		setFace(index, if #art > 0 then (index - CardFlourish.HALF + chosen - 1) % #art + 1 else nil)
 	end
 end
 
@@ -262,7 +312,10 @@ function CardView.show(camera: Camera, view: CFrame, cards: { CFrame }, crush: C
 	local slot = CardInHand.slot
 	if slot and (top ~= topShown or slot ~= slotShown) then
 		topShown, slotShown = top, slot
-		setFace(top, art[slot] or "")
+		setFace(top, slot)
+	end
+	for index = top, CardFlourish.CHOSEN do -- the cards that are face up, or turning
+		printFace(index)
 	end
 	if crush then
 		local left = math.max(1 - crush.crushed, 0.01)

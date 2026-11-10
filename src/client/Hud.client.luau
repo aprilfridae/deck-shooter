@@ -12,13 +12,12 @@ local Zones = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Zones
 local GunAudio = require(script.Parent.GunAudio)
 local GunView = require(script.Parent.GunView)
 local CardData = require(script.Parent.CardData)
+local CardFace = require(script.Parent.CardFace)
 local CardInHand = require(script.Parent.CardInHand)
 local TypeLabel = require(script.Parent.TypeLabel)
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local Cards = require(CardCore:WaitForChild("Cards"))
-local CardArt = require(CardCore:WaitForChild("CardArt"))
 local CardIndex = require(CardCore:WaitForChild("CardIndex"))
-local CardLook = require(CardCore:WaitForChild("CardLook"))
 local HudText = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Hud"):WaitForChild("HudText"))
 
 local remotes = ReplicatedStorage:WaitForChild("GunRemotes")
@@ -55,8 +54,7 @@ local CARD_DROP = 6 -- how much lower the outer cards sit
 local CARD_LIFT = 10 -- how far the card in hand rises
 local CARD_LIFT_TIME = 0.07 -- seconds it takes to get most of the way
 local CARD_GREY = Color3.fromRGB(86, 90, 98) -- what lies over a card on cooldown
-local CARD_GREYED = 0.3 -- how see-through that grey is when the cooldown starts
-local CARD_DIM = Color3.fromRGB(120, 120, 120) -- and what the card's own colours are multiplied by
+local CARD_GREYED = 0.2 -- how see-through that grey is when the cooldown starts
 
 local player = Players.LocalPlayer
 local lastHealth = 0
@@ -145,7 +143,7 @@ local markerSize = 1
 -- The equipped cards, fanned out above the health: slot 1 on the left and on top, slot 2 upright under it, slot 3 under that.
 local function spreadCard(index: number)
 	local side = index - (SLOTS + 1) / 2 -- -1, 0, 1
-	local image = Instance.new("ImageLabel")
+	local image = Instance.new("Frame") -- holds the card's face
 	image.AnchorPoint = Vector2.new(0.5, 0.5)
 	image.Size = UDim2.fromOffset(CARD_WIDTH, CARD_HEIGHT)
 	image.Rotation = side * CARD_TILT
@@ -159,6 +157,7 @@ local function spreadCard(index: number)
 	grey.BackgroundColor3 = CARD_GREY
 	grey.BackgroundTransparency = 1
 	grey.BorderSizePixel = 0
+	grey.ZIndex = 10 -- over the face
 	grey.Parent = image
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(CARD_CORNER, 0)
@@ -169,6 +168,7 @@ local function spreadCard(index: number)
 		x = MARGIN + CARD_WIDTH / 2 + CARD_STEP + side * CARD_STEP,
 		y = CARD_LINE - CARD_HEIGHT / 2 + math.abs(side) * CARD_DROP,
 		shows = "",
+		face = nil :: GuiObject?,
 		lift = 0, -- how far it has risen, from 0 to 1
 	}
 end
@@ -195,11 +195,14 @@ local function showCard(index: number, now: number, step: number)
 		card.shows = id .. tier
 		local snapshot = CardData.get()
 		local variant = if snapshot then CardIndex.variant(snapshot.stacks, id, tier) else ""
-		card.image.Image = CardArt.base(id, CardLook.look(tier, variant)) or CardArt.HAND_BACK
+		if card.face then
+			card.face:Destroy()
+		end
+		-- The same face as in the menus, with its name and rarity printed on it.
+		card.face = CardFace.new(card.image, { cardId = id, tier = tier, variant = variant, width = CARD_WIDTH })
 	end
 	local left = (player:GetAttribute(`Ability{index}ReadyAt`) or 0) - now
 	local colour = HudText.colour(left, player:GetAttribute(`Ability{index}Cooldown`) or 0)
-	card.image.ImageColor3 = CARD_DIM:Lerp(Color3.new(1, 1, 1), colour)
 	card.grey.BackgroundTransparency = CARD_GREYED + (1 - CARD_GREYED) * colour
 	-- The card in hand slides up, and back down when it's put away.
 	local held = if CardInHand.slot == index then 1 else 0
