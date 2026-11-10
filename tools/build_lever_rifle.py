@@ -71,11 +71,11 @@ for o in list(bpy.context.scene.objects):
 # end leaves the glowing rim, with the lens showing through.
 for o in meshes:
     if o.name in ("ScopeEyeRing", "ScopeObjectiveRing"):
-        centre = sum((v.co for v in o.data.vertices), Vector()) / len(o.data.vertices)
         mesh = bmesh.new()
         mesh.from_mesh(o.data)
-        middle = [v for v in mesh.verts if (Vector((0, v.co.y, v.co.z)) - Vector((0, centre.y, centre.z))).length < 0.001]
-        bmesh.ops.delete(mesh, geom=middle, context="VERTS")
+        turn = o.matrix_world.to_3x3()
+        middle = [f for f in mesh.faces if abs((turn @ f.normal).normalized().x) > 0.7]  # the faces across each end
+        bmesh.ops.delete(mesh, geom=middle, context="FACES")
         mesh.to_mesh(o.data)
         mesh.free()
         print("RING", o.name, "took out", len(middle))
