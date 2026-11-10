@@ -323,8 +323,8 @@ local LEFT_LIFT = shape("Left", { 1, 0.2, 0.3 }, { 0.9, 0.4, 0.2 }, 0.04, { 5, 8
 local LEFT_HALVED = shape("Left", { 0.9, 0.5, 0.1 }, { 0.15, 0.85, -0.5 }, 0.04, { 5, 80, 40 }) -- on half a deck
 local LEFT_PUSH = shape("Left", { 1, 0.4, -0.2 }, { 0.2, 0.8, -0.8 }, 0.04, { 5, 70, 15 }) -- its thumb slides the top half off
 
-local RIGHT_BOWED = shape("Right", { 0.9, 0.3, 0 }, { 0.5, 0.2, -0.8 }, 0.04, { 12, 68, 30 }) -- the deck squeezed against the fingers
-local RIGHT_SQUEEZED = shape("Right", { 0.8, 0.4, -0.2 }, { 0.3, 0.3, -0.9 }, 0.02, { 25, 75, 40 }) -- the last cards leaving
+local RIGHT_BOWED = shape("Right", { 0.9, 0.3, 0 }, { 0.5, 0.2, -0.8 }, 0.04, { 10, 52, 22 }) -- the deck squeezed against the fingers
+local RIGHT_SQUEEZED = shape("Right", { 0.8, 0.4, -0.2 }, { 0.3, 0.3, -0.9 }, 0.02, { 18, 58, 28 }) -- the last cards leaving
 local RIGHT_LOOSE = shape("Right", { 0.4, 0.6, 0.6 }, { 0.4, 0.8, 0.3 }, 0.1, { 10, 16, 12 })
 local RIGHT_REACH = shape("Right", { 0.85, 0.5, 0.2 }, { 0.6, 0.8, 0 }, 0.06, { 0, 125, 50 }) -- thumb up, ready to pinch
 local RIGHT_PINCH = shape("Right", { 0.7, 0.7, 0 }, { 0, 0.95, -0.3 }, 0.04, { 0, 130, 50 }) -- thumb on the face, fingers folded under
