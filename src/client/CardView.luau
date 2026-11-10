@@ -1,107 +1,106 @@
--- The bending card and the deck held in view. Uses the Card model in ReplicatedStorage.GunModels, or a plain block until it's imported.
-local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
+-- The deck of cards held in view: one thin part per card, each showing one of the player's own cards.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local CARD_LENGTH = 0.32
-local BLOCK_SIZE = Vector3.new(0.3, 0.012, CARD_LENGTH)
-local BLOCK_COLOR = Palette.DeepNavy
-local DECK_SIZE = Vector3.new(0.22, 0.1, CARD_LENGTH)
-local DECK_COLOR = Palette.Bone
-local BEND_SIGN = -1 -- the imported bones turn the opposite way to the ones in Blender
+local CardCore = ReplicatedStorage:WaitForChild("CardCore")
+local Guns = ReplicatedStorage:WaitForChild("Guns")
+local CardArt = require(CardCore:WaitForChild("CardArt"))
+local CardIndex = require(CardCore:WaitForChild("CardIndex"))
+local CardLook = require(CardCore:WaitForChild("CardLook"))
+local CardFlourish = require(Guns:WaitForChild("CardFlourish"))
+local Palette = require(Guns:WaitForChild("Palette"))
+local CardData = require(script.Parent.CardData)
+local CardInHand = require(script.Parent.CardInHand)
 
-local card: BasePart? = nil
-local model: Instance? = nil
-local deck: BasePart? = nil
-local bones: { Bone } = {}
+local BACK_SIZE = Vector2.new(150, 240) -- the card's shape, in card units
+local BACK_BORDER = 10
 
-local function setUp(part: BasePart)
+local parts: { BasePart } = {}
+local faces: { Decal } = {}
+local holder: Folder? = nil
+local shown = false
+
+local function makeCard(): (BasePart, Decal)
+	local part = Instance.new("Part")
+	part.Name = "Card"
+	part.Size = CardFlourish.CARD_SIZE
+	part.Color = Palette.Bone
+	part.Material = Enum.Material.SmoothPlastic
 	part.Anchored = true
 	part.CanCollide = false
 	part.CanQuery = false
 	part.CanTouch = false
 	part.CastShadow = false
+	local face = Instance.new("Decal")
+	face.Face = Enum.NormalId.Top
+	face.Parent = part
+	local back = Instance.new("SurfaceGui")
+	back.Face = Enum.NormalId.Bottom
+	back.CanvasSize = BACK_SIZE
+	back.LightInfluence = 1
+	back.Parent = part
+	local fill = Instance.new("Frame")
+	fill.Size = UDim2.fromScale(1, 1)
+	fill.BackgroundColor3 = Palette.Bone
+	fill.BorderSizePixel = 0
+	fill.Parent = back
+	local panel = Instance.new("Frame")
+	panel.Position = UDim2.fromOffset(BACK_BORDER, BACK_BORDER)
+	panel.Size = UDim2.new(1, -BACK_BORDER * 2, 1, -BACK_BORDER * 2)
+	panel.BackgroundColor3 = Palette.DeepNavy
+	panel.BorderSizePixel = 0
+	panel.Parent = fill
+	return part, face
 end
 
-local function makeBlock()
-	local part = Instance.new("Part")
-	part.Name = "CardView"
-	part.Size = BLOCK_SIZE
-	part.Color = BLOCK_COLOR
-	part.Material = Enum.Material.SmoothPlastic
-	setUp(part)
-	card, model = part, part
-end
-
-local function make()
-	local folder = ReplicatedStorage:FindFirstChild("GunModels")
-	local source = folder and folder:FindFirstChild("Card")
-	local mesh = source and (if source:IsA("MeshPart") then source else source:FindFirstChildWhichIsA("MeshPart", true))
-	if not source or not mesh then
-		makeBlock()
-		return
+local function make(): Folder
+	local folder = Instance.new("Folder")
+	folder.Name = "CardView"
+	for index = 1, CardFlourish.COUNT do
+		local part, face = makeCard()
+		part.Parent = folder
+		parts[index], faces[index] = part, face
 	end
-	local copy = Instance.new("Model")
-	copy.Name = "CardView"
-	local part = mesh:Clone() :: MeshPart
-	part.Parent = copy
-	copy.PrimaryPart = part
-	copy:ScaleTo(CARD_LENGTH / math.max(part.Size.X, part.Size.Y, part.Size.Z))
-	setUp(part)
-	local found = {}
-	for _, child in part:GetDescendants() do
-		if child:IsA("Bone") then
-			table.insert(found, child)
+	return folder
+end
+
+-- Deals the player's deck through the cards over and over, with the card in hand on top of the right hand's half.
+local function dress()
+	local snapshot = CardData.get()
+	local art = {}
+	if snapshot then
+		for slot, entry in snapshot.deck do
+			local variant = CardIndex.variant(snapshot.stacks, entry.cardId, entry.tier)
+			art[slot] = CardArt.base(entry.cardId, CardLook.look(entry.tier, variant)) or ""
 		end
 	end
-	table.sort(found, function(a, b)
-		return a.Name < b.Name
-	end)
-	card, model, bones = part, copy, found
-end
-
--- A block with the card's art on top. The deck never bends, so it needs no bones.
-local function makeDeck(): BasePart
-	local part = Instance.new("Part")
-	part.Name = "DeckView"
-	part.Size = DECK_SIZE
-	part.Color = DECK_COLOR
-	part.Material = Enum.Material.SmoothPlastic
-	setUp(part)
-	if card and card:IsA("MeshPart") then
-		local art = Instance.new("Decal")
-		art.Face = Enum.NormalId.Top
-		art.Texture = card.TextureID
-		art.Parent = part
+	local chosen = CardInHand.slot or 1
+	for index, face in faces do
+		face.Texture = if #art > 0 then art[(index - CardFlourish.HALF + chosen - 1) % #art + 1] else ""
 	end
-	return part
 end
 
 local CardView = {}
 
-function CardView.show(camera: Camera, frame: any, jitter: CFrame)
-	if not card then
-		make()
+-- cards is where each card is, relative to view.
+function CardView.show(camera: Camera, view: CFrame, cards: { CFrame })
+	holder = holder or make()
+	if not shown then
+		shown = true
+		dress()
 	end
-	deck = deck or makeDeck()
-	local part = card :: BasePart
-	part.CFrame = camera.CFrame * jitter * frame.card
-	local held = deck :: BasePart
-	held.CFrame = camera.CFrame * jitter * frame.deck
-	held.Parent = camera
-	-- The first bone stays put, and each one after it bows a little further.
-	for index = 2, #bones do
-		bones[index].Transform = CFrame.Angles(frame.bend * BEND_SIGN, 0, 0)
+	local placed = table.create(#cards)
+	for index, frame in cards do
+		placed[index] = view * frame
 	end
-	local shown = model :: Instance
-	shown.Parent = camera
+	workspace:BulkMoveTo(parts, placed, Enum.BulkMoveMode.FireCFrameChanged)
+	local folder = holder :: Folder
+	folder.Parent = camera
 end
 
 function CardView.hide()
-	if model then
-		model.Parent = nil
-	end
-	if deck then
-		deck.Parent = nil
+	shown = false
+	if holder then
+		holder.Parent = nil
 	end
 end
 

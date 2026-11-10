@@ -6,7 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ArmClip = require(ReplicatedStorage.Guns.ArmClip)
 local ArmClips = require(ReplicatedStorage.Guns.ArmClips)
-local CardClip = require(ReplicatedStorage.Guns.ArmClips.Card)
+local CardFlourish = require(ReplicatedStorage.Guns.CardFlourish)
 local GunConfig = require(ReplicatedStorage.Guns.GunConfig)
 local CardView = require(script.Parent.CardView)
 local ViewArms = require(script.Parent.ViewArms)
@@ -465,7 +465,6 @@ local reloadShown, handShown = CFrame.identity, Vector3.zero -- a code-posed gun
 local holsterAt: number? = nil
 local snapAt: number? = nil
 local cardAt: number? = nil
-local shownCard: any = nil
 local shownFrame: any = nil -- what's on screen, with any snap laid over it
 local shownBase: any = nil
 local shownSnap: any = nil
@@ -941,12 +940,12 @@ local function snapFrame(): (any, number)
 	return frame, weight * weight * (3 - 2 * weight)
 end
 
--- With a card out, the gun drops, then the arms play the card flying across and holding it.
+-- With a card out, the gun drops, then the hands play the deck flourish and hold the deck.
 -- Returns true while the card has the screen.
 local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boolean
 	if not cardOut then
 		if cardAt then
-			cardAt, shownCard, holsterAt = nil, nil, nil
+			cardAt, holsterAt = nil, nil
 			equipAt = os.clock()
 			shownFrame, shownBase, shownSnap = nil, nil, nil
 			CardView.hide()
@@ -967,11 +966,11 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 		hideSmears()
 		table.clear(history)
 	end
-	local frame = ArmClip.sampleAt(CardClip.draw, elapsed) or ArmClip.sampleAt(CardClip.hold, os.clock())
-	shownCard = frame
-	ViewArms.showFrame(CardClip.meshOffset, frame.bones)
-	CardView.show(camera, frame, cardSway)
-	ViewArms.place(camera, camera.CFrame * cardSway)
+	local pose = CardFlourish.at(elapsed)
+	local held = camera.CFrame * cardSway
+	ViewArms.holdCards(pose.right, pose.left)
+	CardView.show(camera, held, pose.cards)
+	ViewArms.place(camera, held)
 	return true
 end
 

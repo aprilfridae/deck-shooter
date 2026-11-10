@@ -95,7 +95,7 @@ Requests go through `Requests.luau`, which drops bad types, NaN, extra fields an
 ## What players see
 
 - The HUD's ability rows: key, card name, tier in its colour and a 10-segment cooldown bar (see `hud.md`).
-- The card in hand, drawn from the `Card` model in `GunModels` (`CardView.luau`).
+- The deck in hand (`CardView.luau`): 32 thin cards showing the player's own deck over and over, with the card in hand on top. Pulling a card out plays a 5.4s flourish keyed in code (`CardFlourish.luau`): the deck springs from the right hand to the left, squares up on its edge, cuts in two, the right half spins and fans open, then closes back into one deck, which is held. A click uses the card at any point.
 - Credits and income in the Outpost's top left (`IncomeLine.luau`).
 - The Loadout page: DPR and the deck, with a card picker (`LoadoutPanel.luau`, see `outpost-ui.md`).
 - The Profile page: Credits, DPR and the card index with copy counts (`ProfilePanel.luau`).
