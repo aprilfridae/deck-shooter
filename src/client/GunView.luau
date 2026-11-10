@@ -179,7 +179,7 @@ local RELOADS: { [string]: any } = {
 			to = 0.62,
 			points = { { 0, 0, 2 }, { 0.15, 0.25, 1.3 }, { 0.26, 0.55, 3.4 }, { 0.62, 1, 0.6 } },
 		},
-		smoothFrom = 1.4, -- seconds in: the return to ready gets a touch more smoothing on top
+		smoothFrom = 0.15, -- seconds in: everything after the kick gets a touch more smoothing on top, so no jolt is hard
 		-- How far open the lever is (0 to 1) at each time: thrown open into the click, held, and slammed shut on the
 		-- clunk. Each move speeds up into its stop.
 		lever = { { 0.92, 0 }, { 1.03, 1 }, { 1.2, 1 }, { 1.32, 0 } },
@@ -196,18 +196,18 @@ local RELOADS: { [string]: any } = {
 			key(0.44, tilt(-2, 0, 0, 0, 0.53, 0.05), Vector3.new(0.02, -0.06, -0.03), "flow"), -- it flips up above the hand
 			key(0.56, tilt(1, -1, 1, 0.01, 0.47, 0.02), Vector3.new(0.01, -0.03, 0), "flow"), -- and comes back down, the hand already easing down to meet it
 			key(0.62, tilt(4, -2, 2, 0.02, 0.41, 0.02), Vector3.zero, "flow"), -- landing in the hand
-			key(0.68, tilt(9, -3, -8, -0.01, 0.25, 0.02), Vector3.new(0, -0.04, 0), "flow"), -- both hands drop with the weight straight away
+			key(0.68, tilt(8, -3, -5, -0.01, 0.27, 0.02), Vector3.new(0, -0.03, 0), "flow"), -- both hands drop with the weight straight away
 			key(0.79, tilt(10, -4, 2, -0.03, 0.1, 0.03), Vector3.zero, "flow"), -- then it sinks into both hands, canted a little
 			-- CLICK: the left hand keeps hold of the fore-end and the right hand throws the lever open, down and
 			-- forward. The throw shoves the gun down and forward and kicks its muzzle up, and it rebounds.
-			key(0.92, tilt(12, -4, 3, -0.03, 0.05, 0.03), Vector3.zero, "flow"), -- a small wind-up
-			key(1.03, tilt(9, -3, 6, -0.02, -0.07, -0.08), Vector3.zero, "in"), -- CLICK: the lever hits its stop
-			key(1.09, tilt(10, -3, 1, -0.02, -0.02, -0.04), Vector3.zero, "out"),
-			key(1.2, tilt(11, -4, 2, -0.03, -0.03, -0.03), Vector3.zero, "flow"), -- held open
+			key(0.92, tilt(11, -4, 2.5, -0.03, 0.05, 0.03), Vector3.zero, "flow"), -- a small wind-up
+			key(1.03, tilt(9.5, -3, 4.5, -0.02, -0.04, -0.05), Vector3.zero, "flow"), -- CLICK: the lever hits its stop
+			key(1.1, tilt(10, -3, 2, -0.02, -0.02, -0.035), Vector3.zero, "flow"),
+			key(1.2, tilt(10.5, -4, 2, -0.03, -0.025, -0.03), Vector3.zero, "flow"), -- held open
 			-- CLUNK: the hand slams the lever shut, which shoves the gun up and back and dips its muzzle, and it
 			-- eases back round to ready and settles.
-			key(1.32, tilt(6, -2, -5, -0.01, 0.07, 0.1), Vector3.zero, "in"),
-			key(1.4, tilt(3, -1, -1, 0, 0.02, 0.04), Vector3.zero, "out"),
+			key(1.32, tilt(6, -2, -3, -0.01, 0.045, 0.065), Vector3.zero, "flow"),
+			key(1.42, tilt(3, -1, -0.5, 0, 0.015, 0.03), Vector3.zero, "flow"),
 			key(1.55, tilt(-1, 0.3, -0.5, 0.002, -0.006, 0.015), Vector3.zero, "flow"), -- and it rocks back a touch
 			key(1.77, CFrame.identity, Vector3.zero, "flow"),
 		},
