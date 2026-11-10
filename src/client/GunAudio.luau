@@ -50,6 +50,7 @@ for _, soundId in {
 	GunSounds.slideStart,
 	GunSounds.coinBurst,
 	GunSounds.snap,
+	GunSounds.cardFlourish,
 } do
 	others[soundId] = newSound(soundId)
 end
@@ -142,6 +143,37 @@ function GunAudio.playHit(headshot: boolean, killed: boolean)
 	for _, soundId in GunSounds.hitSounds(headshot, killed) do
 		task.delay(GunSounds.hitDelaySeconds, playCopy, others[soundId], 0)
 	end
+end
+
+-- The cards coming out. Only one plays at a time, and it's faded out when the cards go away or the flourish is cut
+-- short.
+local CARD_FADE = 0.15
+local cardSound: Sound? = nil
+
+function GunAudio.stopCards()
+	local playing = cardSound
+	if playing then
+		cardSound = nil
+		local fade = TweenService:Create(playing, TweenInfo.new(CARD_FADE), { Volume = 0 })
+		fade.Completed:Once(function()
+			playing:Destroy()
+		end)
+		fade:Play()
+	end
+end
+
+function GunAudio.playCards()
+	GunAudio.stopCards()
+	local copy = others[GunSounds.cardFlourish]:Clone()
+	copy.Parent = SoundService
+	copy.Ended:Once(function()
+		if cardSound == copy then
+			cardSound = nil
+		end
+		copy:Destroy()
+	end)
+	cardSound = copy
+	copy:Play()
 end
 
 function GunAudio.playReload(gunId: string)

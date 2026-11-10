@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ArmClip = require(ReplicatedStorage.Guns.ArmClip)
 local Loosen = require(ReplicatedStorage.Guns.Loosen)
+local GunAudio = require(script.Parent.GunAudio)
 local AkReload = require(ReplicatedStorage.Guns.AkReload)
 local SoldierPose = require(ReplicatedStorage.Guns.SoldierPose)
 local ArmClips = require(ReplicatedStorage.Guns.ArmClips)
@@ -1055,6 +1056,7 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 		end
 		if not crushAt or now - crushAt >= CardFlourish.CRUSH then
 			cardAt, crushAt = nil, nil
+			GunAudio.stopCards()
 			shownFrame, shownBase, shownSnap = nil, nil, nil
 			smearFrame = nil
 			CardView.hide()
@@ -1064,6 +1066,7 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 	end
 	if not cardAt then
 		cardAt = now
+		GunAudio.playCards()
 		cardUsed = CardInHand.used
 		cardTurns, turns = CardInHand.turns, 0
 		cardLife = math.random() * 100
@@ -1077,6 +1080,7 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 		if elapsed < CardFlourish.LENGTH then
 			cardAt = now - CardFlourish.LENGTH
 			CardView.snap()
+			GunAudio.stopCards()
 			elapsed = CardFlourish.LENGTH
 		end
 	end

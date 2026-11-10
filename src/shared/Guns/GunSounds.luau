@@ -82,6 +82,8 @@ local GunSounds = {
 	snapDelaySeconds = 0.075, -- the click at 0.06s in the clip, which plays at 0.8 speed
 	-- The coins a body bursts into when it dies.
 	coinBurst = sound("coin-burst.wav"),
+	-- Taking the cards out: it plays under the flourish, and is cut when the cards go away or the flourish is skipped.
+	cardFlourish = sound("card-flourish.wav"),
 	-- Each pack rarity's opening sound.
 	packOpens = {
 		Field = sound("pack-open-common.wav"),
