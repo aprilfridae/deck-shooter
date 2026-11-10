@@ -57,8 +57,9 @@ local SPRINT_HOLD = CFrame.new(0.03, -0.08, 0.06) * CFrame.Angles(math.rad(-6), 
 -- Guns that sank too low sprinting: their own lean, and how much of the footstep dip they take.
 local SPRINT_HOLDS: { [string]: CFrame } = {
 	["Energy Pistol"] = CFrame.new(0.02, -0.02, 0.03) * CFrame.Angles(math.rad(-2), math.rad(3), math.rad(2)),
+	M57 = CFrame.new(0.03, -0.03, 0.05) * CFrame.Angles(math.rad(-3), math.rad(4), math.rad(3)),
 }
-local BOB_DIPS: { [string]: number } = { ["Energy Pistol"] = 0.5 }
+local BOB_DIPS: { [string]: number } = { ["Energy Pistol"] = 0.5, M57 = 0.7 }
 local EASE = 11
 -- Breathing: standing still, the gun rises and settles with the chest and the hands drift a little. Running
 -- leaves the player winded, so the breaths come bigger and quicker for a few seconds after.
