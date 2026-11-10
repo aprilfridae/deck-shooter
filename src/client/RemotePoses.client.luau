@@ -148,9 +148,19 @@ local function onCharacter(character: Model)
 			HeldGuns.remove(character)
 		end
 	end)
-	character.Destroying:Once(function()
-		bodies[character] = nil
-		HeldGuns.remove(character)
+	-- A body that's replaced is only taken out of the game here, not destroyed, so watch for it leaving too.
+	-- Otherwise its gun stays behind where it last stood.
+	local function drop()
+		if bodies[character] == body then
+			bodies[character] = nil
+			HeldGuns.remove(character)
+		end
+	end
+	character.Destroying:Once(drop)
+	character.AncestryChanged:Connect(function()
+		if not character:IsDescendantOf(game) then
+			drop()
+		end
 	end)
 end
 
