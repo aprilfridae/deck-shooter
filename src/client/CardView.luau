@@ -10,11 +10,7 @@ local CardFlourish = require(Guns:WaitForChild("CardFlourish"))
 local Palette = require(Guns:WaitForChild("Palette"))
 local CardData = require(script.Parent.CardData)
 local CardInHand = require(script.Parent.CardInHand)
-local PackCardBack = require(script.Parent.PackCardBack)
 
-local BACK_WIDTH = 300 -- pixels across a card's back
-local BACK_SIZE = Vector2.new(BACK_WIDTH, BACK_WIDTH * 1.6)
-local BACK_PACK = "Field" -- every back is the Field pack's card back, so the deck reads as one deck
 
 local SHARDS = 14 -- bits of card thrown out of the fist
 local SPARKS = 22
@@ -42,17 +38,10 @@ local function makeCard(): (BasePart, Decal)
 	local face = Instance.new("Decal")
 	face.Face = Enum.NormalId.Top
 	face.Parent = part
-	local back = Instance.new("SurfaceGui")
+	local back = Instance.new("Decal") -- one image the card's own shape, so it can't stretch
 	back.Face = Enum.NormalId.Bottom
-	back.CanvasSize = BACK_SIZE
-	back.LightInfluence = 1
+	back.Texture = CardArt.HAND_BACK
 	back.Parent = part
-	local fill = Instance.new("Frame") -- colours the corners the rounded back leaves bare
-	fill.Size = UDim2.fromScale(1, 1)
-	fill.BackgroundColor3 = Palette.DeepNavy
-	fill.BorderSizePixel = 0
-	fill.Parent = back
-	PackCardBack.new(fill, BACK_PACK, BACK_WIDTH, true)
 	return part, face
 end
 

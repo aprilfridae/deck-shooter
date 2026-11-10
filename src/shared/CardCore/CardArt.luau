@@ -39,6 +39,7 @@ local OUTLINE = {
 
 local CardArt = {
 	STRIPES = asset("126017007753657"), -- one tile, 28 card units square
+	HAND_BACK = asset("122178725578514"), -- the back of the cards held in hand. tools/make-card-back.py makes it.
 }
 
 -- The image for this card and look, or nil if it has no art yet.

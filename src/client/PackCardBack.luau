@@ -41,8 +41,7 @@ local function centredWords(root: GuiObject, unit: number, style: string, size: 
 	words:setPosition(UDim2.fromOffset((WIDTH * unit - words:width()) / 2, line * unit))
 end
 
--- still leaves the moving shine off.
-function PackCardBack.new(parent: Instance, pack: string, width: number, still: boolean?): Frame
+function PackCardBack.new(parent: Instance, pack: string, width: number): Frame
 	local look = PackFace.look(pack)
 	local unit = width / WIDTH
 
@@ -78,9 +77,6 @@ function PackCardBack.new(parent: Instance, pack: string, width: number, still: 
 	rule.Parent = root
 
 	root.Parent = parent
-	if still then
-		return root
-	end
 
 	local shine = CardEffects.band(root, CORNER * unit, SHINE_HALF_WIDTH, ColorSequence.new(Color3.new(1, 1, 1)), look.shine)
 	CardEffects.animate(root, function(elapsed: number)
