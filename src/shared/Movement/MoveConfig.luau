@@ -27,6 +27,17 @@ return {
 	ParryBoost = 6,
 	ParryMaxSpeed = 58, -- matches the fastest chain jump
 
+	-- Wall jump: jump again in the air beside a wall to kick off it.
+	WallJumpReach = 2.4, -- studs from the middle of the body to the wall
+	WallJumpHeight = 5,
+	WallJumpBoost = 2, -- added to the current speed, up to ParryMaxSpeed
+	WallJumpGap = 0.25, -- seconds between wall jumps
+	WallJumpMinAir = 0.12, -- seconds in the air before the first, so a jump beside a wall isn't spent on it
+	WallJumps = 3, -- in one time in the air
+	WallJumpSame = 0.85, -- two walls facing this much the same way count as the same wall, which can't be used twice running
+	WallJumpSteep = 0.3, -- the most a wall can lean (the upward share of its normal)
+	WallJumpLook = 0.6, -- how much of the kick goes where the player is looking, against straight off the wall
+
 	-- Cheat checks. SpeedLimit is the fastest chain jump plus a margin.
 	SpeedLimit = 63,
 	SpeedWindow = 0.5,

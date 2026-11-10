@@ -1,5 +1,6 @@
 local harness = require("./harness")
 local MoveState = require("../src/shared/Movement/MoveState")
+local MoveConfig = require("../src/shared/Movement/MoveConfig")
 
 local describe, it, expect = harness.describe, harness.it, harness.expect
 
@@ -141,6 +142,26 @@ describe("MoveState", function()
 		MoveState.step(s, on({ moving = true, sprint = true, jump = true, grounded = false }), 0.1)
 		expect(s.mode).toBe("Air")
 		expect(MoveState.speed(s, 0.5)).toBe(30)
+	end)
+
+	describe("wall jump", function()
+		it("keeps the speed it had, adds a little, and stays in the air", function()
+			local s = MoveState.new()
+			MoveState.step(s, on({ moving = true, sprint = true, grounded = false, jump = true }), 0)
+			local before = math.max(MoveState.speed(s, 0.3), MoveConfig.SprintSpeed) -- it has at least sprint speed
+			MoveState.wallJump(s, 0.3)
+			expect(s.mode).toBe("Air")
+			expect(MoveState.speed(s, 0.35)).toBe(before + MoveConfig.WallJumpBoost)
+			MoveState.wallJump(s, 0.6)
+			expect(MoveState.speed(s, 0.65)).toBe(before + 2 * MoveConfig.WallJumpBoost)
+		end)
+
+		it("never goes past the fastest parry", function()
+			local s = MoveState.new()
+			MoveState.launch(s, MoveConfig.ParryMaxSpeed - 1, 0)
+			MoveState.wallJump(s, 0.3)
+			expect(MoveState.speed(s, 0.35)).toBe(MoveConfig.ParryMaxSpeed)
+		end)
 	end)
 
 	describe("edge parry", function()

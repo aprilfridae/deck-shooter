@@ -83,6 +83,16 @@ function MoveState.parry(state: State, now: number)
 	state.dashFadeAt = -math.huge
 end
 
+-- Kicks off a wall in the air, keeping speed and adding a little.
+function MoveState.wallJump(state: State, now: number)
+	local current = math.max(MoveState.speed(state, now), MoveConfig.SprintSpeed)
+	state.carrySpeed = math.max(current, math.min(current + MoveConfig.WallJumpBoost, MoveConfig.ParryMaxSpeed))
+	state.mode = "Air"
+	state.airSince = now
+	state.chained = false
+	state.dashFadeAt = -math.huge
+end
+
 -- Thrown into the air at this speed, for shoves from abilities.
 function MoveState.launch(state: State, speed: number, now: number)
 	state.carrySpeed = speed

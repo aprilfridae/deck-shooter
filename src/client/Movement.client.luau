@@ -15,6 +15,7 @@ local Config = require(CardCore:WaitForChild("Config"))
 local Movement = ReplicatedStorage:WaitForChild("Movement")
 local Parry = require(Movement:WaitForChild("Parry"))
 local MoveState = require(Movement:WaitForChild("MoveState"))
+local MoveConfig = require(Movement:WaitForChild("MoveConfig"))
 local poseRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("Pose") :: RemoteEvent
 local abilityRemotes = ReplicatedStorage:WaitForChild("AbilityRemotes")
 local dashRemote = abilityRemotes:WaitForChild("Dash") :: RemoteEvent
@@ -135,7 +136,69 @@ local function tryParry(moveDirection: Vector3, now: number)
 	local edge = Ledge.find(humanoid.Parent :: Model, root, heading, rootHeight)
 	if edge then
 		startParry(heading, edge.height, now)
+		return true
 	end
+	return false
+end
+
+-- A jump press in the air beside a wall kicks off it: away from the wall and toward where the player is looking,
+-- keeping their speed. A few to a time in the air, and never off the same wall twice running.
+local wallJumps = 0
+local wallJumpAt = -math.huge
+local lastWall: Vector3? = nil
+local wallParams = RaycastParams.new()
+wallParams.FilterType = Enum.RaycastFilterType.Exclude
+wallParams.RespectCanCollide = true
+
+local function tryWallJump(moveDirection: Vector3, now: number)
+	if
+		state.mode ~= "Air"
+		or humanoid.FloorMaterial ~= Enum.Material.Air
+		or wallJumps >= MoveConfig.WallJumps
+		or now - wallJumpAt < MoveConfig.WallJumpGap
+		or now - airStartedAt < MoveConfig.WallJumpMinAir
+	then
+		return
+	end
+	wallParams.FilterDescendantsInstances = { humanoid.Parent :: Instance }
+	-- The nearest wall within reach, looking all the way round.
+	local look = flatLook()
+	local nearest: RaycastResult? = nil
+	for turn = 0, 7 do
+		local way = CFrame.Angles(0, turn * math.pi / 4, 0) * look
+		local hit = workspace:Raycast(root.Position, way * MoveConfig.WallJumpReach, wallParams)
+		if hit and math.abs(hit.Normal.Y) <= MoveConfig.WallJumpSteep and (not nearest or hit.Distance < nearest.Distance) then
+			nearest = hit
+		end
+	end
+	if not nearest then
+		return
+	end
+	local away = Vector3.new(nearest.Normal.X, 0, nearest.Normal.Z).Unit
+	if lastWall and away:Dot(lastWall) > MoveConfig.WallJumpSame then
+		return
+	end
+	-- Where the player is steering, or looking, bounced off the wall if it points into it.
+	local aim = if moveDirection.Magnitude > 0 then moveDirection.Unit else look
+	local into = aim:Dot(away)
+	if into < 0 then
+		aim -= away * (2 * into)
+	end
+	local kick = (away + aim * MoveConfig.WallJumpLook).Unit
+	MoveState.wallJump(state, now)
+	humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+	root.AssemblyLinearVelocity = kick * MoveState.speed(state, now)
+		+ Vector3.new(0, Parry.riseSpeed(MoveConfig.WallJumpHeight, workspace.Gravity), 0)
+	slideDirection = kick
+	airFromSlide = true
+	jumped = true
+	airStartedAt = now
+	peakFall = 0
+	wallJumps += 1
+	wallJumpAt = now
+	lastWall = away
+	jumpSoundAt = now
+	GunAudio.playJump()
 end
 
 -- A dash follows a set path, then hands back to normal movement in the air.
@@ -234,8 +297,11 @@ local function onFrame(dt: number)
 		humanoid.Jump = true
 	end
 
-	if jumpPressed and state.mode ~= "Dash" then
-		tryParry(direction, now)
+	if jumpPressed and state.mode ~= "Dash" and not tryParry(direction, now) then
+		tryWallJump(direction, now)
+	end
+	if humanoid.FloorMaterial ~= Enum.Material.Air then
+		wallJumps, lastWall = 0, nil -- back on the ground
 	end
 	if dash then
 		advanceDash(dash, now)
