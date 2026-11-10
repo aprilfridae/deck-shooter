@@ -59,6 +59,21 @@ local modelShift = Vector3.zero -- the gun shown's, in view studs
 -- on the old model, whose fore-end was where the AK's magazine is, so the left hand goes forward to the handguard.
 local CLIP_NUDGES: { [string]: { [string]: Vector3 } } = { M57 = { Left = Vector3.new(0, 0.05, -0.42) } }
 local clipPalms: { [string]: CFrame }? = nil -- this frame's moved palms, in the clip's space
+-- Fingers given another shape than the clips', by side and digit bone: which way each joint points, in the gun's own
+-- space. The M57's clips were made on the old model, and on the AK they left the trigger finger lying straight along
+-- the outside of the trigger guard. It now runs down past the trigger, hooks back in, and lays its tip across the
+-- front of the blade (measured against the AK's trigger: the tip crosses it within about 0.01 studs).
+local CLIP_FINGERS: { [string]: { [string]: { [string]: { Vector3 } } } } = {
+	M57 = {
+		Right = {
+			Indice = {
+				Vector3.new(-0.003, -0.082, -0.128).Unit, -- forward and down along the outside of the guard
+				Vector3.new(-0.05, 0, 0.063).Unit, -- hooking back in toward the trigger
+				Vector3.new(-1, 0, 0.05).Unit, -- and its tip across the front of the blade
+			},
+		},
+	},
+}
 -- The M57 is River's AK, and its reload's left hand, magazine and bolt are keyed in code on the AK's own shape
 -- (AkReload), over the old clip's gun and right hand. perMetre is the stored model's studs to a metre and middle
 -- is the model's middle in River's handoff (metres, +X muzzle, +Y left, +Z up).
@@ -1361,7 +1376,25 @@ function GunView.update(
 			end
 		end
 		clipPalms = moved
-		ViewArms.showFrame(clips.meshOffset, whole.bones, clipPalms)
+		-- Fingers with their own shape go with the gun, unless the hand has come off it.
+		local shaped = config and CLIP_FINGERS[config.name]
+		local fingers: { [string]: { [string]: { Vector3 } } }? = nil
+		if shaped and not (codePose and codePose.rightWeight > 0.5) then
+			local turn = (whole.gun * codeTurn).Rotation
+			local turnedFingers = {}
+			for side, digits in shaped do
+				turnedFingers[side] = {}
+				for digit, aims in digits do
+					local turnedAims = table.create(#aims)
+					for joint, aim in aims do
+						turnedAims[joint] = turn * aim
+					end
+					turnedFingers[side][digit] = turnedAims
+				end
+			end
+			fingers = turnedFingers
+		end
+		ViewArms.showFrame(clips.meshOffset, whole.bones, clipPalms, fingers)
 		-- Reloading and scoping still move the whole hold, on top of the clip.
 		shown = held * HIP:Inverse() * frame.gun * codeTurn
 		-- What the blur trails: the clip's pose with a coded reload's turn of the gun and its moved hands.

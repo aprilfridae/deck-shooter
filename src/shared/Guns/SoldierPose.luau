@@ -185,7 +185,15 @@ end
 -- palms puts a hand's palm somewhere other than where the clip has it, by side name, in the space the offset puts
 -- the clip in: for a gun whose shape isn't the one the clip was made on. Its fingers keep the clip's shape, turned
 -- with the palm.
-function SoldierPose.fromBones(pose: any, offset: CFrame, bones: any, palms: { [string]: CFrame }?): { [string]: CFrame }
+-- fingers gives a digit another shape than the clip's, by side name and digit bone: which way each of its three
+-- joints points, in the same space as palms.
+function SoldierPose.fromBones(
+	pose: any,
+	offset: CFrame,
+	bones: any,
+	palms: { [string]: CFrame }?,
+	fingers: { [string]: { [string]: { Vector3 } } }?
+): { [string]: CFrame }
 	local parts = {}
 	for _, side in { pose.right, pose.left } do
 		local palm = offset * palmOf(bones, side.prefix)
@@ -198,9 +206,12 @@ function SoldierPose.fromBones(pose: any, offset: CFrame, bones: any, palms: { [
 		local hand = palm * side.handOnPalm
 		poseArm(side, hand, palm, parts)
 		for _, digit in side.digits do
-			local aims = digitAims(bones, side.prefix, digit.bone)
-			for index, aim in aims do
-				aims[index] = turned * offset:VectorToWorldSpace(aim)
+			local shaped = fingers and fingers[side.name] and fingers[side.name][digit.bone]
+			local aims = if shaped then table.clone(shaped) else digitAims(bones, side.prefix, digit.bone)
+			if not shaped then
+				for index, aim in aims do
+					aims[index] = turned * offset:VectorToWorldSpace(aim)
+				end
 			end
 			poseDigit(digit.segments, hand, aims, parts)
 		end

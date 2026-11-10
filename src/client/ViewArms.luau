@@ -122,10 +122,15 @@ function ViewArms.holdCards(right: CFrame, left: CFrame, fingers: { [string]: So
 end
 
 -- Shows one exported frame.
-function ViewArms.showFrame(offset: CFrame, bones: { [string]: { number } }, palms: { [string]: CFrame }?)
+function ViewArms.showFrame(
+	offset: CFrame,
+	bones: { [string]: { number } },
+	palms: { [string]: CFrame }?,
+	fingers: { [string]: { [string]: { Vector3 } } }?
+)
 	rig = rig or makeRig(true)
 	if rig then
-		rig.parts = SoldierPose.fromBones(solver, offset, bones, palms)
+		rig.parts = SoldierPose.fromBones(solver, offset, bones, palms, fingers)
 	end
 end
 
