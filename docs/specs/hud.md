@@ -63,7 +63,7 @@ Sizes are in pixels on a 720-pixel-tall screen. All text is capitals.
 
 The spread shows each equipped card's face, 60 by 96, drawn by `CardFace` with its name and rarity printed on it. There are no keys or bars:
 
-- To start, slot 1 is on top, slot 2 under it and slot 3 under that. A card taken in hand is drawn 46 up out of the spread and laid back down on top of the others, in 0.3s (`HudText.pull`); it goes over them at the top of the move, and stays on top after. Slot 2 stands upright in the middle, its bottom 26 above the `HEALTH` line. Slots 1 and 3 sit 34 to its left and right, lean 14 degrees outward and sit 6 lower.
+- To start, slot 1 is on top, slot 2 under it and slot 3 under that. A card taken in hand glitches out of the spread and back in on top of the others, in 0.28s (`HudText.glitch`): it flickers, jumps up to 7 sideways and flashes Data Cyan, goes over the others while it's gone, and stays on top after. Slot 2 stands upright in the middle, its bottom 26 above the `HEALTH` line. Slots 1 and 3 sit 34 to its left and right, lean 14 degrees outward and sit 6 lower.
 - A card on cooldown is greyed out: a grey lies over it. The colour comes back evenly over the cooldown (`HudText.colour`), and is all back when the card is ready.
 - The card in hand slides up 10, and back down when it's put away (most of the way in 0.07s).
 - An empty slot shows nothing.

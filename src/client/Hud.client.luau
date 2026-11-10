@@ -53,8 +53,9 @@ local CARD_TILT = 14 -- degrees the outer cards lean
 local CARD_DROP = 6 -- how much lower the outer cards sit
 local CARD_LIFT = 10 -- how far the card in hand rises
 local CARD_LIFT_TIME = 0.07 -- seconds it takes to get most of the way
-local CARD_PULL = 46 -- how far a picked card is drawn up out of the spread on its way to the top
-local CARD_PULL_TIME = 0.3 -- seconds that takes, up and back down
+local CARD_GLITCH_TIME = 0.28 -- seconds a picked card glitches out and back in on top
+local CARD_GLITCH_SHIFT = 7 -- how far it jumps sideways while it does
+local CARD_GLITCH_FLASH = 0.45 -- how see-through the flash over it is
 local CARD_GREY = Color3.fromRGB(86, 90, 98) -- what lies over a card on cooldown
 local CARD_GREYED = 0.2 -- how see-through that grey is when the cooldown starts
 
@@ -161,13 +162,19 @@ local function spreadCard(index: number)
 	grey.BackgroundTransparency = 1
 	grey.BorderSizePixel = 0
 	grey.ZIndex = 10 -- over the face
+	local flash = grey:Clone() -- lights the card while it glitches
+	flash.BackgroundColor3 = Palette.DataCyan
+	flash.ZIndex = 11
+	flash.Parent = image
 	grey.Parent = image
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(CARD_CORNER, 0)
 	corner.Parent = grey
+	corner:Clone().Parent = flash
 	return {
 		image = image,
 		grey = grey,
+		flash = flash,
 		x = MARGIN + CARD_WIDTH / 2 + CARD_STEP + side * CARD_STEP,
 		y = CARD_LINE - CARD_HEIGHT / 2 + math.abs(side) * CARD_DROP,
 		shows = "",
@@ -191,7 +198,7 @@ end)
 
 local heldShown: number? = nil -- the card in hand the spread has caught up with
 
--- The picked card is drawn up out of the spread and laid back down on top of the rest.
+-- The picked card glitches out of the spread and back in on top of the rest.
 local function pick(index: number)
 	local card = spread[index]
 	local top = 0
@@ -229,12 +236,17 @@ local function showCard(index: number, now: number, step: number)
 	-- The card in hand slides up, and back down when it's put away.
 	local held = if CardInHand.slot == index then 1 else 0
 	card.lift += (held - card.lift) * (1 - math.exp(-step / CARD_LIFT_TIME))
-	local rise, over = HudText.pull((os.clock() - card.pulledAt) / CARD_PULL_TIME)
+	local there, shift, over = HudText.glitch((os.clock() - card.pulledAt) / CARD_GLITCH_TIME)
 	if over and not card.pulled then
 		card.pulled = true
-		card.image.ZIndex = card.over -- it's clear of the others' tops here, so it goes over them
+		card.image.ZIndex = card.over -- it's gone here, and comes back over the others
 	end
-	card.image.Position = UDim2.new(0, card.x, 1, card.y - card.lift * CARD_LIFT - rise * CARD_PULL)
+	card.flash.BackgroundTransparency = if shift ~= 0 then CARD_GLITCH_FLASH else 1
+	card.image.Position = UDim2.new(0, card.x + shift * CARD_GLITCH_SHIFT, 1, card.y - card.lift * CARD_LIFT)
+	if not there then
+		card.image.Visible = false
+		return
+	end
 	card.image.Visible = true
 end
 
