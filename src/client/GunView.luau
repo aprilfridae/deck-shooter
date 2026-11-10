@@ -120,6 +120,7 @@ local codeReloadAt: number? = nil -- when it started
 local codeReloading = false -- whether this reload has started it
 local codePose: any = nil -- this frame's
 local codeTurn = CFrame.identity -- this frame's turn of the gun, in view studs
+local wristFlip = CFrame.identity -- this frame's flip of the gun about the wrist from a shot, in the clip's space
 local smearFrame: any = nil -- this frame's pose for the motion blur, on a gun with clips
 local codeParts: { { part: BasePart, rest: CFrame, slides: boolean } } = {}
 local spareParts: { { part: BasePart, rest: CFrame } } = {} -- a second magazine, for while there are two
@@ -233,6 +234,7 @@ local VIEW_KICKS: { [string]: any } = {
 		back = 0.24, drop = 0.06, up = 14, roll = 4, rise = 0.04, stiff = 70, damp = 12.5, sides = true, loose = 2,
 		left = 5, -- degrees the muzzle kicks to the left as well
 		stillLeft = true, -- the kick is the gun hand's: the left hand stays where it is
+		wrist = 18, -- degrees more the gun snaps up about the wrist, on top of the whole arm's kick
 		-- Its soft spring (it was 165 and 19.1) takes about twice as long to bring it home.
 	},
 	Shotgun = { back = 0.605, drop = 0.132, up = 14.3, roll = -6.6, rise = 0.081, stiff = 52.5, damp = 10.4 },
@@ -1394,7 +1396,7 @@ function GunView.update(
 		local moved: { [string]: CFrame }? = nil
 		local viewKick = config and VIEW_KICKS[config.name]
 		local stillLeft = viewKick ~= nil and viewKick.stillLeft == true
-		local palms = if nudged or codeReload or stillLeft
+		local palms = if nudged or codeReload or stillLeft or (viewKick ~= nil and viewKick.wrist ~= nil)
 			then SoldierPose.clipPalms(clips.meshOffset, whole.bones)
 			else nil
 		if nudged and palms then
@@ -1403,6 +1405,18 @@ function GunView.update(
 				nudgedPalms[side] = whole.gun * CFrame.new(by) * whole.gun:Inverse() * palms[side]
 			end
 			moved = nudgedPalms
+		end
+		-- A kick that breaks at the wrist: the gun and the hand on it flip up about the wrist, more than the arm does.
+		wristFlip = CFrame.identity
+		if viewKick and viewKick.wrist and palms then
+			local placed = moved or {}
+			local hand = placed.Right or palms.Right
+			local snap = viewKick.wrist * kick
+			wristFlip = CFrame.new(hand.Position)
+				* CFrame.Angles(math.rad(snap * shot.up), math.rad(snap * 0.3), 0)
+				* CFrame.new(-hand.Position)
+			placed.Right = wristFlip * hand
+			moved = placed
 		end
 		if stillLeft and palms then
 			-- The whole view kicks with the shot, so the left hand is moved back by as much to stay put.
@@ -1482,9 +1496,9 @@ function GunView.update(
 		end
 		ViewArms.showFrame(clips.meshOffset, whole.bones, clipPalms, fingers)
 		-- Reloading and scoping still move the whole hold, on top of the clip.
-		shown = held * HIP:Inverse() * frame.gun * codeTurn
+		shown = held * HIP:Inverse() * wristFlip * frame.gun * codeTurn
 		-- What the blur trails: the clip's pose with a coded reload's turn of the gun and its moved hands.
-		smearFrame = { gun = whole.gun * codeTurn, bones = whole.bones, palms = clipPalms }
+		smearFrame = { gun = wristFlip * whole.gun * codeTurn, bones = whole.bones, palms = clipPalms }
 		if codeReload then
 			-- Where the magazine and bolt are in the gun, so the blur's copies can put theirs there too.
 			local per, origin = codeReload.perMetre, codeReload.origin
