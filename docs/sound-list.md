@@ -22,7 +22,7 @@ What the game already plays and what it still needs. Checked against the code on
 | Shotgun shots | `gun-shotgun-1` to `30` | Each shot, 0.8s apart |
 | Energy Pistol shots | `gun-pistol-1` to `30` | Each shot, 150ms apart |
 | Assault reload | `reload-assault-v4` | B33 reload (0.985s; the file runs on with a silent tail) |
-| Coin suck | `coin-suck` | The kill coins being pulled into the killer (River's "COIN SUCK", 1.7s). Plays once per kill as the first coin goes, from the killer's body |
+| Coin suck | `coin-suck-v2` | The kill coins being pulled into the killer (River's "COIN SUCK #", 1.7s). Plays once per kill as the first coin goes, from the killer's body |
 | Card skip | `card-skip` | Every right click with the cards out, which turns to the next card and cuts the flourish short if it's still playing (River's "RIGHT CLICK SKIP", 0.86s) |
 | Card flourish | `card-flourish-v4` | Taking the cards out (River's "CARD ANIMATION TEST 1", 3.64s, about the flourish's 3.6s). Starts with the flourish; faded over 0.15s when the cards go away or the flourish is skipped |
 | AK reload | `reload-assault-v5` | M57 reload (River's "assult reload like deadass", 1.714s file, over by about 1.5s; the reload is 2s) |
