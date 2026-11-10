@@ -20,12 +20,12 @@ local MODEL_SCALE = 0.031
 local VIEW_SCALES: { [string]: number } = { Longscope = 1.35 }
 -- Where the left hand holds a gun, as a share of its length from the middle, where the usual spot is out of reach.
 -- Too far forward and the arm locks straight with the shoulder sliding into view.
-local LEFT_GRIPS: { [string]: number } = { Longscope = 0 }
+local LEFT_GRIPS: { [string]: number } = { Longscope = -0.065 } -- under the lever rifle's fore-end
 local leftGrip = LEFT_GRIP_Z
--- Where a gun's own shape needs the hands moved, in studs. The Longscope's pistol grip sits behind its trigger,
--- further back and lower than the usual hold, and its fore-end is shallow, so the left hand comes up to meet it.
+-- Where a gun's own shape needs the hands moved, in studs. The Longscope is a lever rifle: its right hand sits in
+-- the lever loop, behind and below the trigger, and its fore-end is shallow, so the left hand comes up to meet it.
 local GRIP_SHIFTS: { [string]: { right: Vector3, left: Vector3 } } = {
-	Longscope = { right = Vector3.new(0, -0.09, 0.56), left = Vector3.new(0, 0.08, 0) },
+	Longscope = { right = Vector3.new(0, 0, 0.54), left = Vector3.new(0, 0.08, 0) },
 }
 local gripShift: { right: Vector3, left: Vector3 }? = nil
 -- Shoulders moved for a gun, in camera space. The Longscope's left arm comes up from below instead of
@@ -35,6 +35,7 @@ local SHOULDERS: { [string]: { [string]: Vector3 } } = { Longscope = { Left = Ve
 local THUMB_WRAPS: { [string]: { [string]: number } } = { Longscope = { Left = math.rad(70) } }
 local BLOCK_SECTION = Vector2.new(0.3, 0.4)
 local BARREL_RISE = 0.26 -- how far above the model's middle the barrel sits, as a share of its height
+local BARREL_RISES: { [string]: number } = { Longscope = 0.098 } -- guns whose barrel sits somewhere else
 local HIP = CFrame.new(0.9, -0.8, -2)
 local AIMED = CFrame.new(0, -0.55, -2)
 local RELOAD_DIP = CFrame.new(0, -0.7, 0) * CFrame.Angles(math.rad(-25), 0, 0)
@@ -513,7 +514,7 @@ local function makeModel(name: string): Model?
 	model.WorldPivot = model:GetBoundingBox()
 	local size = model:GetExtentsSize()
 	length = size.Z
-	barrelRise = size.Y * BARREL_RISE
+	barrelRise = size.Y * (BARREL_RISES[name] or BARREL_RISE)
 	return model
 end
 
