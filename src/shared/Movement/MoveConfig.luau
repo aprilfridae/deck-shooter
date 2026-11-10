@@ -2,7 +2,7 @@
 return {
 	WalkSpeed = 16,
 	CrouchSpeed = 8,
-	SprintSpeed = 27,
+	SprintSpeed = 30,
 	SlideStartSpeed = 42,
 	SlideFadeTime = 0.9, -- slows to sprint speed over this long; lasts while crouch is held
 	SlideCooldown = 0,

@@ -51,6 +51,8 @@ local fieldOfView = FIELD_OF_VIEW
 local wasScoped = false
 local scopeEasing = false
 local landDip = 0
+local JUMP_SOUND_GAP = 0.3 -- seconds before the jump sound can play again
+local jumpSoundAt = -math.huge
 local airStartedAt = 0
 local peakFall = 0 -- the fastest fall since leaving the ground
 local sentPose = "Normal"
@@ -298,7 +300,9 @@ local function onFrame(dt: number)
 		airStartedAt = now
 		peakFall = 0
 		jumped = keys.jump
-		if jumped then
+		-- Once a jump: the ground check can flicker as the feet leave, which would count as leaving it twice.
+		if jumped and now - jumpSoundAt >= JUMP_SOUND_GAP then
+			jumpSoundAt = now
 			GunAudio.playJump()
 		end
 	elseif previousMode == "Air" and not airborne and now - airStartedAt >= MIN_AIR_FOR_DIP then
