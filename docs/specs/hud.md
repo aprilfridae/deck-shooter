@@ -63,9 +63,9 @@ Sizes are in pixels on a 720-pixel-tall screen. All text is capitals.
 
 The spread shows each equipped card's own art, 60 by 96, with no names, keys or bars:
 
-- Slot 2 stands upright in the middle and in front, its bottom 26 above the `HEALTH` line. Slots 1 and 3 sit 34 to its left and right, lean 14 degrees outward and sit 6 lower.
+- Slot 1 is on top, slot 2 under it and slot 3 under that. Slot 2 stands upright in the middle, its bottom 26 above the `HEALTH` line. Slots 1 and 3 sit 34 to its left and right, lean 14 degrees outward and sit 6 lower.
 - A card on cooldown is greyed out: its colours are dimmed and a grey lies over it. The colour comes back evenly over the cooldown (`HudText.colour`), and is all back when the card is ready.
-- The card in hand rises 10.
+- The card in hand slides up 10, and back down when it's put away (most of the way in 0.07s).
 - An empty slot shows nothing.
 
 Health and shield round up, so a player on 0.4 health shows 1.

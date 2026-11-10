@@ -53,6 +53,7 @@ local CARD_STEP = 34 -- from one card's middle to the next
 local CARD_TILT = 14 -- degrees the outer cards lean
 local CARD_DROP = 6 -- how much lower the outer cards sit
 local CARD_LIFT = 10 -- how far the card in hand rises
+local CARD_LIFT_TIME = 0.07 -- seconds it takes to get most of the way
 local CARD_GREY = Color3.fromRGB(86, 90, 98) -- what lies over a card on cooldown
 local CARD_GREYED = 0.3 -- how see-through that grey is when the cooldown starts
 local CARD_DIM = Color3.fromRGB(120, 120, 120) -- and what the card's own colours are multiplied by
@@ -141,7 +142,7 @@ healthLabel:set("HEALTH")
 local markerAt = 0
 local markerSize = 1
 
--- The equipped cards, fanned out above the health: slot 1 on the left, slot 2 upright in the middle and in front.
+-- The equipped cards, fanned out above the health: slot 1 on the left and on top, slot 2 upright under it, slot 3 under that.
 local function spreadCard(index: number)
 	local side = index - (SLOTS + 1) / 2 -- -1, 0, 1
 	local image = Instance.new("ImageLabel")
@@ -149,7 +150,7 @@ local function spreadCard(index: number)
 	image.Size = UDim2.fromOffset(CARD_WIDTH, CARD_HEIGHT)
 	image.Rotation = side * CARD_TILT
 	image.BackgroundTransparency = 1
-	image.ZIndex = if side == 0 then 2 else 1
+	image.ZIndex = SLOTS + 1 - index
 	image.Visible = false
 	image.Parent = hud
 	-- The grey that lies over a card on cooldown.
@@ -168,6 +169,7 @@ local function spreadCard(index: number)
 		x = MARGIN + CARD_WIDTH / 2 + CARD_STEP + side * CARD_STEP,
 		y = CARD_LINE - CARD_HEIGHT / 2 + math.abs(side) * CARD_DROP,
 		shows = "",
+		lift = 0, -- how far it has risen, from 0 to 1
 	}
 end
 
@@ -181,7 +183,7 @@ CardData.changed:Connect(function()
 	end
 end)
 
-local function showCard(index: number, now: number)
+local function showCard(index: number, now: number, step: number)
 	local card = spread[index]
 	local id = player:GetAttribute(`Ability{index}Id`) or ""
 	if not Cards.byId[id] then
@@ -199,8 +201,10 @@ local function showCard(index: number, now: number)
 	local colour = HudText.colour(left, player:GetAttribute(`Ability{index}Cooldown`) or 0)
 	card.image.ImageColor3 = CARD_DIM:Lerp(Color3.new(1, 1, 1), colour)
 	card.grey.BackgroundTransparency = CARD_GREYED + (1 - CARD_GREYED) * colour
-	local lift = if CardInHand.slot == index then CARD_LIFT else 0
-	card.image.Position = UDim2.new(0, card.x, 1, card.y - lift)
+	-- The card in hand slides up, and back down when it's put away.
+	local held = if CardInHand.slot == index then 1 else 0
+	card.lift += (held - card.lift) * (1 - math.exp(-step / CARD_LIFT_TIME))
+	card.image.Position = UDim2.new(0, card.x, 1, card.y - card.lift * CARD_LIFT)
 	card.image.Visible = true
 end
 
@@ -214,7 +218,7 @@ hitRemote.OnClientEvent:Connect(function(info)
 	end
 end)
 
-RunService.RenderStepped:Connect(function()
+RunService.RenderStepped:Connect(function(step)
 	-- The combat HUD is hidden in the Outpost, where guns and cards are off.
 	gui.Enabled = not MenuState.isOpen(MenuState.shared) and Zones.allowsCombat(Zones.of(player))
 	local character = player.Character
@@ -242,7 +246,7 @@ RunService.RenderStepped:Connect(function()
 	end
 	local now = workspace:GetServerTimeNow()
 	for index = 1, SLOTS do
-		showCard(index, now)
+		showCard(index, now, step)
 	end
 	if marker.Visible then
 		local scale, transparency = HitMarker.look(os.clock() - markerAt, MARKER_SECONDS, MARKER_POP)
