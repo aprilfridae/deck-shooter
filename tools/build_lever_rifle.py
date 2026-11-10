@@ -15,6 +15,7 @@ import math
 import os
 import sys
 
+import bmesh
 import bpy
 from mathutils import Matrix, Vector
 
@@ -24,6 +25,10 @@ os.makedirs(out, exist_ok=True)
 MOVING = {"Lever": "Lever", "LeverGrip": "Lever", "Bolt": "Bolt", "BoltIndicator": "Bolt", "Trigger": "Trigger"}
 BUDGET = 40  # a mesh of n triangles keeps about BUDGET * n ^ (1/3)
 SMALLEST = 120
+SOLID_FROM = 30000  # triangles: bigger meshes are the solid moulded ones (stock, fore-end, lever, receiver)
+HEAVY = 1500  # triangles a small part may keep before it is collapsed as well
+THIN = ("ScopeBody", "Ring", "Lens")  # thin-walled parts that are never collapsed
+FLAT = 6  # degrees between faces that count as one flat face on a small part
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=source)
@@ -62,16 +67,43 @@ for o in list(bpy.context.scene.objects):
     if o.type != "MESH":
         bpy.data.objects.remove(o)
 
+# The scope's two glowing "rings" are solid discs in the file, which cover its lenses. Taking out the middle of each
+# end leaves the glowing rim, with the lens showing through.
+for o in meshes:
+    if o.name in ("ScopeEyeRing", "ScopeObjectiveRing"):
+        centre = sum((v.co for v in o.data.vertices), Vector()) / len(o.data.vertices)
+        mesh = bmesh.new()
+        mesh.from_mesh(o.data)
+        middle = [v for v in mesh.verts if (Vector((0, v.co.y, v.co.z)) - Vector((0, centre.y, centre.z))).length < 0.001]
+        bmesh.ops.delete(mesh, geom=middle, context="VERTS")
+        mesh.to_mesh(o.data)
+        mesh.free()
+        print("RING", o.name, "took out", len(middle))
+
 # Thin each mesh.
 before = 0
 for o in meshes:
     count = triangles(o)
     before += count
     keep = max(SMALLEST, int(BUDGET * count ** (1 / 3)))
-    if keep < count:
+    if count < SOLID_FROM:
+        # A small part is thin-walled metal: collapsing it tears tubes open and fills rings in (it did the scope),
+        # so only its flat faces are merged, which leaves its shape exactly as it was.
+        modifier = o.modifiers.new("Thin", "DECIMATE")
+        modifier.decimate_type = "DISSOLVE"
+        modifier.angle_limit = math.radians(FLAT)
+    elif keep < count:
         modifier = o.modifiers.new("Thin", "DECIMATE")
         modifier.ratio = keep / count
-        only([o])
+    else:
+        continue
+    only([o])
+    bpy.ops.object.modifier_apply(modifier="Thin")
+    # A small part that's still heavy is a solid knob or block, which does collapse cleanly.
+    left = triangles(o)
+    if count < SOLID_FROM and left > HEAVY and not any(word in o.name for word in THIN):
+        modifier = o.modifiers.new("Thin", "DECIMATE")
+        modifier.ratio = HEAVY / left
         bpy.ops.object.modifier_apply(modifier="Thin")
 
 # Split by material, then join each group's pieces of one material.
