@@ -73,6 +73,40 @@ local codeParts: { { part: BasePart, rest: CFrame, slides: boolean } } = {}
 local spareParts: { { part: BasePart, rest: CFrame } } = {} -- a second magazine, for while there are two
 local spareShown = false
 local HIP = CFrame.new(0.9, -0.8, -2)
+-- Up against a wall the gun and arms would poke through it and vanish. So when something solid is closer in front
+-- than the gun reaches, the whole view is tucked in: the muzzle tips up and the hold comes back and down, more the
+-- closer the thing is. The cards, which sit closer in, just come back and down.
+local WALL_REACH = 4.2 -- studs in front of the eye a gun needs clear
+local CARD_REACH = 2.6 -- and the cards
+local WALL_NEAR = 0.9 -- at this close it's tucked all the way
+local WALL_WIDTH = 0.55 -- how wide a path is checked: the radius of the ball swept forward
+local WALL_BEHIND = 0.7 -- the sweep starts this far behind the eye, so a wall the eye is against still counts
+local WALL_EASE = 12 -- how fast it tucks and comes back, a second
+local WALL_PITCH = math.rad(66) -- how far the muzzle tips up, tucked all the way
+local WALL_BACK = 0.85 -- studs the hold comes back
+local WALL_DROP = 0.3 -- and down
+local CARD_BACK = 1.1 -- the same for the cards
+local CARD_DROP = 0.35
+local wallShare = 0 -- how tucked the view is, 0 to 1
+local wallParams = RaycastParams.new()
+wallParams.FilterType = Enum.RaycastFilterType.Exclude
+wallParams.RespectCanCollide = true -- only things that are really in the way
+
+-- Eases wallShare toward how tucked the view should be, for something that needs `reach` studs clear.
+local function tuck(camera: Camera, dt: number, reach: number): number
+	wallParams.FilterDescendantsInstances = { camera, Players.LocalPlayer.Character :: Instance }
+	local eye = camera.CFrame
+	local hit = workspace:Spherecast(
+		eye.Position - eye.LookVector * WALL_BEHIND,
+		WALL_WIDTH,
+		eye.LookVector * (reach + WALL_BEHIND),
+		wallParams
+	)
+	local clear = if hit then math.max(hit.Distance - WALL_BEHIND, 0) else reach
+	local wanted = math.clamp((reach - clear) / (reach - WALL_NEAR), 0, 1)
+	wallShare += (wanted - wallShare) * (1 - math.exp(-dt * WALL_EASE))
+	return wallShare
+end
 local AIMED = CFrame.new(0, -0.55, -2)
 local RELOAD_DIP = CFrame.new(0, -0.7, 0) * CFrame.Angles(math.rad(-25), 0, 0)
 -- Sway: the gun and arms lag behind the mouse, then swing back on a spring.
@@ -1217,8 +1251,14 @@ function GunView.update(
 	loosePlaying = playing
 	looseShare += ((if playing then 1 else 0) - looseShare) * (1 - math.exp(-dt * LOOSE_EASE))
 	local loose = Loosen.drift(HIP.Position, idleLife, idleSize + (1 - math.min(idleSize, 1)) * looseShare)
-	local base = camera.CFrame * reach * sway * loose * (if clips then recoil * layerShown else CFrame.identity)
-	if showCard(camera, cardOut, sway) then
+	-- Tucked in when there's a wall in the way.
+	local tucked = tuck(camera, dt, if cardOut then CARD_REACH else WALL_REACH)
+	local tip = CFrame.new(0, -WALL_DROP * tucked, WALL_BACK * tucked)
+		* CFrame.new(HIP.Position)
+		* CFrame.Angles(WALL_PITCH * tucked, 0, 0)
+		* CFrame.new(-HIP.Position)
+	local base = camera.CFrame * reach * tip * sway * loose * (if clips then recoil * layerShown else CFrame.identity)
+	if showCard(camera, cardOut, CFrame.new(0, -CARD_DROP * tucked, CARD_BACK * tucked) * sway) then
 		if flashModel then
 			flashModel.Parent = nil
 		end
