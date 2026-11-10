@@ -60,6 +60,7 @@ local history: { { at: number, cards: { CFrame } } } = {} -- where the cards wer
 local BLUR_FADE = 14 -- how fast a card's blur fades in and out, a second
 local strengths: { [number]: number } = {} -- how much of each card's blur shows, 0 to 1
 local steppedAt = 0
+local ghostsOut = false -- whether any blur copies were out last frame
 
 -- A bent card is shown as a few strips along its length, each with its slice of the card's two images, and the card
 -- itself is put away while they show.
@@ -310,9 +311,10 @@ local function setFace(index: number, slot: number?)
 end
 
 -- Where every card's blur copies go: trailing the cards that are moving fast, and away for the rest.
-local function blur(view: CFrame, cards: { CFrame }): { CFrame }
+local function blur(view: CFrame, cards: { CFrame }): ({ CFrame }, boolean)
 	local now = os.clock()
 	local trail = table.create(#ghosts, AWAY)
+	local any = false -- whether any copy is out this frame
 	local was = history[1]
 	if was and now - was.at < 0.2 then
 		local span = now - was.at
@@ -343,6 +345,7 @@ local function blur(view: CFrame, cards: { CFrame }): { CFrame }
 			shows += (wanted - shows) * fadeStep
 			strengths[index] = shows
 			if shows > 0.02 then
+				any = true
 				-- How many of each card's copies are used follows the machine; the rest stay put away.
 				local used = Perf.pick(GHOSTS, 3, 1)
 				for ghost = 1, used do
@@ -357,7 +360,7 @@ local function blur(view: CFrame, cards: { CFrame }): { CFrame }
 	while history[2] and now - history[2].at >= SHUTTER do
 		table.remove(history, 1)
 	end
-	return trail
+	return trail, any
 end
 
 -- Deals the player's deck through the cards over and over, with the card in hand on top of the right hand's half.
@@ -474,7 +477,13 @@ function CardView.show(
 		workspace:BulkMoveTo(strips, pieces, Enum.BulkMoveMode.FireCFrameChanged)
 	end
 	workspace:BulkMoveTo(parts, placed, Enum.BulkMoveMode.FireCFrameChanged)
-	workspace:BulkMoveTo(ghosts, blur(view, cards), Enum.BulkMoveMode.FireCFrameChanged)
+	-- The copies are only moved while some are out, and once more after to put them away: with the cards held
+	-- still, which is most of the time, none of the 192 of them is touched.
+	local trail, blurring = blur(view, cards)
+	if blurring or ghostsOut then
+		workspace:BulkMoveTo(ghosts, trail, Enum.BulkMoveMode.FireCFrameChanged)
+	end
+	ghostsOut = blurring
 	local folder = holder :: Folder
 	folder.Parent = camera
 end
