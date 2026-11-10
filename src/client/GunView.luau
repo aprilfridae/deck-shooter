@@ -1080,7 +1080,7 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 		if elapsed < CardFlourish.LENGTH then
 			cardAt = now - CardFlourish.LENGTH
 			CardView.snap()
-			GunAudio.stopCards()
+			GunAudio.playCardSkip()
 			elapsed = CardFlourish.LENGTH
 		end
 	end

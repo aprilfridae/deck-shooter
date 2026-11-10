@@ -51,6 +51,7 @@ for _, soundId in {
 	GunSounds.coinBurst,
 	GunSounds.snap,
 	GunSounds.cardFlourish,
+	GunSounds.cardSkip,
 } do
 	others[soundId] = newSound(soundId)
 end
@@ -160,6 +161,12 @@ function GunAudio.stopCards()
 		end)
 		fade:Play()
 	end
+end
+
+-- Right click cutting the flourish short: the flourish's sound is cut and this plays over it.
+function GunAudio.playCardSkip()
+	GunAudio.stopCards()
+	playCopy(others[GunSounds.cardSkip], 0)
 end
 
 function GunAudio.playCards()
