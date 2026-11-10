@@ -310,7 +310,9 @@ local function shape(side: string, root: { number }, tip: { number }, spread: nu
 end
 
 local LEFT_OPEN = shape("Left", { 0.3, 0.6, 0.7 }, { 0.3, 0.8, 0.5 }, 0.12, { 8, 14, 12 }) -- waiting under the falling cards
-local LEFT_HOLD = shape("Left", { 1, 0.3, 0.1 }, { 0.3, 0.8, -0.5 }, 0.04, { 5, 80, 25 })
+-- The hand lies at a slant, so the first finger's joint falls short of the card's edge: it reaches out past the edge
+-- before it curls round, where the others can fold straight over.
+local LEFT_HOLD = shape("Left", { 1, 0.3, 0.1 }, { 0.3, 0.8, -0.5 }, 0.04, { 5, 40, 70 }, { 5, 62, 45 }, { 5, 80, 25 })
 local LEFT_LIFT = shape("Left", { 1, 0.2, 0.3 }, { 0.9, 0.4, 0.2 }, 0.04, { 5, 80, 10 }) -- thumb up to let the other half land
 local LEFT_HALVED = shape("Left", { 0.9, 0.5, 0.1 }, { 0.15, 0.85, -0.5 }, 0.04, { 5, 80, 40 }) -- on half a deck
 local LEFT_PUSH = shape("Left", { 1, 0.4, -0.2 }, { 0.2, 0.8, -0.8 }, 0.04, { 5, 70, 15 }) -- its thumb slides the top half off

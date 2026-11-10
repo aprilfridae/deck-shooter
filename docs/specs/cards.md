@@ -96,6 +96,7 @@ Requests go through `Requests.luau`, which drops bad types, NaN, extra fields an
 ## What players see
 
 - The HUD's ability rows: key, card name, tier in its colour and a 10-segment cooldown bar (see `hud.md`).
+- Left hold: the first finger reaches out past the card's edge before curling round it (bends 5, 40, 70 degrees; the middle finger 5, 62, 45; the last two 5, 80, 25), because the hand lies at a slant and its joint falls short of the edge.
 - Life: so it never plays the same twice, each hand drifts up to 0.012 studs and rolls up to 3 degrees on its own slow wander, with its cards (`CardFlourish.sway`; a card crossing between hands blends from one to the other), and the flourish runs up to 0.035s ahead of or behind itself (`CardFlourish.tempo`). Each time out starts at a random point in the wander.
 - Print: the cards that are face up or turning over (from the top card to the first one flipped) get a `SurfaceGui` with the whole `CardFace` on it, so they carry their name, rarity and serial like the cards in the menus. The rest, and the blur copies, show only the baked image.
 - Motion blur: while a card moves faster than 0.5 studs a second, three faint copies of it trail back over the last 0.03s of its path (`blur` in `CardView.luau`; cards moving as one stack share one trail), and two faint copies of the arms do the same (`ViewArms.blur`).
