@@ -37,11 +37,14 @@ if AK:
     MOVING = {"BoltCarrier": "Bolt", "Magazine": "Mag", "Trigger": "Trigger"}
 if PISTOL:
     MOVING = {"PowerHousing": "Slide", "MagTrack": "Mag", "Magazine": "Mag", "Trigger": "Trigger"}
-BUDGET = 40  # a mesh of n triangles keeps about BUDGET * n ^ (1/3)
+BUDGET = 30  # a mesh of n triangles keeps about BUDGET * n ^ (1/3)
 SMALLEST = 120
 SOLID_FROM = 30000  # triangles: bigger meshes are the solid moulded ones (stock, fore-end, lever, receiver)
-HEAVY = 1500  # triangles a small part may keep before it is collapsed as well
+HEAVY = 800  # triangles a small part may keep before it is collapsed as well
 THIN = ("ScopeBody", "Ring", "Lens")  # thin-walled parts that are never collapsed
+AK_KEEP = {"ButtPlate": 1300, "MuzzleBrake": 1500, "PistolGrip": 1300}
+TINY = 0.045  # metres across: smaller parts than this are thinned hard
+TINY_KEEP = 140  # triangles a tiny part keeps
 FLAT = 6  # degrees between faces that count as one flat face on a small part
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -104,6 +107,14 @@ for o in meshes:
     count = triangles(o)
     before += count
     if AK:
+        # Already light. Only its two densest small parts, a ribbed butt plate and a slotted muzzle brake that
+        # together are a third of the gun, are thinned, and the grip a little.
+        keep = AK_KEEP.get(o.name)
+        if keep and keep < count:
+            modifier = o.modifiers.new("Thin", "DECIMATE")
+            modifier.ratio = keep / count
+            only([o])
+            bpy.ops.object.modifier_apply(modifier="Thin")
         continue
     keep = max(SMALLEST, int(BUDGET * count ** (1 / 3)))
     if count < SOLID_FROM:
@@ -121,10 +132,19 @@ for o in meshes:
     bpy.ops.object.modifier_apply(modifier="Thin")
     # A small part that's still heavy is a solid knob or block, which does collapse cleanly.
     left = triangles(o)
-    if count < SOLID_FROM and left > HEAVY and not any(word in o.name for word in THIN):
+    thin = any(word in o.name for word in THIN)
+    if count < SOLID_FROM and left > HEAVY and not thin:
         modifier = o.modifiers.new("Thin", "DECIMATE")
         modifier.ratio = HEAVY / left
         bpy.ops.object.modifier_apply(modifier="Thin")
+    elif count < SOLID_FROM and left > TINY_KEEP and not thin:
+        # A tiny part (a screw, a pin, a stud) is a few pixels on screen and doesn't need hundreds of triangles.
+        corners = [o.matrix_world @ Vector(c) for c in o.bound_box]
+        across = max((a - b).length for a in corners for b in corners)
+        if across < TINY:
+            modifier = o.modifiers.new("Thin", "DECIMATE")
+            modifier.ratio = max(TINY_KEEP / left, 0.3)
+            bpy.ops.object.modifier_apply(modifier="Thin")
 
 # Split by material, then join each group's pieces of one material.
 piles = {}

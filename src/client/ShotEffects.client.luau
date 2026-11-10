@@ -154,19 +154,38 @@ local function addTracer(from: Vector3, to: Vector3)
 end
 
 -- A glowing drop that streaks along its path as it flies.
+-- The glowing bits a hit throws (streaks and bolts) are used again and again instead of being made and thrown away:
+-- an automatic makes hundreds of them a second, and making a part is far dearer than moving one.
+local SPARE_MOST = 240
+local spare: { Part } = {}
+local function takeBit(color: Color3): Part
+	local part = table.remove(spare)
+	if not part then
+		part = makePart(Vector3.one * DROP_SIZE, color, Enum.Material.Neon)
+	end
+	part.Color = color
+	return part
+end
+local function giveBack(part: Part)
+	if #spare < SPARE_MOST then
+		part.Parent = nil
+		table.insert(spare, part)
+	else
+		part:Destroy()
+	end
+end
+
 local function addDrop(position: Vector3, direction: Vector3, speed: number, cone: number)
 	local spread = direction + random:NextUnitVector() * cone
 	-- Some streaks are white-hot, the rest already cooling.
-	local part = makePart(
-		Vector3.one * DROP_SIZE,
-		if random:NextNumber() < 0.4 then BLOOD_COLOR else BLOOD_GLOW,
-		Enum.Material.Neon
-	)
+	local part = takeBit(if random:NextNumber() < 0.4 then BLOOD_COLOR else BLOOD_GLOW)
 	part.Shape = Enum.PartType.Ball
+	part.Size = Vector3.one * DROP_SIZE
 	part.CFrame = CFrame.new(position)
 	part.Parent = folder
 	table.insert(drops, {
 		part = part,
+		block = false, -- whether it's stretched into a streak yet
 		position = position,
 		velocity = spread.Unit * speed * random:NextNumber(0.4, 1),
 		width = DROP_SIZE * random:NextNumber(0.6, 1.4),
@@ -199,7 +218,8 @@ local function addBolt(position: Vector3, away: Vector3)
 	local reach = (away + random:NextUnitVector() * 1.4).Unit * random:NextNumber(BOLT_REACH[1], BOLT_REACH[2])
 	local bolt = { from = position, reach = reach, parts = {}, age = 0, redrawn = false }
 	for kink = 1, BOLT_KINKS do
-		local part = makePart(Vector3.one * BOLT_WIDTH, if kink % 2 == 0 then BLOOD_COLOR else BLOOD_GLOW, Enum.Material.Neon)
+		local part = takeBit(if kink % 2 == 0 then BLOOD_COLOR else BLOOD_GLOW)
+		part.Shape = Enum.PartType.Block
 		part.Parent = folder
 		bolt.parts[kink] = part
 	end
@@ -212,7 +232,7 @@ local function stepBolts(dt: number)
 		bolt.age += dt
 		if bolt.age >= BOLT_TIME then
 			for _, part in bolt.parts do
-				part:Destroy()
+				giveBack(part)
 			end
 			table.remove(bolts, index)
 		elseif not bolt.redrawn and bolt.age >= BOLT_TIME / 2 then
@@ -306,11 +326,16 @@ local function stepDrops(dt: number)
 			local fade = 1 - drop.age / DROP_LIFE
 			local width = drop.width * fade
 			local speed = drop.velocity.Magnitude
+			-- Its shape is only set when it changes: setting it every frame rebuilds the part each time.
+			local block = speed * STREAK > width
+			if block ~= drop.block then
+				drop.block = block
+				drop.part.Shape = if block then Enum.PartType.Block else Enum.PartType.Ball
+			end
 			drop.part.Size = Vector3.new(width, width, width + speed * STREAK * fade)
-			drop.part.Shape = if speed * STREAK > width then Enum.PartType.Block else Enum.PartType.Ball
 			drop.part.CFrame = CFrame.lookAt(drop.position, drop.position + drop.velocity)
 		else
-			drop.part:Destroy()
+			giveBack(drop.part)
 			table.remove(drops, index)
 		end
 	end
