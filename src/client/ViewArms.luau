@@ -10,6 +10,7 @@ local SoldierPose = require(ReplicatedStorage.Guns.SoldierPose)
 local FINGER_JITTER = 1.2 -- degrees at every finger and thumb joint
 local ARM_JITTER = 0.4
 local HAND_JITTER = 1
+local GHOST_MIN_MOVE = 0.06 -- studs a part must be from the real one for its blur copy to show
 
 export type Grip = SoldierPose.Grip
 
@@ -121,8 +122,13 @@ function ViewArms.poseGhost(ghost: any, offset: CFrame, bones: { [string]: { num
 end
 
 function ViewArms.placeGhost(ghost: any, camera: Camera, transparency: number, view: CFrame?)
-	for _, mesh in ghost.meshes do
-		mesh.Transparency = transparency
+	-- A part that has hardly moved gets no blur: a see-through copy sitting right on top of the real part only
+	-- makes it flicker.
+	for index, mesh in ghost.meshes do
+		local group = ghost.groups[index]
+		local real = rig and rig.parts and rig.parts[group]
+		local still = real and (ghost.parts[group].Position - real.Position).Magnitude < GHOST_MIN_MOVE
+		mesh.Transparency = if still then 1 else transparency
 	end
 	placeRig(ghost, camera, view)
 end
