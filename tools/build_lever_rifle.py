@@ -120,6 +120,10 @@ for o in meshes:
         used = {piece.data.materials[p.material_index] for p in piece.data.polygons if piece.data.materials}
         material = next(iter(used), None)
         name = material.name.replace("LR_", "") if material else "Plain"
+        if name.startswith("Neon"):
+            # River doesn't want the glowing cyan and magenta strips, dots and rims: they're left off.
+            bpy.data.objects.remove(piece)
+            continue
         key = f"{group}_{name}"
         if name == "Lens":
             middle = sum((piece.matrix_world @ Vector(c) for c in piece.bound_box), Vector()) / 8
