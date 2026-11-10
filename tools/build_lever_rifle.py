@@ -27,11 +27,16 @@ os.makedirs(out, exist_ok=True)
 #   blender -b --python tools/build_lever_rifle.py -- <AK_v3_optimized.glb> <out folder> ak
 # The AK is already light, so nothing is thinned; its moving groups are Bolt (carrier, charging handle and knob),
 # Mag (the magazine and everything on it) and Trigger. It writes AK_low.glb.
-AK = len(arguments) > 2 and arguments[2] == "ak"
-NAME = "AK_low.glb" if AK else "LeverRifle_low.glb"
+# And River's pistol (Pistol_v3.glb) with pistol: also light, with moving groups Slide (the power housing and all on
+# it), Mag (the cell and its track) and Trigger. It writes Pistol_low.glb. Its two lenses keep their own colour part.
+PISTOL = len(arguments) > 2 and arguments[2] == "pistol"
+AK = (len(arguments) > 2 and arguments[2] == "ak") or PISTOL  # "already light": nothing is thinned
+NAME = "Pistol_low.glb" if PISTOL else "AK_low.glb" if AK else "LeverRifle_low.glb"
 MOVING = {"Lever": "Lever", "LeverGrip": "Lever", "Bolt": "Bolt", "BoltIndicator": "Bolt", "Trigger": "Trigger"}
 if AK:
     MOVING = {"BoltCarrier": "Bolt", "Magazine": "Mag", "Trigger": "Trigger"}
+if PISTOL:
+    MOVING = {"PowerHousing": "Slide", "MagTrack": "Mag", "Magazine": "Mag", "Trigger": "Trigger"}
 BUDGET = 40  # a mesh of n triangles keeps about BUDGET * n ^ (1/3)
 SMALLEST = 120
 SOLID_FROM = 30000  # triangles: bigger meshes are the solid moulded ones (stock, fore-end, lever, receiver)
@@ -63,8 +68,12 @@ groups = {}
 for o in meshes:
     base = o.name.split(".")[0]
     groups[o.name] = MOVING.get(o.name, MOVING.get(base, "Static"))
-    if o.parent and o.parent.name in MOVING:
-        groups[o.name] = MOVING[o.parent.name]
+    above = o.parent
+    while above:  # anything under a moving part moves with it
+        if above.name in MOVING:
+            groups[o.name] = MOVING[above.name]
+            break
+        above = above.parent
 
 # Drop the animation and the parenting, keeping every mesh where it is.
 for o in list(bpy.context.scene.objects):
@@ -130,13 +139,16 @@ for o in meshes:
     for piece in bpy.context.selected_objects:
         used = {piece.data.materials[p.material_index] for p in piece.data.polygons if piece.data.materials}
         material = next(iter(used), None)
-        name = material.name.replace("LR_", "").replace("AK_", "") if material else "Plain"
+        name = material.name.replace("LR_", "").replace("AK_", "").replace("PS_", "") if material else "Plain"
+        if PISTOL and not material:
+            bpy.data.objects.remove(piece)  # the magazine's track, a helper box with no look of its own
+            continue
         if name.startswith("Neon"):
             # River doesn't want the glowing cyan and magenta strips, dots and rims: they're left off.
             bpy.data.objects.remove(piece)
             continue
         key = f"{group}_{name}"
-        if name == "Lens":
+        if name == "Lens" and not AK:
             middle = sum((piece.matrix_world @ Vector(c) for c in piece.bound_box), Vector()) / 8
             key = "sight_glass_low" if middle.x < 0.05 else "Lens_Front"
         piles.setdefault(key, []).append(piece)

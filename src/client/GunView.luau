@@ -48,7 +48,7 @@ local lever: { pivot: Vector3, swing: number, slide: number }? = nil -- the gun 
 local leverParts: { { part: BasePart, rest: CFrame, slides: boolean } } = {}
 local BLOCK_SECTION = Vector2.new(0.3, 0.4)
 local BARREL_RISE = 0.26 -- how far above the model's middle the barrel sits, as a share of its height
-local BARREL_RISES: { [string]: number } = { Longscope = 0.098, M57 = 0.29 } -- guns whose barrel sits somewhere else
+local BARREL_RISES: { [string]: number } = { Longscope = 0.098, M57 = 0.29, ["Energy Pistol"] = 0.38 } -- guns whose barrel sits somewhere else
 -- Where a gun's model sits from the spot the hold and the clips turn it about: the model's ViewShift attribute, in
 -- its own studs. Without one, that spot is the middle of the model. The M57 is River's AK now, held by clips made
 -- for the old model, so its ViewShift puts its trigger where the old one's was.
