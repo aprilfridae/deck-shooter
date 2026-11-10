@@ -24,7 +24,14 @@ local COINS = 16
 local COIN_RADIUS = 0.28
 local COIN_THICK = 0.08
 local COIN_SIDES = 12 -- straight edges round each rim
-local COIN_LINE = 1.5 -- pixels
+local COIN_GRID = 2 -- grid lines each side of the middle, each way across a face
+local COIN_PROUD = 0.006 -- how far the lines stand off the faces
+-- The glow first, then the bright line on it: a lit green wireframe on black.
+local COIN_PASSES = {
+	{ color = Palette.SignalAcid, thickness = 6, transparency = 0.78 },
+	{ color = Palette.SignalAcid, thickness = 3, transparency = 0.45 },
+	{ color = Palette.SignalAcid:Lerp(Color3.new(1, 1, 1), 0.45), thickness = 1.5, transparency = 0 },
+}
 local COIN_COLOR = Palette.SignalAcid
 local COIN_UP = { 26, 44 }
 local COIN_OUT = { 10, 24 }
@@ -335,26 +342,26 @@ end)
 -- One coin: nothing but its edges, drawn as lines in Signal Acid. Two rims joined across the edge, and a diamond
 -- on each face.
 local function coinLines(wire: WireframeHandleAdornment)
+	-- Just proud of the coin's faces, so its black body doesn't cut into them.
+	local faces = { -COIN_THICK / 2 - COIN_PROUD, COIN_THICK / 2 + COIN_PROUD }
 	local rims = { {}, {} }
 	for side = 1, COIN_SIDES do
 		local turn = side / COIN_SIDES * 2 * math.pi
 		local y, z = math.cos(turn) * COIN_RADIUS, math.sin(turn) * COIN_RADIUS
-		rims[1][side] = Vector3.new(-COIN_THICK / 2, y, z)
-		rims[2][side] = Vector3.new(COIN_THICK / 2, y, z)
-		if side % 3 == 0 then
-			wire:AddLine(rims[1][side], rims[2][side])
-		end
+		rims[1][side] = Vector3.new(faces[1], y, z)
+		rims[2][side] = Vector3.new(faces[2], y, z)
+		wire:AddLine(rims[1][side], rims[2][side]) -- across the edge, at every corner of the rim
 	end
 	for face, rim in rims do
 		wire:AddPath(rim, true)
-		local x = rim[1].X
-		local mark = COIN_RADIUS * 0.5
-		wire:AddPath({
-			Vector3.new(x, mark, 0),
-			Vector3.new(x, 0, mark),
-			Vector3.new(x, -mark, 0),
-			Vector3.new(x, 0, -mark),
-		}, true)
+		-- A grid of straight lines across the face, like a wireframe mesh, each cut off where it meets the rim.
+		local x = faces[face]
+		for line = -COIN_GRID, COIN_GRID do
+			local at = line / (COIN_GRID + 1) * COIN_RADIUS
+			local reach = math.sqrt(COIN_RADIUS * COIN_RADIUS - at * at)
+			wire:AddLine(Vector3.new(x, at, -reach), Vector3.new(x, at, reach))
+			wire:AddLine(Vector3.new(x, -reach, at), Vector3.new(x, reach, at))
+		end
 	end
 end
 
@@ -369,17 +376,22 @@ local function burstCoins(position: Vector3, killer: Player?)
 		part.Name = "Coin"
 		part.Shape = Enum.PartType.Cylinder -- lies along X, so this is a flat coin: what it lands and rolls on
 		part.Size = Vector3.new(COIN_THICK, COIN_RADIUS * 2, COIN_RADIUS * 2)
-		part.Transparency = 1 -- only its wireframe shows
+		part.Color = Color3.new(0, 0, 0) -- black between the lines, like the dark of a wireframe render
+		part.Material = Enum.Material.SmoothPlastic
 		part.CollisionGroup = Collision.corpse
 		part.CanQuery = false
 		part.CanTouch = false
 		part.CastShadow = false
-		local wire = Instance.new("WireframeHandleAdornment")
-		wire.Color3 = COIN_COLOR
-		wire.Thickness = COIN_LINE
-		wire.Adornee = part
-		coinLines(wire)
-		wire.Parent = part
+		-- The lines are drawn twice: a wide, faint pass for their glow, and a thin bright one on top.
+		for _, pass in COIN_PASSES do
+			local wire = Instance.new("WireframeHandleAdornment")
+			wire.Color3 = pass.color
+			wire.Thickness = pass.thickness
+			wire.Transparency = pass.transparency
+			wire.Adornee = part
+			coinLines(wire)
+			wire.Parent = part
+		end
 		-- Motion blur: a streak the width of the coin trails where it has just been.
 		local top, bottom = Instance.new("Attachment"), Instance.new("Attachment")
 		top.Position, bottom.Position = Vector3.new(0, COIN_RADIUS, 0), Vector3.new(0, -COIN_RADIUS, 0)
