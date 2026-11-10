@@ -325,6 +325,8 @@ local LEFT_OPEN = shape("Left", { 0.3, 0.6, 0.7 }, { 0.3, 0.8, 0.5 }, 0.12, { 8,
 local LEFT_HOLD = shape("Left", { 1, 0.3, 0.1 }, { 0.3, 0.8, -0.5 }, 0.04, { 5, 40, 70 }, { 5, 62, 45 }, { 5, 80, 25 })
 local LEFT_LIFT = shape("Left", { 1, 0.2, 0.3 }, { 0.9, 0.4, 0.2 }, 0.04, { 5, 80, 10 }) -- thumb up to let the other half land
 local LEFT_HALVED = shape("Left", { 0.9, 0.5, 0.1 }, { 0.15, 0.85, -0.5 }, 0.04, { 5, 80, 40 }) -- on half a deck
+-- Its fingers drop off the deck's edge so the top half can slide out over them, and its thumb pushes it.
+local LEFT_RELEASE = shape("Left", { 1, 0.4, -0.2 }, { 0.2, 0.8, -0.8 }, 0.06, { 5, 20, 10 })
 local LEFT_PUSH = shape("Left", { 1, 0.4, -0.2 }, { 0.2, 0.8, -0.8 }, 0.04, { 5, 70, 15 }) -- its thumb slides the top half off
 
 local RIGHT_BOWED = shape("Right", { 0.9, 0.3, 0 }, { 0.5, 0.2, -0.8 }, 0.04, { 10, 52, 22 }) -- the deck squeezed against the fingers
@@ -368,9 +370,10 @@ local LEFT_FINGERS: { FingerKey } = {
 	{ at = 0, shape = LEFT_OPEN },
 	{ at = 0.9, shape = LEFT_OPEN },
 	{ at = 1.25, shape = LEFT_HOLD },
-	{ at = SLIDE_AT, shape = LEFT_HOLD },
-	{ at = CUT_AT, shape = LEFT_PUSH },
-	{ at = 2.6, shape = LEFT_HALVED },
+	{ at = SLIDE_AT - 0.25, shape = LEFT_HOLD },
+	{ at = SLIDE_AT - 0.05, shape = LEFT_RELEASE },
+	{ at = 2.45, shape = LEFT_RELEASE }, -- the right hand has lifted its half clear
+	{ at = 2.7, shape = LEFT_HALVED },
 	{ at = 4.3, shape = LEFT_HALVED },
 	{ at = 4.5, shape = LEFT_LIFT },
 	{ at = 4.75, shape = LEFT_LIFT },
