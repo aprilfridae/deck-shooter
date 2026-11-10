@@ -23,6 +23,13 @@ for name in SoldierArmsData.frames do
 end
 
 local rig: any = nil
+
+-- Motion blur for the hands with the cards: faint copies of the arms trail back along the way they came.
+local BLUR_FADES = { 0.6, 0.82 } -- how see-through each copy is, nearest the arms first
+local BLUR_SHUTTER = 0.03 -- seconds of movement the arms are smeared over
+local BLUR_MIN_MOVE = 0.012 -- studs a part must be from the real one for its copy to show
+local blurRigs: { any } = {}
+local blurHistory: { { at: number, parts: { [string]: CFrame } } } = {} -- where the arms were lately, oldest first
 local jitterStep = -1
 
 -- The part a mesh belongs to, from a name like RightIndex1_seg.001_metal.
@@ -166,6 +173,48 @@ function ViewArms.jitter(step: number, strength: number)
 	for name, degrees in jitterDegrees do
 		seed += 1
 		rig.jitter[name] = ViewArms.shaken(step, seed, 0, math.rad(degrees) * strength)
+	end
+end
+
+-- Trails the blur copies behind the arms as they are now. Call it every frame the blur is wanted, after place.
+function ViewArms.blur(camera: Camera, view: CFrame?)
+	if not rig or not rig.parts then
+		return
+	end
+	local now = os.clock()
+	local was = blurHistory[1]
+	if was and now - was.at < 0.2 then
+		local back = math.min(BLUR_SHUTTER / (now - was.at), 1)
+		for copy, fade in BLUR_FADES do
+			local ghost = blurRigs[copy] or makeRig()
+			if not ghost then
+				break
+			end
+			blurRigs[copy] = ghost
+			local parts = {}
+			for group, frame in rig.parts do
+				local old = was.parts[group]
+				parts[group] = if old then frame:Lerp(old, back * copy / #BLUR_FADES) else frame
+			end
+			ghost.parts = parts
+			for index, mesh in ghost.meshes do
+				local group = ghost.groups[index]
+				local moved = (parts[group].Position - rig.parts[group].Position).Magnitude
+				mesh.Transparency = if moved < BLUR_MIN_MOVE then 1 else fade
+			end
+			placeRig(ghost, camera, view)
+		end
+	end
+	table.insert(blurHistory, { at = now, parts = table.clone(rig.parts) })
+	while blurHistory[2] and now - blurHistory[2].at >= BLUR_SHUTTER do
+		table.remove(blurHistory, 1)
+	end
+end
+
+function ViewArms.clearBlur()
+	table.clear(blurHistory)
+	for _, ghost in blurRigs do
+		ghost.model.Parent = nil
 	end
 end
 

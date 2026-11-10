@@ -967,6 +967,7 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 			equipAt = now
 			shownFrame, shownBase, shownSnap = nil, nil, nil
 			CardView.hide()
+			ViewArms.clearBlur()
 			return false
 		end
 	end
@@ -1005,6 +1006,7 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 	ViewArms.holdCards(pose.right, pose.left, pose.fingers)
 	CardView.show(camera, held, pose.cards, crush, CardFlourish.top(turns))
 	ViewArms.place(camera, held)
+	ViewArms.blur(camera, held)
 	return true
 end
 
@@ -1213,6 +1215,7 @@ function GunView.hide()
 		view.Parent = nil
 	end
 	CardView.hide()
+	ViewArms.clearBlur()
 	ViewArms.hide()
 	showScope(0)
 	if flashModel then

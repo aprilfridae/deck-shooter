@@ -23,7 +23,7 @@ local JOINED_AT = 4.75 -- and the halves are one deck again
 local FLIP_AT = 4.95 -- the left thumb flips the top card off
 local CAUGHT_AT = 5.45 -- and the right hand has it
 local LENGTH = 5.9
-local SPEED = 1.35 -- how much faster than its keys the whole flourish plays
+local SPEED = 1.6 -- how much faster than its keys the whole flourish plays
 local LANDED_AT = SPRING_TO + FLIGHT -- the last card is in the left hand
 local CRUSH = 0.4 -- seconds the right hand takes to crush its card, once it's used
 local BURST_AT = 0.16 -- into the crush, the card is gone
@@ -33,6 +33,8 @@ local FAN_TOP = -60 -- degrees the top card leans
 local FAN_BOTTOM = 125 -- and the bottom card
 local FAN_GAP = 0.0012 -- extra space between fanned cards, so they don't flicker
 local FAN_AT = 3.55 -- the fan snaps open
+local FAN_RIPPLE = 0.09 -- seconds the fan's bottom card opens behind its top one
+local FLIP_LEAD = 0.1 -- the flip's rounded corner starts this long before FLIP_AT, so the card leaves the deck smoothly
 
 -- Weight. Whatever lands in a hand knocks it down and it rings back, and the cards in it go with it.
 local SINK = Vector3.new(0, -1, 0.3) -- the way a hand gives, relative to the camera
@@ -92,7 +94,7 @@ local LEFT_HALF: { Key } = {
 	again(4.65, FINAL),
 	again(LENGTH, FINAL),
 }
--- The top half from when it slides off: the right hand takes it, spins it once as it turns face up, fans it, then
+-- The top half from when it slides off: the right hand takes it, spins it twice as it turns face up, fans it, then
 -- drops it back on.
 local FACE_DOWN = CFrame.Angles(0, 0, math.pi)
 
@@ -105,13 +107,13 @@ local RIGHT_HALF: { Key } = {
 	again(SLIDE_AT, TIPPED, 0, HALF_HEIGHT),
 	again(CUT_AT, TIPPED, 0.14, HALF_HEIGHT, 0.24),
 	key(2.5, 0.12, 0.16, -0.02, -5, 0, -15),
-	again(3.0, SPUN, 0, 0, 0, 1),
-	again(3.2, SPUN, 0, 0, 0, 1),
-	again(3.65, FANNED, 0, 0, 0, 1),
-	again(4.1, FANNED, 0, 0, 0, 1),
-	key(4.45, -0.04, 0.34, 0.01, 360 + FINAL.yaw),
-	again(JOINED_AT, FINAL, 0, HALF_HEIGHT, 0, 1),
-	again(LENGTH, FINAL, 0, HALF_HEIGHT, 0, 1),
+	again(3.0, SPUN, 0, 0, 0, 2), -- two full turns
+	again(3.2, SPUN, 0, 0, 0, 2),
+	again(3.65, FANNED, 0, 0, 0, 2),
+	again(4.1, FANNED, 0, 0, 0, 2),
+	key(4.45, -0.04, 0.34, 0.01, 720 + FINAL.yaw),
+	again(JOINED_AT, FINAL, 0, HALF_HEIGHT, 0, 2),
+	again(LENGTH, FINAL, 0, HALF_HEIGHT, 0, 2),
 }
 -- The top card's flip across to the right hand, turning face up on the way.
 local TOP = over(again(0, FINAL, 0, (COUNT - 1) * THICKNESS))
@@ -129,9 +131,10 @@ local FAN: { Key } = {
 	key(4.4, 0, 0, 0, 0),
 }
 
--- How far along a move is. It only half slows into each key, so one move runs on into the next.
+-- How far along a move is. A practised hand: it's off at once and settles softly, without quite stopping, so one
+-- move runs on into the next.
 local function eased(share: number): number
-	return (share + smooth(share)) / 2
+	return 0.25 * share + 0.35 * smooth(share) + 0.4 * (1 - (1 - share) ^ 2)
 end
 
 -- Moments around a time, and how much each counts. Blending them rounds off the corner at every key.
@@ -207,7 +210,7 @@ local RIGHT_HAND: { HandKey } = {
 	held(3.2, SPUN, PINCH_GRIP),
 	held(3.65, FANNED, PINCH_GRIP),
 	held(4.1, FANNED, PINCH_GRIP),
-	held(4.45, again(0, RIGHT_HALF[8], 0, 0, 0, -1), PINCH_GRIP),
+	held(4.45, again(0, RIGHT_HALF[8], 0, 0, 0, -2), PINCH_GRIP),
 	held(JOINED_AT, WAITING, PINCH_GRIP),
 	held(5.0, WAITING, PINCH_GRIP),
 	held(5.35, HELD, CARD_GRIP),
@@ -249,12 +252,15 @@ end
 -- A card during the spring. They leave the face of the right hand's deck one by one and land from the bottom up.
 local function sprung(index: number, at: number, pile: CFrame): CFrame
 	local up = height(index)
-	local leaves = SPRING_FROM + (SPRING_TO - SPRING_FROM) * up / (COUNT - 1)
+	-- No two cards fly quite alike: each leaves a hair early or late, climbs its own height and flutters on the way.
+	local odd, other = math.sin(index * 12.9898), math.sin(index * 78.233)
+	local leaves = SPRING_FROM + (SPRING_TO - SPRING_FROM) * up / (COUNT - 1) + 0.01 * odd
 	local share = math.clamp((at - leaves) / FLIGHT, 0, 1)
 	local from = RIGHT_DECK_FRAME * CFrame.new(0, (COUNT - 1 - up) * THICKNESS, 0)
 	local to = pile * CFrame.new(0, up * THICKNESS, 0)
-	local flying = from:Lerp(to, smooth(share))
-	return flying + RISE * math.sin(share * math.pi)
+	local arc = math.sin(share * math.pi)
+	local flying = from:Lerp(to, smooth(share)) * CFrame.Angles(math.rad(7) * other * arc, math.rad(11) * odd * arc, 0)
+	return flying + RISE * (arc * (1 + 0.25 * other))
 end
 
 -- A card of the right hand's half, turned about the thumb by how far the fan is open.
@@ -429,8 +435,11 @@ function CardFlourish.at(elapsed: number): Pose
 		local rightHalf = if at < SLIDE_AT
 			then leftHalf * CFrame.new(0, HALF_HEIGHT, 0)
 			else frameOf(flowing(RIGHT_HALF, at)) + rightGive + dropped
-		local open = flowing(FAN, at).x + 0.09 * knock(at - FAN_AT + 0.03) -- it overshoots and springs back
+		local fanning = at > 3.1 and at < 4.6
 		for index = 1, HALF do
+			-- The fan ripples open from its top card, and each card overshoots and springs back.
+			local when = at - FAN_RIPPLE * (HALF - index) / (HALF - 1)
+			local open = if fanning then flowing(FAN, when).x + 0.09 * knock(when - FAN_AT + 0.03) else 0
 			cards[index] = fanned(rightHalf, index, open)
 			cards[HALF + index] = leftHalf * CFrame.new(0, (index - 1) * THICKNESS, 0)
 		end
@@ -439,7 +448,7 @@ function CardFlourish.at(elapsed: number): Pose
 	for index, frame in cards do
 		cards[index] = frame * FACE_DOWN
 	end
-	if at > FLIP_AT then
+	if at > FLIP_AT - FLIP_LEAD then
 		cards[CHOSEN] = frameOf(flowing(FLIP, at)) + rightGive
 	end
 	return {
@@ -478,7 +487,7 @@ end
 function CardFlourish.turn(turns: number, since: number): Pose
 	local done = final()
 	local over = turns % HALF
-	local at = FLIP_AT + math.clamp(since, 0, 10) * SPEED
+	local at = FLIP_AT - FLIP_LEAD + math.clamp(since, 0, 10) * SPEED
 	local leftGive = SINK * (-0.012 * knock(at - FLIP_AT))
 	local rightGive = CATCH * (0.035 * knock(at - CAUGHT_AT + 0.04))
 	local cards = table.create(COUNT)

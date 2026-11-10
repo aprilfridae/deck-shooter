@@ -29,6 +29,19 @@ local topShown: number? = nil -- the card showing the held card's art
 local slotShown: number? = nil -- and the slot it shows
 local shrunk: number? = nil -- the card the crush has shrunk
 
+-- Motion blur: each card has a few faint copies of itself, and while it moves fast they trail back along the way it
+-- came.
+local GHOSTS = 3 -- copies of each card
+local FADES = { 0.5, 0.72, 0.88 } -- how see-through each is, nearest the card first
+local SHUTTER = 0.03 -- seconds of movement a card is smeared over
+local BLUR_FROM = 0.5 -- studs a second a card has to move to blur
+local STACKED = 0.02 -- cards this close move as one stack, and only one of them blurs
+local AWAY = CFrame.new(0, 1e5, 0) -- where the copies wait
+local CORNER_AT = CardFlourish.CARD_SIZE / 2 -- a card's corner, which moves when it only spins
+local ghosts: { BasePart } = {}
+local ghostFaces: { Decal } = {}
+local history: { { at: number, cards: { CFrame } } } = {} -- where the cards were lately, oldest first
+
 local CORNER = CardFlourish.CARD_SIZE.X * 10 / 150 -- the card art's corners (tools/make-card-art.py)
 local rounded: BasePart? = nil -- a card cut with those corners, once it's made
 
@@ -68,6 +81,8 @@ local function cut()
 		holder, shown = nil, false
 		table.clear(parts)
 		table.clear(faces)
+		table.clear(ghosts)
+		table.clear(ghostFaces)
 	end
 end
 
@@ -144,8 +159,64 @@ local function make(): Folder
 		local part, face = makeCard()
 		part.Parent = folder
 		parts[index], faces[index] = part, face
+		for ghost = 1, GHOSTS do
+			local copy, copyFace = makeCard()
+			copy.Name = "Blur"
+			copy.Transparency = FADES[ghost]
+			for _, image in copy:GetChildren() do
+				(image :: Decal).Transparency = FADES[ghost]
+			end
+			copy.CFrame = AWAY
+			copy.Parent = folder
+			table.insert(ghosts, copy)
+			table.insert(ghostFaces, copyFace)
+		end
 	end
 	return folder
+end
+
+-- Sets the image on a card and its blur.
+local function setFace(index: number, texture: string)
+	faces[index].Texture = texture
+	for ghost = 1, GHOSTS do
+		ghostFaces[(index - 1) * GHOSTS + ghost].Texture = texture
+	end
+end
+
+-- Where every card's blur copies go: trailing the cards that are moving fast, and away for the rest.
+local function blur(view: CFrame, cards: { CFrame }): { CFrame }
+	local now = os.clock()
+	local trail = table.create(#ghosts, AWAY)
+	local was = history[1]
+	if was and now - was.at < 0.2 then
+		local span = now - was.at
+		local back = math.min(SHUTTER / span, 1)
+		local blurred: { Vector3 } = {}
+		for index = #cards, 1, -1 do -- top cards first, so a stack's blur shows the card on top
+			local frame, old = cards[index], was.cards[index]
+			local moved = math.max((frame.Position - old.Position).Magnitude, (frame * CORNER_AT - old * CORNER_AT).Magnitude)
+			if moved >= BLUR_FROM * span and index ~= shrunk then
+				local alone = true
+				for _, other in blurred do
+					if (other - frame.Position).Magnitude < STACKED then
+						alone = false
+						break
+					end
+				end
+				if alone then
+					table.insert(blurred, frame.Position)
+					for ghost = 1, GHOSTS do
+						trail[(index - 1) * GHOSTS + ghost] = view * frame:Lerp(old, back * ghost / GHOSTS)
+					end
+				end
+			end
+		end
+	end
+	table.insert(history, { at = now, cards = table.clone(cards) })
+	while history[2] and now - history[2].at >= SHUTTER do
+		table.remove(history, 1)
+	end
+	return trail
 end
 
 -- Deals the player's deck through the cards over and over, with the card in hand on top of the right hand's half.
@@ -160,8 +231,8 @@ local function dress()
 		end
 	end
 	local chosen = CardInHand.slot or 1
-	for index, face in faces do
-		face.Texture = if #art > 0 then art[(index - CardFlourish.HALF + chosen - 1) % #art + 1] else ""
+	for index in faces do
+		setFace(index, if #art > 0 then art[(index - CardFlourish.HALF + chosen - 1) % #art + 1] else "")
 	end
 end
 
@@ -185,12 +256,13 @@ function CardView.show(camera: Camera, view: CFrame, cards: { CFrame }, crush: C
 	holder = holder or make()
 	if not shown then
 		shown = true
+		table.clear(history)
 		dress()
 	end
 	local slot = CardInHand.slot
 	if slot and (top ~= topShown or slot ~= slotShown) then
 		topShown, slotShown = top, slot
-		faces[top].Texture = art[slot] or ""
+		setFace(top, art[slot] or "")
 	end
 	if crush then
 		local left = math.max(1 - crush.crushed, 0.01)
@@ -213,6 +285,7 @@ function CardView.show(camera: Camera, view: CFrame, cards: { CFrame }, crush: C
 		placed[index] = view * frame
 	end
 	workspace:BulkMoveTo(parts, placed, Enum.BulkMoveMode.FireCFrameChanged)
+	workspace:BulkMoveTo(ghosts, blur(view, cards), Enum.BulkMoveMode.FireCFrameChanged)
 	local folder = holder :: Folder
 	folder.Parent = camera
 end
