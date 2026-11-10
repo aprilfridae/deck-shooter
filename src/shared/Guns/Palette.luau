@@ -9,7 +9,9 @@ local Palette = {
 	-- A motion blur copy's colour, like the Outpost's trail: white (Bone) right behind the thing, running to blue
 	-- (Deep Navy) at the far end. near is 1 for the copy nearest the thing and 0 for the furthest.
 	blur = function(near: number): Color3
-		return Color3.fromRGB(41, 50, 79):Lerp(Color3.fromRGB(232, 230, 223), math.clamp(near, 0, 1))
+		-- It turns blue close in: only the first copy or two are white, and it's most of the way to blue by a third
+		-- of the way back.
+		return Color3.fromRGB(41, 50, 79):Lerp(Color3.fromRGB(232, 230, 223), math.clamp(near, 0, 1) ^ 3)
 	end,
 	ZeroDayBack = Color3.fromRGB(14, 16, 24), -- #0E1018 Zero-Day cards only
 }
