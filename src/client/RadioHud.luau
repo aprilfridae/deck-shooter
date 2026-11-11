@@ -1,7 +1,7 @@
 -- The radio's strip on the HUD: a row of bars that move with the music, and the track's title and artist beside
 -- them, in the top-left corner. River picked this layout from four mock-ups (docs/specs/radio.md).
 -- When the track changes, the old title and artist slide left off the screen and the new ones slide in from
--- the left edge, passing behind the bars. The strip is bright for a change and then dims.
+-- behind the bars: the text is cropped at the bars' edge, so it never crosses them. The strip is bright for a change and then dims.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -18,6 +18,7 @@ local BAR_WIDTH, BAR_GAP = 5, 3
 local BAR_HEIGHT = 40
 local BAR_FLOOR = 3 -- a bar is never shorter than this
 local TEXT_GAP = 14 -- from the bars to the text
+local TEXT_INSET = 9 -- how far inside its window the text rests, so the window's edge sits just off the bars
 local TITLE_SIZE, ARTIST_SIZE = 22, 17
 local TITLE_LINE, ARTIST_LINE = 18, 39 -- baselines, down from the strip's top
 local TRACKING = 0.08 -- of the text's size
@@ -71,13 +72,21 @@ function RadioHud.new()
 	self.group = group
 
 	local barsWide = BARS * BAR_WIDTH + (BARS - 1) * BAR_GAP
-	self.textHome = (LEFT + barsWide + TEXT_GAP) * unit
+	-- The words live in a window that starts just past the bars and crops whatever leaves it. Sliding left,
+	-- they vanish at the bars' edge as if going behind them, and new words come out from that same edge.
+	-- (River's ask: the visualizer is "off the screen" for the text.)
+	local window = Instance.new("Frame")
+	window.BackgroundTransparency = 1
+	window.ClipsDescendants = true
+	window.Position = UDim2.fromOffset((LEFT + barsWide + TEXT_GAP - TEXT_INSET) * unit, 0)
+	window.Size = UDim2.fromOffset(760 * unit, (BAR_HEIGHT + 8) * unit)
+	window.Parent = group
+	self.textHome = TEXT_INSET * unit -- where the words rest, inside the window
 	local text = Instance.new("Frame")
 	text.BackgroundTransparency = 1
 	text.Position = UDim2.fromOffset(self.textHome, 0)
 	text.Size = UDim2.fromOffset(700 * unit, (BAR_HEIGHT + 8) * unit)
-	text.ZIndex = 1
-	text.Parent = group
+	text.Parent = window
 	self.text = text
 	self.title = TypeLabel.new(text, {
 		style = "LabelBold",
@@ -130,7 +139,7 @@ function RadioHud:show(title: string, artist: string)
 	self.changes += 1
 	local change = self.changes
 	local text = self.text
-	local off = UDim2.fromOffset(-(math.max(self.title:width(), self.artist:width()) + self.textHome + 40 * self.unit), 0)
+	local off = UDim2.fromOffset(-(math.max(self.title:width(), self.artist:width()) + 12 * self.unit), 0)
 	local out = TweenService:Create(text, TweenInfo.new(SLIDE_OUT, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = off })
 	out:Play()
 	task.delay(SLIDE_OUT, function()
@@ -140,7 +149,7 @@ function RadioHud:show(title: string, artist: string)
 		self.title:set(title)
 		self.artist:set(artist)
 		local wide = math.max(self.title:width(), self.artist:width())
-		text.Position = UDim2.fromOffset(-(wide + 40 * self.unit), 0)
+		text.Position = UDim2.fromOffset(-(wide + 12 * self.unit), 0)
 		TweenService:Create(text, TweenInfo.new(SLIDE_IN, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
 			Position = UDim2.fromOffset(self.textHome, 0),
 		}):Play()
