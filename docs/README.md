@@ -20,6 +20,7 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 | [`specs/outpost-ui.md`](specs/outpost-ui.md) | The Outpost menus: Play, Packs, Loadout, Profile, comments and Settings | Built |
 | [`specs/matches.md`](specs/matches.md) | Elimination and Tower modes, rounds, arenas | Planned, not built |
 | [`specs/relay.md`](specs/relay.md) | Relay, the 1v1 map: two fog towers, a bridge, the undercity | Built as a free-play zone, not checked in Play |
+| [`specs/hex.md`](specs/hex.md) | Hex, the box 1v1 map: a ring of six walls with shooting holes, spawn cover and corner ramps | Grey box, not checked in Play |
 | [`sound-list.md`](sound-list.md) | Sounds in the game and sounds still needed | Kept current |
 
 Other places with rules:
@@ -70,7 +71,7 @@ The specs explain the design. The code holds the actual values, so check it befo
 | DPR | Deck Power Rating, from the deck's tiers and gun levels only |
 | Credits | The currency cards earn while you play |
 | Soldier | The player body (attribute `SoldierRig`), which replaced the old low poly body and arms |
-| Zone | Where a player is: `Outpost` (safe, no combat), `TestRoom` or `Relay` (the 1v1 map) |
+| Zone | Where a player is: `Outpost` (safe, no combat), `TestRoom`, `Relay` or `Hex` (the 1v1 maps) |
 | Test room | The grey room for trying guns and cards, with a grey dummy and a soldier dummy. Reached from the Outpost. |
 | Palette | Deep Navy, Signal Acid, Data Cyan, Field Green, Hazard Red and Bone. Red is for threats and purchases only. |
 | Group | Fridae Studios (group 237720778), which owns the experience and every asset |

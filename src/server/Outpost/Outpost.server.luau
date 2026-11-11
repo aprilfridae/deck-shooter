@@ -10,10 +10,12 @@ local StarterPlayer = game:GetService("StarterPlayer")
 local Zones = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Zones"))
 local Map = require(script.Parent.Map)
 local Relay = require(script.Parent.Relay)
+local Hex = require(script.Parent.Hex)
 local MoveGrace = require(script.Parent.Parent.MoveGrace)
 
 local ORIGIN = CFrame.new(4000, 0, 0) -- far from the test room, which sits at the world origin
 local RELAY_ORIGIN = CFrame.new(-4000, 300, 0) -- the Relay map's centre, high enough to fall from
+local HEX_ORIGIN = CFrame.new(0, 100, -4000) -- the Hex map's centre
 local TRAVEL_GRACE_SECONDS = 1
 local TRAVEL_COOLDOWN_SECONDS = 1
 local STREAM_TIMEOUT_SECONDS = 2
@@ -36,19 +38,23 @@ local testRoomTerminal = Map.buildReturnTerminal(testRoom, testSpawn)
 local relay = Relay.build(RELAY_ORIGIN)
 local relayTerminal = Relay.buildTerminal(testRoom, testSpawn.Position + Vector3.new(-9, -testSpawn.Size.Y / 2, 0), Vector3.xAxis)
 
+local hex = Hex.build(HEX_ORIGIN)
+local hexTerminal = Hex.buildTerminal(testRoom, testSpawn.Position + Vector3.new(9, -testSpawn.Size.Y / 2, 0), -Vector3.xAxis)
+
 local spawns: { [string]: SpawnLocation } = {
 	[Zones.Outpost] = outpost.spawn,
 	[Zones.TestRoom] = testSpawn,
 	[Zones.Relay] = relay.spawns[1],
 }
 local lastTravel: { [Player]: number } = {}
--- Which Relay tower each player there spawns in: 1 or 2.
+-- Which side of a 1v1 map (Relay or Hex) each player there spawns on: 1 or 2.
 local relaySide: { [Player]: number } = {}
+local hexSide: { [Player]: number } = {}
 
--- The tower with fewer players, so two players get one each.
-local function emptierRelaySide(): number
+-- The side with fewer players, so two players get one each.
+local function emptierSide(sides: { [Player]: number }): number
 	local counts = { 0, 0 }
-	for other, side in relaySide do
+	for other, side in sides do
 		if other.Parent == Players then
 			counts[side] += 1
 		end
@@ -59,6 +65,8 @@ end
 local function spawnFor(player: Player, zone: string): SpawnLocation
 	if zone == Zones.Relay then
 		return relay.spawns[relaySide[player] or 1]
+	elseif zone == Zones.Hex then
+		return hex.spawns[hexSide[player] or 1]
 	end
 	return spawns[zone]
 end
@@ -113,7 +121,12 @@ local function setZone(player: Player, zone: string)
 	if zone ~= Zones.Relay then
 		relaySide[player] = nil
 	elseif not relaySide[player] then
-		relaySide[player] = emptierRelaySide()
+		relaySide[player] = emptierSide(relaySide)
+	end
+	if zone ~= Zones.Hex then
+		hexSide[player] = nil
+	elseif not hexSide[player] then
+		hexSide[player] = emptierSide(hexSide)
 	end
 	player:SetAttribute("Zone", zone)
 	player.RespawnLocation = spawnFor(player, zone)
@@ -139,6 +152,14 @@ end)
 relayTerminal.Triggered:Connect(function(player)
 	travel(player, Zones.Relay)
 end)
+hexTerminal.Triggered:Connect(function(player)
+	travel(player, Zones.Hex)
+end)
+for _, prompt in hex.terminals do
+	prompt.Triggered:Connect(function(player)
+		travel(player, Zones.Outpost)
+	end)
+end
 for _, prompt in relay.terminals do
 	prompt.Triggered:Connect(function(player)
 		travel(player, Zones.Outpost)
@@ -186,6 +207,7 @@ Players.PlayerRemoving:Connect(function(player)
 	lastTravel[player] = nil
 	moving[player] = nil
 	relaySide[player] = nil
+	hexSide[player] = nil
 end)
 
 -- Getting out of the building somehow sends you back to the spawn.
