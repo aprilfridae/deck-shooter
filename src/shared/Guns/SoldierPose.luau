@@ -238,6 +238,24 @@ local function wrapThumb(aims: { Vector3 }, palm: CFrame, gun: CFrame, amount: n
 	end
 end
 
+-- One hand's palm and fingers, for a hand already in place: the third-person body's hand part, which sits where
+-- these arms' hand does. sideName is "Right" or "Left". fingers gives the digits a shape other than the gun grip
+-- (which way each of a digit's three joints points, in the palm's space).
+function SoldierPose.handParts(pose: any, sideName: string, hand: CFrame, fingers: Fingers?): { [string]: CFrame }
+	local side = if sideName == "Right" then pose.right else pose.left
+	local palm = hand * side.handOnPalm:Inverse()
+	local parts = { [side.name .. "Hand"] = hand }
+	for _, digit in side.digits do
+		local shape = fingers and fingers[digit.bone] or digit.grip
+		local aims = {}
+		for index, aim in shape do
+			aims[index] = palm:VectorToWorldSpace(aim)
+		end
+		poseDigit(digit.segments, hand, aims, parts)
+	end
+	return parts
+end
+
 -- Where a clip frame has each palm, relative to the camera, by side name.
 function SoldierPose.clipPalms(offset: CFrame, bones: any): { [string]: CFrame }
 	return { Right = offset * palmOf(bones, PREFIXES.Right), Left = offset * palmOf(bones, PREFIXES.Left) }

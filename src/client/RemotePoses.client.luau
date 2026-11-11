@@ -18,6 +18,7 @@ local ShotKick = require(Movement:WaitForChild("ShotKick"))
 local PistolArms = require(Movement:WaitForChild("PistolArms"))
 local GunAudio = require(script.Parent:WaitForChild("GunAudio"))
 local HeldGuns = require(script.Parent:WaitForChild("HeldGuns"))
+local BodyHands = require(script.Parent:WaitForChild("BodyHands"))
 
 local shotsRemote = ReplicatedStorage:WaitForChild("GunRemotes"):WaitForChild("Shots") :: RemoteEvent
 
@@ -200,6 +201,7 @@ local function onCharacter(character: Model)
 		table.clear(body.base)
 		if not body.soldier then
 			HeldGuns.remove(character)
+			BodyHands.remove(character)
 		end
 	end)
 	-- A body that's replaced is only taken out of the game here, not destroyed, so watch for it leaving too.
@@ -208,6 +210,7 @@ local function onCharacter(character: Model)
 		if bodies[character] == body then
 			bodies[character] = nil
 			HeldGuns.remove(character)
+			BodyHands.remove(character)
 		end
 	end
 	character.Destroying:Once(drop)
@@ -536,6 +539,7 @@ RunService.PreRender:Connect(function()
 					)
 			end
 			HeldGuns.show(character, body.gunName, body.poses, body.pose, visible)
+			BodyHands.show(character, visible)
 		end
 	end
 end)
