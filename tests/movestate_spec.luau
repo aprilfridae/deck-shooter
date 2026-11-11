@@ -252,7 +252,7 @@ describe("MoveState", function()
 			sprintThenSlide(s, 0)
 			expect(MoveState.jumpHeight(s)).toBe(MoveConfig.JumpHeight)
 			MoveState.step(s, on(airJump), 0.2)
-			expect(MoveState.jumpHeight(s)).toBe(6)
+			expect(MoveState.jumpHeight(s)).toBe(MoveConfig.JumpHeight)
 			expect(MoveState.speed(s, 0.2)).toBeCloseTo(slideAt(0.1) + MoveConfig.SlideJumpBoost)
 		end)
 
