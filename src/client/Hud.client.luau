@@ -361,7 +361,10 @@ RunService.RenderStepped:Connect(function(step)
 	shieldText:set(shield)
 	shieldText:setVisible(shield ~= "")
 	shieldText:setPosition(UDim2.new(0, MARGIN + healthText:width() + SHIELD_GAP, 1, BASELINE))
-	crosshair.Visible = player:GetAttribute("ScopeShown") ~= true -- the scope has its own reticle
+	-- The scope has its own reticle, and a dead player has nothing to aim (River, 2026-11-10).
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local alive = humanoid ~= nil and humanoid.Health > 0
+	crosshair.Visible = alive and player:GetAttribute("ScopeShown") ~= true
 	local gun = GunConfig.guns[player:GetAttribute("GunId")]
 	local reloading = gun ~= nil and player:GetAttribute("Reloading") == true
 	ammoText:setVisible(gun ~= nil)
