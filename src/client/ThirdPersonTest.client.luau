@@ -26,8 +26,10 @@ local function set(on: boolean)
 	player:SetAttribute(ATTRIBUTE, if on then true else nil)
 end
 
-UserInputService.InputBegan:Connect(function(input: InputObject, typing: boolean)
-	if typing then
+UserInputService.InputBegan:Connect(function(input: InputObject)
+	-- Not the "already handled" flag: Roblox's own camera uses O (and I) to zoom, so it marks O as handled and
+	-- the key never got here. Typing in a text box is the only thing that should block these.
+	if UserInputService:GetFocusedTextBox() then
 		return
 	end
 	if input.KeyCode == FLIP_KEY then
