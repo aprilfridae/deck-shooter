@@ -50,7 +50,7 @@ Damage falls off in a straight line between the two distances, then stays flat. 
 
 | Gun | Body damage | Headshot | RPM | Mag | Reload | Fire | Spread | Range |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| M57 | 24 | 2x | 600 | 30 | 2s | Auto | 0.2 | 100% to 90 studs, 70% by 180 |
+| M57 | 18 (24 until 2026-11-11) | 2x | 600 | 30 | 2s | Auto | 0.2 | 100% to 90 studs, 70% by 180 |
 | B33 | 24 | Kill | 540 | 30 | 0.985s | Auto | 0.4 | 100% to 90 studs, 70% by 180 |
 | SMG | 17 | 2x | 800 | 32 | 2.0s | Auto | 0.8 | 100% to 40 studs, 60% by 90 |
 | Longscope | Kill | Kill | 50 | 1 | 1.714s | Single | 0, hipfired or scoped | No falloff |
