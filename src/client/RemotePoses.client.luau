@@ -367,6 +367,14 @@ local function sampleStance(body: Body, now: number)
 	end
 	-- Reloading: the reload pose is a standing one, so in a slide or in the air only its arms are used and the
 	-- rest of the body stays as it was. (River: reloading in a slide stood the torso up.)
+	-- The pistol stands the way it reloads. Its reload plays over the Fire pose, which stands up straight, and its
+	-- own Stand pose doesn't, so the body shifted stance going into every reload and again coming out, however the
+	-- reload's ending was eased. River: "just make the base pose stand up straight how it is when your reloading".
+	-- The arms are the same in both (PistolArms), so only the stance changes.
+	if poses == BodyPoses["Energy Pistol"] and pick.name == "Stand" and poses.poses.Fire then
+		pick = { name = "Fire", mirrored = false }
+	end
+
 	-- A coded reload runs from when the reload starts to its own end, a little after the gun is loaded, unless
 	-- it is cut short.
 	if reloading and not body.wasReloading then
