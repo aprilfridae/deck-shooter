@@ -456,9 +456,7 @@ local function roof(g)
 			local at = CFrame.new(hole[1] + g:range(-hole[3], hole[3]) * 0.7, size.Y / 2 - 0.1, landZ + g:range(-hole[3], hole[3]) * 0.5) * CFrame.Angles(g:range(-0.2, 0.2), g:range(0, math.pi), g:range(-0.2, 0.2))
 			Kit.decor(g:solid("darkConcrete", size, at))
 		end
-		if hole[3] > 7 and math.abs(z) < HALF_WIDE * 0.75 then
-			g:shaft(v(hole[1], WALL_HEIGHT + middle * math.sin(angle) + 30, z), v(hole[1], 0.2, z), hole[3] * 0.45, HEAVEN)
-		end
+		-- No light shafts through the breaks: only the crown hole has the heaven light (River).
 	end
 	-- A collar round the hole, hanging a little below the vault, so its edge reads as a clean ring.
 	local crown = WALL_HEIGHT + inner
