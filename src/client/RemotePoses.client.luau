@@ -95,7 +95,6 @@ local CARD_OUT = CFrame.new(0, 0, -0.45) -- and how far out from there, along it
 local CARD_LEAN = 0.9 -- the share of the torso's forward lean it takes (none of its twist or tip)
 local CARD_LOOK = 0.5 -- the share of the look's pitch it tips with
 local CARD_BLEND = 0.12 -- seconds the arms take to pass to the cards
-local CARD_HEAD_DOWN = math.rad(6) -- the head drops a little to watch the cards (14 at first, which added to the hunch)
 -- With the cards out the torso is stood up: this share of whatever forward lean the pose has is taken back out at
 -- the waist. The poses lean the torso in to shoulder a gun, and over a deck held out in front that read as
 -- hunched, more leaned in than with the AK or the pistol (River, 2026-11-11).
@@ -731,14 +730,17 @@ local function applyCards(body: Body)
 		end
 	end
 	local blend = math.clamp(shown.since / CARD_BLEND, 0, 1)
-	if joints.Neck then
-		joints.Neck.Transform = CFrame.Angles(-CARD_HEAD_DOWN * blend, 0, 0) * joints.Neck.Transform
-	end
 	local torso = through(through(body.root.CFrame, joints.Root), joints.Waist)
 	local facing = body.root.CFrame.Rotation
 	local lean = (facing:Inverse() * torso.Rotation):ToEulerAnglesYXZ() -- the torso's pitch from upright; forward is negative
 	if lean < 0 then
-		joints.Waist.Transform = CFrame.Angles(-lean * CARD_UPRIGHT * blend, 0, 0) * joints.Waist.Transform
+		local back = -lean * CARD_UPRIGHT * blend
+		joints.Waist.Transform = CFrame.Angles(back, 0, 0) * joints.Waist.Transform
+		-- The head stays facing exactly where the pose has it with a gun. The pose tips the head up to make up
+		-- for the torso's lean, so standing the torso up alone left it looking at the sky (River).
+		if joints.Neck then
+			joints.Neck.Transform = CFrame.Angles(-back, 0, 0) * joints.Neck.Transform
+		end
 		torso = through(through(body.root.CFrame, joints.Root), joints.Waist)
 		lean = (facing:Inverse() * torso.Rotation):ToEulerAnglesYXZ()
 	end
