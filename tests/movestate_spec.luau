@@ -4,7 +4,10 @@ local MoveConfig = require("../src/shared/Movement/MoveConfig")
 
 -- A slide's speed this long after it starts, while it is still slowing to sprint speed.
 local function slideAt(seconds: number): number
-	return MoveConfig.SlideStartSpeed - (MoveConfig.SlideStartSpeed - MoveConfig.SprintSpeed) * seconds / MoveConfig.SlideFadeTime
+	local span = MoveConfig.SlideStartSpeed - MoveConfig.SprintSpeed
+	local fade = MoveConfig.SlideStartSpeed - span * seconds / MoveConfig.SlideFadeTime
+	local ramp = MoveConfig.SprintSpeed + span * math.min(seconds / MoveConfig.SlideRampTime, 1)
+	return math.min(fade, ramp)
 end
 
 local describe, it, expect = harness.describe, harness.it, harness.expect
@@ -50,7 +53,8 @@ describe("MoveState", function()
 		local s = MoveState.new()
 		sprintThenSlide(s, 0)
 		expect(s.mode).toBe("Slide")
-		expect(MoveState.speed(s, 0.1)).toBeCloseTo(MoveConfig.SlideStartSpeed)
+		expect(MoveState.speed(s, 0.1)).toBeCloseTo(MoveConfig.SprintSpeed) -- the boost builds from here
+		expect(MoveState.speed(s, 0.1 + MoveConfig.SlideRampTime)).toBeCloseTo(slideAt(MoveConfig.SlideRampTime))
 		expect(MoveState.speed(s, 0.55)).toBeCloseTo((MoveConfig.SlideStartSpeed + MoveConfig.SprintSpeed) / 2)
 	end)
 
@@ -109,7 +113,8 @@ describe("MoveState", function()
 		MoveState.step(s, on({ moving = true, sprint = true, crouch = true, jump = true, grounded = false }), 0.2)
 		MoveState.step(s, on(sliding), 1)
 		expect(s.mode).toBe("Slide")
-		expect(MoveState.speed(s, 1)).toBeCloseTo(MoveConfig.SlideStartSpeed)
+		expect(MoveState.speed(s, 1)).toBeCloseTo(MoveConfig.SprintSpeed) -- the boost builds from here
+		expect(MoveState.speed(s, 1 + MoveConfig.SlideRampTime)).toBeCloseTo(slideAt(MoveConfig.SlideRampTime))
 	end)
 
 	it("does not slide on landing without a sprint", function()
@@ -302,7 +307,8 @@ describe("MoveState", function()
 		held.jump, held.grounded = false, true
 		MoveState.step(s, on(held), 1.2)
 		expect(s.mode).toBe("Slide")
-		expect(MoveState.speed(s, 1.2)).toBeCloseTo(MoveConfig.SlideStartSpeed)
+		expect(MoveState.speed(s, 1.2)).toBeCloseTo(MoveConfig.SprintSpeed) -- the boost builds from here
+		expect(MoveState.speed(s, 1.2 + MoveConfig.SlideRampTime)).toBeCloseTo(slideAt(MoveConfig.SlideRampTime))
 	end)
 
 	-- Review Focus 4

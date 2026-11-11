@@ -4,6 +4,7 @@ return {
 	CrouchSpeed = 6,
 	SprintSpeed = 18.5, -- 30, then 27, 20 and 16.5 on 2026-11-10: River wants the game way less fast paced (and playable on phones)
 	SlideStartSpeed = 31,
+	SlideRampTime = 0.18, -- the boost builds from sprint speed over this long
 	SlideFadeTime = 0.9, -- slows to sprint speed over this long; lasts while crouch is held
 	SlideCooldown = 0,
 	DashFadeTime = 0.4, -- how long a dash takes to ramp down to normal speed

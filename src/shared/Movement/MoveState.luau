@@ -55,8 +55,13 @@ end
 
 function MoveState.speed(state: State, now: number): number
 	if state.mode == "Slide" then
-		local alpha = math.min((now - state.slideStart) / MoveConfig.SlideFadeTime, 1)
-		return lerp(MoveConfig.SlideStartSpeed, MoveConfig.SprintSpeed, alpha)
+		-- The boost builds over SlideRampTime instead of arriving at once (River: "come on a little slower", like
+		-- Call of Duty), then fades as before. The speed is whichever of the two lines is lower.
+		local since = now - state.slideStart
+		local alpha = math.min(since / MoveConfig.SlideFadeTime, 1)
+		local fade = lerp(MoveConfig.SlideStartSpeed, MoveConfig.SprintSpeed, alpha)
+		local ramp = lerp(MoveConfig.SprintSpeed, MoveConfig.SlideStartSpeed, math.clamp(since / MoveConfig.SlideRampTime, 0, 1))
+		return math.min(fade, ramp)
 	elseif state.mode == "Air" then
 		local alpha = (now - state.dashFadeAt) / MoveConfig.DashFadeTime
 		return if alpha < 1 then lerp(state.dashFadeFrom, state.carrySpeed, alpha) else state.carrySpeed
