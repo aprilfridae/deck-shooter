@@ -42,10 +42,14 @@ local SHOULDERS = 1.5 -- how far the shoulders turn against the hips: past squar
 -- metre and origin is where the reload's own origin is from the model's middle, in metres, both as GunView has
 -- them for first person.
 -- A reload without them (BodyReloads) is keyed straight in the held gun's own studs.
-local CODED_RELOADS: { [string]: { reload: any, perMetre: number?, origin: Vector3? } } = {
-	M57 = { reload = AkReload, perMetre = 91.09, origin = Vector3.new(-0.011, 0.0535, 0.137) },
-	["Energy Pistol"] = { reload = BodyReloads["Energy Pistol"] },
-	Longscope = { reload = BodyReloads.Longscope },
+-- outro is how long before its end, in the reload's own seconds, a reload starts easing back to the base pose:
+-- the gun, both hands and the body all lean toward where the pose has them while the reload's last moves are
+-- still playing, so the two run together as one motion (River, 2026-11-11). The M57's is short, so its last
+-- flourish (the gun snapped over flat after the bolt) still plays.
+local CODED_RELOADS: { [string]: { reload: any, perMetre: number?, origin: Vector3?, outro: number } } = {
+	M57 = { reload = AkReload, perMetre = 91.09, origin = Vector3.new(-0.011, 0.0535, 0.137), outro = 0.26 },
+	["Energy Pistol"] = { reload = BodyReloads["Energy Pistol"], outro = 0.42 },
+	Longscope = { reload = BodyReloads.Longscope, outro = 0.45 },
 }
 local RELOAD_BLEND = 0.08 -- of the reload's own seconds: how long the arms take to pass to it and back
 -- For reloads marked natural (BodyReloads):
@@ -661,6 +665,10 @@ local function applyReload(body: Body, dt: number)
 	local pose = reload.at(at, { middle = middle, ratio = ratio })
 	-- The arms pass to the reload over its first moments and back over its last, so the elbows don't jump.
 	local blend = math.clamp(math.min(at - (reload.lead or 0), reload.LENGTH - at) / RELOAD_BLEND, 0, 1)
+	-- How much of the reload still shows: all of it until the outro, then easing to none by the end.
+	local left = math.clamp((reload.LENGTH - at) / coded.outro, 0, 1)
+	local fade = left * left * (3 - 2 * left)
+	local carry = blend * fade -- for the body's lean
 
 	-- The body goes with it, before the hands are found, so they and the gun are carried along.
 	-- A natural reload's gun stays where it is in the air while the torso leans and turns under it: the torso's
@@ -679,11 +687,11 @@ local function applyReload(body: Body, dt: number)
 	-- own turn. The hips turn a little the same way and shift against the tip.
 	local leanBack, leanTurn, leanTip, hipsTurn, hipsShift
 	if pose.body then
-		leanBack, leanTurn, leanTip = pose.body.pitch * blend, pose.body.yaw * blend, pose.body.roll * blend
+		leanBack, leanTurn, leanTip = pose.body.pitch * carry, pose.body.yaw * carry, pose.body.roll * carry
 		hipsTurn, hipsShift = leanTurn * RELOAD_BODY_HIPS_YAW, -leanTip * RELOAD_BODY_HIPS_SHIFT
 	else
 		local pitch, yaw, roll = pose.gun:ToEulerAnglesXYZ()
-		pitch, yaw, roll = pitch * blend, yaw * blend, roll * blend
+		pitch, yaw, roll = pitch * carry, yaw * carry, roll * carry
 		leanBack, leanTurn, leanTip = pitch * RELOAD_TORSO.pitch, yaw * RELOAD_TORSO.yaw, roll * RELOAD_TORSO.roll
 		hipsTurn, hipsShift = yaw * RELOAD_HIPS_YAW, -roll * RELOAD_HIPS_SHIFT
 	end
@@ -691,7 +699,7 @@ local function applyReload(body: Body, dt: number)
 	joints.Root.Transform = CFrame.new(hipsShift, 0, 0) * CFrame.Angles(0, hipsTurn, 0) * joints.Root.Transform
 	if joints.Neck then
 		joints.Neck.Transform = CFrame.Angles(
-			-leanBack * RELOAD_HEAD_LEVEL - pose.weight * RELOAD_HEAD_DOWN * blend,
+			-leanBack * RELOAD_HEAD_LEVEL - pose.weight * RELOAD_HEAD_DOWN * carry,
 			-leanTurn * RELOAD_HEAD_LEVEL,
 			-leanTip * RELOAD_HEAD_LEVEL
 		) * joints.Neck.Transform
@@ -752,6 +760,13 @@ local function applyReload(body: Body, dt: number)
 		handle, goals.Right, goals.Left = torso * now.handle, torso * now.Right, torso * now.Left
 	end
 
+	-- The outro: the gun and both hands ease from where the reload has them to where the pose does.
+	if fade < 1 then
+		handle = (hands.Right * HeldGuns.frame(body.pose.gun)):Lerp(handle, fade)
+		goals.Right = hands.Right:Lerp(goals.Right, fade)
+		goals.Left = hands.Left:Lerp(goals.Left, fade)
+	end
+
 	for _, side in { "Right", "Left" } do
 		local shoulder, elbow, wrist = joints[side .. "Shoulder"], joints[side .. "Elbow"], joints[side .. "Wrist"]
 		local arm = body.arms[side]
@@ -787,8 +802,8 @@ local function applyReload(body: Body, dt: number)
 	-- then in the gun. (First person shows both for a moment; this body's gun has the one.)
 	body.moves = {
 		handle = torso:ToObjectSpace(handle),
-		mag = moved(pose.spare or pose.mag),
-		action = CFrame.new(0, 0, pose.bolt * per),
+		mag = CFrame.identity:Lerp(moved(pose.spare or pose.mag), fade),
+		action = CFrame.new(0, 0, pose.bolt * per * fade),
 	}
 end
 
