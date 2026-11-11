@@ -30,16 +30,16 @@ Speeds are studs per second.
 
 | Move | Rule |
 | --- | --- |
-| Walk | 16 |
-| Crouch | 8 |
-| Sprint | 27 (30 earlier on 2026-11-10; River slowed sprint, slide and jump speeds about a tenth so phones have a chance), in any direction, with no stamina |
-| Slide | Crouch while sprinting. Starts at 38 and slows to sprint speed (27) over 0.9s, then holds it for as long as crouch is held. No cooldown. The direction is fixed when the slide starts. Letting go of crouch blends back to walk or sprint speed over 0.25s. |
+| Walk | 14 |
+| Crouch | 7 |
+| Sprint | 20 (30, then 27, then 20 on 2026-11-10: River wants the game way less fast paced, and playable on phones; every speed here came down with it), in any direction, with no stamina |
+| Slide | Crouch while sprinting. Starts at 27 and slows to sprint speed (20) over 0.9s, then holds it for as long as crouch is held. No cooldown. The direction is fixed when the slide starts. Letting go of crouch blends back to walk or sprint speed over 0.25s. |
 | Jump | 6 studs high |
-| Slide jump | Jumping out of a slide adds 7 to the current speed. The air keeps that speed, and it fades over 0.6s after landing. |
+| Slide jump | Jumping out of a slide adds 4 to the current speed. The air keeps that speed, and it fades over 0.6s after landing. |
 | Fast fall | Hold crouch in the air to fall faster: 350 per second per second, up to 110. Landing while moving with crouch and sprint held starts a slide. |
-| Chain jump | A jump from a slide that began by landing from the air goes 8 studs high and adds 14. |
-| Wall jump | Press jump in the air with a wall within 2.4 studs (any side; it mustn't lean more than a little). Kicks off it: away from the wall and toward where the player is steering or looking (bounced off the wall if that points into it), rising 5 studs. Keeps the current speed (at least sprint speed) and adds 2, up to 52. Up to 3 in one time in the air, at least 0.25s apart, never off the same wall twice running, and not in the first 0.12s of a jump. An edge parry wins if both could happen. Plays the jump sound. (`MoveState.wallJump`, `tryWallJump` in `Movement.client.luau`; values in `MoveConfig`.) |
-| Edge parry | Press jump at a fixed flat edge 1 to 4.5 studs above the feet, on the ground or in the air. Keeps the current speed (at least sprint speed, 27) and adds 6, up to 52. It goes in the slide direction while sliding (or in the air after a slide with no move key held), otherwise the move direction, otherwise the camera's. |
+| Chain jump | A jump from a slide that began by landing from the air goes 8 studs high and adds 8. |
+| Wall jump | Press jump in the air with a wall within 2.4 studs (any side; it mustn't lean more than a little). Kicks off it: away from the wall and toward where the player is steering or looking (bounced off the wall if that points into it), rising 5 studs. Keeps the current speed (at least sprint speed) and adds 2, up to 35. Up to 3 in one time in the air, at least 0.25s apart, never off the same wall twice running, and not in the first 0.12s of a jump. An edge parry wins if both could happen. Plays the jump sound. (`MoveState.wallJump`, `tryWallJump` in `Movement.client.luau`; values in `MoveConfig`.) |
+| Edge parry | Press jump at a fixed flat edge 1 to 4.5 studs above the feet, on the ground or in the air. Keeps the current speed (at least sprint speed, 20) and adds 4, up to 35. It goes in the slide direction while sliding (or in the air after a slide with no move key held), otherwise the move direction, otherwise the camera's. |
 
 A **fixed flat edge** is an anchored part that isn't part of a character, with a top surface whose normal points at least 0.98 up. The edge check looks 1.5, 2.5 and 3.5 studs ahead (`src/client/Ledge.luau`).
 
@@ -63,7 +63,7 @@ A **fixed flat edge** is an anchored part that isn't part of a character, with a
 
 The server checks every player's movement in `src/server/MovementGuard.server.luau`, using `src/shared/Movement/SpeedLimit.luau`.
 
-- **One limit for every state.** This is deliberate: a client could fake its state, and slide jumps legally hold high speed. Horizontal movement may be at most 57 studs per second (the fastest chain jump plus a margin) times the time passed, plus 4 studs for lag. Rising may be at most 60 per second times the time passed, plus 4. Both are measured from the oldest sample in a 0.5s window, and one jump in position is credited with at most 1.3s.
+- **One limit for every state.** This is deliberate: a client could fake its state, and slide jumps legally hold high speed. Horizontal movement may be at most 40 studs per second (the fastest chain jump plus a margin) times the time passed, plus 4 studs for lag. Rising may be at most 60 per second times the time passed, plus 4. Both are measured from the oldest sample in a 0.5s window, and one jump in position is credited with at most 1.3s.
 - Falling is never checked. Hovering isn't detected.
 - Checks run every 0.1s, with 1s of grace after spawning.
 - Moves the server causes pause the check through `MoveGrace.give`: Phase Dash for 1s, an Aegis Shell push for 0.5s and Outpost travel for 1s, each plus twice the player's ping.
