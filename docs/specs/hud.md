@@ -91,3 +91,13 @@ The whole HUD, crosshair included, is hidden while the title screen is open and 
 - A low-health colour or animation.
 - Numbers animating when they change.
 - A scoreboard.
+
+## Death: the soul knocked out
+
+Added 2026-11-10, not seen in Play. `src/client/DeathSoul.client.luau`. River's idea.
+
+- When you die, the camera leaves your body: it's shoved 15 studs the way the shot was going (from the killer through you) and 5 up, fast at first then drifting, and turns to look back at the body. It stops short of walls. With no killer known (a fall, a reset) it goes straight back from where you were looking.
+- The picture drains to grey over 0.7s (a `ColorCorrectionEffect` named `DeathGrey` on the camera, so the zone lighting code doesn't touch it).
+- `YOU DIED` fades in after 0.45s, in Bone, with a thin rule under it. It uses Roblox's Michroma font for now, not the game's own type.
+- Your own body is made visible while it lasts. Everything is undone when the new character arrives.
+- The push direction comes from the `DeathBurst` remote (position and killer), which the coin burst already used.
