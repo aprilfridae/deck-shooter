@@ -30,7 +30,13 @@ type Held = {
 	restAction: CFrame,
 	muzzle: Vector3, -- the end of the barrel, from the handle
 	handle: CFrame?, -- where the gun was last put, while it is shown
+	middle: Vector3, -- the model's middle, from the handle
+	ratio: number, -- handle studs to one of the stored model's studs
 }
+
+-- Moves a coded reload makes, in place of what the pose says. handle is the gun's own frame in the world; mag and
+-- action are how far the magazine and the bolt have moved from their places, in the gun's space.
+export type Moves = { handle: CFrame?, mag: CFrame?, action: CFrame? }
 
 local folder = Instance.new("Folder")
 folder.Name = "HeldGuns"
@@ -123,7 +129,8 @@ local function build(name: string, poses: Poses): Held?
 	end
 	local box, size = model:GetBoundingBox()
 	model.WorldPivot = box
-	model:ScaleTo(model:GetScale() * (high.Z - low.Z) / size.Z)
+	local ratio = (high.Z - low.Z) / size.Z
+	model:ScaleTo(model:GetScale() * ratio)
 	-- Handle space: the model's middle goes to the middle of the pose file's gun.
 	model:PivotTo(CFrame.new((low + high) / 2))
 
@@ -142,7 +149,18 @@ local function build(name: string, poses: Poses): Held?
 			if math.abs(low.Z) > math.abs(high.Z) then low.Z else high.Z
 		),
 		handle = nil,
+		middle = (low + high) / 2,
+		ratio = ratio,
 	}
+	-- A model that names its own moving parts (River's AK: Mag_ and Bolt_, as first person reads them) is sorted
+	-- by those names. The pose file's boxes are the shape of the gun the poses were made on, not this one.
+	local named = false
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") and (part.Name:find("^Mag_") or part.Name:find("^Bolt_")) then
+			named = true
+			break
+		end
+	end
 	local function add(group: Group, part: BasePart)
 		table.insert(group.parts, part)
 		table.insert(group.offsets, part.CFrame)
@@ -150,7 +168,10 @@ local function build(name: string, poses: Poses): Held?
 	for _, part in model:GetDescendants() do
 		if part:IsA("BasePart") then
 			local group = result.body
-			for _, entry in boxes do
+			if named then
+				group = if part.Name:find("^Mag_") then result.mag elseif part.Name:find("^Bolt_") then result.action else result.body
+			end
+			for _, entry in if named then {} else boxes do
 				if entry.bone ~= "GunMount" and not isStandIn(entry.name) and inside(part.Position, entry.low, entry.high) then
 					group = if entry.bone == "MagProp" then result.mag else result.action
 					break
@@ -189,7 +210,7 @@ end
 
 -- Shows, moves or hides the gun one body holds. Call every frame after the body has moved.
 -- gunName nil, or a pose with no gun, hides it.
-function HeldGuns.show(character: Model, gunName: string?, poses: Poses?, pose: Pose?, visible: boolean)
+function HeldGuns.show(character: Model, gunName: string?, poses: Poses?, pose: Pose?, visible: boolean, moves: Moves?)
 	local current = held[character]
 	if current and current.name ~= gunName then
 		current.model:Destroy()
@@ -216,15 +237,28 @@ function HeldGuns.show(character: Model, gunName: string?, poses: Poses?, pose: 
 		current.handle = nil
 		return
 	end
-	local handle = holder.CFrame * HeldGuns.frame(pose.gun)
+	local handle = (moves and moves.handle) or holder.CFrame * HeldGuns.frame(pose.gun)
 	current.handle = handle
 	place(current.body, handle)
-	place(current.mag, handle * HeldGuns.frame(pose.mag) * current.restMag:Inverse())
-	place(current.action, handle * HeldGuns.frame(pose.action) * current.restAction:Inverse())
+	place(current.mag, handle * (if moves and moves.mag then moves.mag else HeldGuns.frame(pose.mag) * current.restMag:Inverse()))
+	place(
+		current.action,
+		handle * (if moves and moves.action then moves.action else HeldGuns.frame(pose.action) * current.restAction:Inverse())
+	)
 	workspace:BulkMoveTo(parts, frames, Enum.BulkMoveMode.FireCFrameChanged)
 	table.clear(parts)
 	table.clear(frames)
 	current.model.Parent = folder
+end
+
+-- How the gun a body is showing was fitted: its model's middle from the handle, and how many handle studs one of
+-- the stored model's studs became. nil until it has been shown once.
+function HeldGuns.fit(character: Model): (Vector3?, number?)
+	local current = held[character]
+	if not current then
+		return nil, nil
+	end
+	return current.middle, current.ratio
 end
 
 -- Where the end of the barrel is on the gun this body is showing, or nil if it shows none. Tracers start here.

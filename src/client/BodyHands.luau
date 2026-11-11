@@ -136,6 +136,11 @@ function BodyHands.show(character: Model, visible: boolean, shapes: Shapes?)
 	end
 end
 
+-- Where a hand part sits on its palm (hand = palm * this), for placing a hand by its palm as first person does.
+function BodyHands.handOnPalm(side: string): CFrame
+	return SoldierPose.handOnPalm(solver, side)
+end
+
 function BodyHands.remove(character: Model)
 	local hands = made[character]
 	if hands then

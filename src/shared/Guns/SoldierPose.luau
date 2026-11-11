@@ -238,6 +238,11 @@ local function wrapThumb(aims: { Vector3 }, palm: CFrame, gun: CFrame, amount: n
 	end
 end
 
+-- Where a hand part sits on its palm: hand = palm * this. sideName is "Right" or "Left".
+function SoldierPose.handOnPalm(pose: any, sideName: string): CFrame
+	return (if sideName == "Right" then pose.right else pose.left).handOnPalm
+end
+
 -- One hand's palm and fingers, for a hand already in place: the third-person body's hand part, which sits where
 -- these arms' hand does. sideName is "Right" or "Left". fingers gives the digits a shape other than the gun grip
 -- (which way each of a digit's three joints points, in the palm's space).

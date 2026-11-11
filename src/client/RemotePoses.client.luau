@@ -19,6 +19,8 @@ local PistolArms = require(Movement:WaitForChild("PistolArms"))
 local GunAudio = require(script.Parent:WaitForChild("GunAudio"))
 local HeldGuns = require(script.Parent:WaitForChild("HeldGuns"))
 local BodyHands = require(script.Parent:WaitForChild("BodyHands"))
+local ArmReach = require(script.Parent:WaitForChild("ArmReach"))
+local AkReload = require(Guns:WaitForChild("AkReload"))
 
 local shotsRemote = ReplicatedStorage:WaitForChild("GunRemotes"):WaitForChild("Shots") :: RemoteEvent
 
@@ -34,6 +36,17 @@ local TURN_EASE = 12 -- how fast the legs follow a change in which way the body 
 -- While the run has the legs, the rest of the body holds one pose, not the two the stride used to flip between.
 local STEADY = { Sprint_Pass = "Sprint_Contact", Walk_Pass = "Walk_Contact", Crouch_Idle = "Crouch_Walk" }
 local SHOULDERS = 1.5 -- how far the shoulders turn against the hips: past square, so they swing the other way
+-- Reloads keyed in code, by the gun's display name: the same reload first person plays (the hands, the
+-- magazine, the bolt and the gun's turn), put on the third-person body. perMetre is the stored model's studs to a
+-- metre and origin is where the reload's own origin is from the model's middle, in metres, both as GunView has
+-- them for first person.
+local CODED_RELOADS: { [string]: { reload: any, perMetre: number, origin: Vector3 } } = {
+	M57 = { reload = AkReload, perMetre = 91.09, origin = Vector3.new(-0.011, 0.0535, 0.137) },
+}
+local RELOAD_BLEND = 0.08 -- of the reload's own seconds: how long the arms take to pass to it and back
+-- Roughly which way each elbow points while its hand is placed, in the torso's space.
+local ELBOW_WAYS = { Right = Vector3.new(0.5, -1, 0.3), Left = Vector3.new(-0.6, -1, 0.25) }
+
 -- Shooting and aiming, laid over whatever pose the body is in.
 -- Looking up and down: the torso, arms and head share the bend, so the gun and the eyes point where the
 -- player is looking. Shares of the look's pitch.
@@ -115,6 +128,11 @@ type Body = {
 	kick: ShotKick.Kick, -- the recoil spring
 	shotSeen: number, -- the last shot of this body's that has kicked it
 	look: number, -- how far up it is looking, radians, eased
+	wasReloading: boolean,
+	reloadAt: number?, -- when the reload being played started
+	codedAt: number?, -- how far into a coded reload it is, in the reload's own seconds
+	arms: { [string]: ArmReach.Arm }, -- each arm's lengths, once measured
+	moves: any, -- this frame's moves of the gun, its magazine and its bolt, from a coded reload
 	sampledAt: number,
 	gunName: string?,
 	poses: any,
@@ -183,6 +201,11 @@ local function onCharacter(character: Model)
 		kick = ShotKick.new(),
 		shotSeen = -math.huge,
 		look = 0,
+		wasReloading = false,
+		reloadAt = nil,
+		codedAt = nil,
+		arms = {},
+		moves = nil,
 		sampledAt = os.clock(),
 		gunName = nil,
 		poses = nil,
@@ -306,8 +329,36 @@ local function sampleStance(body: Body, now: number)
 	end
 	-- Reloading: the reload pose is a standing one, so in a slide or in the air only its arms are used and the
 	-- rest of the body stays as it was. (River: reloading in a slide stood the torso up.)
+	-- A coded reload runs from when the reload starts to its own end, a little after the gun is loaded, unless
+	-- it is cut short.
+	if reloading and not body.wasReloading then
+		body.reloadAt = now
+	end
+	body.wasReloading = reloading
+	local coded = gunName and CODED_RELOADS[gunName]
+	body.codedAt = nil
+	if coded and body.reloadAt then
+		local id = if player then player:GetAttribute("GunId") else body.character:GetAttribute("GunId")
+		local config = id and GunConfig.guns[id]
+		local at = (now - body.reloadAt) * coded.reload.SOUND / (config and config.reload or 2)
+		if at >= coded.reload.LENGTH or (not reloading and at < coded.reload.SOUND * 0.95) then
+			body.reloadAt = nil
+		else
+			body.codedAt = at
+		end
+	elseif not reloading then
+		body.reloadAt = nil
+	end
+
 	local arms = nil
-	if reloading and poses.poses.Reload then
+	if body.codedAt and poses.poses.Fire then
+		-- The reload is played over the gun held up, as first person plays it over its hold.
+		if KEEPS_BODY[pick.name] then
+			arms = poses.poses.Fire
+		else
+			pick = { name = "Fire", mirrored = false }
+		end
+	elseif reloading and poses.poses.Reload then
 		if KEEPS_BODY[pick.name] then
 			arms = poses.poses.Reload
 		else
@@ -488,6 +539,82 @@ local function applyAim(body: Body, dt: number)
 	end
 end
 
+local function through(frame: CFrame, joint: Motor6D): CFrame
+	return frame * joint.C0 * joint.Transform * joint.C1:Inverse()
+end
+
+-- A coded reload: turns the gun, moves its magazine and bolt, and puts the hands where the reload has them, on
+-- top of everything else. Works out where the pose has the torso, the hands and the gun from the joints as they
+-- now stand, then bends both arms to reach.
+local function applyReload(body: Body)
+	body.moves = nil
+	local at = body.codedAt
+	local coded = body.gunName and CODED_RELOADS[body.gunName]
+	local middle, ratio = HeldGuns.fit(body.character)
+	local joints = body.joints
+	if not at or not coded or not middle or not ratio or not body.pose or not body.pose.gun then
+		return
+	end
+	for _, name in { "Root", "Waist", "RightShoulder", "RightElbow", "RightWrist", "LeftShoulder", "LeftElbow", "LeftWrist" } do
+		if not joints[name] or not joints[name]:IsA("Motor6D") then
+			return
+		end
+	end
+	local reload = coded.reload
+	local per = coded.perMetre * ratio
+	local origin = middle + coded.origin * per
+	-- A frame in the reload's metres, as a place on the gun; and a move in them, as a move of something on it.
+	local function placed(frame: CFrame): CFrame
+		return CFrame.new(origin + frame.Position * per) * frame.Rotation
+	end
+	local function moved(frame: CFrame): CFrame
+		return placed(frame) * CFrame.new(-origin)
+	end
+
+	local torso = through(through(body.root.CFrame, joints.Root), joints.Waist)
+	local hands = {}
+	for _, side in { "Right", "Left" } do
+		hands[side] = through(through(through(torso, joints[side .. "Shoulder"]), joints[side .. "Elbow"]), joints[side .. "Wrist"])
+	end
+	local hold = hands.Right * HeldGuns.frame(body.pose.gun) -- the gun before the reload turns it
+	local pose = reload.at(at)
+	local handle = hold * moved(pose.gun)
+
+	-- Each hand goes round with the gun, and leaves it for the magazine or the charging knob.
+	local goals = {
+		Right = handle * hold:ToObjectSpace(hands.Right),
+		Left = handle * hold:ToObjectSpace(hands.Left),
+	}
+	goals.Left = goals.Left:Lerp(hold * placed(pose.palm) * BodyHands.handOnPalm("Left"), pose.weight)
+	if pose.rightWeight > 0 then
+		local away = hold * placed(pose.right) * BodyHands.handOnPalm("Right")
+		goals.Right = goals.Right:Lerp(away, pose.rightWeight) + hold.Rotation * (pose.rightSwing * per)
+	end
+
+	-- The arms pass to the reload over its first moments and back over its last, so the elbows don't jump.
+	local blend = math.clamp(math.min(at, reload.LENGTH - at) / RELOAD_BLEND, 0, 1)
+	for _, side in { "Right", "Left" } do
+		local shoulder, elbow, wrist = joints[side .. "Shoulder"], joints[side .. "Elbow"], joints[side .. "Wrist"]
+		local arm = body.arms[side]
+		if not arm then
+			arm = ArmReach.measure(shoulder, elbow, wrist)
+			body.arms[side] = arm
+		end
+		local turns = { ArmReach.solve(arm, torso * shoulder.C0, goals[side], torso:VectorToWorldSpace(ELBOW_WAYS[side])) }
+		for index, joint in { shoulder, elbow, wrist } do
+			joint.Transform = joint.Transform:Lerp(turns[index], blend)
+		end
+	end
+
+	-- The old magazine is the gun's until it is let go; from then the one shown is the new one, in the hand and
+	-- then in the gun. (First person shows both for a moment; this body's gun has the one.)
+	body.moves = {
+		handle = torso:ToObjectSpace(handle),
+		mag = moved(pose.spare or pose.mag),
+		action = CFrame.new(0, 0, pose.bolt * per),
+	}
+end
+
 -- Runs after the Animator has written its frame, so these poses win.
 RunService.PreSimulation:Connect(function(dt: number)
 	local now = os.clock()
@@ -507,6 +634,7 @@ RunService.PreSimulation:Connect(function(dt: number)
 			end
 			applyRun(body)
 			applyAim(body, dt)
+			applyReload(body)
 			continue
 		end
 		if frame ~= body.frame then
@@ -538,7 +666,13 @@ RunService.PreRender:Connect(function()
 						and (head == nil or (camera.CFrame.Position - head.Position).Magnitude > FIRST_PERSON)
 					)
 			end
-			HeldGuns.show(character, body.gunName, body.poses, body.pose, visible)
+			-- A coded reload's gun is placed from the torso, since neither hand need be holding it.
+			local moves = nil
+			local torso = character:FindFirstChild("UpperTorso")
+			if body.moves and torso and torso:IsA("BasePart") then
+				moves = { handle = torso.CFrame * body.moves.handle, mag = body.moves.mag, action = body.moves.action }
+			end
+			HeldGuns.show(character, body.gunName, body.poses, body.pose, visible, moves)
 			BodyHands.show(character, visible)
 		end
 	end
