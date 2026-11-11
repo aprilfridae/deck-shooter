@@ -32,8 +32,8 @@ local TURN_EASE = 12 -- how fast the legs follow a change in which way the body 
 -- While the run has the legs, the rest of the body holds one pose, not the two the stride used to flip between.
 local STEADY = { Sprint_Pass = "Sprint_Contact", Walk_Pass = "Walk_Contact", Crouch_Idle = "Crouch_Walk" }
 local LEGS = {
-	{ hip = "RightHip", knee = "RightKnee", ankle = "RightAnkle", offset = 0 },
-	{ hip = "LeftHip", knee = "LeftKnee", ankle = "LeftAnkle", offset = 0.5 },
+	{ hip = "RightHip", knee = "RightKnee", ankle = "RightAnkle", offset = 0, side = 1 },
+	{ hip = "LeftHip", knee = "LeftKnee", ankle = "LeftAnkle", offset = 0.5, side = -1 },
 }
 
 -- Sidearms without poses of their own borrow the Energy Pistol's.
@@ -341,7 +341,7 @@ local function applyRun(body: Body)
 	local lean = rootShown:ToEulerAnglesYXZ() -- the hips' pitch; forward is negative
 	local height = LegCycle.restHeight + rootShown.Y + bob
 	for _, names in LEGS do
-		local leg = LegCycle.leg(body.phase + names.offset, shape, body.goForward, body.goRight, height)
+		local leg = LegCycle.leg(body.phase + names.offset, shape, body.goForward, body.goRight, height, names.side)
 		local frames = {
 			[names.hip] = CFrame.Angles(0, 0, leg.roll) * CFrame.Angles(leg.pitch - lean - LegCycle.restHip, 0, 0),
 			[names.knee] = CFrame.Angles(LegCycle.restKnee - leg.bend, 0, 0),

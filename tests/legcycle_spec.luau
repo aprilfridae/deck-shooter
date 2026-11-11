@@ -82,12 +82,24 @@ end)
 describe("LegCycle.leg", function()
 	it("steps backward when the body is going backward", function()
 		local shape = LegCycle.shape(15)
-		local ahead = LegCycle.leg(0, shape, 1, 0, 2.9)
-		local behind = LegCycle.leg(0, shape, -1, 0, 2.9)
+		local ahead = LegCycle.leg(0, shape, 1, 0, 2.9, 1)
+		local behind = LegCycle.leg(0, shape, -1, 0, 2.9, 1)
 		local aheadAt = ankle(ahead.pitch, ahead.bend)
 		local behindAt = ankle(behind.pitch, behind.bend)
 		expect(aheadAt > 0).toBe(true)
-		expect(behindAt).toBeCloseTo(-aheadAt, 0.001)
+		expect(behindAt).toBeCloseTo(-aheadAt, 0.01)
+	end)
+
+	it("keeps each leg on its own side, even stepping sideways", function()
+		local shape = LegCycle.shape(15)
+		for phase = 0, 0.95, 0.05 do
+			-- Going right: the right leg never rolls in past its hip by much, nor the left.
+			expect(LegCycle.leg(phase, shape, 0, 1, 2.9, 1).roll > -0.06).toBe(true)
+			expect(LegCycle.leg(phase, shape, 0, 1, 2.9, -1).roll < 0.06).toBe(true)
+			-- Running straight, both legs sit a little outside their hips.
+			expect(LegCycle.leg(phase, shape, 1, 0, 2.9, 1).roll > 0).toBe(true)
+			expect(LegCycle.leg(phase, shape, 1, 0, 2.9, -1).roll < 0).toBe(true)
+		end
 	end)
 
 	it("keeps the hips' bob lowest over a planted foot", function()

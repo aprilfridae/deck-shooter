@@ -47,7 +47,7 @@ function LegCycle.shape(speed: number): Shape
 		half = half,
 		stance = stance,
 		length = 2 * half / stance,
-		lift = math.clamp(0.3 + 0.045 * speed, 0.3, 1.25),
+		lift = math.clamp(0.2 + 0.022 * speed, 0.2, 0.65), -- River found the first pass (up to 1.25) lifted too high
 		bob = math.clamp(0.01 * speed, 0, 0.12),
 	}
 end
@@ -100,11 +100,18 @@ function LegCycle.solve(ahead: number, side: number, down: number): (number, num
 	return math.atan2(ahead, drop) + lead, math.pi - inside, roll
 end
 
+-- Keeping the legs out of each other (River saw them clipping): each foot is set a little outside its hip, and
+-- when stepping sideways it can come no closer to the other leg than INSIDE studs in from its own hip.
+local SPLAY = 0.18
+local INSIDE = 0.12
+
 -- One leg, whole. phase is this leg's own; forward and right say which way the body is going relative to the
--- way it faces (a unit vector's two parts); height is hip above the ground.
-function LegCycle.leg(phase: number, shape: Shape, forward: number, right: number, height: number): Leg
+-- way it faces (a unit vector's two parts); height is hip above the ground. side is 1 for the right leg and -1
+-- for the left.
+function LegCycle.leg(phase: number, shape: Shape, forward: number, right: number, height: number, side: number): Leg
 	local along, lift, foot = LegCycle.foot(phase, shape)
-	local pitch, bend, roll = LegCycle.solve(along * forward, along * right, height - lift)
+	local out = math.max((along * right) * side + SPLAY, -INSIDE) -- studs outward from this leg's hip
+	local pitch, bend, roll = LegCycle.solve(along * forward, out * side, height - lift)
 	return { pitch = pitch, bend = bend, roll = roll, foot = foot * math.max(forward, 0.3) }
 end
 
