@@ -132,7 +132,7 @@ local function originValid(shooter: GunTargets.Target, shot: any, ping: number, 
 end
 
 -- Every living target this ray passes through before a wall, nearest first, and the wall if there is one.
-local function hitsAlong(shooter: GunTargets.Target, shot: any, direction: any, viewAt: number)
+local function hitsAlong(shooter: GunTargets.Target, shot: any, direction: any, viewAt: number, magnet: number?)
 	local origin = Vector3.new(shot.origin.x, shot.origin.y, shot.origin.z)
 	local wall = firstWall(origin, Vector3.new(direction.x, direction.y, direction.z) * MAX_RANGE)
 	local reach = if wall then wall.Distance else MAX_RANGE
@@ -141,7 +141,7 @@ local function hitsAlong(shooter: GunTargets.Target, shot: any, direction: any, 
 		if target ~= shooter and GunTargets.isAlive(target) then
 			local past = History.at(target.history, viewAt)
 			if past then
-				local zone, distance = Hitbox.test(shot.origin, direction, past, target.shape)
+				local zone, distance = Hitbox.test(shot.origin, direction, past, target.shape, magnet)
 				if zone and distance < reach then
 					table.insert(hits, { target = target, zone = zone, distance = distance })
 				end
@@ -196,7 +196,7 @@ local function onFire(player: Player, raw: any)
 	local origin = Vector3.new(shot.origin.x, shot.origin.y, shot.origin.z)
 	for _ = 1, gun.pellets do
 		local direction = Spread.apply(shot.direction, angle, rng)
-		local hits, reach, wall = hitsAlong(shooter, shot, direction, viewAt)
+		local hits, reach, wall = hitsAlong(shooter, shot, direction, viewAt, gun.magnet)
 		local line = Vector3.new(direction.x, direction.y, direction.z)
 		local first = hits[1]
 		if gun.collateral and #hits >= 2 then

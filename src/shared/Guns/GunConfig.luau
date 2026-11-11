@@ -1,4 +1,4 @@
--- Gun and class data. Times are seconds, distances are studs, spread and kick are degrees.
+-- Gun and class data. magnet is bullet magnetism (see Hitbox.test); guns without it have none. Times are seconds, distances are studs, spread and kick are degrees.
 -- kick is how far each shot nudges the view up. It settles straight back, and bullets always go where
 -- the crosshair is, so there's no spray to learn.
 local SIDEARM_FULL_TO = 40
@@ -22,6 +22,7 @@ end
 GunConfig.guns = {
 	M4 = gun({
 		name = "M57",
+		magnet = 0.4, -- bullet magnetism: a shot this close to a body (studs) is pulled onto it. River's AK only
 		kick = 0.12,
 		body = 24,
 		rpm = 600,

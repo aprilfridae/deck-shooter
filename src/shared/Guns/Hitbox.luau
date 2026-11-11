@@ -35,12 +35,13 @@ local function raySphere(origin: Point, direction: Point, cx: number, cy: number
 end
 
 -- Returns the distance along the ray to a vertical cylinder, or nil.
-local function rayCylinder(origin: Point, direction: Point, cx: number, cz: number, bottom: number, top: number): number?
+local function rayCylinder(origin: Point, direction: Point, cx: number, cz: number, bottom: number, top: number, radius: number?): number?
 	local enter, leave = -math.huge, math.huge
 
 	local ox, oz = origin.x - cx, origin.z - cz
 	local a = direction.x * direction.x + direction.z * direction.z
-	local c = ox * ox + oz * oz - BODY_RADIUS * BODY_RADIUS
+	local reach = radius or BODY_RADIUS
+	local c = ox * ox + oz * oz - reach * reach
 	if a > 1e-9 then
 		local b = ox * direction.x + oz * direction.z
 		local discriminant = b * b - a * c
@@ -68,8 +69,11 @@ local function rayCylinder(origin: Point, direction: Point, cx: number, cz: numb
 end
 
 -- direction must be unit length. shape defaults to the soldier's.
+-- magnet is a gun's bullet magnetism, in studs: a shot that misses but passes within that distance of the body
+-- (or beside the head) counts as a body hit, as if the bullet were pulled in. A true head or body hit is never
+-- changed by it, and a near miss is never a headshot.
 -- Returns "Head" or "Body" and the distance, or nil.
-function Hitbox.test(origin: Point, direction: Point, target: any, shape: Shape?): (string?, number?)
+function Hitbox.test(origin: Point, direction: Point, target: any, shape: Shape?, magnet: number?): (string?, number?)
 	local size = shape or Hitbox.shapes.soldier
 	local drop = POSE_DROP[target.pose] or 0
 	local head = raySphere(origin, direction, target.x, target.y + size.headHeight - drop, target.z)
@@ -85,6 +89,21 @@ function Hitbox.test(origin: Point, direction: Point, target: any, shape: Shape?
 		return "Head", head
 	elseif body then
 		return "Body", body
+	end
+	if magnet and magnet > 0 then
+		-- A wider cylinder, the body's and up past the head. The floor stays where it is.
+		local near = rayCylinder(
+			origin,
+			direction,
+			target.x,
+			target.z,
+			target.y + size.bodyBottom,
+			target.y + size.headHeight + HEAD_RADIUS - drop + magnet,
+			BODY_RADIUS + magnet
+		)
+		if near then
+			return "Body", near
+		end
 	end
 	return nil, nil
 end

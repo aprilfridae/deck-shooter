@@ -65,6 +65,25 @@ describe("Hitbox", function()
 		expect(distance).toBeCloseTo(18.9, 1e-3)
 	end)
 
+	it("pulls a shot just past the shoulder onto the body with magnetism", function()
+		local zone = Hitbox.test({ x = -20, y = 3, z = 1.4 }, east, target(), nil, 0.4)
+		expect(zone).toBe("Body")
+	end)
+
+	it("still misses with magnetism when the shot isn't really close", function()
+		expect((Hitbox.test({ x = -20, y = 3, z = 1.6 }, east, target(), nil, 0.4))).toBeNil()
+	end)
+
+	it("counts a near miss beside the head as a body hit, never a headshot", function()
+		local zone = Hitbox.test({ x = -20, y = 5.9, z = 1 }, east, target(), nil, 0.4)
+		expect(zone).toBe("Body")
+	end)
+
+	it("leaves a true headshot a headshot with magnetism", function()
+		local zone = Hitbox.test({ x = -20, y = 5.9, z = 0 }, east, target(), nil, 0.4)
+		expect(zone).toBe("Head")
+	end)
+
 	it("misses past the shoulder", function()
 		expect((Hitbox.test({ x = -20, y = 3, z = 1.5 }, east, target()))).toBeNil()
 	end)

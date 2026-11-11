@@ -63,6 +63,10 @@ Damage falls off in a straight line between the two distances, then stays flat. 
 - A 2x headshot applies after falloff, so the M57 does 48 to the head only within 90 studs.
 - The M57, B33, Longscope and Energy Pistol reload times match their reload sounds (`GunSounds.luau`). The SMG and Shotgun have no reload sound yet.
 
+## Bullet magnetism
+
+Added 2026-11-10 at River's ask, not tried in Play. The M57 (River's AK) has `magnet = 0.4` in `GunConfig`: a shot that misses but passes within 0.4 studs of the body, or beside the head, counts as a body hit. The server does it in `Hitbox.test`, with a body cylinder 0.4 wider (radius 1.1 to 1.5). A true hit is never changed, and a near miss is never a headshot. No other gun has it. Walls still stop it.
+
 ## Recoil
 
 - Recoil is like Call of Duty's: almost none. Bullets always go where the crosshair is, with no spray pattern to learn.
