@@ -113,6 +113,18 @@ local function ringWall(g, angle: number, color: Color3)
 	piece(-half, -centre - hole, HOLE_BOTTOM, HOLE_TOP)
 	piece(-centre + hole, centre - hole, HOLE_BOTTOM, HOLE_TOP)
 	piece(centre + hole, half, HOLE_BOTTOM, HOLE_TOP)
+	-- The windows are for bullets only. Only a body's root part collides, and it is small enough to jump into a
+	-- window; once the walls got thick you could end up standing inside one, or come out the far side (River:
+	-- "get stuck inside / go through"). An unseen block fills each window. Bodies hit it; bullets and every
+	-- other ray pass, because it can't be queried.
+	for _, x in { -centre, centre } do
+		local glass = g:block(v(HOLE_WIDE, HOLE_TOP - HOLE_BOTTOM, RING_THICK), at * CFrame.new(x, (HOLE_BOTTOM + HOLE_TOP) / 2, 0), Color3.new(), M.SmoothPlastic)
+		glass.Name = "WindowBlock"
+		glass.Transparency = 1
+		glass.CanQuery = false
+		glass.CanTouch = false
+		glass.CastShadow = false
+	end
 	-- A thin lit strip along the top, so you know whose side you're on.
 	g:neon(v(RING_LENGTH - 1, 0.12, 0.3), at * CFrame.new(0, RING_HEIGHT + 0.06, 0), color)
 	-- Bars left sticking out of the top where the pour stopped.
