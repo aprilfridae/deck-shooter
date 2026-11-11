@@ -37,6 +37,7 @@ What the game already plays and what it still needs. Checked against the code on
 | Footsteps | `step-1` to `10` | Every 9 studs while walking or sprinting |
 | Jumps | `jump-1` to `14` | A jump with Space (walking off an edge plays nothing). Each take opens with 0.1s of silence, which the game skips. |
 | Menu music | `menu-music-v2.mp3` | Loops on the title screen only, and fades out over 0.6s after PLAY. |
+| Radio tracks | `radio-*.mp3` (23) | The radio's playlist (`RadioTracks.luau`, `specs/radio.md`). Sources are in `assets/sounds/radio/`. |
 | Outpost ambience | `outpost-ambience.ogg` | Loops while you're in the Outpost after PLAY, fading in and out over 1.5s. Game volume group. |
 | Menu selection | `menu-select` | Clicking PLAY, clicks in the Outpost menu, and with each pack's opening sound. Hovering a nav row plays it quieter and higher. |
 | Landings | `move-land-soft`, `move-land-hard` | Landing after at least 0.15s in the air. Hard if the fall reached 60 studs per second (a fast fall or long drop), else soft. |
