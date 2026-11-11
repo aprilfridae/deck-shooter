@@ -12,6 +12,9 @@
 --   bolt   how far back the slide or bolt is
 --   palm, weight         where the left palm is in the hold, and how much of the hand is there, not where the pose has it
 --   leftShift, rightShift  how far each hand is from where it would be, in the hold
+--   pull   how far the whole gun is drawn in toward the body, in the body's own space (+X its right, +Z behind it)
+-- A reload marked natural keeps each elbow on the side its pose has it, eases the hands and gun over a few frames,
+-- and won't bend the left wrist past a limit.
 local BodyReloads = {}
 
 export type Fit = { middle: Vector3, ratio: number } -- the model's middle from the handle; handle studs per stored stud
@@ -85,6 +88,7 @@ do
 	local SCALE = 0.82
 	local ORIGIN = Vector3.new(0.018, 0.271, -0.099) -- the clip's gun origin, from the held gun's handle
 	local GRIP = Vector3.new(0.125, 0.17, 0.27) -- the right palm, which the layered turn is about
+	local PULL = Vector3.new(-0.45, -0.1, 1.3) -- how far the gun comes in for the reload: to the body's right, up and back
 
 	-- GunView's layer over the clip (RELOADS["Energy Pistol"]): seconds, then degrees of roll, yaw and pitch and
 	-- studs across, up and back, as the camera sees them.
@@ -127,10 +131,24 @@ do
 		local fromGun = frame.gun:ToObjectSpace(SoldierPose.clipPalms(clips.meshOffset, frame.bones).Left)
 		local palm = CFrame.new(ORIGIN + fromGun.Position * SCALE) * fromGun.Rotation
 		local weight = smooth(between(t, 0.06, 0.36)) * (1 - smooth(between(t, 0.8, 0.95)))
-		return { gun = gun, mag = CFrame.identity, bolt = 0, palm = gun * palm, weight = weight, rightWeight = 0 }
+		-- The body holds the pistol out at arm's length, about 3.5 studs from the left shoulder, and an arm is
+		-- 2.3 long: the left hand couldn't get to the gun at all, and reached for it with a straight arm and a bent
+		-- wrist (River's clip, 2026-11-11). First person's gun is only 1.5 from the eye. So the gun is drawn in
+		-- toward the chest and the middle for the reload and pushed back out after.
+		local pull = PULL * (smooth(between(t, 0.03, 0.34)) * (1 - smooth(between(t, 0.74, 0.94))))
+		return {
+			gun = gun,
+			mag = CFrame.identity,
+			bolt = 0,
+			palm = gun * palm,
+			weight = weight,
+			rightWeight = 0,
+			pull = pull,
+			freeLeft = true, -- between reloads the left hand hangs at the side, not on the gun
+		}
 	end
 
-	BodyReloads["Energy Pistol"] = { at = at, LENGTH = LENGTH, SOUND = LENGTH }
+	BodyReloads["Energy Pistol"] = { at = at, LENGTH = LENGTH, SOUND = LENGTH, natural = true }
 end
 
 -- The Longscope -------------------------------------------------------------------------------------------------
@@ -185,7 +203,7 @@ do
 		}
 	end
 
-	BodyReloads.Longscope = { at = at, LENGTH = LENGTH, SOUND = 1.714, lead = LEAD }
+	BodyReloads.Longscope = { at = at, LENGTH = LENGTH, SOUND = 1.714, lead = LEAD, natural = true }
 end
 
 return BodyReloads

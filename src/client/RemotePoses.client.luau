@@ -48,6 +48,9 @@ local CODED_RELOADS: { [string]: { reload: any, perMetre: number?, origin: Vecto
 	Longscope = { reload = BodyReloads.Longscope },
 }
 local RELOAD_BLEND = 0.08 -- of the reload's own seconds: how long the arms take to pass to it and back
+-- For reloads marked natural (BodyReloads):
+local RELOAD_EASE = 30 -- how fast the hands and gun follow the reload, per second: takes the snap off single-frame jumps
+local RELOAD_WRIST_MOST = math.rad(60) -- the furthest the left wrist is bent to match a palm
 -- The body goes with the reload (River: "make the torso turn with the reload ... more natural and more swaggy").
 -- The gun's own turn already swings, overshoots and rebounds, so the torso takes a share of it: leaning back as
 -- the muzzle comes up, turning with it, and tipping over with its roll. The hips take a little, and the head
@@ -157,6 +160,7 @@ type Body = {
 	codedAt: number?, -- how far into a coded reload it is, in the reload's own seconds
 	arms: { [string]: ArmReach.Arm }, -- each arm's lengths, once measured
 	moves: any, -- this frame's moves of the gun, its magazine and its bolt, from a coded reload
+	eased: any, -- a natural reload's gun and hands as last shown, from the torso, to ease from
 	sampledAt: number,
 	gunName: string?,
 	poses: any,
@@ -233,6 +237,7 @@ local function onCharacter(character: Model)
 		codedAt = nil,
 		arms = {},
 		moves = nil,
+		eased = nil,
 		sampledAt = os.clock(),
 		gunName = nil,
 		poses = nil,
@@ -623,9 +628,12 @@ end
 -- A coded reload: turns the gun, moves its magazine and bolt, and puts the hands where the reload has them, on
 -- top of everything else. Works out where the pose has the torso, the hands and the gun from the joints as they
 -- now stand, then bends both arms to reach.
-local function applyReload(body: Body)
+local function applyReload(body: Body, dt: number)
 	body.moves = nil
 	local at = body.codedAt
+	if not at then
+		body.eased = nil
+	end
 	local coded = body.gunName and CODED_RELOADS[body.gunName]
 	local middle, ratio = HeldGuns.fit(body.character)
 	local joints = body.joints
@@ -674,14 +682,21 @@ local function applyReload(body: Body)
 		hands[side] = through(through(through(torso, joints[side .. "Shoulder"]), joints[side .. "Elbow"]), joints[side .. "Wrist"])
 	end
 	local hold = hands.Right * HeldGuns.frame(body.pose.gun) -- the gun before the reload turns it
+	-- Where each hand is on the gun as the pose has them.
+	local onGun = { Right = hold:ToObjectSpace(hands.Right), Left = hold:ToObjectSpace(hands.Left) }
+	-- A pull draws the whole gun in toward the body; the hands and the places the reload gives them go with it.
+	if pose.pull then
+		hold += body.root.CFrame:VectorToWorldSpace(pose.pull)
+	end
 	local turned = hold * moved(pose.gun)
 	-- A spin is a turn of the gun the hands don't go round with: the Longscope flipping over about the trigger.
 	local handle = if pose.spin then turned * moved(pose.spin) else turned
 
 	-- Each hand goes round with the gun, and leaves it for the magazine, the slide or the charging knob.
 	local goals = {
-		Right = turned * hold:ToObjectSpace(hands.Right),
-		Left = turned * hold:ToObjectSpace(hands.Left),
+		Right = turned * onGun.Right,
+		-- A left hand that isn't on the gun (the pistol's hangs at the side) stays where its pose has it.
+		Left = if pose.freeLeft then hands.Left else turned * onGun.Left,
 	}
 	if pose.palm and pose.weight > 0 then
 		goals.Left = goals.Left:Lerp(hold * placed(pose.palm) * BodyHands.handOnPalm("Left"), pose.weight)
@@ -697,6 +712,22 @@ local function applyReload(body: Body)
 		goals.Right = goals.Right:Lerp(away, pose.rightWeight) + hold.Rotation * (pose.rightSwing * per)
 	end
 
+	-- A natural reload's gun and hands are eased toward where the reload has them, from the torso, so a move the
+	-- reload makes in one frame is spread over a few.
+	local natural = reload.natural == true
+	if natural then
+		local now = { handle = torso:ToObjectSpace(handle), Right = torso:ToObjectSpace(goals.Right), Left = torso:ToObjectSpace(goals.Left) }
+		local eased = body.eased
+		if eased then
+			local share = 1 - math.exp(-dt * RELOAD_EASE)
+			for key, frame in now do
+				now[key] = eased[key]:Lerp(frame, share)
+			end
+		end
+		body.eased = now
+		handle, goals.Right, goals.Left = torso * now.handle, torso * now.Right, torso * now.Left
+	end
+
 	for _, side in { "Right", "Left" } do
 		local shoulder, elbow, wrist = joints[side .. "Shoulder"], joints[side .. "Elbow"], joints[side .. "Wrist"]
 		local arm = body.arms[side]
@@ -704,7 +735,25 @@ local function applyReload(body: Body)
 			arm = ArmReach.measure(shoulder, elbow, wrist)
 			body.arms[side] = arm
 		end
-		local turns = { ArmReach.solve(arm, torso * shoulder.C0, goals[side], torso:VectorToWorldSpace(ELBOW_WAYS[side])) }
+		local base = torso * shoulder.C0
+		local way = torso:VectorToWorldSpace(ELBOW_WAYS[side])
+		if natural then
+			-- The elbow stays on the side the pose has it. Pointing it somewhere fixed swung the pistol arm's
+			-- elbow round under it and left the wrist twisted 80 degrees to make up (measured in Play).
+			local poseElbow = (base * shoulder.Transform * shoulder.C1:Inverse() * elbow.C0).Position
+			if (poseElbow - base.Position).Magnitude > 0.1 then
+				way = poseElbow - base.Position
+			end
+		end
+		local turns = { ArmReach.solve(arm, base, goals[side], way) }
+		if natural and side == "Left" then
+			-- A wrist isn't bent past what a wrist does to match the palm exactly: the hand stays where it is
+			-- and turns as far as it can.
+			local axis, angle = turns[3]:ToAxisAngle()
+			if angle > RELOAD_WRIST_MOST then
+				turns[3] = CFrame.fromAxisAngle(axis, RELOAD_WRIST_MOST)
+			end
+		end
 		for index, joint in { shoulder, elbow, wrist } do
 			joint.Transform = joint.Transform:Lerp(turns[index], blend)
 		end
@@ -739,7 +788,7 @@ RunService.PreSimulation:Connect(function(dt: number)
 			applyRun(body)
 			applyAim(body, dt)
 			applyWallKick(body, now)
-			applyReload(body)
+			applyReload(body, dt)
 			continue
 		end
 		if frame ~= body.frame then
