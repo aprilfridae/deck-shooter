@@ -47,6 +47,7 @@ local GIRDER = Color3.fromRGB(30, 32, 34)
 local CASES = { Color3.fromRGB(104, 106, 104), Color3.fromRGB(84, 86, 88), Color3.fromRGB(66, 68, 70) }
 local GLASS = Color3.fromRGB(12, 16, 18)
 local CABLE = Color3.fromRGB(20, 21, 22)
+local HEAVEN = Color3.fromRGB(255, 228, 192) -- the light from above: pale and warm
 local SCREEN_TAG = "OutpostWiredScreen" -- the client runs code on these (OutpostWired.client.luau)
 local SCREEN_LIGHT = Color3.fromRGB(110, 215, 210)
 
@@ -334,6 +335,19 @@ local function skyline(g, colors: { Color3 })
 	end
 end
 
+-- A shaft of pale warm light falling from far above onto the middle of the ring, like a spotlight from the
+-- heavens (River's words). The beams are the shaft you see in the fog; the spotlight is the pool it throws on
+-- the floor and on anyone standing in it. It holds steady: FlickerDepth 0 keeps the flicker script off it.
+local function heavenLight(g)
+	local source = Kit.decor(g:block(v(1, 1, 1), CFrame.new(0, 58, 0), HEAVEN, M.SmoothPlastic))
+	source.Transparency = 1
+	local light = g:light(source, "SpotLight", { Face = Enum.NormalId.Bottom, Angle = 30, Range = 60, Brightness = 9, Shadows = true, Color = HEAVEN })
+	light:SetAttribute("FlickerDepth", 0)
+	-- Twice over, a narrow core inside a wide fall, so it's bright down the middle and soft at the edge.
+	g:shaft(v(0, 190, 0), v(0, 0.2, 0), 9, HEAVEN)
+	g:shaft(v(0, 190, 0), v(0, 0.2, 0), 4.5, HEAVEN)
+end
+
 local function makeSpawn(g): SpawnLocation
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "HexSpawn"
@@ -360,6 +374,7 @@ function Hex.build(origin: CFrame)
 	local base = Kit.new(folder, origin, SEED)
 	base:floor("floor", v(-HALF_LONG - T, -2, -HALF_WIDE - T), v(HALF_LONG + T, 0, HALF_WIDE + T), true)
 	skyline(base:group("Skyline"), SIDES)
+	heavenLight(base:group("HeavenLight"))
 	local spawns, terminals = {}, {}
 	for index, color in SIDES do
 		local sideFolder = Instance.new("Folder")

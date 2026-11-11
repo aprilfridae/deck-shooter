@@ -20,6 +20,7 @@ A walled box, 184 studs long and 104 wide, open to the sky, with plain walls 39 
 - **Dressing:** each side has a heavy analog control desk and three rusted crates in the dead corner on the spawn's left; these are solid. Dead CRT monitors lie in heaps: about half are smashed, and the intact ones still scroll code (the Outpost's screen script), some casting a small stuttering glow. Thick cables snake across the floor in slack bends, some ending in a coil, and hang slack along the walls; River wants no straight or taut cables. You walk and shoot through all of those, so the lanes are unchanged.
 - **Skyline:** 16 ruined towers ring the arena, 172 to 310 studs out, with broken stepped tops, hanging floor slabs, and a few lit windows. No girders, steel frames or cables on them: River said thin parts read as string and the frames as floating letter Ms. Nothing out there collides.
 - **Flicker:** `OutpostFlicker.client.luau` flickers the lamps subtly and the monitor glow hard (the light's `FlickerDepth` attribute).
+- **Light from above:** a pale warm shaft falls from 190 studs up onto the middle of the ring, with a steady spotlight pooling on the floor (`heavenLight`). River asked for "a spotlight from the heavens".
 - **Fog and light:** `HEX_LIGHTING` and `hexEffects` in `src/client/Outpost.client.luau`: dim dusk in dense blue-green fog.
 
 All the sizes are constants at the top of `Hex.luau`.
