@@ -21,6 +21,7 @@ local HeldGuns = require(script.Parent:WaitForChild("HeldGuns"))
 local BodyHands = require(script.Parent:WaitForChild("BodyHands"))
 local BodyCards = require(script.Parent:WaitForChild("BodyCards"))
 local SlideSparks = require(script.Parent:WaitForChild("SlideSparks"))
+local WallKick = require(script.Parent:WaitForChild("WallKick"))
 local CardFlourish = require(Guns:WaitForChild("CardFlourish"))
 local ArmReach = require(script.Parent:WaitForChild("ArmReach"))
 local AkReload = require(Guns:WaitForChild("AkReload"))
@@ -74,11 +75,18 @@ local ELBOW_WAYS = { Right = Vector3.new(0.5, -1, 0.3), Left = Vector3.new(-0.6,
 
 -- A wall jump (the client says when, and which way is out of the wall): the body leans away from the wall, the
 -- leg nearer it shoves off it and the other tucks up, then it all eases back into the jump pose.
-local WALL_KICK_SECONDS = 0.45
-local WALL_KICK_ATTACK = 0.12 -- the share of that it takes to hit the full shove
-local WALL_KICK_LEAN = math.rad(20)
-local WALL_KICK_LEG = math.rad(42) -- how far the kicking leg swings toward the wall
-local WALL_KICK_TUCK = math.rad(50) -- how far the other leg's hip and knee fold
+-- River asked for a proper wall jump ("walljump animation lets go"): it now coils against the wall for an
+-- instant, throws the body over harder, whips the shoulders round, and plants the left hand on the wall when the
+-- wall is on that side. The first version was a lean, a kick and a tuck.
+local WALL_KICK_SECONDS = 0.55
+local WALL_KICK_ATTACK = 0.11 -- the share of that it takes to hit the full shove
+local WALL_KICK_COIL = 0.045 -- seconds the coil against the wall lasts
+local WALL_KICK_DIP = 0.22 -- studs the hips sink in the coil
+local WALL_KICK_LEAN = math.rad(30)
+local WALL_KICK_WHIP = math.rad(20) -- how far the shoulders turn away from the wall
+local WALL_KICK_LEG = math.rad(52) -- how far the kicking leg swings toward the wall
+local WALL_KICK_TUCK = math.rad(62) -- how far the other leg's hip and knee fold
+local WALL_KICK_PLANT = 0.13 -- seconds the hand stays on the wall
 
 -- The cards: with a card out the body puts its gun away and plays first person's own deck flourish
 -- (CardFlourish), then holds the deck; turning to the next card flips one across, and using the card crushes it in
@@ -568,6 +576,14 @@ local function sampleStance(body: Body, now: number)
 		if stamp and typeof(way) == "Vector3" and way.Magnitude > 0.5 then
 			body.wallKickAt = now
 			body.wallWay = way.Unit
+			-- The arms are flung out by it straight away, if they're free.
+			if not body.cardPose and not body.codedAt and not body.wasReloading then
+				body.armsOut = 1
+			end
+			-- Anyone else's kick throws dust and sparks off the wall, as your own does from Movement.
+			if player ~= Players.LocalPlayer then
+				WallKick.play(body.root.Position - way.Unit * 1.4 - Vector3.new(0, 1.6, 0), way.Unit)
+			end
 		end
 	end
 
@@ -892,15 +908,12 @@ end
 
 -- The wall jump, over the jump pose.
 local function applyWallKick(body: Body, now: number)
-	local through = (now - body.wallKickAt) / WALL_KICK_SECONDS
-	if through < 0 or through >= 1 then
+	local since = now - body.wallKickAt
+	local share = since / WALL_KICK_SECONDS
+	if share < 0 or share >= 1 then
 		return
 	end
 	local joints = body.joints
-	-- A quick shove that eases away, and a slower tuck that follows it.
-	local attack = math.clamp(through / WALL_KICK_ATTACK, 0, 1)
-	local shove = attack * attack * (3 - 2 * attack) * (1 - through) ^ 2
-	local tuck = math.sin(math.pi * through) ^ 2
 	-- Out of the wall, as the body sees it: +X its right, +Z behind it.
 	local out = body.root.CFrame:VectorToObjectSpace(body.wallWay)
 	local flat = Vector3.new(out.X, 0, out.Z)
@@ -908,23 +921,79 @@ local function applyWallKick(body: Body, now: number)
 		return
 	end
 	flat = flat.Unit
-	-- Leaning away: a turn about Z tips the top to the left, one about X tips it back.
+
+	-- Three beats that run into each other: a coil against the wall, gone almost at once; the shove off it,
+	-- which hits hard and eases away; and a tuck that follows the shove through.
+	local coil = math.exp(-since / WALL_KICK_COIL) * math.clamp(since / 0.02, 0, 1)
+	local attack = math.clamp((since - WALL_KICK_COIL * 0.6) / (WALL_KICK_SECONDS * WALL_KICK_ATTACK), 0, 1)
+	local shove = attack * attack * (3 - 2 * attack) * (1 - share) ^ 2
+	local tuck = math.sin(math.pi * share) ^ 2
+
+	-- The body: pulled in toward the wall as it coils, then thrown well over away from it, and it rights itself.
+	-- A turn about Z tips the top to the left, one about X tips it back. The shoulders whip round away from the
+	-- wall a moment behind the hips, and the head stays facing ahead.
+	local lean = WALL_KICK_LEAN * shove - WALL_KICK_LEAN * 0.45 * coil
 	if joints.Root then
-		joints.Root.Transform = joints.Root.Transform * CFrame.Angles(flat.Z * WALL_KICK_LEAN * shove, 0, -flat.X * WALL_KICK_LEAN * shove)
+		joints.Root.Transform = CFrame.new(0, -WALL_KICK_DIP * coil, 0)
+			* joints.Root.Transform
+			* CFrame.Angles(flat.Z * lean, 0, -flat.X * lean)
 	end
-	-- The leg on the wall's side kicks; with the wall dead ahead or behind, the right one.
+	local late = math.clamp((since - 0.05) / (WALL_KICK_SECONDS * WALL_KICK_ATTACK), 0, 1)
+	local whip = WALL_KICK_WHIP * late * late * (3 - 2 * late) * (1 - share) ^ 2
+	if joints.Waist then
+		joints.Waist.Transform = CFrame.Angles(0, -flat.X * whip, 0) * joints.Waist.Transform
+	end
+	if joints.Neck then
+		joints.Neck.Transform = CFrame.Angles(0, flat.X * whip, 0) * joints.Neck.Transform
+	end
+
+	-- The legs. The one on the wall's side kicks (the right one with the wall dead ahead or behind): folded up
+	-- against the wall in the coil, then driven straight into it. The other tucks up out of the way.
 	local kicking = if flat.X > 0.3 then "Left" else "Right"
 	local other = if kicking == "Left" then "Right" else "Left"
 	local hip, knee = joints[kicking .. "Hip"], joints[kicking .. "Knee"]
 	if hip and knee then
 		-- Toward the wall: a hip turn about Z swings the foot to the right, one about X swings it forward.
-		hip.Transform = CFrame.Angles(flat.Z * WALL_KICK_LEG * shove, 0, -flat.X * WALL_KICK_LEG * shove) * hip.Transform
+		local swing = WALL_KICK_LEG * (shove + 0.5 * coil)
+		hip.Transform = CFrame.Angles(flat.Z * swing, 0, -flat.X * swing) * hip.Transform
 		knee.Transform = knee.Transform:Lerp(CFrame.Angles(LegCycle.restKnee, 0, 0), shove) -- straight as it shoves
+			* CFrame.Angles(-WALL_KICK_TUCK * coil, 0, 0)
 	end
 	local otherHip, otherKnee = joints[other .. "Hip"], joints[other .. "Knee"]
 	if otherHip and otherKnee then
 		otherHip.Transform = CFrame.Angles(WALL_KICK_TUCK * tuck, 0, 0) * otherHip.Transform
 		otherKnee.Transform = otherKnee.Transform * CFrame.Angles(-WALL_KICK_TUCK * 1.3 * tuck, 0, 0)
+	end
+
+	-- The hand. With the wall on the body's left and its hands free, the left hand comes off the gun and slaps
+	-- flat on the wall for a moment, as if pushing off it. (On the right, that hand has the gun.)
+	local plant = math.clamp(since / 0.05, 0, 1) * (1 - math.clamp((since - WALL_KICK_PLANT) / 0.14, 0, 1))
+	local shoulder, elbow, wrist = joints.LeftShoulder, joints.LeftElbow, joints.LeftWrist
+	local free = not body.cardPose and not body.codedAt and not body.wasReloading
+	if plant > 0.01 and free and flat.X > 0.3 and joints.Root and joints.Waist and shoulder and elbow and wrist then
+		local torso = body.root.CFrame * joints.Root.C0 * joints.Root.Transform * joints.Root.C1:Inverse()
+		torso = torso * joints.Waist.C0 * joints.Waist.Transform * joints.Waist.C1:Inverse()
+		local base = torso * shoulder.C0
+		local params = RaycastParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = { body.character }
+		local way = Vector3.new(body.wallWay.X, 0, body.wallWay.Z).Unit
+		local wall = workspace:Raycast(base.Position + Vector3.new(0, 0.2, 0), -way * 3, params)
+		if wall then
+			-- Fingers up and a little ahead, palm on the wall.
+			local fingers = (body.root.CFrame.Rotation * Vector3.new(0, 1, -0.35)).Unit
+			local x = (way - fingers * way:Dot(fingers)).Unit -- a left palm's X points away from what it faces
+			local palm = CFrame.fromMatrix(wall.Position + way * 0.18, x, fingers, x:Cross(fingers))
+			local arm = body.arms.Left
+			if not arm then
+				arm = ArmReach.measure(shoulder, elbow, wrist)
+				body.arms.Left = arm
+			end
+			local turns = { ArmReach.solve(arm, base, palm * BodyHands.handOnPalm("Left"), body.root.CFrame.Rotation * Vector3.new(-0.3, -1, 0.6)) }
+			for index, joint in { shoulder, elbow, wrist } do
+				joint.Transform = joint.Transform:Lerp(turns[index], plant)
+			end
+		end
 	end
 end
 
