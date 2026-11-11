@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local CardHand = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("CardHand"))
+local CameraSmooth = require(script.Parent.CameraSmooth)
 local CardInHand = require(script.Parent.CardInHand)
 local GunConfig = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("GunConfig"))
 local GunAudio = require(script.Parent.GunAudio)
@@ -139,6 +140,7 @@ end
 
 local function onFrame(dt: number)
 	local camera = workspace.CurrentCamera
+	CameraSmooth.apply(dt, camera) -- first, so the gun is drawn from the smoothed camera
 	local pitch, yaw = Recoil.advance(dt)
 	camera.CFrame *= CFrame.Angles(pitch, yaw, 0)
 
