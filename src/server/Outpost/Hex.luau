@@ -23,7 +23,7 @@ local T = 2 -- outer wall thickness
 local RING = 32 -- from the centre to the middle of each ring wall
 local RING_LENGTH = 29 -- each ring wall's length; the gaps between them are about 8
 local RING_HEIGHT = 15
-local RING_THICK = 1.2
+local RING_THICK = 3.5 -- was 1.2; River wanted the ring walls thicker (2026-11-11)
 local HOLE_BOTTOM, HOLE_TOP = 3.8, 7.4 -- the windows, around head height (River found 3.2 to 5.6 too low)
 local HOLE_WIDE = 7
 
