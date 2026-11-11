@@ -19,6 +19,8 @@ local PistolArms = require(Movement:WaitForChild("PistolArms"))
 local GunAudio = require(script.Parent:WaitForChild("GunAudio"))
 local HeldGuns = require(script.Parent:WaitForChild("HeldGuns"))
 local BodyHands = require(script.Parent:WaitForChild("BodyHands"))
+local BodyCards = require(script.Parent:WaitForChild("BodyCards"))
+local CardFlourish = require(Guns:WaitForChild("CardFlourish"))
 local ArmReach = require(script.Parent:WaitForChild("ArmReach"))
 local AkReload = require(Guns:WaitForChild("AkReload"))
 local BodyReloads = require(Guns:WaitForChild("BodyReloads"))
@@ -76,6 +78,15 @@ local WALL_KICK_ATTACK = 0.12 -- the share of that it takes to hit the full shov
 local WALL_KICK_LEAN = math.rad(20)
 local WALL_KICK_LEG = math.rad(42) -- how far the kicking leg swings toward the wall
 local WALL_KICK_TUCK = math.rad(50) -- how far the other leg's hip and knee fold
+
+-- The cards: with a card out the body puts its gun away and plays first person's own deck flourish
+-- (CardFlourish), then holds the deck; turning to the next card flips one across, and using the card crushes it in
+-- the right fist. First person works all of that out from the camera, in front of the eye. On the body it hangs
+-- from a frame in front of the chest, turned with the look, and both arms are bent to the flourish's palms.
+local CARD_VIEW = CFrame.new(0, 2.45, 0.35) -- that frame, from the root: the flourish sits 1.4 ahead of it and 0.36 below
+local CARD_LOOK = 0.5 -- the share of the look's pitch it tips with
+local CARD_BLEND = 0.12 -- seconds the arms take to pass to the cards
+local CARD_HEAD_DOWN = math.rad(14) -- the head drops to watch the cards
 
 -- Shooting and aiming, laid over whatever pose the body is in.
 -- Looking up and down: the torso, arms and head share the bend, so the gun and the eyes point where the
@@ -161,6 +172,8 @@ type Body = {
 	kickStamp: any, -- the wall jump's stamp as last seen, to spot a new one
 	wallKickAt: number, -- when this body last kicked off a wall
 	wallWay: Vector3, -- and which way was out of the wall
+	cards: any, -- the card hand as last seen and when things happened to it, while a card is out
+	cardPose: any, -- this frame's flourish pose, its view from the torso and the crush, while a card is out
 	wasReloading: boolean,
 	reloadAt: number?, -- when the reload being played started
 	codedAt: number?, -- how far into a coded reload it is, in the reload's own seconds
@@ -238,6 +251,8 @@ local function onCharacter(character: Model)
 		kickStamp = if player == Players.LocalPlayer then player:GetAttribute("WallKickAt") else character:GetAttribute("WallKickAt"),
 		wallKickAt = -math.huge,
 		wallWay = Vector3.xAxis,
+		cards = nil,
+		cardPose = nil,
 		wasReloading = false,
 		reloadAt = nil,
 		codedAt = nil,
@@ -263,6 +278,7 @@ local function onCharacter(character: Model)
 		if not body.soldier then
 			HeldGuns.remove(character)
 			BodyHands.remove(character)
+			BodyCards.remove(character)
 		end
 	end)
 	-- A body that's replaced is only taken out of the game here, not destroyed, so watch for it leaving too.
@@ -272,6 +288,7 @@ local function onCharacter(character: Model)
 			bodies[character] = nil
 			HeldGuns.remove(character)
 			BodyHands.remove(character)
+			BodyCards.remove(character)
 		end
 	end
 	character.Destroying:Once(drop)
@@ -413,6 +430,53 @@ local function sampleStance(body: Body, now: number)
 		end
 	elseif KEEPS_BODY[pick.name] and poses.poses.Fire and now - shotAt < GunStance.fireTime then
 		arms = poses.poses.Fire -- shooting in a slide or the air: the gun still comes up
+	end
+
+	-- The cards, on first person's own timing (GunView's showCard): the flourish from when a card comes out, a
+	-- flip for each turn to the next card (which skips what's left of the flourish), and the crush when one is used.
+	do
+		local hand: Instance = if player == Players.LocalPlayer then player else body.character
+		local out = hand:GetAttribute("CardsOut") == true
+		local turns = hand:GetAttribute("CardTurns") or 0
+		local used = hand:GetAttribute("CardUsed") or 0
+		local cards = body.cards
+		if cards and out and cards.crushAt then
+			cards = nil -- another card came out mid-crush
+		end
+		if cards and not out then
+			if not cards.crushAt and used ~= cards.used then
+				cards.crushAt = now
+			end
+			if not cards.crushAt or now - cards.crushAt >= CardFlourish.CRUSH then
+				cards = nil
+			end
+		end
+		if out and not cards then
+			cards = { at = now, crushAt = nil, used = used, seenTurns = turns, turns = 0, turnAt = now, life = math.random() * 100 }
+		end
+		body.cards = cards
+		body.cardPose = nil
+		if cards then
+			local elapsed = (cards.crushAt or now) - cards.at
+			if turns ~= cards.seenTurns then
+				cards.seenTurns = turns
+				cards.turns += 1
+				cards.turnAt = now
+				if elapsed < CardFlourish.LENGTH then
+					cards.at = now - CardFlourish.LENGTH
+					elapsed = CardFlourish.LENGTH
+				end
+			end
+			local crush = if cards.crushAt then CardFlourish.crush(elapsed, now - cards.crushAt, cards.turns) else nil
+			local pose = if crush
+				then crush.pose
+				elseif cards.turns > 0 then CardFlourish.turn(cards.turns, now - cards.turnAt)
+				else CardFlourish.at(CardFlourish.tempo(elapsed, cards.life + now))
+			pose = CardFlourish.sway(pose, cards.life + now)
+			-- The card that shows its face: the one flipped up at the flourish's end, or turned to since.
+			local faceUp = if cards.turns > 0 or elapsed >= CardFlourish.LENGTH - 0.3 or crush then CardFlourish.top(cards.turns) else nil
+			body.cardPose = { pose = pose, faceUp = faceUp, gone = if crush then crush.crushed else nil, since = now - cards.at }
+		end
 	end
 
 	-- A new wall jump: your own from this client, anyone else's from the server.
@@ -640,6 +704,43 @@ local function through(frame: CFrame, joint: Motor6D): CFrame
 	return frame * joint.C0 * joint.Transform * joint.C1:Inverse()
 end
 
+-- A card out: both arms are bent to the flourish's palms and the head drops to the cards. Leaves where the
+-- flourish hangs, from the torso, for the deck to be placed once the body has moved.
+local function applyCards(body: Body)
+	local shown = body.cardPose
+	local joints = body.joints
+	if not shown then
+		return
+	end
+	for _, name in { "Root", "Waist", "RightShoulder", "RightElbow", "RightWrist", "LeftShoulder", "LeftElbow", "LeftWrist" } do
+		if not joints[name] or not joints[name]:IsA("Motor6D") then
+			return
+		end
+	end
+	local blend = math.clamp(shown.since / CARD_BLEND, 0, 1)
+	if joints.Neck then
+		joints.Neck.Transform = CFrame.Angles(-CARD_HEAD_DOWN * blend, 0, 0) * joints.Neck.Transform
+	end
+	local torso = through(through(body.root.CFrame, joints.Root), joints.Waist)
+	local view = body.root.CFrame * CARD_VIEW * CFrame.Angles(body.look * CARD_LOOK, 0, 0)
+	for _, side in { "Right", "Left" } do
+		local shoulder, elbow, wrist = joints[side .. "Shoulder"], joints[side .. "Elbow"], joints[side .. "Wrist"]
+		local arm = body.arms[side]
+		if not arm then
+			arm = ArmReach.measure(shoulder, elbow, wrist)
+			body.arms[side] = arm
+		end
+		local palm = if side == "Right" then shown.pose.right else shown.pose.left
+		local goal = view * palm * BodyHands.handOnPalm(side)
+		local turns = { ArmReach.solve(arm, torso * shoulder.C0, goal, torso:VectorToWorldSpace(ELBOW_WAYS[side])) }
+		for index, joint in { shoulder, elbow, wrist } do
+			joint.Transform = joint.Transform:Lerp(turns[index], blend)
+		end
+	end
+	shown.view = torso:ToObjectSpace(view)
+end
+
+
 -- A coded reload: turns the gun, moves its magazine and bolt, and puts the hands where the reload has them, on
 -- top of everything else. Works out where the pose has the torso, the hands and the gun from the joints as they
 -- now stand, then bends both arms to reach.
@@ -836,7 +937,12 @@ RunService.PreSimulation:Connect(function(dt: number)
 			applyRun(body)
 			applyAim(body, dt)
 			applyWallKick(body, now)
-			applyReload(body, dt)
+			if body.cardPose then
+				body.moves = nil
+				applyCards(body)
+			else
+				applyReload(body, dt)
+			end
 			continue
 		end
 		if frame ~= body.frame then
@@ -874,8 +980,16 @@ RunService.PreRender:Connect(function()
 			if body.moves and torso and torso:IsA("BasePart") then
 				moves = { handle = torso.CFrame * body.moves.handle, mag = body.moves.mag, action = body.moves.action }
 			end
-			HeldGuns.show(character, body.gunName, body.poses, body.pose, visible, moves)
-			BodyHands.show(character, visible)
+			-- With a card out the gun is put away and the deck is in the hands, their fingers shaped to it.
+			local cards = body.cardPose
+			local deckView = if cards and cards.view and torso and torso:IsA("BasePart") then torso.CFrame * cards.view else nil
+			HeldGuns.show(character, body.gunName, body.poses, body.pose, visible and not cards, moves)
+			BodyHands.show(character, visible, if cards then cards.pose.fingers else nil)
+			if visible and cards and deckView then
+				BodyCards.show(character, deckView, cards.pose.cards, cards.faceUp, cards.gone)
+			else
+				BodyCards.hide(character)
+			end
 		end
 	end
 end)

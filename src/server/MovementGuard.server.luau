@@ -97,6 +97,35 @@ Players.PlayerRemoving:Connect(function(player)
 	wallJumpWindows[player] = nil
 end)
 
+-- The cards in a player's hand, so other players' copies of the body can play the deck flourish: whether a card
+-- is out, how many times the held card has been turned to the next, and how many have been used. Only for show.
+local cardsRemote = Instance.new("RemoteEvent")
+cardsRemote.Name = "Cards"
+cardsRemote.Parent = remotes
+local MAX_CARDS_PER_SECOND = 15
+local cardsWindows: { [Player]: { startedAt: number, count: number } } = {}
+cardsRemote.OnServerEvent:Connect(function(player, out, turns, used)
+	if type(out) ~= "boolean" or type(turns) ~= "number" or type(used) ~= "number" or turns ~= turns or used ~= used then
+		return
+	end
+	local now = os.clock()
+	local window = cardsWindows[player]
+	if not window or now - window.startedAt >= 1 then
+		window = { startedAt = now, count = 0 }
+		cardsWindows[player] = window
+	end
+	window.count += 1
+	if window.count > MAX_CARDS_PER_SECOND or not player.Character then
+		return
+	end
+	player.Character:SetAttribute("CardsOut", out)
+	player.Character:SetAttribute("CardTurns", math.clamp(math.floor(turns), 0, 1e6))
+	player.Character:SetAttribute("CardUsed", math.clamp(math.floor(used), 0, 1e6))
+end)
+Players.PlayerRemoving:Connect(function(player)
+	cardsWindows[player] = nil
+end)
+
 poseRemote.OnServerEvent:Connect(function(player, pose)
 	if type(pose) ~= "string" or not POSES[pose] or not allowPose(player) then
 		return

@@ -20,6 +20,7 @@ local MoveState = require(Movement:WaitForChild("MoveState"))
 local MoveConfig = require(Movement:WaitForChild("MoveConfig"))
 local poseRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("Pose") :: RemoteEvent
 local lookRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("Look") :: RemoteEvent
+local cardsRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("Cards") :: RemoteEvent
 local wallJumpRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("WallJump") :: RemoteEvent
 local abilityRemotes = ReplicatedStorage:WaitForChild("AbilityRemotes")
 local dashRemote = abilityRemotes:WaitForChild("Dash") :: RemoteEvent
@@ -66,6 +67,9 @@ local airStartedAt = 0
 local peakFall = 0 -- the fastest fall since leaving the ground
 local sentPose = "Normal"
 local sentLook = 0
+local sentCards = { out = false, turns = 0, used = 0 }
+local cardsSentAt = -math.huge
+local CARDS_SEND_GAP = 0.08 -- stays under the server's limit
 local lookSentAt = -math.huge
 local poseSentAt = -math.huge
 local jumpHeld = false
@@ -488,6 +492,19 @@ local function onFrame(dt: number)
 	local low = sliding or (keys.crouch and state.mode == "Air" and now - slidSeenAt < SLIDE_CAMERA_HOLD)
 	local target = BODY_CAMERA + (if low then SLIDE_CAMERA_DROP else Vector3.zero) + LAND_CAMERA_DIP * landDip
 	humanoid.CameraOffset = humanoid.CameraOffset:Lerp(target, math.min(dt * CAMERA_EASE, 1))
+
+	-- The cards in your hand, for the body: yours on the player for this client, everyone else's by the server.
+	local cardsOut, cardTurns, cardUsed = CardInHand.slot ~= nil, CardInHand.turns, CardInHand.used
+	if cardsOut ~= sentCards.out or cardTurns ~= sentCards.turns or cardUsed ~= sentCards.used then
+		player:SetAttribute("CardsOut", cardsOut)
+		player:SetAttribute("CardTurns", cardTurns)
+		player:SetAttribute("CardUsed", cardUsed)
+		if now - cardsSentAt >= CARDS_SEND_GAP then
+			sentCards = { out = cardsOut, turns = cardTurns, used = cardUsed }
+			cardsSentAt = now
+			cardsRemote:FireServer(cardsOut, cardTurns, cardUsed)
+		end
+	end
 
 	-- How far up or down you're looking, for the body other players see (and your own, in the test view) to
 	-- bend to. Yours is kept on the player for this client; everyone else gets it by way of the server.
