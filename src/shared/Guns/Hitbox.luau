@@ -72,8 +72,9 @@ end
 -- magnet is a gun's bullet magnetism, in studs: a shot that misses but passes within that distance of the body
 -- (or beside the head) counts as a body hit, as if the bullet were pulled in. A true head or body hit is never
 -- changed by it, and a near miss is never a headshot.
--- Returns "Head" or "Body" and the distance, or nil.
-function Hitbox.test(origin: Point, direction: Point, target: any, shape: Shape?, magnet: number?): (string?, number?)
+-- Returns "Head" or "Body" and the distance, or nil. A pulled-in shot also returns the point on the body it was
+-- pulled to, for the tracer to bend onto: the side of the body nearest the bullet's path, at the path's height.
+function Hitbox.test(origin: Point, direction: Point, target: any, shape: Shape?, magnet: number?): (string?, number?, Point?)
 	local size = shape or Hitbox.shapes.soldier
 	local drop = POSE_DROP[target.pose] or 0
 	local head = raySphere(origin, direction, target.x, target.y + size.headHeight - drop, target.z)
@@ -102,7 +103,18 @@ function Hitbox.test(origin: Point, direction: Point, target: any, shape: Shape?
 			BODY_RADIUS + magnet
 		)
 		if near then
-			return "Body", near
+			-- Where the path comes closest to the body's middle line, seen from above.
+			local flat = direction.x * direction.x + direction.z * direction.z
+			local along = near
+			if flat > 1e-9 then
+				along = math.max(near, ((target.x - origin.x) * direction.x + (target.z - origin.z) * direction.z) / flat)
+			end
+			local offX = origin.x + direction.x * along - target.x
+			local offZ = origin.z + direction.z * along - target.z
+			local off = math.sqrt(offX * offX + offZ * offZ)
+			local scale = if off > 1e-6 then BODY_RADIUS / off else 0
+			local height = math.clamp(origin.y + direction.y * along, target.y + size.bodyBottom, target.y + size.bodyTop - drop)
+			return "Body", near, { x = target.x + offX * scale, y = height, z = target.z + offZ * scale }
 		end
 	end
 	return nil, nil

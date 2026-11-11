@@ -141,9 +141,9 @@ local function hitsAlong(shooter: GunTargets.Target, shot: any, direction: any, 
 		if target ~= shooter and GunTargets.isAlive(target) then
 			local past = History.at(target.history, viewAt)
 			if past then
-				local zone, distance = Hitbox.test(shot.origin, direction, past, target.shape, magnet)
+				local zone, distance, pull = Hitbox.test(shot.origin, direction, past, target.shape, magnet)
 				if zone and distance < reach then
-					table.insert(hits, { target = target, zone = zone, distance = distance })
+					table.insert(hits, { target = target, zone = zone, distance = distance, pull = pull })
 				end
 			end
 		end
@@ -226,11 +226,14 @@ local function onFire(player: Player, raw: any)
 			elseif wall then
 				table.insert(impacts, { position = wall.Position, normal = wall.Normal })
 			end
+			-- A shot magnetism pulled in ends on the body, and the tracer bends onto it (pulled).
+			local pull = if first then first.pull else nil
 			table.insert(shots, {
-				to = origin + line * (if first then first.distance else reach),
+				to = if pull then Vector3.new(pull.x, pull.y, pull.z) else origin + line * (if first then first.distance else reach),
 				direction = line,
 				hit = if first then first.target.model else nil,
 				head = first ~= nil and first.zone == "Head",
+				pulled = pull ~= nil or nil,
 			})
 		end
 	end

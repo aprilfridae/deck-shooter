@@ -45,6 +45,7 @@ local COIN_TAKEN = 1.6 -- studs from the killer where a coin is taken
 local COIN_BLUR = 0.09 -- seconds of its path the streak covers
 local COIN_LIFE = 3 -- seconds at most, if there's nobody to go to
 local TRACER_LENGTH = 12
+local TRACER_BEND = 35 -- studs before a body over which a magnetised tracer swings onto it
 local TRACER_WIDTH = 0.07
 local TRACER_COLOR = Palette.DataCyan
 
@@ -143,14 +144,16 @@ local rings: { any } = {}
 local tracers: { any } = {}
 local drops: { any } = {}
 
-local function addTracer(from: Vector3, to: Vector3)
+-- aim is the way the gun was pointing, for a shot magnetism pulled onto a body: the tracer flies that way and
+-- hooks onto the body over its last TRACER_BEND studs.
+local function addTracer(from: Vector3, to: Vector3, aim: Vector3?)
 	local line = to - from
 	if line.Magnitude < 0.1 then
 		return
 	end
 	local part = makePart(Vector3.new(TRACER_WIDTH, TRACER_WIDTH, 0.1), TRACER_COLOR, Enum.Material.Neon)
 	part.Parent = folder
-	table.insert(tracers, { part = part, from = from, unit = line.Unit, total = line.Magnitude, age = 0 })
+	table.insert(tracers, { part = part, from = from, unit = line.Unit, total = line.Magnitude, age = 0, aim = aim })
 end
 
 -- A glowing drop that streaks along its path as it flies.
@@ -288,7 +291,7 @@ shotsRemote.OnClientEvent:Connect(function(shooter: Player, origin: Vector3, sho
 	for _, shot in shots do
 		-- A collateral sends a blood mark for each body it went through and one tracer past them all.
 		if not shot.through then
-			addTracer(from, shot.to)
+			addTracer(from, shot.to, if shot.pulled then shot.direction else nil)
 		end
 		if shot.hit then
 			bleed(shot)
@@ -303,16 +306,29 @@ shotsRemote.OnClientEvent:Connect(function(shooter: Player, origin: Vector3, sho
 	end
 end)
 
+-- The point this far along a tracer's path. A pulled tracer follows the aim line and swings over to the body.
+local function tracerPoint(tracer: any, along: number): Vector3
+	local direct = tracer.from + tracer.unit * along
+	if not tracer.aim then
+		return direct
+	end
+	local bend = math.min(TRACER_BEND, tracer.total)
+	local share = math.clamp((along - (tracer.total - bend)) / bend, 0, 1)
+	return (tracer.from + tracer.aim * along):Lerp(direct, share * share)
+end
+
 local function stepTracers(dt: number)
 	for index = #tracers, 1, -1 do
 		local tracer = tracers[index]
 		tracer.age += dt
 		local tail, head = Tracer.span(tracer.total, tracer.age, TRACER_SPEED, TRACER_LENGTH)
 		if tail and head then
-			local length = math.max(head - tail, 0.01)
+			local back, front = tracerPoint(tracer, tail), tracerPoint(tracer, head)
+			local span = front - back
+			local length = math.max(span.Magnitude, 0.01)
 			tracer.part.Size = Vector3.new(TRACER_WIDTH, TRACER_WIDTH, length)
-			local middle = tracer.from + tracer.unit * ((tail + head) / 2)
-			tracer.part.CFrame = CFrame.lookAt(middle, middle + tracer.unit)
+			local way = if span.Magnitude > 0.001 then span.Unit else tracer.unit
+			tracer.part.CFrame = CFrame.lookAt((back + front) / 2, (back + front) / 2 + way)
 		else
 			tracer.part:Destroy()
 			table.remove(tracers, index)
