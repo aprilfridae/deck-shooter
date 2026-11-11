@@ -44,9 +44,8 @@ local EFFECT_EASE = 7
 local POSE_SEND_GAP = 0.12 -- stays under the server's 10 per second limit
 local LOOK_SEND_GAP = 0.1 -- how often the server is told how far up or down you're looking, at most
 local LOOK_SEND_CHANGE = 2 -- degrees it must have changed by
-local DASH_RADIUS = 1.5 -- keeps the body this far from a wall
-local DASH_BACK_START = 1.6
-local DASH_GROUND_REACH = 6
+local DASH_POP = 16 -- studs a second upward a dash from the ground gets at least
+local DASH_FLAT_LEAST = 0.3 -- the least share of the launch speed kept as running speed, for a dash aimed up or down
 
 local player = Players.LocalPlayer
 local humanoid: Humanoid? = nil
@@ -75,15 +74,6 @@ local poseSentAt = -math.huge
 local jumpHeld = false
 local stepTravel = 0
 
-type DashPath = {
-	from: Vector3,
-	to: Vector3,
-	forward: Vector3,
-	startedAt: number,
-	entrySpeed: number,
-	fallSpeed: number,
-}
-local dash: DashPath? = nil
 
 local function poseFor(mode: string): string
 	if mode == "Slide" or mode == "Crouch" then
@@ -246,9 +236,12 @@ local function tryWallJump(moveDirection: Vector3, now: number)
 	wallJumpRemote:FireServer(away)
 end
 
--- A dash follows a set path, then hands back to normal movement in the air.
+-- A dash is a launch: one hard shove of speed, then the speed is kept and let go slowly (MoveState's dash fade).
+-- It used to carry the body along a set path by placing it every frame, which looked steppy (River, 2026-11-11:
+-- "not smooth", "it should launch"): Roblox stops smoothing a body on a frame a script moves it. Now the velocity
+-- is set once and physics carries it, walls and all.
 local function startDash(distance: number)
-	if not humanoid or not root or humanoid.Health <= 0 or dash then
+	if not humanoid or not root or humanoid.Health <= 0 then
 		return
 	end
 	-- Holding only forward, the dash goes where the camera looks, up or down too (River: "dash in the direction
@@ -258,57 +251,26 @@ local function startDash(distance: number)
 	local asked = camera:VectorToObjectSpace(direction)
 	local straight = direction.Magnitude > 0 and asked.Z < 0 and math.abs(asked.X) < DASH_SIDE_LEAST * math.abs(asked.Z)
 	local forward = if straight then camera.LookVector elseif direction.Magnitude > 0 then direction.Unit else flatLook()
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { humanoid.Parent :: Model }
-	params.RespectCanCollide = true
 
-	-- On the ground the path follows the slope, so a ramp does not stop the dash.
-	local ground = workspace:Raycast(root.Position, Vector3.new(0, -DASH_GROUND_REACH, 0), params)
-	-- Looking up off the ground lifts off it; anything else along the ground follows it.
-	if ground and forward:Dot(ground.Normal) < 0.2 then
-		forward = (forward - ground.Normal * forward:Dot(ground.Normal)).Unit
+	local now = os.clock()
+	local peak = distance / Config.DashSeconds
+	local flat = Vector3.new(forward.X, 0, forward.Z)
+	local way = if flat.Magnitude > 0.05 then flat.Unit else flatLook()
+	-- Off the ground it always pops up a little, so the floor doesn't eat the launch.
+	local rise = forward.Y * peak
+	if humanoid.FloorMaterial ~= Enum.Material.Air then
+		rise = math.max(rise, DASH_POP)
 	end
 
-	-- A sphere cast misses anything it starts inside, so it starts behind the player
-	-- to catch a wall they are already touching.
-	local start = root.Position - forward * DASH_BACK_START
-	local hit = workspace:Spherecast(start, DASH_RADIUS, forward * (distance + DASH_BACK_START), params)
-	local travel = if hit then math.max(hit.Distance - DASH_BACK_START, 0) else distance
-	local from = root.Position
-	dash = {
-		from = from,
-		to = from + forward * travel,
-		forward = forward,
-		startedAt = os.clock(),
-		entrySpeed = MoveState.speed(state, os.clock()),
-		fallSpeed = root.AssemblyLinearVelocity.Y,
-	}
-	MoveState.startDash(state)
-	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-end
-
-local function advanceDash(path: DashPath, now: number)
-	local progress = math.min((now - path.startedAt) / Config.DashSeconds, 1)
-	root.CFrame = CFrame.new(path.from:Lerp(path.to, progress)) * root.CFrame.Rotation
-	root.AssemblyLinearVelocity = Vector3.zero
-
-	if progress >= 1 then
-		dash = nil
-		local dashSpeed = (path.to - path.from).Magnitude / Config.DashSeconds
-		MoveState.finishDash(state, path.entrySpeed, dashSpeed, now)
-		humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
-		local flat = Vector3.new(path.forward.X, 0, path.forward.Z)
-		slideDirection = if flat.Magnitude > 0.05 then flat.Unit else flatLook()
-		local speed = MoveState.speed(state, now) * math.min(flat.Magnitude / 0.5, 1)
-		-- A dash upward doesn't end in a drop.
-		local fall = if path.forward.Y > 0.2 then math.max(path.fallSpeed, 0) else path.fallSpeed
-		root.AssemblyLinearVelocity = slideDirection * speed + Vector3.yAxis * fall
-		airFromSlide = true
-		jumped = false
-		airStartedAt = now
-		peakFall = 0
-	end
+	local entrySpeed = MoveState.speed(state, now)
+	MoveState.finishDash(state, entrySpeed, peak * math.max(flat.Magnitude, DASH_FLAT_LEAST), now)
+	humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+	slideDirection = way
+	root.AssemblyLinearVelocity = flat * peak + Vector3.yAxis * rise
+	airFromSlide = true
+	jumped = false
+	airStartedAt = now
+	peakFall = 0
 end
 
 -- In the Outpost the body turns to face where it's walking. In first person this script turns it to the camera.
@@ -331,7 +293,6 @@ local function onCharacter(character: Model)
 	landDip = 0
 	sentPose = "Normal"
 	jumpHeld = false
-	dash = nil
 	workspace.CurrentCamera.FieldOfView = FIELD_OF_VIEW
 end
 
@@ -356,9 +317,6 @@ local function onFrame(dt: number)
 	end
 	if humanoid.FloorMaterial ~= Enum.Material.Air then
 		wallJumps, kickedWalls = 0, {} -- back on the ground
-	end
-	if dash then
-		advanceDash(dash, now)
 	end
 
 	MoveState.step(state, {
@@ -406,7 +364,7 @@ local function onFrame(dt: number)
 	-- gravity, so the flat velocity is set here: straight to the keys on the ground (and to a stop with none
 	-- held), and to the jump's speed on leaving the ground. In the air it is left alone, so a jump, a push or a
 	-- wall kick carries. A dash moves itself.
-	if not dash and state.mode ~= "Dash" then
+	if state.mode ~= "Dash" then
 		local wish = direction
 		if sliding or (airFromSlide and direction.Magnitude == 0) then
 			wish = slideDirection
@@ -572,7 +530,7 @@ end
 
 dashRemote.OnClientEvent:Connect(startDash)
 pushRemote.OnClientEvent:Connect(function(velocity: Vector3)
-	if humanoid and root and not dash then
+	if humanoid and root then
 		local flat = Vector3.new(velocity.X, 0, velocity.Z)
 		MoveState.launch(state, flat.Magnitude, os.clock())
 		humanoid:ChangeState(Enum.HumanoidStateType.Freefall)

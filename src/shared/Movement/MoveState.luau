@@ -69,8 +69,9 @@ function MoveState.speed(state: State, now: number): number
 		local ramp = lerp(MoveConfig.SprintSpeed, MoveConfig.SlideStartSpeed, math.clamp(since / MoveConfig.SlideRampTime, 0, 1))
 		return math.min(fade, ramp) * cards
 	elseif state.mode == "Air" then
+		-- Let go fast at first and then slowly, so the launch reads as a launch and its tail hangs on.
 		local alpha = (now - state.dashFadeAt) / MoveConfig.DashFadeTime
-		return if alpha < 1 then lerp(state.dashFadeFrom, state.carrySpeed, alpha) else state.carrySpeed
+		return if alpha < 1 then lerp(state.dashFadeFrom, state.carrySpeed, 1 - (1 - alpha) ^ 3) else state.carrySpeed
 	elseif state.mode == "Dash" then
 		return 0
 	end
