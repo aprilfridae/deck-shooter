@@ -33,7 +33,7 @@ What the game already plays and what it still needs. Checked against the code on
 | Pistol snap | `pistol-snap` | The pistol hand's finger snap on a kill |
 | Energy Pistol reload | `reload-pistol-v4` | Reload (0.964s) |
 | Hits | `hit-body`, `hit-head`, `hit-kill` | Your shot hits a body, a head, or gets a kill |
-| Low health | `hurt` | Damage leaves you at 20 health or less |
+| Hurt | `hurt` | Every time you take damage and live (only at 20 health or less until 2026-11-11) |
 | Footsteps | `step-1` to `10` | Every 9 studs while walking or sprinting |
 | Jumps | `jump-1` to `14` | A jump with Space (walking off an edge plays nothing). Each take opens with 0.1s of silence, which the game skips. |
 | Menu music | `menu-music-v2.mp3` | Loops on the title screen only, and fades out over 0.6s after PLAY. |

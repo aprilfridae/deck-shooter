@@ -178,13 +178,10 @@ describe("GunSounds.hitSounds", function()
 end)
 
 describe("GunSounds.hurtPlays", function()
-	it("plays when damage leaves you at 20 health or less", function()
+	it("plays whenever damage leaves you alive", function()
+		expect(GunSounds.hurtPlays(100, 79)).toBe(true)
 		expect(GunSounds.hurtPlays(45, 20)).toBe(true)
 		expect(GunSounds.hurtPlays(20, 7)).toBe(true)
-	end)
-
-	it("stays quiet above 20 health", function()
-		expect(GunSounds.hurtPlays(100, 21)).toBe(false)
 	end)
 
 	it("stays quiet when health doesn't drop", function()

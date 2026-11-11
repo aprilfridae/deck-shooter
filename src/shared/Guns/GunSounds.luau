@@ -3,7 +3,6 @@
 -- outside the repo; to add or change a sound, upload it to the group and add its id to SoundIds.
 local SoundIds = require("./SoundIds")
 
-local HURT_HEALTH = 20
 
 local function sound(file: string): string
 	local id = SoundIds[file]
@@ -142,9 +141,10 @@ function GunSounds.hitSounds(headshot: boolean, killed: boolean): { string }
 	return { if headshot then GunSounds.hits.head else GunSounds.hits.body }
 end
 
--- A warning that you're nearly dead, not a sound for every hit.
+-- Plays every time you take damage and live. It used to be a warning at 20 health or less only; River wanted it
+-- on every hit (2026-11-11).
 function GunSounds.hurtPlays(previousHealth: number, health: number): boolean
-	return health < previousHealth and health > 0 and health <= HURT_HEALTH
+	return health < previousHealth and health > 0
 end
 
 return GunSounds
