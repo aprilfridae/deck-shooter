@@ -87,7 +87,12 @@ local WALL_KICK_TUCK = math.rad(50) -- how far the other leg's hip and knee fold
 -- it and 0.36 below. It was fixed to the root at first, 0.45 further back. But the poses carry the chest off the
 -- root (a quarter stud to the right standing, well forward running), so the cards sat too close, off to the
 -- left, and behind the chest on the run (River, 2026-11-11).
-local CARD_VIEW = CFrame.new(0, 0.72, -0.45)
+-- Then it followed the middle of the torso but stayed upright, and the run leans the torso nearly 30 degrees:
+-- the shoulders and head went forward and down and the cards didn't, so the arms trailed behind the body on the
+-- move. Now it hangs from the top of the torso and leans with it.
+local CARD_NECK = Vector3.new(0, 0.72, 0) -- where it hangs from, on the upper torso
+local CARD_OUT = CFrame.new(0, 0, -0.45) -- and how far out from there, along its own leaned line
+local CARD_LEAN = 0.9 -- the share of the torso's forward lean it takes (none of its twist or tip)
 local CARD_LOOK = 0.5 -- the share of the look's pitch it tips with
 local CARD_BLEND = 0.12 -- seconds the arms take to pass to the cards
 local CARD_HEAD_DOWN = math.rad(14) -- the head drops to watch the cards
@@ -726,7 +731,9 @@ local function applyCards(body: Body)
 		joints.Neck.Transform = CFrame.Angles(-CARD_HEAD_DOWN * blend, 0, 0) * joints.Neck.Transform
 	end
 	local torso = through(through(body.root.CFrame, joints.Root), joints.Waist)
-	local view = CFrame.new(torso.Position) * body.root.CFrame.Rotation * CARD_VIEW * CFrame.Angles(body.look * CARD_LOOK, 0, 0)
+	local facing = body.root.CFrame.Rotation
+	local lean = (facing:Inverse() * torso.Rotation):ToEulerAnglesYXZ() -- the torso's pitch from upright; forward is negative
+	local view = CFrame.new(torso * CARD_NECK) * facing * CFrame.Angles(lean * CARD_LEAN + body.look * CARD_LOOK, 0, 0) * CARD_OUT
 	for _, side in { "Right", "Left" } do
 		local shoulder, elbow, wrist = joints[side .. "Shoulder"], joints[side .. "Elbow"], joints[side .. "Wrist"]
 		local arm = body.arms[side]
