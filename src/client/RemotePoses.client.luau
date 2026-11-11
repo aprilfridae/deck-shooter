@@ -83,7 +83,11 @@ local WALL_KICK_TUCK = math.rad(50) -- how far the other leg's hip and knee fold
 -- (CardFlourish), then holds the deck; turning to the next card flips one across, and using the card crushes it in
 -- the right fist. First person works all of that out from the camera, in front of the eye. On the body it hangs
 -- from a frame in front of the chest, turned with the look, and both arms are bent to the flourish's palms.
-local CARD_VIEW = CFrame.new(0, 2.45, 0.35) -- that frame, from the root: the flourish sits 1.4 ahead of it and 0.36 below
+-- That frame, from the middle of the upper torso, facing the way the body faces: the flourish sits 1.4 ahead of
+-- it and 0.36 below. It was fixed to the root at first, 0.45 further back. But the poses carry the chest off the
+-- root (a quarter stud to the right standing, well forward running), so the cards sat too close, off to the
+-- left, and behind the chest on the run (River, 2026-11-11).
+local CARD_VIEW = CFrame.new(0, 0.72, -0.45)
 local CARD_LOOK = 0.5 -- the share of the look's pitch it tips with
 local CARD_BLEND = 0.12 -- seconds the arms take to pass to the cards
 local CARD_HEAD_DOWN = math.rad(14) -- the head drops to watch the cards
@@ -722,7 +726,7 @@ local function applyCards(body: Body)
 		joints.Neck.Transform = CFrame.Angles(-CARD_HEAD_DOWN * blend, 0, 0) * joints.Neck.Transform
 	end
 	local torso = through(through(body.root.CFrame, joints.Root), joints.Waist)
-	local view = body.root.CFrame * CARD_VIEW * CFrame.Angles(body.look * CARD_LOOK, 0, 0)
+	local view = CFrame.new(torso.Position) * body.root.CFrame.Rotation * CARD_VIEW * CFrame.Angles(body.look * CARD_LOOK, 0, 0)
 	for _, side in { "Right", "Left" } do
 		local shoulder, elbow, wrist = joints[side .. "Shoulder"], joints[side .. "Elbow"], joints[side .. "Wrist"]
 		local arm = body.arms[side]
