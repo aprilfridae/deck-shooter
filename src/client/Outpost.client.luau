@@ -51,6 +51,19 @@ local RELAY_LIGHTING = {
 	GlobalShadows = true,
 	ShadowSoftness = 0.6,
 }
+-- The Hex map: the last light of a cold day in a ruined city, deep in blue-green fog. Dim, so the amber and
+-- green emergency lamps carry the arena and the towers outside are only shapes.
+local HEX_LIGHTING = {
+	Ambient = Color3.fromRGB(46, 62, 70),
+	OutdoorAmbient = Color3.fromRGB(78, 104, 114),
+	Brightness = 0.7,
+	ClockTime = 17.6,
+	EnvironmentDiffuseScale = 0.4,
+	EnvironmentSpecularScale = 0.6,
+	ExposureCompensation = -0.15,
+	GlobalShadows = true,
+	ShadowSoftness = 0.7,
+}
 -- Effects the Outpost and the Relay map replace while you're there.
 local REPLACED = {
 	Atmosphere = true,
@@ -110,9 +123,29 @@ local relayEffects = {
 	effect("BloomEffect", { Intensity = 1, Size = 30, Threshold = 1.2 }),
 }
 
+local hexEffects = {
+	effect("Atmosphere", {
+		Density = 0.46,
+		Offset = 0,
+		Color = Color3.fromRGB(84, 116, 126),
+		Decay = Color3.fromRGB(40, 62, 72),
+		Glare = 0,
+		Haze = 2.8,
+	}),
+	effect("Sky", { CelestialBodiesShown = false, StarCount = 0 }),
+	effect("ColorCorrectionEffect", {
+		Saturation = -0.15,
+		Contrast = 0.14,
+		Brightness = -0.02,
+		TintColor = Color3.fromRGB(200, 232, 240),
+	}),
+	effect("BloomEffect", { Intensity = 1.1, Size = 32, Threshold = 1.1 }),
+}
+
 local PROFILES = {
 	[Zones.Outpost] = { lighting = OUTPOST_LIGHTING, effects = outpostEffects },
 	[Zones.Relay] = { lighting = RELAY_LIGHTING, effects = relayEffects },
+	[Zones.Hex] = { lighting = HEX_LIGHTING, effects = hexEffects },
 }
 
 local original: { [string]: any } = {}
