@@ -10,11 +10,15 @@ local TweenService = game:GetService("TweenService")
 
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local Palette = require(Guns:WaitForChild("Palette"))
+local TypeLabel = require(script.Parent.TypeLabel)
 
 local PUSH = 15 -- studs the soul is knocked back
 local LIFT = 5 -- and up
 local PUSH_EASE = 2.6 -- how fast it gets there: quick at first, then drifting
 local TURN_EASE = 2.2 -- how fast it turns to look back at the body
+local FOLLOW_EASE = 4 -- how fast the look follows the body as it falls. The body moves in jolts; the look mustn't
+local TEXT_HEIGHT = 0.075 -- of the screen's height
+local TEXT_TRACKING = 0.12 -- of the text's size
 local DRIFT = 0.6 -- studs a second it keeps floating up afterwards
 local SOUL_FOV = 82
 local FOV_EASE = 3
@@ -32,6 +36,7 @@ type Soul = {
 	startedAt: number,
 	from: CFrame,
 	body: BasePart,
+	lookAt: Vector3, -- the eased point on the body the soul looks at
 	push: Vector3, -- where it ends up, from where it started
 	character: Model,
 }
@@ -78,32 +83,39 @@ local function showText()
 	screen.IgnoreGuiInset = true
 	screen.ResetOnSpawn = false
 	screen.DisplayOrder = 50
-	local label = Instance.new("TextLabel")
-	label.BackgroundTransparency = 1
-	label.AnchorPoint = Vector2.new(0.5, 0.5)
-	label.Position = UDim2.fromScale(0.5, 0.42)
-	label.Size = UDim2.fromScale(0.8, 0.12)
-	label.Font = Enum.Font.Michroma
-	label.Text = "YOU DIED"
-	label.TextScaled = true
-	label.TextColor3 = Palette.Bone
-	label.TextTransparency = 1
-	label.Parent = screen
+	-- The game's own monospace, bold (the LabelBold sheet), faded in as one group.
+	local group = Instance.new("CanvasGroup")
+	group.BackgroundTransparency = 1
+	group.Size = UDim2.fromScale(1, 1)
+	group.GroupTransparency = 1
+	group.Parent = screen
+	local view = workspace.CurrentCamera.ViewportSize
+	local size = view.Y * TEXT_HEIGHT
+	local label = TypeLabel.new(group, {
+		style = "LabelLarge", -- LabelBold drawn for big text, so it stays sharp at this size
+		size = size,
+		tracking = size * TEXT_TRACKING,
+		color = Palette.Bone,
+		shadow = false,
+		position = UDim2.fromOffset(0, 0),
+	})
+	label:set("YOU DIED")
+	label:setPosition(UDim2.fromOffset((view.X - label:width()) / 2, view.Y * 0.46))
 	local line = Instance.new("Frame")
 	line.BorderSizePixel = 0
 	line.BackgroundColor3 = Palette.Bone
-	line.BackgroundTransparency = 1
+	line.BackgroundTransparency = 0.3
 	line.AnchorPoint = Vector2.new(0.5, 0)
 	line.Position = UDim2.fromScale(0.5, 0.5)
 	line.Size = UDim2.new(0, 0, 0, 2)
-	line.Parent = screen
+	line.Parent = group
 	screen.Parent = player:WaitForChild("PlayerGui")
 	gui = screen
 	task.delay(TEXT_DELAY, function()
 		if gui == screen then
 			local info = TweenInfo.new(TEXT_FADE, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-			TweenService:Create(label, info, { TextTransparency = 0 }):Play()
-			TweenService:Create(line, info, { BackgroundTransparency = 0.3, Size = UDim2.new(0.22, 0, 0, 2) }):Play()
+			TweenService:Create(group, info, { GroupTransparency = 0 }):Play()
+			TweenService:Create(line, info, { Size = UDim2.new(0, label:width(), 0, 2) }):Play()
 		end
 	end)
 end
@@ -135,7 +147,8 @@ local function onFrame(dt: number)
 	local out = 1 - math.exp(-age * PUSH_EASE)
 	local position = current.from.Position + current.push * out + Vector3.yAxis * DRIFT * age
 	-- It starts looking where you were looking and comes round to the body.
-	local toBody = CFrame.lookAt(position, current.body.Position)
+	current.lookAt = current.lookAt:Lerp(current.body.Position, 1 - math.exp(-dt * FOLLOW_EASE))
+	local toBody = CFrame.lookAt(position, current.lookAt)
 	local turn = 1 - math.exp(-age * TURN_EASE)
 	camera.CFrame = CFrame.new(position) * current.from.Rotation:Lerp(toBody.Rotation, turn)
 	camera.FieldOfView += (SOUL_FOV - camera.FieldOfView) * (1 - math.exp(-dt * FOV_EASE))
@@ -162,6 +175,7 @@ local function begin(character: Model)
 		startedAt = os.clock(),
 		from = from,
 		body = body,
+		lookAt = body.Position,
 		push = clearPush(from.Position, direction, character),
 		character = character,
 	}

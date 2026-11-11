@@ -74,7 +74,7 @@ Rolling, opening, rebirths and the odds. `specs/packs.md` has the page and how i
 | --- | --- | --- |
 | Music, Game and Menu volume | 0 to 100% | 100% |
 | Mouse sensitivity | 0.1 to 3 times | 1 |
-| Longscope sensitivity | 0.1 to 2 times mouse sensitivity | 1 |
+| Longscope sensitivity | 0.1 to 2 times mouse sensitivity. At 1 the view turns exactly as far scoped as unscoped; there is no extra slowdown for the zoom (removed 2026-11-10 at River's ask). | 1 |
 | Field of view | 60 to 100 | 80 |
 | Keybinds | Any keyboard key, or Mouse 1 and 2 | The current keys |
 
