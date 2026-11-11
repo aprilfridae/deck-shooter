@@ -38,8 +38,13 @@ return {
 	WallJumpSteep = 0.3, -- the most a wall can lean (the upward share of its normal)
 	WallJumpLook = 0.6, -- how much of the kick goes where the player is looking, against straight off the wall
 
-	-- Cheat checks. SpeedLimit is the fastest chain jump plus a margin.
-	SpeedLimit = 40,
+	-- Air strafing, by the Source engine's rule (AirStrafe.luau). The numbers are Source's own defaults.
+	AirAccelerate = 10, -- sv_airaccelerate
+	AirCapShare = 30 / 250, -- the air speed cap as a share of run speed: 30 units a second against a 250 run
+	AirStrafeMaxSpeed = 40, -- the most strafing can build to. Source has no limit; the cheat checks need one
+
+	-- Cheat checks. SpeedLimit is the fastest air strafe plus a margin.
+	SpeedLimit = 45,
 	SpeedWindow = 0.5,
 	LagStuds = 4,
 	MaxLagSeconds = 1.3, -- most stall time one position jump can be credited

@@ -16,6 +16,7 @@ local Movement = ReplicatedStorage:WaitForChild("Movement")
 local Parry = require(Movement:WaitForChild("Parry"))
 local MoveState = require(Movement:WaitForChild("MoveState"))
 local MoveConfig = require(Movement:WaitForChild("MoveConfig"))
+local AirStrafe = require(Movement:WaitForChild("AirStrafe"))
 local poseRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("Pose") :: RemoteEvent
 local abilityRemotes = ReplicatedStorage:WaitForChild("AbilityRemotes")
 local dashRemote = abilityRemotes:WaitForChild("Dash") :: RemoteEvent
@@ -347,6 +348,29 @@ local function onFrame(dt: number)
 	end
 	if airFromSlide and direction.Magnitude == 0 then
 		humanoid:Move(slideDirection, false)
+	end
+
+	-- In the air you fly by Source's rule: you keep your velocity, and the keys only add a little along the
+	-- direction they ask for (AirStrafe.luau). The Humanoid would steer you straight to the keys, so it's told to
+	-- go exactly where you're already going. Not during a dash or its ramp-down.
+	if state.mode == "Air" and not dash and now - state.dashFadeAt >= MoveConfig.DashFadeTime then
+		local flying = root.AssemblyLinearVelocity
+		local vx, vz = flying.X, flying.Z
+		if previousMode ~= "Air" then
+			-- Taking off: leave the ground at the speed the jump gives (a slide jump's boost lands at once).
+			local flat = math.sqrt(vx * vx + vz * vz)
+			if flat > 1 and state.carrySpeed > flat then
+				vx, vz = vx / flat * state.carrySpeed, vz / flat * state.carrySpeed
+			elseif flat <= 1 and direction.Magnitude > 0 then
+				vx, vz = direction.Unit.X * state.carrySpeed, direction.Unit.Z * state.carrySpeed
+			end
+		end
+		vx, vz = AirStrafe.accelerate(vx, vz, direction.X, direction.Z, dt)
+		root.AssemblyLinearVelocity = Vector3.new(vx, flying.Y, vz)
+		local flat = math.sqrt(vx * vx + vz * vz)
+		MoveState.setAirSpeed(state, flat, now)
+		humanoid.WalkSpeed = flat
+		humanoid:Move(if flat > 0.1 then Vector3.new(vx / flat, 0, vz / flat) else Vector3.zero, false)
 	end
 
 	local velocity = root.AssemblyLinearVelocity
