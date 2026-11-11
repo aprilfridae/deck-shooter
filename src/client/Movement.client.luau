@@ -164,6 +164,8 @@ feelParams.FilterType = Enum.RaycastFilterType.Exclude
 feelParams.RespectCanCollide = true
 local lastPush: Vector3? = nil -- the velocity set on the last frame, if one was
 
+local WALL_JUMP_HEIGHTS = { 0, -2.2, 1.5 } -- studs from the middle of the body
+
 local function tryWallJump(moveDirection: Vector3, now: number)
 	if
 		state.mode ~= "Air"
@@ -178,11 +180,16 @@ local function tryWallJump(moveDirection: Vector3, now: number)
 	-- The nearest wall within reach, looking all the way round.
 	local look = flatLook()
 	local nearest: RaycastResult? = nil
-	for turn = 0, 7 do
-		local way = CFrame.Angles(0, turn * math.pi / 4, 0) * look
-		local hit = workspace:Raycast(root.Position, way * MoveConfig.WallJumpReach, wallParams)
-		if hit and math.abs(hit.Normal.Y) <= MoveConfig.WallJumpSteep and (not nearest or hit.Distance < nearest.Distance) then
-			nearest = hit
+	-- At three heights, the middle of the body, near the feet and near the head: with only the middle, a wall
+	-- that was low, or had a window at that height, was missed, and River found it finicky when low (2026-11-11).
+	for _, height in WALL_JUMP_HEIGHTS do
+		local from = root.Position + Vector3.new(0, height, 0)
+		for turn = 0, 7 do
+			local way = CFrame.Angles(0, turn * math.pi / 4, 0) * look
+			local hit = workspace:Raycast(from, way * MoveConfig.WallJumpReach, wallParams)
+			if hit and math.abs(hit.Normal.Y) <= MoveConfig.WallJumpSteep and (not nearest or hit.Distance < nearest.Distance) then
+				nearest = hit
+			end
 		end
 	end
 	if not nearest then
