@@ -1,4 +1,5 @@
--- Makes the Outpost's lights flicker subtly while you're there (Flicker has the shape of it). Each light and its
+-- Makes the Outpost's lights flicker subtly while you're there (Flicker has the shape of it), and the Hex map's
+-- lamps and monitor glow too. A light with a FlickerDepth attribute flickers that many times harder. Each light and its
 -- glowing bulb dim together. Runs a few times a second, not every frame, and not at all elsewhere.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -11,13 +12,13 @@ local Zones = require(Guns:WaitForChild("Zones"))
 local UPDATE_EVERY = 1 / 20
 local BULB_FADE = 0.5 -- how much of a dip shows on the bulb itself
 
-type Lamp = { light: Light, full: number, bulb: BasePart?, bulbFull: number, seed: number }
+type Lamp = { light: Light, full: number, bulb: BasePart?, bulbFull: number, seed: number, depth: number }
 
 local player = Players.LocalPlayer
-local lamps: { Lamp } = {}
+local byZone: { [string]: { Lamp } } = {}
 
-local function gather(folder: Instance)
-	table.clear(lamps)
+local function gather(folder: Instance): { Lamp }
+	local lamps = {}
 	for _, item in folder:GetDescendants() do
 		if item:IsA("Light") then
 			local parent = item.Parent
@@ -28,16 +29,21 @@ local function gather(folder: Instance)
 				bulb = bulb,
 				bulbFull = if bulb then bulb.Transparency else 0,
 				seed = #lamps + 1,
+				depth = item:GetAttribute("FlickerDepth") or 1,
 			})
 		end
 	end
+	return lamps
 end
 
-local outpost = workspace:WaitForChild("Outpost", 60)
-if not outpost then
-	return
+for zone, name in { [Zones.Outpost] = "Outpost", [Zones.Hex] = "Hex" } do
+	task.spawn(function()
+		local folder = workspace:WaitForChild(name, 60)
+		if folder then
+			byZone[zone] = gather(folder)
+		end
+	end)
 end
-gather(outpost)
 
 local waited = 0
 RunService.Heartbeat:Connect(function(dt)
@@ -46,12 +52,13 @@ RunService.Heartbeat:Connect(function(dt)
 		return
 	end
 	waited = 0
-	if Zones.of(player) ~= Zones.Outpost then
+	local lamps = byZone[Zones.of(player)]
+	if not lamps then
 		return
 	end
 	local now = os.clock()
 	for _, lamp in lamps do
-		local share = Flicker.at(lamp.seed, now)
+		local share = math.max(0, 1 - (1 - Flicker.at(lamp.seed, now)) * lamp.depth)
 		lamp.light.Brightness = lamp.full * share
 		if lamp.bulb then
 			lamp.bulb.Transparency = lamp.bulbFull + (1 - lamp.bulbFull) * (1 - share) * BULB_FADE

@@ -17,8 +17,9 @@ A walled box, 160 studs long and 90 wide, open to the sky, with plain walls 34 h
 
 - **Concrete:** the floor is one damp pour; walls, ring, cover and ramps are weathered concrete with grime and water streaks (`Kit:dirty`). Rusted bar ends poke out of walls and bleed stains down them.
 - **Side colours:** amber for one side and a sickly green for the other, as thin lit strips on the ring and cover and as emergency lamps on the walls (three a side).
-- **Dressing:** each side has a heavy analog control desk and three rusted crates in the dead corner on the spawn's left; these are solid. Dead and smashed CRT monitors lie in heaps and thick cables run across the floor and along the walls; you walk and shoot through all of those, so the lanes are unchanged.
-- **Skyline:** 16 ruined towers ring the arena, 150 to 290 studs out, with broken stepped tops, hanging floor slabs, bare girders, a few lit windows and cables strung between them. Nothing out there collides.
+- **Dressing:** each side has a heavy analog control desk and three rusted crates in the dead corner on the spawn's left; these are solid. Dead CRT monitors lie in heaps: about half are smashed, and the intact ones still scroll code (the Outpost's screen script), some casting a small stuttering glow. Thick cables snake across the floor in slack bends, some ending in a coil, and hang slack along the walls; River wants no straight or taut cables. You walk and shoot through all of those, so the lanes are unchanged.
+- **Skyline:** 16 ruined towers ring the arena, 150 to 290 studs out, with broken stepped tops, hanging floor slabs, bays of heavy steel frame and a few lit windows. No thin parts and no cables between towers: River said those read as string. Nothing out there collides.
+- **Flicker:** `OutpostFlicker.client.luau` flickers the lamps subtly and the monitor glow hard (the light's `FlickerDepth` attribute).
 - **Fog and light:** `HEX_LIGHTING` and `hexEffects` in `src/client/Outpost.client.luau`: dim dusk in dense blue-green fog.
 
 All the sizes are constants at the top of `Hex.luau`.
@@ -26,5 +27,4 @@ All the sizes are constants at the top of `Hex.luau`.
 ## Not done
 
 - The art pass is unseen. Check first: can you still see the other player across the arena in the fog, do the towers show over the walls, and do the floor cables or monitors look wrong to run through.
-- The lamps don't flicker (the Outpost's flicker script only covers the Outpost).
 - No chipped edges or rubble on the concrete yet.

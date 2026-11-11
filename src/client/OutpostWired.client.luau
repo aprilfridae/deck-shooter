@@ -323,7 +323,8 @@ RunService.Heartbeat:Connect(function(dt)
 		return
 	end
 	waited = 0
-	if Zones.of(player) ~= Zones.Outpost then
+	local zone = Zones.of(player)
+	if zone ~= Zones.Outpost and zone ~= Zones.Hex then -- Hex has dead monitors still running
 		return
 	end
 	local camera = workspace.CurrentCamera

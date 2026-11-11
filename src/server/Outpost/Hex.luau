@@ -6,6 +6,8 @@
 -- emergency lamps, and broken towers looming over the walls. See docs/specs/hex.md.
 -- The map is point-symmetric. One side is built, then the same build runs turned half round.
 -- Side axes: this side's spawn is toward -X, facing +X, so its right hand is +Z.
+local CollectionService = game:GetService("CollectionService")
+
 local Kit = require(script.Parent.Kit)
 local Relay = require(script.Parent.Relay)
 
@@ -43,6 +45,8 @@ local GIRDER = Color3.fromRGB(30, 32, 34)
 local CASES = { Color3.fromRGB(104, 106, 104), Color3.fromRGB(84, 86, 88), Color3.fromRGB(66, 68, 70) }
 local GLASS = Color3.fromRGB(12, 16, 18)
 local CABLE = Color3.fromRGB(20, 21, 22)
+local SCREEN_TAG = "OutpostWiredScreen" -- the client runs code on these (OutpostWired.client.luau)
+local SCREEN_LIGHT = Color3.fromRGB(150, 220, 200)
 
 local function v(x: number, y: number, z: number): Vector3
 	return Vector3.new(x, y, z)
@@ -138,8 +142,18 @@ local function deadMonitor(g, at: Vector3)
 	local size = g:range(1.8, 2.8)
 	local frame = CFrame.new(at + v(0, size * 0.4, 0)) * CFrame.Angles(0, g:range(0, math.pi * 2), 0) * CFrame.Angles(g:range(-0.5, 0.2), 0, if g:chance(0.3) then math.pi / 2 else g:range(-0.15, 0.15))
 	Kit.decor(g:block(v(size, size * 0.8, size * 0.9), frame, g:vary(CASES[g.random:NextInteger(1, #CASES)], 0.03), M.SmoothPlastic))
-	Kit.decor(g:block(v(size * 0.76, size * 0.56, 0.1), frame * CFrame.new(0, 0.05, -size * 0.45 - 0.03), GLASS, M.Glass))
-	if g:chance(0.5) then -- smashed: a hole into the tube
+	local glass = Kit.decor(g:block(v(size * 0.76, size * 0.56, 0.1), frame * CFrame.new(0, 0.05, -size * 0.45 - 0.03), GLASS, M.Glass))
+	if g:chance(0.55) then
+		-- Still running: code scrolls on it, left going since whoever worked here stopped coming. Its glow
+		-- falls on the floor and cables around it, and the client makes it stutter (OutpostFlicker).
+		glass:SetAttribute("WiredKind", "Code")
+		glass:SetAttribute("WiredSeed", g.random:NextInteger(1, 1e6))
+		CollectionService:AddTag(glass, SCREEN_TAG)
+		if g:chance(0.6) then
+			local light = g:light(glass, "PointLight", { Color = SCREEN_LIGHT, Range = 11, Brightness = 0.9, Shadows = false })
+			light:SetAttribute("FlickerDepth", g:range(4, 8))
+		end
+	else -- smashed: a hole into the tube
 		Kit.decor(g:block(v(size * 0.35, size * 0.3, 0.06), frame * CFrame.new(g:range(-0.3, 0.3), g:range(-0.2, 0.2), -size * 0.45 - 0.1) * CFrame.Angles(0, 0, g:range(0, 3)), Color3.new(0, 0, 0), M.SmoothPlastic))
 	end
 end
@@ -180,6 +194,44 @@ local function crate(g, base: Vector3, size: number, turn: number)
 	end
 end
 
+-- A heavy rubber cable lying slack on the floor from a to b (both at floor height): it wanders side to side
+-- in lazy bends and never runs straight (River: no taut lines). coil ends it in a loose coil at b.
+-- Built from short lengths of round cable, which you walk and shoot through.
+local function snake(g, a: Vector3, b: Vector3, thick: number, coil: boolean)
+	local along = b - a
+	local length = along.Magnitude
+	local side = along.Unit:Cross(Vector3.yAxis)
+	local points = {}
+	local steps = math.max(8, math.ceil(length / 1.5))
+	local swing1, swing2 = g:range(2, 4.5), g:range(0.8, 2)
+	local bends1, bends2 = g:range(1.2, 2.4), g:range(3, 5.5)
+	local phase1, phase2 = g:range(0, 6.28), g:range(0, 6.28)
+	for step = 0, steps do
+		local t = step / steps
+		local ease = math.max(math.sin(t * math.pi), 0) ^ 0.6 -- the ends stay where they're asked to
+		local off = (math.sin(t * bends1 * 6.28 + phase1) * swing1 + math.sin(t * bends2 * 6.28 + phase2) * swing2) * ease
+		table.insert(points, a + along * t + side * off)
+	end
+	if coil then
+		local radius = g:range(1.4, 2.4)
+		local centre = b + side * radius
+		local start = math.atan2(-side.Z, -side.X)
+		local turns = g:range(1.6, 2.8)
+		local count = math.ceil(turns * 11)
+		for step = 1, count do
+			local angle = start + step / 11 * 6.28
+			local r = radius * (1 - 0.35 * step / count)
+			table.insert(points, centre + v(math.cos(angle) * r, 0, math.sin(angle) * r))
+		end
+	end
+	local color = g:vary(CABLE, 0.02)
+	for index = 1, #points - 1 do
+		local from, to = points[index] + v(0, thick / 2, 0), points[index + 1] + v(0, thick / 2, 0)
+		local frame = CFrame.lookAt((from + to) / 2, to) * CFrame.Angles(0, math.pi / 2, 0)
+		Kit.decor(g:cylinder(frame, (to - from).Magnitude + thick * 0.6, thick, color, M.SmoothPlastic))
+	end
+end
+
 -- The set dressing for one side. The solid things (desk and crates) stand in the dead corner on the spawn's
 -- left, away from the ramp, the cover and the lanes; everything else is walked and shot through.
 local function dressing(g, color: Color3)
@@ -203,32 +255,30 @@ local function dressing(g, color: Color3)
 			deadMonitor(g, heap[1] + v(g:range(-heap[3], heap[3]), 0, g:range(-heap[3], heap[3])))
 		end
 	end
-	-- Thick rubber cables across the floor, from the desk out to the cover, the ring and the far corner.
-	local desk = v(-HALF_LONG + 3, 0.12, -HALF_WIDE + 18)
+	-- Thick rubber cables snaking across the floor, from the desk out to the cover, the ring and the far corner.
+	local desk = v(-HALF_LONG + 3, 0, -HALF_WIDE + 18)
 	for _, to in {
-		v(-COVER_X - 2, 0.12, -6),
-		v(-COVER_X - 2, 0.12, 5),
-		v(-RING - 4, 0.12, -10),
-		v(-HALF_LONG + 10, 0.12, HALF_WIDE - RAMP_WIDE - 3),
-		v(-30, 0.12, -HALF_WIDE + 1),
+		v(-COVER_X - 2, 0, -6),
+		v(-COVER_X - 2, 0, 5),
+		v(-RING - 4, 0, -10),
+		v(-HALF_LONG + 10, 0, HALF_WIDE - RAMP_WIDE - 3),
+		v(-30, 0, -HALF_WIDE + 3),
 	} do
-		local middle = (desk + to) / 2 + v(g:range(-5, 5), 0, g:range(-5, 5))
-		g:cable(desk + v(0, 0, g:range(-3, 3)), middle, g:range(-0.1, 0.1), g:range(0.28, 0.45), CABLE)
-		g:cable(middle, to, g:range(-0.1, 0.1), g:range(0.28, 0.45), CABLE)
+		snake(g, desk + v(g:range(0, 2), 0, g:range(-3, 3)), to, g:range(0.3, 0.45), g:chance(0.6))
 	end
 	-- And slung along the walls, out of reach.
 	for _ = 1, 3 do
 		local from = g:range(-HALF_LONG + 2, -30)
-		g:cable(v(from, g:range(24, 31), HALF_WIDE - 0.3), v(from + g:range(18, 28), g:range(24, 31), HALF_WIDE - 0.3), g:range(2, 5), 0.3, CABLE)
+		g:cable(v(from, g:range(24, 31), HALF_WIDE - 0.3), v(from + g:range(18, 28), g:range(24, 31), HALF_WIDE - 0.3), g:range(5, 9), 0.3, CABLE)
 	end
 	for _ = 1, 2 do
 		local from = g:range(-HALF_WIDE + 4, 0)
-		g:cable(v(-HALF_LONG + 0.3, g:range(22, 30), from), v(-HALF_LONG + 0.3, g:range(22, 30), from + g:range(20, 34)), g:range(2, 5), 0.3, CABLE)
+		g:cable(v(-HALF_LONG + 0.3, g:range(22, 30), from), v(-HALF_LONG + 0.3, g:range(22, 30), from + g:range(20, 34)), g:range(5, 9), 0.3, CABLE)
 	end
 end
 
 -- One ruined tower out in the fog, standing on base (far below the arena's floor). Its top is broken:
--- stepped stumps of what's left of the upper floors, floor slabs hanging out, and bare girders. Nothing here
+-- stepped stumps of what's left of the upper floors, floor slabs hanging out, and bays of heavy steel frame. Nothing here
 -- collides or stops a bullet; it's only ever seen over the walls.
 local function tower(g, base: Vector3, wide: number, deep: number, height: number, lean: number)
 	local frame = CFrame.new(base) * CFrame.Angles(0, g:range(0, math.pi), 0) * CFrame.Angles(lean, 0, lean * 0.6)
@@ -249,10 +299,16 @@ local function tower(g, base: Vector3, wide: number, deep: number, height: numbe
 		if g:chance(0.7) then
 			chunk(v(w * g:range(0.3, 0.6), 2.5, d * 0.9), CFrame.new(x - sideX * nextW * 0.6, y + 1.5, z) * CFrame.Angles(0, 0, sideX * g:range(0.05, 0.3)))
 		end
-		-- Bare girders standing where the walls were.
-		for _ = 1, 3 do
-			local reach = g:range(14, 46)
-			Kit.decor(g:block(v(2, reach, 2), frame * CFrame.new(g:range(-w, w) * 0.48, y + reach / 2, g:range(-d, d) * 0.48) * CFrame.Angles(g:range(-0.12, 0.12), 0, g:range(-0.12, 0.12)), GIRDER, M.Metal))
+		-- A bay of the steel frame left standing where the walls were: heavy columns with a beam across them,
+		-- upright and square, so it reads as structure. (Thin leaning sticks read as string from the arena.)
+		if g:chance(0.6) then
+			local reach = g:range(12, 22)
+			local gx = -sideX * w * 0.42
+			local span = d * g:range(0.5, 0.85)
+			for _, gz in { -span / 2, 0, span / 2 } do
+				Kit.decor(g:block(v(5, reach, 5), frame * CFrame.new(gx, y + reach / 2, gz), GIRDER, M.Metal))
+			end
+			Kit.decor(g:block(v(5, 4, span + 5), frame * CFrame.new(gx, y + reach - 2, 0), GIRDER, M.Metal))
 		end
 		y += tall
 		w, d = nextW, nextD
@@ -267,7 +323,6 @@ end
 -- The ruined city around the arena. Towers ring it at different distances so the near ones loom and the far
 -- ones are only shapes in the fog.
 local function skyline(g, colors: { Color3 })
-	local tops = {}
 	local count = 16
 	for index = 1, count do
 		local angle = (index - 1 + g:range(-0.3, 0.3)) / count * math.pi * 2
@@ -278,18 +333,11 @@ local function skyline(g, colors: { Color3 })
 		local base = v(math.cos(angle) * distance, -160, math.sin(angle) * distance)
 		local lean = if g:chance(0.25) then g:range(0.03, 0.09) else 0
 		local frame, body = tower(g, base, wide, deep, height, lean)
-		table.insert(tops, (frame * CFrame.new(0, body * g:range(0.75, 1), 0)).Position)
 		-- A few windows still lit.
 		for _ = 1, g.random:NextInteger(1, 4) do
 			local face = if g:chance(0.5) then 1 else -1
 			local at = frame * CFrame.new(face * (wide / 2 + 0.4), body * g:range(0.6, 0.95), g:range(-deep, deep) * 0.4)
 			g:neon(v(1, 3, 2.2), at, colors[g.random:NextInteger(1, #colors)])
-		end
-	end
-	-- Cables strung from tower to tower.
-	for index = 1, #tops do
-		if g:chance(0.6) then
-			g:cable(tops[index], tops[index % #tops + 1], g:range(20, 50), 0.9, CABLE)
 		end
 	end
 end
