@@ -278,7 +278,8 @@ local function dressing(g, color: Color3)
 end
 
 -- One ruined tower out in the fog, standing on base (far below the arena's floor). Its top is broken:
--- stepped stumps of what's left of the upper floors, floor slabs hanging out, and bays of heavy steel frame. Nothing here
+-- stepped stumps of what's left of the upper floors, and floor slabs hanging out. No steel frames on top: they floated
+-- off the stumps and read as letter Ms in the sky (River had them removed). Nothing here
 -- collides or stops a bullet; it's only ever seen over the walls.
 local function tower(g, base: Vector3, wide: number, deep: number, height: number, lean: number)
 	local frame = CFrame.new(base) * CFrame.Angles(0, g:range(0, math.pi), 0) * CFrame.Angles(lean, 0, lean * 0.6)
@@ -298,17 +299,6 @@ local function tower(g, base: Vector3, wide: number, deep: number, height: numbe
 		-- A floor slab left hanging out of the break.
 		if g:chance(0.7) then
 			chunk(v(w * g:range(0.3, 0.6), 2.5, d * 0.9), CFrame.new(x - sideX * nextW * 0.6, y + 1.5, z) * CFrame.Angles(0, 0, sideX * g:range(0.05, 0.3)))
-		end
-		-- A bay of the steel frame left standing where the walls were: heavy columns with a beam across them,
-		-- upright and square, so it reads as structure. (Thin leaning sticks read as string from the arena.)
-		if g:chance(0.6) then
-			local reach = g:range(12, 22)
-			local gx = -sideX * w * 0.42
-			local span = d * g:range(0.5, 0.85)
-			for _, gz in { -span / 2, 0, span / 2 } do
-				Kit.decor(g:block(v(5, reach, 5), frame * CFrame.new(gx, y + reach / 2, gz), GIRDER, M.Metal))
-			end
-			Kit.decor(g:block(v(5, 4, span + 5), frame * CFrame.new(gx, y + reach - 2, 0), GIRDER, M.Metal))
 		end
 		y += tall
 		w, d = nextW, nextD
