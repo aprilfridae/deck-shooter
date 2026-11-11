@@ -10,7 +10,7 @@ A walled box, 184 studs long and 104 wide, open to the sky, with plain walls 39 
 
 - **Spawns:** one at each end, facing the middle.
 - **Spawn cover:** a slab 28 long and 12.5 high, 32 studs in front of each spawn.
-- **Ramp:** in the corner on each spawn's right, along the side wall. It's 25 wide, rises 14 studs over 21 (about 34 degrees; River asked for steeper) toward the middle and ends on a plain flat lookout. River asked for no lip on it.
+- **Ramp:** on each spawn's right, along the side wall, its foot 14 studs clear of the end wall so there is room to run onto it. It's 25 wide, rises 14 studs over 21 (about 34 degrees; River asked for steeper) toward the middle and ends on a plain flat lookout. River asked for no lip on it.
 - **Ring:** six walls in a hexagon around the centre (32 studs out, 29 long, 15 high), with gaps of about 8 between them. Each wall has two windows to shoot through, 7 wide and from 3.8 to 7.4 up, around head height. A lit strip on top shows which side a wall is on (orange or teal).
 
 ## Look

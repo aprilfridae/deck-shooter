@@ -30,7 +30,8 @@ local COVER_X = 52 -- the spawn cover's distance from the centre
 local COVER_HALF = 14 -- half its length
 local COVER_HEIGHT = 12.5
 
-local RAMP_FOOT, RAMP_TOP = 90, 69 -- the ramp runs from the back corner toward the middle
+local RAMP_FOOT, RAMP_TOP = 78, 57 -- the ramp rises toward the middle. Its foot is 14 clear of the end wall, so
+-- there is room to run onto it (River found it hard to get on with the foot against the wall)
 local RAMP_HEIGHT = 14
 local RAMP_WIDE = 25
 local DECK_LENGTH = 14 -- the flat lookout at the ramp's top
