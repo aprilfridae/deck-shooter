@@ -115,7 +115,13 @@ local AIR_INTO = math.rad(9) -- lean into the way it's travelling, at a full run
 -- hand"): the right arm swings out with the gun in its hand, the left comes off the gun and swings out the other
 -- way, both lifting a little more over the top of the jump, and they come back in on landing. Not while
 -- shooting, reloading or with the cards out, when the hands are busy.
-local AIR_ARMS_OUT = { Right = math.rad(46), Left = math.rad(68) } -- how far each arm swings out from the body (34 and 52 at first; River asked for a bit more)
+local AIR_ARMS_OUT = { Right = math.rad(58), Left = math.rad(84) } -- how far each arm swings out from the body (34 and 52, then 46 and 68; River asked for more twice)
+-- And they move while they're out (River: "give em like a motion"): each arm sweeps from thrown up and forward
+-- off the ground to back behind over the top, the left a little ahead of the right so they don't move as one,
+-- with a loose waver on top.
+local AIR_ARMS_SWEEP = { Right = math.rad(26), Left = math.rad(42) } -- how far forward, then back, each sweeps
+local AIR_ARMS_LAG = 0.5 -- how far behind the left the right arm's sweep runs, in radians of the sweep
+local AIR_ARMS_WAVER = math.rad(5)
 local AIR_ARMS_UP = math.rad(18) -- and how much further they lift over the top
 local AIR_ARMS_EASE = 9 -- how fast they go out and come back, per second
 local AIR_ARMS_QUIET = 0.6 -- seconds after a shot they stay on the gun
@@ -786,13 +792,21 @@ local function applyAir(body: Body, dt: number, now: number)
 			if shoulder then
 				-- About the torso's own axes: a turn about Z swings a hanging arm out to the body's right.
 				local out = (AIR_ARMS_OUT[side] + AIR_ARMS_UP * over) * body.armsOut
-				shoulder.Transform = CFrame.Angles(0, 0, sign * out) * shoulder.Transform
+				-- The sweep runs with the jump itself: forward at takeoff (rising fast), level over the top,
+				-- back as it starts down. A turn about X swings a hanging arm forward.
+				local lag = if side == "Right" then AIR_ARMS_LAG else 0
+				local sweep = AIR_ARMS_SWEEP[side] * math.sin(rising * math.pi / 2 - lag)
+				local waver = AIR_ARMS_WAVER * math.sin(now * 8.5 + sign * 1.3)
+				shoulder.Transform = CFrame.Angles((sweep + waver) * body.armsOut, 0, sign * (out + waver * 0.6 * body.armsOut))
+					* shoulder.Transform
 			end
 		end
 		-- The left arm straightens some as it leaves the gun.
 		local elbow = body.joints.LeftElbow
 		if elbow then
-			elbow.Transform = elbow.Transform:Lerp(CFrame.Angles(math.rad(18), 0, 0), 0.6 * body.armsOut)
+			-- Straighter when thrown forward, bending as it sweeps back.
+			local bend = math.rad(26 - 16 * rising)
+			elbow.Transform = elbow.Transform:Lerp(CFrame.Angles(bend, 0, 0), 0.7 * body.armsOut)
 		end
 	end
 
