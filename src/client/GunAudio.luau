@@ -71,6 +71,7 @@ for _, soundId in {
 	GunSounds.lands.soft,
 	GunSounds.lands.hard,
 	GunSounds.slideStart,
+	GunSounds.wallJump,
 	GunSounds.coinBurst,
 	GunSounds.coinSuck,
 	GunSounds.collateral,
@@ -274,6 +275,10 @@ end
 
 function GunAudio.playLand(hard: boolean)
 	playCopy(others[if hard then GunSounds.lands.hard else GunSounds.lands.soft], 0)
+end
+
+function GunAudio.playWallJump()
+	playCopy(others[GunSounds.wallJump], 0)
 end
 
 function GunAudio.playSlideStart()

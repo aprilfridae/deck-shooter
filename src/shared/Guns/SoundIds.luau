@@ -1,6 +1,7 @@
 -- Roblox asset ids for the game's sounds, uploaded as Fridae Studios group assets.
 -- After uploading a new or changed sound to the group, add its file name and id here.
 return {
+	["wall-jump.wav"] = 88747847727638,
 	-- Mono copies of the shot takes, for other players' shots heard from where they fired (2026-11-11).
 	["gun-ak47-1-mono.wav"] = 128767635986728,
 	["gun-ak47-10-mono.wav"] = 108756043047080,

@@ -100,6 +100,8 @@ local GunSounds = {
 		hard = sound("move-land-hard.wav"),
 	},
 	slideStart = sound("move-slide-start-v2.wav"),
+	-- Kicking off a wall: a heavy metal impact River picked from a Splice pack (2026-11-11).
+	wallJump = sound("wall-jump.wav"),
 	-- Takes layered over the slide start, one picked at random each slide.
 	slideLayers = numbered("move-slide-layer", 15),
 	-- The pistol hand's finger snap on a kill. The clip's fingers click together this far in.

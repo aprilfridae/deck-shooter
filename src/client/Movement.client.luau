@@ -9,6 +9,7 @@ local GunAudio = require(script.Parent.GunAudio)
 local Input = require(script.Parent.Input)
 local Ledge = require(script.Parent.Ledge)
 local PlayerSettings = require(script.Parent.PlayerSettings)
+local WallKick = require(script.Parent.WallKick)
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local Zones = require(Guns:WaitForChild("Zones"))
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
@@ -201,7 +202,8 @@ local function tryWallJump(moveDirection: Vector3, now: number)
 	wallJumpAt = now
 	lastWall = away
 	jumpSoundAt = now
-	GunAudio.playJump()
+	GunAudio.playWallJump()
+	WallKick.play(nearest.Position, nearest.Normal)
 end
 
 -- A dash follows a set path, then hands back to normal movement in the air.

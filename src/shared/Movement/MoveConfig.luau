@@ -33,8 +33,8 @@ return {
 
 	-- Wall jump: jump again in the air beside a wall to kick off it.
 	WallJumpReach = 2.4, -- studs from the middle of the body to the wall
-	WallJumpHeight = 5,
-	WallJumpBoost = 2, -- added to the current speed, up to ParryMaxSpeed
+	WallJumpHeight = 6.5, -- 5 until River asked for more push (2026-11-11)
+	WallJumpBoost = 5, -- added to the current speed (was 2), up to ParryMaxSpeed
 	WallJumpGap = 0.25, -- seconds between wall jumps
 	WallJumpMinAir = 0.12, -- seconds in the air before the first, so a jump beside a wall isn't spent on it
 	WallJumps = 3, -- in one time in the air
