@@ -30,6 +30,14 @@ local function sprintThenSlide(s: any, t: number)
 end
 
 describe("MoveState", function()
+	it("is faster on the ground with the cards in hand", function()
+		local s = MoveState.new()
+		MoveState.step(s, { moving = true, sprint = true, crouch = false, jump = false, grounded = true, cards = true }, 0)
+		expect(MoveState.speed(s, 5)).toBeCloseTo(MoveConfig.SprintSpeed * MoveConfig.CardSpeed)
+		MoveState.step(s, { moving = true, sprint = true, crouch = false, jump = false, grounded = true }, 5)
+		expect(MoveState.speed(s, 10)).toBeCloseTo(MoveConfig.SprintSpeed)
+	end)
+
 	it("walks, sprints and crouches at spec speeds", function()
 		local s = MoveState.new()
 		MoveState.step(s, on({ moving = true }), 0)

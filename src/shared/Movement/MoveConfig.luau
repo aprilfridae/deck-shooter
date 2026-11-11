@@ -1,6 +1,7 @@
 -- Movement tuning values. Speeds are studs per second, times are seconds.
 return {
 	WalkSpeed = 15,
+	CardSpeed = 1.15, -- ground speeds are multiplied by this while the cards are in hand
 	CrouchSpeed = 6,
 	SprintSpeed = 18.5, -- 30, then 27, 20 and 16.5 on 2026-11-10: River wants the game way less fast paced (and playable on phones)
 	SlideStartSpeed = 31,
@@ -42,7 +43,7 @@ return {
 	WallJumpLook = 0.6, -- how much of the kick goes where the player is looking, against straight off the wall
 
 	-- Cheat checks. SpeedLimit is the fastest chain jump plus a margin.
-	SpeedLimit = 43,
+	SpeedLimit = 48, -- 43 before the card bonus
 	SpeedWindow = 0.5,
 	LagStuds = 4,
 	MaxLagSeconds = 1.3, -- most stall time one position jump can be credited

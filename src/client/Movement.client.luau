@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local CardInHand = require(script.Parent.CardInHand)
 local GunAudio = require(script.Parent.GunAudio)
 local Input = require(script.Parent.Input)
 local Ledge = require(script.Parent.Ledge)
@@ -315,6 +316,7 @@ local function onFrame(dt: number)
 		crouch = keys.crouch,
 		jump = keys.jump,
 		grounded = humanoid.FloorMaterial ~= Enum.Material.Air,
+		cards = CardInHand.slot ~= nil,
 	}, now)
 
 	humanoid.WalkSpeed = MoveState.speed(state, now)

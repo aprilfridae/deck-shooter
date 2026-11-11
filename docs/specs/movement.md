@@ -36,6 +36,7 @@ Speeds are studs per second.
 | Sprint | 18.5 (30, then 27, 20, 16.5 and 18.5 on 2026-11-10: River wants the game way less fast paced, and playable on phones; every speed here came down with it), in any direction, with no stamina |
 | Slide | Crouch while sprinting. Builds from sprint speed up toward 31 over 0.18s (`SlideRampTime`, added 2026-11-11: River wanted it to come on slower, a little like Call of Duty; not tried in Play), peaking near 29, and slows to sprint speed (18.5) over 0.9s, then holds it for as long as crouch is held. No cooldown. The direction is fixed when the slide starts. Letting go of crouch blends back to walk or sprint speed over 0.25s. |
 | Jump | 6 studs high |
+| Cards in hand | Added 2026-11-11, not tried in Play. While the cards are out, walk, sprint, crouch and slide speeds are 15% higher (`CardSpeed` 1.15 in `MoveConfig.luau`; sprint 18.5 becomes about 21.3). The air keeps the speed you left the ground with. The server speed limit went from 43 to 48 to allow it. |
 | Slide jump | Jumping out of a slide adds 3.5 to the current speed. The air keeps that speed, and it fades over 0.6s after landing. |
 | Fast fall | Removed 2026-11-10 (River no longer wanted holding crouch in the air to pull you down). Landing while moving with crouch and sprint held still starts a slide. |
 | Chain jump | A jump from a slide that began by landing from the air adds 6.5 to the current speed, more than a plain slide jump. It goes no higher than any other jump: it used to reach 8 studs, and River had that taken out on 2026-11-10. |

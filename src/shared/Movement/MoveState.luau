@@ -8,9 +8,11 @@ export type Input = {
 	crouch: boolean,
 	jump: boolean,
 	grounded: boolean,
+	cards: boolean?, -- the cards are in hand
 }
 export type State = {
 	mode: Mode,
+	cards: boolean,
 	crouchHeld: boolean,
 	slideStart: number,
 	nextSlide: number,
@@ -39,6 +41,7 @@ end
 function MoveState.new(): State
 	return {
 		mode = "Walk",
+		cards = false,
 		crouchHeld = false,
 		slideStart = -math.huge,
 		nextSlide = -math.huge,
@@ -54,6 +57,9 @@ function MoveState.new(): State
 end
 
 function MoveState.speed(state: State, now: number): number
+	-- Holding the cards makes you faster on the ground (River, 2026-11-11). The air keeps whatever speed you left
+	-- the ground with, so it carries the bonus without getting it twice.
+	local cards = if state.cards then MoveConfig.CardSpeed else 1
 	if state.mode == "Slide" then
 		-- The boost builds over SlideRampTime instead of arriving at once (River: "come on a little slower", like
 		-- Call of Duty), then fades as before. The speed is whichever of the two lines is lower.
@@ -61,14 +67,14 @@ function MoveState.speed(state: State, now: number): number
 		local alpha = math.min(since / MoveConfig.SlideFadeTime, 1)
 		local fade = lerp(MoveConfig.SlideStartSpeed, MoveConfig.SprintSpeed, alpha)
 		local ramp = lerp(MoveConfig.SprintSpeed, MoveConfig.SlideStartSpeed, math.clamp(since / MoveConfig.SlideRampTime, 0, 1))
-		return math.min(fade, ramp)
+		return math.min(fade, ramp) * cards
 	elseif state.mode == "Air" then
 		local alpha = (now - state.dashFadeAt) / MoveConfig.DashFadeTime
 		return if alpha < 1 then lerp(state.dashFadeFrom, state.carrySpeed, alpha) else state.carrySpeed
 	elseif state.mode == "Dash" then
 		return 0
 	end
-	local base = BASE_SPEED[state.mode]
+	local base = BASE_SPEED[state.mode] * cards
 	local alpha = (now - state.carryFrom) / state.carryFade
 	if alpha < 1 then
 		return lerp(state.carrySpeed, base, alpha)
@@ -144,6 +150,7 @@ end
 function MoveState.step(state: State, input: Input, now: number)
 	local previous = state.mode
 	local current = MoveState.speed(state, now)
+	state.cards = input.cards == true
 	local pressed = input.crouch and not state.crouchHeld
 	state.crouchHeld = input.crouch
 
