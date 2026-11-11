@@ -1,6 +1,6 @@
 -- Movement tuning values. Speeds are studs per second, times are seconds.
 return {
-	WalkSpeed = 12,
+	WalkSpeed = 15,
 	CrouchSpeed = 6,
 	SprintSpeed = 18.5, -- 30, then 27, 20 and 16.5 on 2026-11-10: River wants the game way less fast paced (and playable on phones)
 	SlideStartSpeed = 31,

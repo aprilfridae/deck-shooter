@@ -30,7 +30,7 @@ Speeds are studs per second.
 
 | Move | Rule |
 | --- | --- |
-| Walk | 12 |
+| Walk | 15 (River found 12 way too slow) |
 | Response | Added 2026-11-10, not tried in Play. The move keys take hold at once: `onFrame` in `Movement.client.luau` sets the flat velocity itself, straight to the keys on the ground (and to a stop with none held) and quickly toward them in the air (`AirResponse`). Air with no keys held is left alone. River found the Humanoid's own easing felt like thick air. |
 | Crouch | 6 |
 | Sprint | 18.5 (30, then 27, 20, 16.5 and 18.5 on 2026-11-10: River wants the game way less fast paced, and playable on phones; every speed here came down with it), in any direction, with no stamina |
