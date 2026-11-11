@@ -23,6 +23,7 @@ export type State = {
 	airSince: number,
 	chained: boolean,
 	dashFadeFrom: number,
+	dashFadeTo: number,
 	dashFadeAt: number,
 }
 
@@ -52,11 +53,12 @@ function MoveState.new(): State
 		airSince = -math.huge,
 		chained = false,
 		dashFadeFrom = 0,
+		dashFadeTo = 0,
 		dashFadeAt = -math.huge,
 	}
 end
 
-function MoveState.speed(state: State, now: number): number
+local function plainSpeed(state: State, now: number): number
 	-- Holding the cards makes you faster on the ground (River, 2026-11-11). The air keeps whatever speed you left
 	-- the ground with, so it carries the bonus without getting it twice.
 	local cards = if state.cards then MoveConfig.CardSpeed else 1
@@ -69,9 +71,7 @@ function MoveState.speed(state: State, now: number): number
 		local ramp = lerp(MoveConfig.SprintSpeed, MoveConfig.SlideStartSpeed, math.clamp(since / MoveConfig.SlideRampTime, 0, 1))
 		return math.min(fade, ramp) * cards
 	elseif state.mode == "Air" then
-		-- Let go fast at first and then slowly, so the launch reads as a launch and its tail hangs on.
-		local alpha = (now - state.dashFadeAt) / MoveConfig.DashFadeTime
-		return if alpha < 1 then lerp(state.dashFadeFrom, state.carrySpeed, 1 - (1 - alpha) ^ 3) else state.carrySpeed
+		return state.carrySpeed
 	elseif state.mode == "Dash" then
 		return 0
 	end
@@ -83,6 +83,26 @@ function MoveState.speed(state: State, now: number): number
 	return base
 end
 
+-- What is left of a dash's launch: let go fast at first and then slowly, so it reads as a launch and its tail
+-- hangs on. 0 when there is none.
+local function dashSpeed(state: State, now: number): number
+	local alpha = (now - state.dashFadeAt) / MoveConfig.DashFadeTime
+	if alpha < 0 or alpha >= 1 then
+		return 0
+	end
+	return lerp(state.dashFadeFrom, state.dashFadeTo, 1 - (1 - alpha) ^ 3)
+end
+
+-- A dash's launch rides over whatever else the player is doing, on the ground or in the air, through landings
+-- and jumps, until it has eased away (River, 2026-11-11: "keep momentum for a long time"; it used to be cut to a
+-- short fade by the first landing).
+function MoveState.speed(state: State, now: number): number
+	if state.mode == "Dash" then
+		return 0
+	end
+	return math.max(plainSpeed(state, now), dashSpeed(state, now))
+end
+
 function MoveState.jumpHeight(_state: State): number
 	-- Every jump is the same height. A chain jump used to go higher (8 against 6); River had that taken out.
 	return MoveConfig.JumpHeight
@@ -90,22 +110,20 @@ end
 
 -- Launches off an edge without losing speed.
 function MoveState.parry(state: State, now: number)
-	local current = math.max(MoveState.speed(state, now), MoveConfig.SprintSpeed)
+	local current = math.max(plainSpeed(state, now), MoveConfig.SprintSpeed)
 	state.carrySpeed = math.min(current + MoveConfig.ParryBoost, MoveConfig.ParryMaxSpeed)
 	state.mode = "Air"
 	state.airSince = now
 	state.chained = false
-	state.dashFadeAt = -math.huge
 end
 
 -- Kicks off a wall in the air, keeping speed and adding a little.
 function MoveState.wallJump(state: State, now: number)
-	local current = math.max(MoveState.speed(state, now), MoveConfig.SprintSpeed)
+	local current = math.max(plainSpeed(state, now), MoveConfig.SprintSpeed)
 	state.carrySpeed = math.max(current, math.min(current + MoveConfig.WallJumpBoost, MoveConfig.ParryMaxSpeed))
 	state.mode = "Air"
 	state.airSince = now
 	state.chained = false
-	state.dashFadeAt = -math.huge
 end
 
 -- Thrown into the air at this speed, for shoves from abilities.
@@ -122,6 +140,7 @@ function MoveState.finishDash(state: State, entrySpeed: number, dashSpeed: numbe
 	local settled = math.max(entrySpeed, MoveConfig.SprintSpeed)
 	MoveState.launch(state, settled, now)
 	state.dashFadeFrom = math.max(dashSpeed, settled)
+	state.dashFadeTo = settled
 	state.dashFadeAt = now
 end
 
@@ -150,7 +169,7 @@ end
 
 function MoveState.step(state: State, input: Input, now: number)
 	local previous = state.mode
-	local current = MoveState.speed(state, now)
+	local current = plainSpeed(state, now)
 	state.cards = input.cards == true
 	local pressed = input.crouch and not state.crouchHeld
 	state.crouchHeld = input.crouch
@@ -176,7 +195,6 @@ function MoveState.step(state: State, input: Input, now: number)
 			state.carrySpeed = current + boost
 			state.airSince = now
 			state.mode = "Air"
-			state.dashFadeAt = -math.huge
 		end
 		return
 	end

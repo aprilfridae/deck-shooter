@@ -44,6 +44,8 @@ local EFFECT_EASE = 7
 local POSE_SEND_GAP = 0.12 -- stays under the server's 10 per second limit
 local LOOK_SEND_GAP = 0.1 -- how often the server is told how far up or down you're looking, at most
 local LOOK_SEND_CHANGE = 2 -- degrees it must have changed by
+local DASH_CARRY_LEAST = 1.3 -- a dash carries you with no keys held while its speed is over this many sprints
+local dashCarryUntil = -math.huge
 local DASH_POP = 16 -- studs a second upward a dash from the ground gets at least
 local DASH_FLAT_LEAST = 0.3 -- the least share of the launch speed kept as running speed, for a dash aimed up or down
 
@@ -264,6 +266,8 @@ local function startDash(distance: number)
 
 	local entrySpeed = MoveState.speed(state, now)
 	MoveState.finishDash(state, entrySpeed, peak * math.max(flat.Magnitude, DASH_FLAT_LEAST), now)
+	dashCarryUntil = now + MoveConfig.DashFadeTime
+	humanoid.WalkSpeed = MoveState.speed(state, now) -- now, not next frame: on the ground the Humanoid drags to its WalkSpeed at once
 	humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
 	slideDirection = way
 	root.AssemblyLinearVelocity = flat * peak + Vector3.yAxis * rise
@@ -320,7 +324,7 @@ local function onFrame(dt: number)
 	end
 
 	MoveState.step(state, {
-		moving = direction.Magnitude > 0 or airFromSlide,
+		moving = direction.Magnitude > 0 or airFromSlide or now < dashCarryUntil,
 		sprint = true, -- always: River had walking taken out (2026-11-10). Moving is sprinting; the sprint key does nothing
 		crouch = keys.crouch,
 		jump = keys.jump,
@@ -359,6 +363,12 @@ local function onFrame(dt: number)
 	if airFromSlide and direction.Magnitude == 0 then
 		humanoid:Move(slideDirection, false)
 	end
+	-- So does a dash, on the ground too, while it's still well over sprint speed.
+	local dashCarry = now < dashCarryUntil and direction.Magnitude == 0
+		and MoveState.speed(state, now) > MoveConfig.SprintSpeed * DASH_CARRY_LEAST
+	if dashCarry then
+		humanoid:Move(slideDirection, false)
+	end
 
 	-- The keys take hold at once. Left to itself the Humanoid eases up to speed and back down, slowly at this
 	-- gravity, so the flat velocity is set here: straight to the keys on the ground (and to a stop with none
@@ -366,7 +376,7 @@ local function onFrame(dt: number)
 	-- wall kick carries. A dash moves itself.
 	if state.mode ~= "Dash" then
 		local wish = direction
-		if sliding or (airFromSlide and direction.Magnitude == 0) then
+		if sliding or (airFromSlide and direction.Magnitude == 0) or dashCarry then
 			wish = slideDirection
 		end
 		local moving = root.AssemblyLinearVelocity

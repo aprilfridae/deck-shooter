@@ -371,7 +371,10 @@ describe("MoveState", function()
 		MoveState.step(s, on(sprinting), 1.15)
 		MoveState.step(s, on({ moving = true, sprint = true, jump = true, grounded = false }), 1.2)
 		expect(s.mode).toBe("Air")
-		expect(MoveState.speed(s, 1.25)).toBeCloseTo(MoveState.speed(s, 1.2))
+		-- The launch carries on easing off through the jump: no step back up, no cut.
+		expect(MoveState.speed(s, 1.25) <= MoveState.speed(s, 1.2)).toBe(true)
+		expect(MoveState.speed(s, 1.25) > MoveState.speed(s, 1.2) - 8).toBe(true)
+		expect(MoveState.speed(s, 1 + MoveConfig.DashFadeTime)).toBe(MoveConfig.SprintSpeed)
 	end)
 
 	-- Review Focus 5
