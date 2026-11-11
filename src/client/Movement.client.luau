@@ -360,7 +360,14 @@ local function onFrame(dt: number)
 		end
 		local moving = root.AssemblyLinearVelocity
 		local goal = Vector3.new(wish.X, 0, wish.Z) * humanoid.WalkSpeed
-		if state.mode ~= "Air" then
+		-- Only when the velocity is really off (a key just pressed or let go, a turn, a new speed). Setting it
+		-- every frame made the camera judder, big step then small step: Roblox stops smoothing a body between
+		-- physics steps on a frame its velocity is set from a script (seen in River's clip, 2026-11-10). Once
+		-- you're at speed the Humanoid holds it and nothing is written.
+		local off = (Vector3.new(moving.X, 0, moving.Z) - goal).Magnitude
+		if off < MoveConfig.ResponseSlack then
+			-- close enough: leave it to the Humanoid
+		elseif state.mode ~= "Air" then
 			root.AssemblyLinearVelocity = Vector3.new(goal.X, moving.Y, goal.Z)
 		elseif wish.Magnitude > 0 and previousMode ~= "Air" then
 			-- Leaving the ground: the jump's speed (a slide jump's boost) is there at once, not eased in.
