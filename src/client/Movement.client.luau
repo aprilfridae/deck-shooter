@@ -403,7 +403,7 @@ local function onFrame(dt: number)
 		GunAudio.playLand(MoveState.hardLanding(peakFall))
 	end
 	if airborne then
-		peakFall = math.max(peakFall, -fallY)
+		peakFall = math.max(peakFall, -velocity.Y)
 	end
 	landDip *= math.exp(-dt * EFFECT_EASE)
 	local scoped = player:GetAttribute("AimFov") ~= nil
