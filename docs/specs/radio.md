@@ -1,6 +1,6 @@
 # Radio
 
-**Status:** designed with River on 2026-11-10, not built. No tracks are uploaded yet. This is the agreed design; River picked each choice from options, and the HUD from four mock-ups (option A, the corner strip).
+**Status:** built on 2026-11-10 from the design agreed with River the same day; not seen or heard in Play. Only the menu theme is in the track list, as a stand-in, until River's tracks are uploaded. Two things differ from the design below and are marked where they come up: the visualizer uses the loudness bars (the real-spectrum trial hasn't been run), and the HUD pieces are named in "How it's built".
 
 ## The idea
 
@@ -50,6 +50,8 @@ No touch buttons yet. They come with the phone controls.
 - **Radio off:** the strip shrinks to a small `RADIO OFF` tag with flat bars.
 
 ## The visualizer
+
+**As built:** the fallback. The bars use `MusicBars` on the track's `PlaybackLoudness`, 20 times a second. The real-spectrum trial needs a Play session to run in and hasn't been done; it's the next thing to try.
 
 - **First choice:** real frequency bars. Roblox's newer audio instances (`AudioPlayer` wired to an `AudioAnalyzer`) can report a spectrum, so the bars would follow the bass and treble. This is to be proven first, in a small trial, because the game's other sounds use the older `Sound` instances.
 - **Fallback:** what the title screen does today: `MusicBars`, which shares one loudness number across the bars with a moving pattern. If the trial fails or costs too much, the radio uses this and nothing else changes.

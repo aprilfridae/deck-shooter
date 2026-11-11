@@ -56,6 +56,19 @@ function Input.readGun(): { [string]: boolean }
 	}))
 end
 
+-- The radio's keys work everywhere but the title screen.
+function Input.readRadio(): { next: boolean, previous: boolean, toggle: boolean }
+	if UserInputService:GetFocusedTextBox() or MenuState.isOpen(MenuState.shared) then
+		return { next = false, previous = false, toggle = false }
+	end
+	local keys = PlayerSettings.get().keys
+	return {
+		next = pressed(keys.radioNext),
+		previous = pressed(keys.radioPrevious),
+		toggle = pressed(keys.radioToggle),
+	}
+end
+
 function Input.readAbility(): { [string]: boolean }
 	if UserInputService:GetFocusedTextBox() then
 		return { slot1 = false, slot2 = false, slot3 = false, use = false, cycle = false, testDeck = false, testTier = false }

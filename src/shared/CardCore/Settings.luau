@@ -7,6 +7,7 @@ export type Settings = {
 	sensitivity: number,
 	scopeSensitivity: number,
 	fieldOfView: number,
+	radio: number, -- 1 on, 0 off
 	keys: { [string]: string },
 }
 
@@ -26,6 +27,9 @@ Settings.actions = {
 	{ id = "slot3", label = "CARD 3", key = "Five" },
 	{ id = "fire", label = "FIRE", key = "MouseButton1" },
 	{ id = "aim", label = "AIM", key = "MouseButton2" },
+	{ id = "radioNext", label = "RADIO NEXT", key = "Period" },
+	{ id = "radioPrevious", label = "RADIO BACK", key = "Comma" },
+	{ id = "radioToggle", label = "RADIO ON OFF", key = "M" },
 }
 
 local RANGES = {
@@ -35,6 +39,7 @@ local RANGES = {
 	sensitivity = { 0.1, 3, 1 },
 	scopeSensitivity = { 0.1, 2, 1 },
 	fieldOfView = { 60, 100, 80 },
+	radio = { 0, 1, 1 },
 }
 
 -- Roblox moves the player with W, A, S and D, and B, N, T and Y are test keys. Slash opens chat.
@@ -105,6 +110,7 @@ function Settings.new(): Settings
 		sensitivity = RANGES.sensitivity[3],
 		scopeSensitivity = RANGES.scopeSensitivity[3],
 		fieldOfView = RANGES.fieldOfView[3],
+		radio = RANGES.radio[3],
 		keys = defaultKeys(),
 	}
 end
