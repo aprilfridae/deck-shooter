@@ -120,6 +120,31 @@ describe("LegCycle.leg", function()
 		end
 	end)
 
+	it("moves smoothly from planted into the swing and back", function()
+		local shape = LegCycle.shape(18.5)
+		local step = 0.002
+		for _, at in { shape.stance, 0 } do
+			local before = LegCycle.foot(at - step, shape) - LegCycle.foot(at - 2 * step, shape)
+			local after = LegCycle.foot(at + 2 * step, shape) - LegCycle.foot(at + step, shape)
+			-- Still going back on both sides of the join, not stopping dead.
+			expect(before < 0).toBe(true)
+			expect(after < 0).toBe(true)
+		end
+	end)
+
+	it("sways the hips over the planted foot and keeps that foot where it was", function()
+		local shape = LegCycle.shape(18.5)
+		local phase = shape.stance / 2
+		local hips = LegCycle.hips(phase, shape, 18.5)
+		expect(hips.sway > 0).toBe(true)
+		expect(LegCycle.hips(phase + 0.5, shape, 18.5).sway).toBeCloseTo(-hips.sway)
+		expect(LegCycle.hips(phase, shape, 0).sway).toBe(0)
+		-- With the hips moved right, the right leg reaches further in to stand on the same spot.
+		local plain = LegCycle.leg(phase, shape, 1, 0, 2.9, 1)
+		local swayed = LegCycle.leg(phase, shape, 1, 0, 2.9, 1, { sway = hips.sway, twist = 0, roll = 0 })
+		expect(swayed.roll < plain.roll).toBe(true)
+	end)
+
 	it("keeps the hips' bob lowest over a planted foot", function()
 		local shape = LegCycle.shape(18.5)
 		expect(LegCycle.bob(shape.stance / 2, shape)).toBeCloseTo(-shape.bob)

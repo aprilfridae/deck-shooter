@@ -30,6 +30,7 @@ local LEG_EASE = 10 -- how fast the run takes over the legs and lets go of them,
 local TURN_EASE = 12 -- how fast the legs follow a change in which way the body is going
 -- While the run has the legs, the rest of the body holds one pose, not the two the stride used to flip between.
 local STEADY = { Sprint_Pass = "Sprint_Contact", Walk_Pass = "Walk_Contact", Crouch_Idle = "Crouch_Walk" }
+local SHOULDERS = 1.5 -- how far the shoulders turn against the hips: past square, so they swing the other way
 local LEGS = {
 	{ hip = "RightHip", knee = "RightKnee", ankle = "RightAnkle", offset = 0, side = 1 },
 	{ hip = "LeftHip", knee = "LeftKnee", ankle = "LeftAnkle", offset = 0.5, side = -1 },
@@ -228,7 +229,8 @@ local function sampleStance(body: Body, now: number)
 	local running = not airborne and flatSpeed > GunStance.moving and body.character:GetAttribute("MovePose") ~= "Slide"
 	body.legWeight += ((if running then 1 else 0) - body.legWeight) * (1 - math.exp(-dt * LEG_EASE))
 	if running then
-		body.runSpeed = flatSpeed
+		-- Eased, so a change of speed reshapes the stride over a few frames, not at once.
+		body.runSpeed += (flatSpeed - body.runSpeed) * (1 - math.exp(-dt * TURN_EASE))
 		local advance = flatSpeed * dt / LegCycle.shape(flatSpeed).length
 		-- A foot lands: the step sound, yours in your ears and anyone else's from their feet. River found the run
 		-- out of time with the sound when the sound kept its own count of the ground, so the feet play it now.
@@ -345,10 +347,16 @@ local function applyRun(body: Body)
 	rootShown = rootShown:Lerp(CFrame.new(0, rootShown.Y, rootShown.Z) * CFrame.Angles(tilt, 0, 0), weight)
 	local shape = LegCycle.shape(body.runSpeed)
 	local bob = LegCycle.bob(body.phase, shape) * weight
+	-- The swagger: the hips sway over the planted foot, turn with the stride and drop on the swinging side, and
+	-- the shoulders turn the other way. The head stays facing ahead.
+	local hips = LegCycle.hips(body.phase, shape, body.runSpeed)
+	hips.sway *= weight
+	hips.twist *= weight
+	hips.roll *= weight
 	local lean = rootShown:ToEulerAnglesYXZ() -- the hips' pitch; forward is negative
 	local height = LegCycle.restHeight + rootShown.Y + bob
 	for _, names in LEGS do
-		local leg = LegCycle.leg(body.phase + names.offset, shape, body.goForward, body.goRight, height, names.side)
+		local leg = LegCycle.leg(body.phase + names.offset, shape, body.goForward, body.goRight, height, names.side, hips)
 		local frames = {
 			[names.hip] = CFrame.Angles(0, 0, leg.roll) * CFrame.Angles(leg.pitch - lean - LegCycle.restHip, 0, 0),
 			[names.knee] = CFrame.Angles(LegCycle.restKnee - leg.bend, 0, 0),
@@ -363,7 +371,17 @@ local function applyRun(body: Body)
 	end
 	local rootJoint = body.joints.Root
 	if rootJoint then
-		rootJoint.Transform = CFrame.new(0, bob, 0) * rootShown
+		rootJoint.Transform = CFrame.new(rootShown.Position + Vector3.new(hips.sway, bob, 0))
+			* CFrame.Angles(0, hips.twist, 0)
+			* rootShown.Rotation
+			* CFrame.Angles(0, 0, hips.roll)
+	end
+	local waist, neck = body.joints.Waist, body.joints.Neck
+	if waist and body.shown.Waist then
+		waist.Transform = body.shown.Waist * CFrame.Angles(0, -hips.twist * SHOULDERS, -hips.roll)
+	end
+	if neck and body.shown.Neck then
+		neck.Transform = body.shown.Neck * CFrame.Angles(0, hips.twist * (SHOULDERS - 1), 0)
 	end
 end
 

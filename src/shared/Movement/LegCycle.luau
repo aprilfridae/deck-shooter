@@ -23,6 +23,7 @@ LegCycle.restHeight = LegCycle.thigh * math.cos(LegCycle.restHip)
 local REACH = (LegCycle.thigh + LegCycle.shin) * 0.985 -- a leg never quite locks straight
 local TOE_OFF = math.rad(-32) -- toes down as the foot leaves the ground
 local TOE_LAND = math.rad(12) -- toes up as it comes down
+local CARRY = 0.3 -- the share of the planted foot's speed the swing starts and ends with
 
 export type Shape = {
 	half: number, -- studs the planted foot travels either side of the hip
@@ -30,6 +31,12 @@ export type Shape = {
 	length: number, -- studs of ground in one whole stride (both feet)
 	lift: number, -- how high the swinging foot rises
 	bob: number, -- how far the hips rise and fall
+}
+-- The swagger: how the hips move over the stride, which the legs then allow for so the feet stay put.
+export type Hips = {
+	sway: number, -- studs to the body's right: over whichever foot is planted
+	twist: number, -- turned to the left (the right hip forward) as the right foot reaches ahead
+	roll: number, -- the right hip up: the hip over the swinging leg drops
 }
 export type Leg = {
 	pitch: number, -- the thigh, forward from straight down
@@ -68,13 +75,36 @@ function LegCycle.foot(phase: number, shape: Shape): (number, number, number)
 		return shape.half * (1 - 2 * through), 0, TOE_OFF * 0.5 * toes * toes
 	end
 	local through = (phase - shape.stance) / (1 - shape.stance)
-	local ahead = shape.half * (2 * smooth(through) - 1)
-	-- Up quickly off the ground and down more gently.
-	local lift = shape.lift * math.sin(math.pi * through ^ 0.75)
+	-- The foot leaves the ground still moving back and lands already moving back, so it doesn't stop dead at
+	-- either end of the swing (River asked for smoother): a curve from behind to ahead that carries a share of
+	-- the planted foot's speed at both ends.
+	local carry = -CARRY * 2 * shape.half / shape.stance * (1 - shape.stance)
+	local t2, t3 = through * through, through * through * through
+	local ahead = (2 * t3 - 3 * t2 + 1) * -shape.half
+		+ (t3 - 2 * t2 + through) * carry
+		+ (-2 * t3 + 3 * t2) * shape.half
+		+ (t3 - t2) * carry
+	-- Off the ground and back onto it gently, a little quicker up than down.
+	local lift = shape.lift * (0.5 - 0.5 * math.cos(2 * math.pi * through ^ 0.85))
 	local pitch = if through < 0.5
 		then TOE_OFF * (0.5 + 0.5 * math.sin(math.pi * through))
 		else TOE_OFF * (1 - smooth((through - 0.5) * 2)) + TOE_LAND * smooth((through - 0.5) * 2)
 	return ahead, lift, pitch
+end
+
+local SWAY = 0.16
+local TWIST = math.rad(11)
+local ROLL = math.rad(5)
+
+-- phase is the right foot's. All of it grows with speed up to a run.
+function LegCycle.hips(phase: number, shape: Shape, speed: number): Hips
+	local much = math.clamp(speed / 14, 0, 1)
+	local planted = math.cos(2 * math.pi * (phase - shape.stance / 2)) -- 1 over the right foot, -1 over the left
+	return {
+		sway = SWAY * much * planted,
+		twist = TWIST * much * math.cos(2 * math.pi * phase),
+		roll = ROLL * much * planted,
+	}
 end
 
 -- Studs of ground between one foot landing and the other, at this speed. The step sounds and the first-person
@@ -120,10 +150,20 @@ local INSIDE = 0.12
 -- One leg, whole. phase is this leg's own; forward and right say which way the body is going relative to the
 -- way it faces (a unit vector's two parts); height is hip above the ground. side is 1 for the right leg and -1
 -- for the left.
-function LegCycle.leg(phase: number, shape: Shape, forward: number, right: number, height: number, side: number): Leg
+-- hips, when given, is where LegCycle.hips has put the hips: the leg undoes it so the foot stays where it was.
+function LegCycle.leg(phase: number, shape: Shape, forward: number, right: number, height: number, side: number, hips: Hips?): Leg
 	local along, lift, foot = LegCycle.foot(phase, shape)
 	local out = math.max((along * right) * side + SPLAY, -INSIDE) -- studs outward from this leg's hip
-	local pitch, bend, roll = LegCycle.solve(along * forward, out * side, height - lift)
+	local ahead, across = along * forward, out * side
+	local tipped = 0
+	if hips then
+		across -= hips.sway
+		local cos, sin = math.cos(hips.twist), math.sin(hips.twist)
+		ahead, across = ahead * cos - across * sin, across * cos + ahead * sin
+		tipped = hips.roll
+	end
+	local pitch, bend, roll = LegCycle.solve(ahead, across, height - lift)
+	roll -= tipped
 	return { pitch = pitch, bend = bend, roll = roll, foot = foot * math.max(forward, 0.3) }
 end
 
