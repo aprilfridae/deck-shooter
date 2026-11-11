@@ -12,6 +12,7 @@
 --   bolt   how far back the slide or bolt is
 --   palm, weight         where the left palm is in the hold, and how much of the hand is there, not where the pose has it
 --   leftShift, rightShift  how far each hand is from where it would be, in the hold
+--   body   how the torso leans (back, to its left, tipping left), where a reload says; otherwise it takes a share of the gun's turn
 --   pull   how far the whole gun is drawn in toward the body, in the body's own space (+X its right, +Z behind it)
 -- A reload marked natural keeps each elbow on the side its pose has it, eases the hands and gun over a few frames,
 -- and won't bend the left wrist past a limit.
@@ -88,6 +89,33 @@ do
 	local SCALE = 0.82
 	local ORIGIN = Vector3.new(0.018, 0.271, -0.099) -- the clip's gun origin, from the held gun's handle
 	local GRIP = Vector3.new(0.125, 0.17, 0.27) -- the right palm, which the layered turn is about
+	local HAND_TRAVEL = 0.25 -- the share of the gun's travel the right hand makes; the rest is left to the wrist's turn
+	-- The body through the reload, for swagger: seconds, then degrees the torso leans back, turns to its left and
+	-- tips to its left. It settles back and opens toward the left hand as that comes up, is driven forward and
+	-- across into the slap, and rocks back past upright after it.
+	local BODY = {
+		{ 0, 0, 0, 0 },
+		{ 0.18, 3, 6, -2 },
+		{ 0.42, 6, 12, -4 }, -- wound up
+		{ 0.56, -8, -9, 5 }, -- the slap
+		{ 0.66, -4, -5, 3 },
+		{ 0.8, 5, 7, -3 }, -- rocking back
+		{ LENGTH, 0, 0, 0 },
+	}
+	local function bodyAt(t: number): { pitch: number, yaw: number, roll: number }
+		local now = { 0, 0, 0 }
+		for index = 2, #BODY do
+			if t < BODY[index][1] then
+				local from, to = BODY[index - 1], BODY[index]
+				local u = smooth((t - from[1]) / (to[1] - from[1]))
+				for value = 1, 3 do
+					now[value] = from[value + 1] + (to[value + 1] - from[value + 1]) * u
+				end
+				break
+			end
+		end
+		return { pitch = math.rad(now[1]), yaw = math.rad(now[2]), roll = math.rad(now[3]) }
+	end
 	local PULL = Vector3.new(-0.45, -0.1, 1.3) -- how far the gun comes in for the reload: to the body's right, up and back
 
 	-- GunView's layer over the clip (RELOADS["Energy Pistol"]): seconds, then degrees of roll, yaw and pitch and
@@ -126,7 +154,12 @@ do
 		local frame = ArmClip.sampleAt(clip, math.max(t, 0)) or clip.frames[#clip.frames]
 		-- How the clip has moved the gun from its hold, about the clip's own origin on the gun.
 		local moved = FIRST:ToObjectSpace(frame.gun)
-		local gun = CFrame.new(ORIGIN) * (CFrame.new(moved.Position) * moved.Rotation) * CFrame.new(-ORIGIN) * layered(t)
+		local whole = CFrame.new(ORIGIN) * (CFrame.new(moved.Position) * moved.Rotation) * CFrame.new(-ORIGIN) * layered(t)
+		-- On the body that turn is made at the wrist. Played whole, it carried the hand about and the entire arm
+		-- shook with it, where River wanted "a short wrist shake": so the gun turns about the palm, and the hand
+		-- itself travels only a share of the way.
+		local carried = whole * GRIP - GRIP
+		local gun = CFrame.new(carried * HAND_TRAVEL) * about(GRIP, whole.Rotation)
 		-- Where the clip has the left palm, from the gun.
 		local fromGun = frame.gun:ToObjectSpace(SoldierPose.clipPalms(clips.meshOffset, frame.bones).Left)
 		local palm = CFrame.new(ORIGIN + fromGun.Position * SCALE) * fromGun.Rotation
@@ -144,6 +177,7 @@ do
 			weight = weight,
 			rightWeight = 0,
 			pull = pull,
+			body = bodyAt(t),
 			freeLeft = true, -- between reloads the left hand hangs at the side, not on the gun
 		}
 	end

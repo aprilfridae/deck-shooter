@@ -49,7 +49,9 @@ local CODED_RELOADS: { [string]: { reload: any, perMetre: number?, origin: Vecto
 }
 local RELOAD_BLEND = 0.08 -- of the reload's own seconds: how long the arms take to pass to it and back
 -- For reloads marked natural (BodyReloads):
-local RELOAD_EASE = 30 -- how fast the hands and gun follow the reload, per second: takes the snap off single-frame jumps
+local RELOAD_EASE = 20 -- how fast the hands and gun follow the reload, per second: takes the snap off single-frame jumps (30 at first; River asked for smoother)
+local RELOAD_BODY_HIPS_YAW = 0.35 -- where a reload says how the torso leans: the hips' share of its turn
+local RELOAD_BODY_HIPS_SHIFT = 0.9 -- and studs the hips shift per radian it tips, the other way
 local RELOAD_WRIST_MOST = math.rad(60) -- the furthest the left wrist is bent to match a palm
 -- The body goes with the reload (River: "make the torso turn with the reload ... more natural and more swaggy").
 -- The gun's own turn already swings, overshoots and rebounds, so the torso takes a share of it: leaning back as
@@ -661,18 +663,25 @@ local function applyReload(body: Body, dt: number)
 	local blend = math.clamp(math.min(at - (reload.lead or 0), reload.LENGTH - at) / RELOAD_BLEND, 0, 1)
 
 	-- The body goes with it, before the hands are found, so they and the gun are carried along.
-	local pitch, yaw, roll = pose.gun:ToEulerAnglesXYZ()
-	pitch, yaw, roll = pitch * blend, yaw * blend, roll * blend
-	local lean = CFrame.Angles(pitch * RELOAD_TORSO.pitch, yaw * RELOAD_TORSO.yaw, roll * RELOAD_TORSO.roll)
-	joints.Waist.Transform = lean * joints.Waist.Transform
-	joints.Root.Transform = CFrame.new(-roll * RELOAD_HIPS_SHIFT, 0, 0)
-		* CFrame.Angles(0, yaw * RELOAD_HIPS_YAW, 0)
-		* joints.Root.Transform
+	-- The torso's lean back, turn to its left and tip to its left: what the reload says, or a share of the gun's
+	-- own turn. The hips turn a little the same way and shift against the tip.
+	local leanBack, leanTurn, leanTip, hipsTurn, hipsShift
+	if pose.body then
+		leanBack, leanTurn, leanTip = pose.body.pitch * blend, pose.body.yaw * blend, pose.body.roll * blend
+		hipsTurn, hipsShift = leanTurn * RELOAD_BODY_HIPS_YAW, -leanTip * RELOAD_BODY_HIPS_SHIFT
+	else
+		local pitch, yaw, roll = pose.gun:ToEulerAnglesXYZ()
+		pitch, yaw, roll = pitch * blend, yaw * blend, roll * blend
+		leanBack, leanTurn, leanTip = pitch * RELOAD_TORSO.pitch, yaw * RELOAD_TORSO.yaw, roll * RELOAD_TORSO.roll
+		hipsTurn, hipsShift = yaw * RELOAD_HIPS_YAW, -roll * RELOAD_HIPS_SHIFT
+	end
+	joints.Waist.Transform = CFrame.Angles(leanBack, leanTurn, leanTip) * joints.Waist.Transform
+	joints.Root.Transform = CFrame.new(hipsShift, 0, 0) * CFrame.Angles(0, hipsTurn, 0) * joints.Root.Transform
 	if joints.Neck then
 		joints.Neck.Transform = CFrame.Angles(
-			-pitch * RELOAD_TORSO.pitch * RELOAD_HEAD_LEVEL - pose.weight * RELOAD_HEAD_DOWN * blend,
-			-yaw * RELOAD_TORSO.yaw * RELOAD_HEAD_LEVEL,
-			-roll * RELOAD_TORSO.roll * RELOAD_HEAD_LEVEL
+			-leanBack * RELOAD_HEAD_LEVEL - pose.weight * RELOAD_HEAD_DOWN * blend,
+			-leanTurn * RELOAD_HEAD_LEVEL,
+			-leanTip * RELOAD_HEAD_LEVEL
 		) * joints.Neck.Transform
 	end
 
