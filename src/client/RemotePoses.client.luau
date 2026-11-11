@@ -115,8 +115,8 @@ local AIR_INTO = math.rad(9) -- lean into the way it's travelling, at a full run
 -- hand"): the right arm swings out with the gun in its hand, the left comes off the gun and swings out the other
 -- way, both lifting a little more over the top of the jump, and they come back in on landing. Not while
 -- shooting, reloading or with the cards out, when the hands are busy.
-local AIR_ARMS_OUT = { Right = math.rad(34), Left = math.rad(52) } -- how far each arm swings out from the body
-local AIR_ARMS_UP = math.rad(14) -- and how much further they lift over the top
+local AIR_ARMS_OUT = { Right = math.rad(46), Left = math.rad(68) } -- how far each arm swings out from the body (34 and 52 at first; River asked for a bit more)
+local AIR_ARMS_UP = math.rad(18) -- and how much further they lift over the top
 local AIR_ARMS_EASE = 9 -- how fast they go out and come back, per second
 local AIR_ARMS_QUIET = 0.6 -- seconds after a shot they stay on the gun
 local AIR_ARMS_BACK = 5 -- studs a second of fall at which they start back to the gun
