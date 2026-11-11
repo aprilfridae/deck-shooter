@@ -17,6 +17,9 @@ local WHIZZ_FAR = 40
 -- Other players' shots sound from where they fired: full volume this close, gone past this far.
 local SHOT_NEAR = 25
 local SHOT_FAR = 600
+-- Other players' footsteps: full volume this close, gone past this far.
+local STEP_NEAR = 6
+local STEP_FAR = 90
 -- Coin bursts sound from the body, loud close by and gone past this far.
 local COIN_NEAR = 8
 local COIN_FAR = 150
@@ -60,6 +63,15 @@ end
 local farBases: { [string]: Sound } = {}
 for gunId, soundId in GunSounds.farShotBases do
 	farBases[gunId] = newFarSound(soundId)
+end
+
+local farSteps: { Sound } = {}
+for _, soundId in GunSounds.farSteps do
+	local step = newSound(soundId)
+	step.RollOffMode = Enum.RollOffMode.InverseTapered
+	step.RollOffMinDistance = STEP_NEAR
+	step.RollOffMaxDistance = STEP_FAR
+	table.insert(farSteps, step)
 end
 
 local others: { [string]: Sound } = {}
@@ -267,6 +279,20 @@ end
 
 function GunAudio.playStep()
 	playCopy(steps[pickTake("step", #steps)], 0)
+end
+
+-- Someone else's footstep, heard from their feet.
+function GunAudio.playFarStep(at: Vector3)
+	local anchor = Instance.new("Attachment")
+	anchor.Name = "FarStep"
+	anchor.WorldPosition = at
+	anchor.Parent = workspace.Terrain
+	local copy = farSteps[pickTake("farStep", #farSteps)]:Clone()
+	copy.Parent = anchor
+	copy:Play()
+	task.delay(3, function() -- the takes are under 1.5s
+		anchor:Destroy()
+	end)
 end
 
 function GunAudio.playJump()

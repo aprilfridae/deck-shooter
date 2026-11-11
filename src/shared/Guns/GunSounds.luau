@@ -88,6 +88,14 @@ local GunSounds = {
 	outpostAmbience = sound("outpost-ambience.ogg"),
 	menuSelect = sound("menu-select.wav"),
 	steps = numbered("step", 10),
+	-- Other players' footsteps, heard from their feet: mono copies of the same takes (River, 2026-11-11).
+	farSteps = (function()
+		local list = {}
+		for take = 1, 10 do
+			table.insert(list, sound(`step-{take}-mono.wav`))
+		end
+		return list
+	end)(),
 	jumps = numbered("jump", 14),
 	-- Bullets flying close past you. Each take's whizz peaks this far in.
 	whizzes = numbered("bullet-whizz", 16),

@@ -1,6 +1,17 @@
 -- Roblox asset ids for the game's sounds, uploaded as Fridae Studios group assets.
 -- After uploading a new or changed sound to the group, add its file name and id here.
 return {
+	-- Mono copies of the footsteps, for other players' steps (2026-11-11).
+	["step-1-mono.wav"] = 77874178668024,
+	["step-10-mono.wav"] = 92773764779896,
+	["step-2-mono.wav"] = 122869156728766,
+	["step-3-mono.wav"] = 89420790413300,
+	["step-4-mono.wav"] = 109226899879842,
+	["step-5-mono.wav"] = 124101260217168,
+	["step-6-mono.wav"] = 119431498432198,
+	["step-7-mono.wav"] = 90162275185633,
+	["step-8-mono.wav"] = 80764018658608,
+	["step-9-mono.wav"] = 106268303369646,
 	["wall-jump.wav"] = 88747847727638,
 	-- Mono copies of the shot takes, for other players' shots heard from where they fired (2026-11-11).
 	["gun-ak47-1-mono.wav"] = 128767635986728,

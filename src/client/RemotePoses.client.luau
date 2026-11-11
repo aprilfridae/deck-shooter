@@ -13,6 +13,8 @@ local Movement = ReplicatedStorage:WaitForChild("Movement")
 local BodyPose = require(Movement:WaitForChild("BodyPose"))
 local BodyPoses = require(Movement:WaitForChild("BodyPoses"))
 local GunStance = require(Movement:WaitForChild("GunStance"))
+local MoveConfig = require(Movement:WaitForChild("MoveConfig"))
+local GunAudio = require(script.Parent:WaitForChild("GunAudio"))
 local HeldGuns = require(script.Parent:WaitForChild("HeldGuns"))
 
 local shotsRemote = ReplicatedStorage:WaitForChild("GunRemotes"):WaitForChild("Shots") :: RemoteEvent
@@ -68,6 +70,7 @@ type Body = {
 	soldier: boolean,
 	airborne: boolean,
 	travel: number,
+	stepTravel: number, -- ground covered since this body's last footstep sound
 	sampledAt: number,
 	gunName: string?,
 	poses: any,
@@ -128,6 +131,7 @@ local function onCharacter(character: Model)
 		soldier = character:GetAttribute("SoldierRig") == true,
 		airborne = false,
 		travel = 0,
+		stepTravel = 0,
 		sampledAt = os.clock(),
 		gunName = nil,
 		poses = nil,
@@ -198,6 +202,14 @@ local function sampleStance(body: Body, now: number)
 	body.airborne = airborne
 	if not airborne then
 		body.travel += flatSpeed * (now - body.sampledAt)
+		-- Other players' footsteps, on the same stride as your own: running upright only, not crouched or sliding.
+		if body.player and body.player ~= Players.LocalPlayer and body.character:GetAttribute("MovePose") == "Normal" then
+			body.stepTravel += flatSpeed * (now - body.sampledAt)
+			if body.stepTravel >= MoveConfig.StrideStuds then
+				body.stepTravel %= MoveConfig.StrideStuds
+				GunAudio.playFarStep(body.root.Position - Vector3.new(0, FEET_BELOW_ROOT, 0))
+			end
+		end
 	end
 	body.sampledAt = now
 
