@@ -1,5 +1,5 @@
 -- Hex: a 1v1 map in a box, from River's sketch. Two players spawn at opposite ends of a walled box. Each has
--- a slab of cover just in front of their spawn and a ramp in the corner on their right, up to a lookout.
+-- a slab of cover just in front of their spawn and a ramp in the corner on their right, up to a flat lookout.
 -- In the middle is a ring of six walls with gaps between them and holes to shoot through.
 -- The box's walls are tall and plain so you can sprint along them and wall jump off them.
 -- Grey box for now: shapes and flow first, looks later. See docs/specs/hex.md.
@@ -29,11 +29,11 @@ local HOLE_WIDE = 3
 
 local COVER_X = 45 -- the spawn cover's distance from the centre
 local COVER_HALF = 12 -- half its length
-local COVER_HEIGHT = 7
+local COVER_HEIGHT = 11
 
-local RAMP_FOOT, RAMP_TOP = 78, 58 -- the ramp runs from the back corner toward the middle
-local RAMP_HEIGHT = 7
-local RAMP_WIDE = 10
+local RAMP_FOOT, RAMP_TOP = 78, 52 -- the ramp runs from the back corner toward the middle
+local RAMP_HEIGHT = 8
+local RAMP_WIDE = 22
 local DECK_LENGTH = 6 -- the flat lookout at the ramp's top
 
 local SPAWN_X = 73
@@ -82,8 +82,9 @@ local function cover(g, color: Color3)
 	grey(g, v(-COVER_X - 1, COVER_HEIGHT, -COVER_HALF), v(-COVER_X + 1, COVER_HEIGHT + 0.4, COVER_HALF), color)
 end
 
--- The ramp on the spawn's right, along the side wall, up to a lookout with a low lip at its front.
-local function ramp(g, color: Color3)
+-- The ramp on the spawn's right, along the side wall, up to a plain flat lookout (River
+-- didn't want a lip on it).
+local function ramp(g)
 	local z0, z1 = HALF_WIDE - RAMP_WIDE, HALF_WIDE
 	local length = RAMP_FOOT - RAMP_TOP
 	local middle = v(-(RAMP_FOOT + RAMP_TOP) / 2, RAMP_HEIGHT / 2, (z0 + z1) / 2)
@@ -91,7 +92,6 @@ local function ramp(g, color: Color3)
 	g:wedge(v(RAMP_WIDE, RAMP_HEIGHT, length), CFrame.lookAt(middle, middle - Vector3.xAxis), DARK, M.SmoothPlastic)
 	local front = -RAMP_TOP + DECK_LENGTH
 	grey(g, v(-RAMP_TOP, 0, z0), v(front, RAMP_HEIGHT, z1), DARK)
-	grey(g, v(front - 0.8, RAMP_HEIGHT, z0), v(front, RAMP_HEIGHT + 3, z1), color)
 end
 
 local function makeSpawn(g): SpawnLocation
@@ -132,7 +132,7 @@ function Hex.build(origin: CFrame)
 			ringWall(ring, math.rad(degrees), color)
 		end
 		cover(kit:group("Cover"), color)
-		ramp(kit:group("Ramp"), color)
+		ramp(kit:group("Ramp"))
 		table.insert(spawns, makeSpawn(kit))
 		local console = kit:point(v(-HALF_LONG + 1.5, 0, -12))
 		table.insert(terminals, Relay.buildTerminal(sideFolder, console, kit:frame(CFrame.new()).RightVector, "OUTPOST"))

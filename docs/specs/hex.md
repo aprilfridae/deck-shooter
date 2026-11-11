@@ -9,8 +9,8 @@
 A walled box, 160 studs long and 90 wide, open to the sky, with plain walls 34 high to sprint along and wall jump off. The map is point-symmetric: one side is built, then built again turned half round.
 
 - **Spawns:** one at each end, facing the middle.
-- **Spawn cover:** a slab 24 long and 7 high, 28 studs in front of each spawn.
-- **Ramp:** in the corner on each spawn's right, along the side wall. It rises 7 studs toward the middle and ends on a small lookout with a low lip.
+- **Spawn cover:** a slab 24 long and 11 high, 28 studs in front of each spawn.
+- **Ramp:** in the corner on each spawn's right, along the side wall. It's 22 wide, rises 8 studs toward the middle and ends on a plain flat lookout. River asked for no lip on it.
 - **Ring:** six walls in a hexagon around the centre (20 studs out, 9 high), with gaps of about 6 between them. Each wall has two holes at chest-to-head height to shoot through. A colour cap shows which side a wall is on (cyan or red).
 
 All the sizes are constants at the top of `Hex.luau`.
