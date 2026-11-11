@@ -2,12 +2,15 @@
 return {
 	WalkSpeed = 12,
 	CrouchSpeed = 6,
-	SprintSpeed = 16.5, -- 30, then 27, 20 and 16.5 on 2026-11-10: River wants the game way less fast paced (and playable on phones)
-	SlideStartSpeed = 26,
+	SprintSpeed = 18.5, -- 30, then 27, 20 and 16.5 on 2026-11-10: River wants the game way less fast paced (and playable on phones)
+	SlideStartSpeed = 31,
 	SlideFadeTime = 0.9, -- slows to sprint speed over this long; lasts while crouch is held
 	SlideCooldown = 0,
 	DashFadeTime = 0.4, -- how long a dash takes to ramp down to normal speed
 	CarryFade = 0.25,
+	-- How fast the air follows the move keys (a share closed per second, as an ease rate). On the ground the keys
+	-- take hold at once. Without this the Humanoid eases in slowly at this gravity, which River called thick air.
+	AirResponse = 14,
 	SlideJumpBoost = 3.5, -- added to current speed when a jump cancels a slide
 	ChainJumpBoost = 6.5, -- the same, from a slide reached by a fast fall
 	JumpHeight = 6,
@@ -25,7 +28,7 @@ return {
 	ParryMaxHeight = 4.5,
 	ParryClearance = 1.5,
 	ParryBoost = 3.5,
-	ParryMaxSpeed = 32.5, -- matches the fastest chain jump
+	ParryMaxSpeed = 37.5, -- matches the fastest chain jump
 
 	-- Wall jump: jump again in the air beside a wall to kick off it.
 	WallJumpReach = 2.4, -- studs from the middle of the body to the wall
@@ -39,7 +42,7 @@ return {
 	WallJumpLook = 0.6, -- how much of the kick goes where the player is looking, against straight off the wall
 
 	-- Cheat checks. SpeedLimit is the fastest chain jump plus a margin.
-	SpeedLimit = 38,
+	SpeedLimit = 43,
 	SpeedWindow = 0.5,
 	LagStuds = 4,
 	MaxLagSeconds = 1.3, -- most stall time one position jump can be credited

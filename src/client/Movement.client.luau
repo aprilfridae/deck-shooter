@@ -349,6 +349,25 @@ local function onFrame(dt: number)
 		humanoid:Move(slideDirection, false)
 	end
 
+	-- The keys take hold at once. Left to itself the Humanoid eases up to speed and back down, slowly at this
+	-- gravity, so the flat velocity is set here: straight to the keys on the ground (and to a stop with none
+	-- held), and quickly toward them in the air. Air with no keys held is left alone, so a jump, a push or a
+	-- wall kick carries. A dash moves itself.
+	if not dash and state.mode ~= "Dash" then
+		local wish = direction
+		if sliding or (airFromSlide and direction.Magnitude == 0) then
+			wish = slideDirection
+		end
+		local moving = root.AssemblyLinearVelocity
+		local goal = Vector3.new(wish.X, 0, wish.Z) * humanoid.WalkSpeed
+		if state.mode ~= "Air" then
+			root.AssemblyLinearVelocity = Vector3.new(goal.X, moving.Y, goal.Z)
+		elseif wish.Magnitude > 0 then
+			local flat = Vector3.new(moving.X, 0, moving.Z):Lerp(goal, 1 - math.exp(-dt * MoveConfig.AirResponse))
+			root.AssemblyLinearVelocity = Vector3.new(flat.X, moving.Y, flat.Z)
+		end
+	end
+
 	local velocity = root.AssemblyLinearVelocity
 	local fallY = MoveState.fallVelocity(state, velocity.Y, dt)
 	if fallY ~= velocity.Y then
