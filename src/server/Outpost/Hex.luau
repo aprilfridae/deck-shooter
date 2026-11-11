@@ -529,9 +529,4 @@ function Hex.build(origin: CFrame)
 	return { folder = folder, spawns = spawns, terminals = terminals }
 end
 
--- A console in another room that leads to the map.
-function Hex.buildTerminal(parent: Instance, base: Vector3, facing: Vector3): ProximityPrompt
-	return Relay.buildTerminal(parent, base, facing, "HEX 1V1")
-end
-
 return Hex

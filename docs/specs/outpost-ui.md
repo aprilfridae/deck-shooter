@@ -116,3 +116,7 @@ Pure rules go in shared modules with Lune tests: setting ranges and repair, key 
 - A tool for reading reports.
 - Touch and controller support.
 - Viewing players who aren't in the server.
+
+## Play page: areas
+
+Added 2026-11-10, not checked in Play. The Play page lists the areas open now above the queues: `HEX` and `RELAY` (1v1 maps) and `TEST` (the test room), each marked `GO`. Clicking one fires `OutpostRemotes.Travel` with the zone; the server (`Outpost.server.luau`) takes it only from a player in the Outpost and only for those three zones, with the usual travel cooldown. The menu only exists in the Outpost, so the way back is still each area's `OUTPOST` terminal. River asked for this instead of walking to terminals; add new areas to `QUEUES` in `PlayPanel.luau` and `MENU_AREAS` on the server.

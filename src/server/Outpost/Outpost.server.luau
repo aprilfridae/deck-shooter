@@ -39,7 +39,6 @@ local relay = Relay.build(RELAY_ORIGIN)
 local relayTerminal = Relay.buildTerminal(testRoom, testSpawn.Position + Vector3.new(-9, -testSpawn.Size.Y / 2, 0), Vector3.xAxis)
 
 local hex = Hex.build(HEX_ORIGIN)
-local hexTerminal = Hex.buildTerminal(testRoom, testSpawn.Position + Vector3.new(9, -testSpawn.Size.Y / 2, 0), -Vector3.xAxis)
 
 local spawns: { [string]: SpawnLocation } = {
 	[Zones.Outpost] = outpost.spawn,
@@ -152,8 +151,20 @@ end)
 relayTerminal.Triggered:Connect(function(player)
 	travel(player, Zones.Relay)
 end)
-hexTerminal.Triggered:Connect(function(player)
-	travel(player, Zones.Hex)
+
+-- The Play page's area list (PlayPanel.luau) asks to travel. The menu only exists in the Outpost, so that's the
+-- only place a request is taken from, and only to the areas on the list.
+local MENU_AREAS = { [Zones.TestRoom] = true, [Zones.Relay] = true, [Zones.Hex] = true }
+local remotes = Instance.new("Folder")
+remotes.Name = "OutpostRemotes"
+local travelRemote = Instance.new("RemoteEvent")
+travelRemote.Name = "Travel"
+travelRemote.Parent = remotes
+remotes.Parent = ReplicatedStorage
+travelRemote.OnServerEvent:Connect(function(player, zone)
+	if type(zone) == "string" and MENU_AREAS[zone] and Zones.of(player) == Zones.Outpost then
+		travel(player, zone)
+	end
 end)
 for _, prompt in hex.terminals do
 	prompt.Triggered:Connect(function(player)

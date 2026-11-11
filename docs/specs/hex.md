@@ -2,7 +2,7 @@
 
 **Status:** built as a free-play combat zone on 2026-11-10, from River's sketch, with a first art pass the same day (River's brief: dystopian retro-futurism and heavy brutalism, oppressive and abandoned). River has played the grey box; the art pass has not been built or seen in Studio or Play. There are no rounds or scoring (`matches.md`); two players can travel there and fight.
 
-**Code:** `src/server/Outpost/Hex.luau` builds the map at server start with the Outpost's `Kit`. `src/server/Outpost/Outpost.server.luau` handles travel and spawns. It's reached from the `HEX 1V1` terminal in the test room, and an `OUTPOST` terminal stands by each spawn.
+**Code:** `src/server/Outpost/Hex.luau` builds the map at server start with the Outpost's `Kit`. `src/server/Outpost/Outpost.server.luau` handles travel and spawns. It's reached from the Play page's area list in the Outpost menu (`PlayPanel.luau`; it had a terminal in the test room until 2026-11-10). An `OUTPOST` terminal stands by each spawn for the way back.
 
 ## Layout
 
