@@ -58,6 +58,7 @@ local listed = {
 	flicker_spec = true,
 	radio_spec = true,
 	legcycle_spec = true,
+	shotkick_spec = true,
 	codelines_spec = true,
 	killrewards_spec = true,
 	akreload_spec = true,
@@ -84,6 +85,7 @@ require("./perflevel_spec")
 require("./flicker_spec")
 require("./radio_spec")
 require("./legcycle_spec")
+require("./shotkick_spec")
 require("./codelines_spec")
 require("./killrewards_spec")
 require("./akreload_spec")

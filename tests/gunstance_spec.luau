@@ -44,9 +44,10 @@ describe("GunStance.pick", function()
 		expect(GunStance.pick(input({ sinceLanded = 0.3 })).name).toBe("Stand")
 	end)
 
-	it("shows a shot for about two held frames", function()
+	it("keeps the gun up for a while after a shot", function()
 		expect(GunStance.pick(input({ sinceShot = 0.05, flatSpeed = 16 })).name).toBe("Fire")
-		expect(GunStance.pick(input({ sinceShot = 0.2 })).name).toBe("Stand")
+		expect(GunStance.pick(input({ sinceShot = GunStance.fireTime - 0.05 })).name).toBe("Fire")
+		expect(GunStance.pick(input({ sinceShot = GunStance.fireTime + 0.05 })).name).toBe("Stand")
 	end)
 
 	it("crouches still or walks crouched", function()

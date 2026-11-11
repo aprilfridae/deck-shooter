@@ -19,6 +19,7 @@ local Parry = require(Movement:WaitForChild("Parry"))
 local MoveState = require(Movement:WaitForChild("MoveState"))
 local MoveConfig = require(Movement:WaitForChild("MoveConfig"))
 local poseRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("Pose") :: RemoteEvent
+local lookRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("Look") :: RemoteEvent
 local abilityRemotes = ReplicatedStorage:WaitForChild("AbilityRemotes")
 local dashRemote = abilityRemotes:WaitForChild("Dash") :: RemoteEvent
 local pushRemote = abilityRemotes:WaitForChild("Push") :: RemoteEvent
@@ -39,6 +40,8 @@ local LAND_CAMERA_DIP = Vector3.new(0, -0.9, 0)
 local MIN_AIR_FOR_DIP = 0.15
 local EFFECT_EASE = 7
 local POSE_SEND_GAP = 0.12 -- stays under the server's 10 per second limit
+local LOOK_SEND_GAP = 0.1 -- how often the server is told how far up or down you're looking, at most
+local LOOK_SEND_CHANGE = 2 -- degrees it must have changed by
 local DASH_RADIUS = 1.5 -- keeps the body this far from a wall
 local DASH_BACK_START = 1.6
 local DASH_GROUND_REACH = 6
@@ -61,6 +64,8 @@ local jumpSoundAt = -math.huge
 local airStartedAt = 0
 local peakFall = 0 -- the fastest fall since leaving the ground
 local sentPose = "Normal"
+local sentLook = 0
+local lookSentAt = -math.huge
 local poseSentAt = -math.huge
 local jumpHeld = false
 local stepTravel = 0
@@ -478,6 +483,16 @@ local function onFrame(dt: number)
 	local low = sliding or (keys.crouch and state.mode == "Air" and now - slidSeenAt < SLIDE_CAMERA_HOLD)
 	local target = BODY_CAMERA + (if low then SLIDE_CAMERA_DROP else Vector3.zero) + LAND_CAMERA_DIP * landDip
 	humanoid.CameraOffset = humanoid.CameraOffset:Lerp(target, math.min(dt * CAMERA_EASE, 1))
+
+	-- How far up or down you're looking, for the body other players see (and your own, in the test view) to
+	-- bend to. Yours is kept on the player for this client; everyone else gets it by way of the server.
+	local lookPitch = math.deg(math.asin(math.clamp(workspace.CurrentCamera.CFrame.LookVector.Y, -1, 1)))
+	player:SetAttribute("LookPitch", lookPitch)
+	if math.abs(lookPitch - sentLook) >= LOOK_SEND_CHANGE and now - lookSentAt >= LOOK_SEND_GAP then
+		sentLook = lookPitch
+		lookSentAt = now
+		lookRemote:FireServer(lookPitch)
+	end
 
 	-- In first person (the combat zones), manually rotate character to face camera direction.
 	-- In third-person (Outpost), AutoRotate is enabled so character faces move direction.

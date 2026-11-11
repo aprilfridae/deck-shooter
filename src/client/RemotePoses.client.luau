@@ -14,6 +14,7 @@ local BodyPose = require(Movement:WaitForChild("BodyPose"))
 local BodyPoses = require(Movement:WaitForChild("BodyPoses"))
 local GunStance = require(Movement:WaitForChild("GunStance"))
 local LegCycle = require(Movement:WaitForChild("LegCycle"))
+local ShotKick = require(Movement:WaitForChild("ShotKick"))
 local GunAudio = require(script.Parent:WaitForChild("GunAudio"))
 local HeldGuns = require(script.Parent:WaitForChild("HeldGuns"))
 
@@ -31,7 +32,20 @@ local TURN_EASE = 12 -- how fast the legs follow a change in which way the body 
 -- While the run has the legs, the rest of the body holds one pose, not the two the stride used to flip between.
 local STEADY = { Sprint_Pass = "Sprint_Contact", Walk_Pass = "Walk_Contact", Crouch_Idle = "Crouch_Walk" }
 local SHOULDERS = 1.5 -- how far the shoulders turn against the hips: past square, so they swing the other way
--- Poses that keep their own body when reloading and take only the reload's arms.
+-- Shooting and aiming, laid over whatever pose the body is in.
+-- Looking up and down: the torso, arms and head share the bend, so the gun and the eyes point where the
+-- player is looking. Shares of the look's pitch.
+local LOOK_EASE = 12 -- how fast the bend follows the look, per second
+local LOOK_WAIST = 0.5
+local LOOK_ARMS = 0.5
+local LOOK_NECK = 0.4
+-- Each shot (ShotKick): degrees and studs for a kick of 1.
+local KICK_ARMS = math.rad(4) -- the gun's muzzle rises
+local KICK_WAIST = math.rad(2.5) -- the torso rocks back
+local KICK_TWIST = math.rad(1.6) -- and twists a little, one way then the other
+local KICK_BACK = 0.07 -- the hips are pushed back
+
+-- Poses that keep their own body when reloading or shooting and take only the arms.
 local KEEPS_BODY = { Slide = true, Jump_Up = true, Fall = true, Land = true }
 local ARM_JOINTS = {
 	RightShoulder = true,
@@ -96,6 +110,9 @@ type Body = {
 	runSpeed: number, -- the speed the stride is shaped for
 	goForward: number, -- which way the body is going relative to the way it faces
 	goRight: number,
+	kick: ShotKick.Kick, -- the recoil spring
+	shotSeen: number, -- the last shot of this body's that has kicked it
+	look: number, -- how far up it is looking, radians, eased
 	sampledAt: number,
 	gunName: string?,
 	poses: any,
@@ -161,6 +178,9 @@ local function onCharacter(character: Model)
 		runSpeed = 0,
 		goForward = 1,
 		goRight = 0,
+		kick = ShotKick.new(),
+		shotSeen = -math.huge,
+		look = 0,
 		sampledAt = os.clock(),
 		gunName = nil,
 		poses = nil,
@@ -264,6 +284,7 @@ local function sampleStance(body: Body, now: number)
 	local player = body.player
 	local gunName, poses = gunOf(player, body.character)
 	local reloading = player ~= nil and player:GetAttribute("Reloading") == true
+	local shotAt = player and lastShot[player] or -math.huge
 	local pick = GunStance.pick({
 		reloading = false, -- worked out just below
 		pose = body.character:GetAttribute("MovePose"),
@@ -271,7 +292,7 @@ local function sampleStance(body: Body, now: number)
 		verticalSpeed = velocity.Y,
 		flatSpeed = flatSpeed,
 		sinceLanded = now - body.landedAt,
-		sinceShot = now - (player and lastShot[player] or -math.huge),
+		sinceShot = now - shotAt,
 		travel = body.travel,
 	})
 	if running and STEADY[pick.name] then
@@ -288,7 +309,23 @@ local function sampleStance(body: Body, now: number)
 		else
 			pick = { name = "Reload", mirrored = false }
 		end
+	elseif KEEPS_BODY[pick.name] and poses.poses.Fire and now - shotAt < GunStance.fireTime then
+		arms = poses.poses.Fire -- shooting in a slide or the air: the gun still comes up
 	end
+
+	-- A new shot kicks the body.
+	if shotAt > body.shotSeen then
+		body.shotSeen = shotAt
+		local id = if player then player:GetAttribute("GunId") else body.character:GetAttribute("GunId")
+		local gun = id and GunConfig.guns[id]
+		ShotKick.hit(body.kick, ShotKick.strength(gun and gun.kick))
+	end
+	-- Where it is looking: your own from this client, anyone else's from the server.
+	local pitch = if player == Players.LocalPlayer
+		then player:GetAttribute("LookPitch")
+		else body.character:GetAttribute("LookPitch")
+	local lookGoal = math.rad(if type(pitch) == "number" then pitch else 0)
+	body.look += (lookGoal - body.look) * (1 - math.exp(-dt * LOOK_EASE))
 	local pose = poses.poses[pick.name] or poses.poses.Stand
 	body.gunName = gunName
 	body.poses = poses
@@ -361,11 +398,12 @@ local function applyRun(body: Body)
 		return
 	end
 	local rootShown = body.shown.Root or CFrame.identity
-	-- The hips run square. The pose's hips are turned and tipped a little to one side, which looked fine as one
-	-- of two poses flipping but held still made the whole lower body lean left (River). Their height, forward
-	-- lean and how far forward they sit are kept.
-	local tilt = rootShown:ToEulerAnglesYXZ()
-	rootShown = rootShown:Lerp(CFrame.new(0, rootShown.Y, rootShown.Z) * CFrame.Angles(tilt, 0, 0), weight)
+	-- The hips run level. The pose's hips are tipped a little to one side, which looked fine as one of two poses
+	-- flipping but held still made the whole lower body lean left (River). Their height, forward lean, how far
+	-- forward they sit and their turn are kept: the upper body's aim is built on that turn (the shooting pose
+	-- stands side-on), so the legs allow for it below and run straight under turned hips.
+	local tilt, turned = rootShown:ToEulerAnglesYXZ()
+	rootShown = rootShown:Lerp(CFrame.new(0, rootShown.Y, rootShown.Z) * CFrame.fromEulerAnglesYXZ(tilt, turned, 0), weight)
 	local shape = LegCycle.shape(body.runSpeed)
 	local bob = LegCycle.bob(body.phase, shape) * weight
 	-- The swagger: the hips sway over the planted foot, turn with the stride and drop on the swinging side, and
@@ -374,10 +412,11 @@ local function applyRun(body: Body)
 	hips.sway *= weight
 	hips.twist *= weight
 	hips.roll *= weight
+	local underLegs = { sway = hips.sway, twist = hips.twist + turned, roll = hips.roll }
 	local lean = rootShown:ToEulerAnglesYXZ() -- the hips' pitch; forward is negative
 	local height = LegCycle.restHeight + rootShown.Y + bob
 	for _, names in LEGS do
-		local leg = LegCycle.leg(body.phase + names.offset, shape, body.goForward, body.goRight, height, names.side, hips)
+		local leg = LegCycle.leg(body.phase + names.offset, shape, body.goForward, body.goRight, height, names.side, underLegs)
 		local frames = {
 			[names.hip] = CFrame.Angles(0, 0, leg.roll) * CFrame.Angles(leg.pitch - lean - LegCycle.restHip, 0, 0),
 			[names.knee] = CFrame.Angles(LegCycle.restKnee - leg.bend, 0, 0),
@@ -406,6 +445,35 @@ local function applyRun(body: Body)
 	end
 end
 
+-- Bends the upper body to where the player is looking and kicks it with each shot, on top of whatever the
+-- pose and the run have set. The turns go on the torso's side of each joint, so they are about the torso's own
+-- axes whatever the pose has done with the arms.
+local function applyAim(body: Body, dt: number)
+	local kick = ShotKick.step(body.kick, dt)
+	local look = body.look
+	if math.abs(look) < 0.001 and math.abs(kick) < 0.001 then
+		return
+	end
+	local joints = body.joints
+	local twist = kick * KICK_TWIST * body.kick.side
+	if joints.Waist then
+		joints.Waist.Transform = CFrame.Angles(look * LOOK_WAIST + kick * KICK_WAIST, twist, 0) * joints.Waist.Transform
+	end
+	local arms = CFrame.Angles(look * LOOK_ARMS + kick * KICK_ARMS, 0, 0)
+	for _, name in { "RightShoulder", "LeftShoulder" } do
+		if joints[name] then
+			joints[name].Transform = arms * joints[name].Transform
+		end
+	end
+	if joints.Neck then
+		-- The head carries on to the full look, and doesn't rock or twist with the shot.
+		joints.Neck.Transform = CFrame.Angles(look * LOOK_NECK - kick * KICK_WAIST, -twist, 0) * joints.Neck.Transform
+	end
+	if joints.Root and kick > 0.001 then
+		joints.Root.Transform = CFrame.new(0, 0, kick * KICK_BACK) * joints.Root.Transform
+	end
+end
+
 -- Runs after the Animator has written its frame, so these poses win.
 RunService.PreSimulation:Connect(function(dt: number)
 	local now = os.clock()
@@ -424,6 +492,7 @@ RunService.PreSimulation:Connect(function(dt: number)
 				end
 			end
 			applyRun(body)
+			applyAim(body, dt)
 			continue
 		end
 		if frame ~= body.frame then

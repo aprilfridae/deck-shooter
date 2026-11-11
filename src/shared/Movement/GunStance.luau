@@ -4,7 +4,7 @@
 local GunStance = {}
 
 GunStance.landTime = 0.25 -- seconds the landing pose holds
-GunStance.fireTime = 0.17 -- about two held frames at 12 fps
+GunStance.fireTime = 0.9 -- seconds the gun stays up after a shot. It was 0.17, one flick of a pose per shot
 GunStance.moving = 1 -- studs per second; slower than this counts as standing
 GunStance.sprinting = 20 -- walk is 16, sprint 24
 GunStance.rising = 2 -- vertical studs per second that counts as still going up

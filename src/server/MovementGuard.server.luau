@@ -43,6 +43,32 @@ local function allowPose(player: Player): boolean
 	return window.count <= MAX_POSES_PER_SECOND
 end
 
+-- How far up or down a player is looking, in degrees, so other players' copies of the body can bend to it.
+local lookRemote = Instance.new("RemoteEvent")
+lookRemote.Name = "Look"
+lookRemote.Parent = remotes
+local MAX_LOOKS_PER_SECOND = 15
+local lookWindows: { [Player]: { startedAt: number, count: number } } = {}
+lookRemote.OnServerEvent:Connect(function(player, pitch)
+	if type(pitch) ~= "number" or pitch ~= pitch then
+		return
+	end
+	local now = os.clock()
+	local window = lookWindows[player]
+	if not window or now - window.startedAt >= 1 then
+		window = { startedAt = now, count = 0 }
+		lookWindows[player] = window
+	end
+	window.count += 1
+	if window.count > MAX_LOOKS_PER_SECOND or not player.Character then
+		return
+	end
+	player.Character:SetAttribute("LookPitch", math.round(math.clamp(pitch, -89, 89)))
+end)
+Players.PlayerRemoving:Connect(function(player)
+	lookWindows[player] = nil
+end)
+
 poseRemote.OnServerEvent:Connect(function(player, pose)
 	if type(pose) ~= "string" or not POSES[pose] or not allowPose(player) then
 		return

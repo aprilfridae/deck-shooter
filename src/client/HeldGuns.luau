@@ -28,6 +28,8 @@ type Held = {
 	action: Group,
 	restMag: CFrame, -- where the magazine and action sit on the gun when nothing moves them
 	restAction: CFrame,
+	muzzle: Vector3, -- the end of the barrel, from the handle
+	handle: CFrame?, -- where the gun was last put, while it is shown
 }
 
 local folder = Instance.new("Folder")
@@ -133,6 +135,13 @@ local function build(name: string, poses: Poses): Held?
 		action = { parts = {}, offsets = {} },
 		restMag = restMag,
 		restAction = restAction,
+		-- The gun lies along Z. The muzzle is the end further from the grip, most of the way up the gun.
+		muzzle = Vector3.new(
+			(low.X + high.X) / 2,
+			low.Y + (high.Y - low.Y) * 0.7,
+			if math.abs(low.Z) > math.abs(high.Z) then low.Z else high.Z
+		),
+		handle = nil,
 	}
 	local function add(group: Group, part: BasePart)
 		table.insert(group.parts, part)
@@ -190,6 +199,7 @@ function HeldGuns.show(character: Model, gunName: string?, poses: Poses?, pose: 
 	if not gunName or not poses or not pose or not pose.gun or not visible then
 		if current then
 			current.model.Parent = nil
+			current.handle = nil
 		end
 		return
 	end
@@ -203,9 +213,11 @@ function HeldGuns.show(character: Model, gunName: string?, poses: Poses?, pose: 
 	local holder = character:FindFirstChild(pose.gunOn or "RightHand")
 	if not holder or not holder:IsA("BasePart") then
 		current.model.Parent = nil
+		current.handle = nil
 		return
 	end
 	local handle = holder.CFrame * HeldGuns.frame(pose.gun)
+	current.handle = handle
 	place(current.body, handle)
 	place(current.mag, handle * HeldGuns.frame(pose.mag) * current.restMag:Inverse())
 	place(current.action, handle * HeldGuns.frame(pose.action) * current.restAction:Inverse())
@@ -213,6 +225,15 @@ function HeldGuns.show(character: Model, gunName: string?, poses: Poses?, pose: 
 	table.clear(parts)
 	table.clear(frames)
 	current.model.Parent = folder
+end
+
+-- Where the end of the barrel is on the gun this body is showing, or nil if it shows none. Tracers start here.
+function HeldGuns.muzzle(character: Model?): Vector3?
+	local current = character and held[character]
+	if not current or not current.handle then
+		return nil
+	end
+	return current.handle * current.muzzle
 end
 
 function HeldGuns.remove(character: Model)

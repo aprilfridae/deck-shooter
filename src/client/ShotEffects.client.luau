@@ -9,6 +9,7 @@ local GunAudio = require(script.Parent.GunAudio)
 local Perf = require(script.Parent.Perf)
 local GunSounds = require(ReplicatedStorage.Guns.GunSounds)
 local GunView = require(script.Parent.GunView)
+local HeldGuns = require(script.Parent.HeldGuns)
 local Collision = require(ReplicatedStorage.Guns.Collision)
 local Flyby = require(ReplicatedStorage.Guns.Flyby)
 local Tracer = require(ReplicatedStorage.Guns.Tracer)
@@ -287,7 +288,14 @@ local function whizz(origin: Vector3, shots: { any })
 end
 
 shotsRemote.OnClientEvent:Connect(function(shooter: Player, origin: Vector3, shots: { any })
-	local from = if shooter == player then GunView.muzzle() or origin else origin
+	-- From the gun's muzzle: the first-person gun for your own shots, the gun in the body's hands for anyone
+	-- else's (River saw tracers leaving other players' faces) and for yours in the test view from outside.
+	local from = origin
+	if shooter == player and not player:GetAttribute("ThirdPersonTest") then
+		from = GunView.muzzle() or origin
+	else
+		from = HeldGuns.muzzle(shooter.Character) or origin
+	end
 	for _, shot in shots do
 		-- A collateral sends a blood mark for each body it went through and one tracer past them all.
 		if not shot.through then
