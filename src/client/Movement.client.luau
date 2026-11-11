@@ -432,7 +432,8 @@ local function onFrame(dt: number)
 	local flatSpeed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
 	local stepped
 	stepTravel, stepped = MoveState.stepTravel(stepTravel, flatSpeed * dt, state.mode)
-	if stepped then
+	-- The soldier body's feet play its step sounds as they land (RemotePoses). This is for any other body.
+	if stepped and not (humanoid.Parent and humanoid.Parent:GetAttribute("SoldierRig")) then
 		GunAudio.playStep()
 	end
 

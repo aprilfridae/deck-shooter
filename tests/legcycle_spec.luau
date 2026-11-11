@@ -26,6 +26,24 @@ describe("LegCycle.shape", function()
 	end)
 end)
 
+describe("LegCycle.lands", function()
+	it("is true once for each foot in a stride", function()
+		local count, phase = 0, 0.01
+		for _ = 1, 100 do
+			if LegCycle.lands(phase, 0.01) then
+				count += 1
+			end
+			phase = (phase + 0.01) % 1
+		end
+		expect(count).toBe(2)
+	end)
+
+	it("spaces the footfalls half a stride apart", function()
+		expect(LegCycle.stepStuds(18.5)).toBeCloseTo(LegCycle.shape(18.5).length / 2)
+		expect(LegCycle.stepStuds(18.5)).toBeCloseTo(6.5, 0.1)
+	end)
+end)
+
 describe("LegCycle.foot", function()
 	local shape = LegCycle.shape(18.5)
 

@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ArmClip = require(ReplicatedStorage.Guns.ArmClip)
 local Loosen = require(ReplicatedStorage.Guns.Loosen)
+local LegCycle = require(ReplicatedStorage:WaitForChild("Movement"):WaitForChild("LegCycle"))
 local GunAudio = require(script.Parent.GunAudio)
 local Perf = require(script.Parent.Perf)
 local AkReload = require(ReplicatedStorage.Guns.AkReload)
@@ -176,7 +177,7 @@ local BOB_HEIGHT = 0.03
 local BOB_SIDE = 0.035
 local BOB_NOD = 1.2
 local BOB_ROLL = 1.5
-local STEP_STUDS = 9 -- the footstep sounds play this far apart, so the dips land with them
+-- The dips keep time with the footsteps, which are as far apart as the body's feet land (LegCycle.stepStuds).
 local BOB_SPRINT = 1.9 -- how much bigger the bob is while sprinting
 local WALK_SPEED = 16
 -- Sprinting: the gun settles a little lower and closer, tipped down. Small on purpose.
@@ -876,7 +877,7 @@ local function swayAndBob(dt: number, camera: Camera, aiming: boolean, sprinting
 		local velocity = root.AssemblyLinearVelocity
 		speed = Vector2.new(velocity.X, velocity.Z).Magnitude
 	end
-	bobPhase += speed * dt * math.pi / STEP_STUDS
+	bobPhase += speed * dt * math.pi / LegCycle.stepStuds(speed)
 	local running = sprinting and speed > 1
 	local bobGoal = math.min(speed / WALK_SPEED, 1) * (if running then BOB_SPRINT else 1) * share
 	bobWeight += (bobGoal - bobWeight) * (1 - math.exp(-dt * 6))

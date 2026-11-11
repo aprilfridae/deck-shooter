@@ -42,7 +42,8 @@ export type Leg = {
 -- is long steps with both feet off the ground between them.
 function LegCycle.shape(speed: number): Shape
 	local half = math.clamp(0.6 + 0.07 * speed, 0.6, 1.3)
-	local stance = math.clamp(0.6 - 0.02 * speed, 0.25, 0.6)
+	-- At sprint a foot is down for a fifth of the stride, which puts the footfalls about 6.5 studs apart.
+	local stance = math.clamp(0.6 - 0.0216 * speed, 0.2, 0.6)
 	return {
 		half = half,
 		stance = stance,
@@ -74,6 +75,17 @@ function LegCycle.foot(phase: number, shape: Shape): (number, number, number)
 		then TOE_OFF * (0.5 + 0.5 * math.sin(math.pi * through))
 		else TOE_OFF * (1 - smooth((through - 0.5) * 2)) + TOE_LAND * smooth((through - 0.5) * 2)
 	return ahead, lift, pitch
+end
+
+-- Studs of ground between one foot landing and the other, at this speed. The step sounds and the first-person
+-- bob keep this time too.
+function LegCycle.stepStuds(speed: number): number
+	return LegCycle.shape(speed).length / 2
+end
+
+-- True when a foot lands as the stride goes from one phase on by this much (under half a stride).
+function LegCycle.lands(phase: number, advance: number): boolean
+	return math.floor(phase * 2) ~= math.floor((phase + advance) * 2)
 end
 
 -- The hips' rise and fall at this point in the stride: lowest with a foot planted under them. phase is the right

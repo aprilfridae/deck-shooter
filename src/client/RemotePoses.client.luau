@@ -14,7 +14,6 @@ local BodyPose = require(Movement:WaitForChild("BodyPose"))
 local BodyPoses = require(Movement:WaitForChild("BodyPoses"))
 local GunStance = require(Movement:WaitForChild("GunStance"))
 local LegCycle = require(Movement:WaitForChild("LegCycle"))
-local MoveConfig = require(Movement:WaitForChild("MoveConfig"))
 local GunAudio = require(script.Parent:WaitForChild("GunAudio"))
 local HeldGuns = require(script.Parent:WaitForChild("HeldGuns"))
 
@@ -81,7 +80,6 @@ type Body = {
 	soldier: boolean,
 	airborne: boolean,
 	travel: number,
-	stepTravel: number, -- ground covered since this body's last footstep sound
 	phase: number, -- where the right foot is in its stride, 0 to 1
 	legWeight: number, -- how much the run has the legs, 0 to 1
 	runSpeed: number, -- the speed the stride is shaped for
@@ -147,7 +145,6 @@ local function onCharacter(character: Model)
 		soldier = character:GetAttribute("SoldierRig") == true,
 		airborne = false,
 		travel = 0,
-		stepTravel = 0,
 		phase = 0,
 		legWeight = 0,
 		runSpeed = 0,
@@ -223,14 +220,6 @@ local function sampleStance(body: Body, now: number)
 	body.airborne = airborne
 	if not airborne then
 		body.travel += flatSpeed * (now - body.sampledAt)
-		-- Other players' footsteps, on the same stride as your own: running upright only, not crouched or sliding.
-		if body.player and body.player ~= Players.LocalPlayer and body.character:GetAttribute("MovePose") == "Normal" then
-			body.stepTravel += flatSpeed * (now - body.sampledAt)
-			if body.stepTravel >= MoveConfig.StrideStuds then
-				body.stepTravel %= MoveConfig.StrideStuds
-				GunAudio.playFarStep(body.root.Position - Vector3.new(0, FEET_BELOW_ROOT, 0))
-			end
-		end
 	end
 	local dt = math.clamp(now - body.sampledAt, 0, 0.1)
 	body.sampledAt = now
@@ -240,7 +229,20 @@ local function sampleStance(body: Body, now: number)
 	body.legWeight += ((if running then 1 else 0) - body.legWeight) * (1 - math.exp(-dt * LEG_EASE))
 	if running then
 		body.runSpeed = flatSpeed
-		body.phase = (body.phase + flatSpeed * dt / LegCycle.shape(flatSpeed).length) % 1
+		local advance = flatSpeed * dt / LegCycle.shape(flatSpeed).length
+		-- A foot lands: the step sound, yours in your ears and anyone else's from their feet. River found the run
+		-- out of time with the sound when the sound kept its own count of the ground, so the feet play it now.
+		if LegCycle.lands(body.phase, advance) and body.player then
+			if body.player == Players.LocalPlayer then
+				local mode = body.player:GetAttribute("MoveMode")
+				if mode == "Sprint" or mode == "Walk" then
+					GunAudio.playStep()
+				end
+			elseif body.character:GetAttribute("MovePose") == "Normal" then
+				GunAudio.playFarStep(body.root.Position - Vector3.new(0, FEET_BELOW_ROOT, 0))
+			end
+		end
+		body.phase = (body.phase + advance) % 1
 		local going = body.root.CFrame:VectorToObjectSpace(Vector3.new(velocity.X, 0, velocity.Z)) / flatSpeed
 		local turn = 1 - math.exp(-dt * TURN_EASE)
 		body.goForward += (-going.Z - body.goForward) * turn
@@ -336,6 +338,11 @@ local function applyRun(body: Body)
 		return
 	end
 	local rootShown = body.shown.Root or CFrame.identity
+	-- The hips run square. The pose's hips are turned and tipped a little to one side, which looked fine as one
+	-- of two poses flipping but held still made the whole lower body lean left (River). Their height, forward
+	-- lean and how far forward they sit are kept.
+	local tilt = rootShown:ToEulerAnglesYXZ()
+	rootShown = rootShown:Lerp(CFrame.new(0, rootShown.Y, rootShown.Z) * CFrame.Angles(tilt, 0, 0), weight)
 	local shape = LegCycle.shape(body.runSpeed)
 	local bob = LegCycle.bob(body.phase, shape) * weight
 	local lean = rootShown:ToEulerAnglesYXZ() -- the hips' pitch; forward is negative
