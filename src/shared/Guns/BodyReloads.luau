@@ -82,7 +82,11 @@ do
 	local clips = ArmClips["Energy Pistol"]
 	local clip = clips.reload
 	local FIRST = clip.frames[1].gun -- the gun in the hold, in the clip's space
-	local LENGTH = 0.964
+	local SOUND = 0.964 -- the reload itself: the clip's length and the sound's
+	-- The motion carries on past the reload and settles. Ending with the reload, everything had 0.15s to get home
+	-- (the left arm swinging two studs down to the side in that) and the last of it was cut off, so it jumped back
+	-- to the base pose (River, 2026-11-11).
+	local LENGTH = 1.4
 	-- The clip's gun space to the held gun's. First person draws the pistol about 1.59 studs long and the body's
 	-- is about 1.31; and the two keep their origins in different places on it, found by putting the right palm,
 	-- which holds the grip in both, in the same spot.
@@ -90,41 +94,62 @@ do
 	local ORIGIN = Vector3.new(0.018, 0.271, -0.099) -- the clip's gun origin, from the held gun's handle
 	local GRIP = Vector3.new(0.125, 0.17, 0.27) -- the right palm, which the layered turn is about
 	local HAND_TRAVEL = 0.25 -- the share of the gun's travel the right hand makes; the rest is left to the wrist's turn
-	-- The body through the reload, for swagger: seconds, then degrees the torso leans back, turns to its left and
-	-- tips to its left. It settles back and opens toward the left hand as that comes up, is driven forward and
-	-- across into the slap, and rocks back past upright after it.
-	local BODY = {
-		{ 0, 0, 0, 0 },
-		-- The gun stays where it is in the air while the torso moves (RemotePoses, for natural reloads), so these
-		-- turns reach the left hand toward it instead of carrying the gun arm about.
-		{ 0.18, 3, 3, -2 },
-		{ 0.4, 5, 5, -3 }, -- wound up, opened a little to the left
-		{ 0.56, -10, -22, 4 }, -- the slap: swung to the right and leaning in, left shoulder leading
-		{ 0.66, -7, -16, 3 },
-		{ 0.8, 4, 4, -3 }, -- rocking back
-		{ LENGTH, 0, 0, 0 },
-	}
-	local function bodyAt(t: number): { pitch: number, yaw: number, roll: number }
-		local now = { 0, 0, 0 }
-		for index = 2, #BODY do
-			if t < BODY[index][1] then
-				local from, to = BODY[index - 1], BODY[index]
-				local u = smooth((t - from[1]) / (to[1] - from[1]))
-				for value = 1, 3 do
-					now[value] = from[value + 1] + (to[value + 1] - from[value + 1]) * u
+
+	-- One smooth curve through a set of keys ({ seconds, values... }), as AkReload's gun rides: it passes through
+	-- each key still moving, at the slope between its neighbours, and is at rest only at the two ends. Easing from
+	-- key to key instead stops dead at every one, which is what made this reload look steppy.
+	local function flowing(keys: { { number } }, t: number): { number }
+		local count = #keys[1] - 1
+		local last = keys[#keys]
+		if t <= keys[1][1] or t >= last[1] then
+			return table.move(if t <= keys[1][1] then keys[1] else last, 2, count + 1, 1, {})
+		end
+		local function slope(index: number, value: number): number
+			if index == 1 or index == #keys then
+				return 0
+			end
+			return (keys[index + 1][value] - keys[index - 1][value]) / (keys[index + 1][1] - keys[index - 1][1])
+		end
+		local now = {}
+		for index = 2, #keys do
+			local from, to = keys[index - 1], keys[index]
+			if t < to[1] then
+				local span = to[1] - from[1]
+				local u = (t - from[1]) / span
+				local u2, u3 = u * u, u * u * u
+				for value = 2, count + 1 do
+					now[value - 1] = from[value] * (2 * u3 - 3 * u2 + 1)
+						+ slope(index - 1, value) * span * (u3 - 2 * u2 + u)
+						+ to[value] * (-2 * u3 + 3 * u2)
+						+ slope(index, value) * span * (u3 - u2)
 				end
 				break
 			end
 		end
-		return { pitch = math.rad(now[1]), yaw = math.rad(now[2]), roll = math.rad(now[3]) }
+		return now
 	end
+
+	-- The body through the reload, for swagger: seconds, then degrees the torso leans back, turns to its left and
+	-- tips to its left. It settles back and opens toward the left hand as that comes up; swings to its right and
+	-- leans in for the slap, left shoulder leading, which is what reaches the left hand to the gun; then rocks
+	-- back well past upright, sways through once more and comes to rest after the reload is over.
+	-- The gun stays where it is in the air while the torso moves (RemotePoses, for natural reloads).
+	local BODY = {
+		{ 0, 0, 0, 0 },
+		{ 0.2, 3, 3, -2 },
+		{ 0.42, 5, 6, -3 }, -- wound up, opened a little to the left
+		{ 0.57, -10, -22, 4 }, -- the slap
+		{ 0.68, -7, -15, 3 },
+		{ 0.86, 5, 7, -3 }, -- rocking back past upright
+		{ 1.05, -1.5, -2.5, 1 }, -- swaying through
+		{ 1.22, 0.6, 0.8, -0.3 },
+		{ LENGTH, 0, 0, 0 },
+	}
 	-- How far the gun comes in for the reload: to the body's right, up and back. Held at arm's length it is about
 	-- 3.5 studs from the left shoulder and an arm is 2.3, so something has to give. At first the gun was drawn
 	-- right in (1.3, then 1.5 back), which folded the gun arm and looked like hugging it to the chest; River: "make
-	-- the left hand come to the right hand, not the other way around". So now the body does the reaching: the torso
-	-- turns to its right and leans in at the slap (BODY), which swings the left shoulder forward and the right one
-	-- back. That brings the left hand to the gun, and takes up most of this smaller pull without the gun arm
-	-- bending much.
+	-- the left hand come to the right hand, not the other way around". So the body does the reaching (BODY), and
+	-- this smaller pull is mostly taken up by the right shoulder going back as the torso turns.
 	local PULL = Vector3.new(-0.1, -0.1, 0.7)
 
 	-- GunView's layer over the clip (RELOADS["Energy Pistol"]): seconds, then degrees of roll, yaw and pitch and
@@ -139,45 +164,47 @@ do
 		{ 0.68, 4, -2, -10, 0, -0.04, 0.08 }, -- the rack yanks it back, muzzle dipping
 		{ 0.74, 2, -1, 9, 0, 0.05, -0.06 }, -- the slide flies home and throws it forward
 		{ 0.84, -2, 1, -3, 0, -0.02, 0.01 }, -- it rocks back past ready
-		{ LENGTH, 0, 0, 0, 0, 0, 0 },
+		{ SOUND, 0, 0, 0, 0, 0, 0 },
 	}
 	local function layered(t: number): CFrame
-		local now = LAYER[#LAYER]
-		for index = 2, #LAYER do
-			if t < LAYER[index][1] then
-				local from, to = LAYER[index - 1], LAYER[index]
-				local u = smooth((t - from[1]) / (to[1] - from[1]))
-				now = {}
-				for value = 1, 7 do
-					now[value] = from[value] + (to[value] - from[value]) * u
-				end
-				break
-			end
-		end
-		local seen = CFrame.new(now[5], now[6], now[7]) * CFrame.Angles(math.rad(now[4]), math.rad(now[3]), math.rad(now[2]))
+		local now = flowing(LAYER, t)
+		local seen = CFrame.new(now[4], now[5], now[6]) * CFrame.Angles(math.rad(now[3]), math.rad(now[2]), math.rad(now[1]))
 		-- As the camera sees it, worked into the gun's own space, which the sideways hold has turned round.
 		return about(GRIP, FIRST.Rotation:Inverse() * seen * FIRST.Rotation)
 	end
 
-	local function at(t: number)
-		local frame = ArmClip.sampleAt(clip, math.max(t, 0)) or clip.frames[#clip.frames]
-		-- How the clip has moved the gun from its hold, about the clip's own origin on the gun.
+	-- The clip at one moment: how it has turned the gun in the hold, and where it has the left palm on the gun.
+	local function clipAt(t: number): (CFrame, CFrame)
+		local frame = ArmClip.sampleAt(clip, math.clamp(t, 0, SOUND)) or clip.frames[#clip.frames]
 		local moved = FIRST:ToObjectSpace(frame.gun)
 		local whole = CFrame.new(ORIGIN) * (CFrame.new(moved.Position) * moved.Rotation) * CFrame.new(-ORIGIN) * layered(t)
-		-- On the body that turn is made at the wrist. Played whole, it carried the hand about and the entire arm
-		-- shook with it, where River wanted "a short wrist shake": so the gun turns about the palm, and the hand
-		-- itself travels only a share of the way.
+		local fromGun = frame.gun:ToObjectSpace(SoldierPose.clipPalms(clips.meshOffset, frame.bones).Left)
+		return whole, CFrame.new(ORIGIN + fromGun.Position * SCALE) * fromGun.Rotation
+	end
+	-- Each moment is blended with the moments just before and after it, as AkReload does. The clip is 25 frames a
+	-- second with straight lines between them, and its slap covers a stud in one frame; this rounds those corners.
+	local TAPS = { { -1, 1 }, { -0.5, 2 }, { 0, 3 }, { 0.5, 2 }, { 1, 1 } }
+	local WINDOW = 0.045 -- seconds either side
+
+	local function at(t: number)
+		local window = math.clamp(math.min(t, LENGTH - t), 0, WINDOW)
+		local whole, palm, total = CFrame.identity, CFrame.identity, 0
+		for _, tap in TAPS do
+			local tapWhole, tapPalm = clipAt(t + tap[1] * window)
+			total += tap[2]
+			whole, palm = whole:Lerp(tapWhole, tap[2] / total), palm:Lerp(tapPalm, tap[2] / total)
+		end
+		-- The clip ends a few degrees off where it began; that is eased out after the reload.
+		whole = whole:Lerp(CFrame.identity, smooth(between(t, 0.84, 1.04)))
+		-- On the body the gun's turn is made at the wrist. Played whole, it carried the hand about and the entire
+		-- arm shook with it, where River wanted "a short wrist shake": so the gun turns about the palm, and the
+		-- hand itself travels only a share of the way.
 		local carried = whole * GRIP - GRIP
 		local gun = CFrame.new(carried * HAND_TRAVEL) * about(GRIP, whole.Rotation)
-		-- Where the clip has the left palm, from the gun.
-		local fromGun = frame.gun:ToObjectSpace(SoldierPose.clipPalms(clips.meshOffset, frame.bones).Left)
-		local palm = CFrame.new(ORIGIN + fromGun.Position * SCALE) * fromGun.Rotation
-		local weight = smooth(between(t, 0.06, 0.36)) * (1 - smooth(between(t, 0.8, 0.95)))
-		-- The body holds the pistol out at arm's length, about 3.5 studs from the left shoulder, and an arm is
-		-- 2.3 long: the left hand couldn't get to the gun at all, and reached for it with a straight arm and a bent
-		-- wrist (River's clip, 2026-11-11). First person's gun is only 1.5 from the eye. So the gun is drawn in
-		-- toward the chest and the middle for the reload and pushed back out after.
-		local pull = PULL * (smooth(between(t, 0.28, 0.54)) * (1 - smooth(between(t, 0.68, 0.9))))
+		-- The left hand comes up from the side over the wind-up, and goes back down slowly after the reload.
+		local weight = smooth(between(t, 0.06, 0.36)) * (1 - smooth(between(t, 0.82, 1.24)))
+		local pull = PULL * (smooth(between(t, 0.28, 0.54)) * (1 - smooth(between(t, 0.68, 1.02))))
+		local body = flowing(BODY, t)
 		return {
 			gun = gun,
 			mag = CFrame.identity,
@@ -186,12 +213,12 @@ do
 			weight = weight,
 			rightWeight = 0,
 			pull = pull,
-			body = bodyAt(t),
+			body = { pitch = math.rad(body[1]), yaw = math.rad(body[2]), roll = math.rad(body[3]) },
 			freeLeft = true, -- between reloads the left hand hangs at the side, not on the gun
 		}
 	end
 
-	BodyReloads["Energy Pistol"] = { at = at, LENGTH = LENGTH, SOUND = LENGTH, natural = true }
+	BodyReloads["Energy Pistol"] = { at = at, LENGTH = LENGTH, SOUND = SOUND, natural = true }
 end
 
 -- The Longscope -------------------------------------------------------------------------------------------------
