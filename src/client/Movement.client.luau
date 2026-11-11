@@ -161,7 +161,7 @@ end
 -- keeping their speed. A few to a time in the air, and never off the same wall twice running.
 local wallJumps = 0
 local wallJumpAt = -math.huge
-local lastWall: Vector3? = nil
+local kickedWalls: { Vector3 } = {} -- the way out of each wall kicked off this time in the air
 local wallParams = RaycastParams.new()
 wallParams.FilterType = Enum.RaycastFilterType.Exclude
 wallParams.RespectCanCollide = true
@@ -208,7 +208,14 @@ local function tryWallJump(moveDirection: Vector3, now: number)
 		return
 	end
 	local away = Vector3.new(nearest.Normal.X, 0, nearest.Normal.Z).Unit
-	if lastWall and away:Dot(lastWall) > MoveConfig.WallJumpSame then
+	-- No more than WallJumpsPerWall kicks off the same wall before landing.
+	local sameWall = 0
+	for _, kicked in kickedWalls do
+		if away:Dot(kicked) > MoveConfig.WallJumpSame then
+			sameWall += 1
+		end
+	end
+	if sameWall >= MoveConfig.WallJumpsPerWall then
 		return
 	end
 	-- Where the player is steering, or looking, bounced off the wall if it points into it.
@@ -229,7 +236,7 @@ local function tryWallJump(moveDirection: Vector3, now: number)
 	peakFall = 0
 	wallJumps += 1
 	wallJumpAt = now
-	lastWall = away
+	table.insert(kickedWalls, away)
 	jumpSoundAt = now
 	GunAudio.playWallJump()
 	WallKick.play(nearest.Position, nearest.Normal)
@@ -348,7 +355,7 @@ local function onFrame(dt: number)
 		tryWallJump(direction, now)
 	end
 	if humanoid.FloorMaterial ~= Enum.Material.Air then
-		wallJumps, lastWall = 0, nil -- back on the ground
+		wallJumps, kickedWalls = 0, {} -- back on the ground
 	end
 	if dash then
 		advanceDash(dash, now)

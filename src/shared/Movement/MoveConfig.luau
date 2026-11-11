@@ -36,7 +36,8 @@ return {
 	WallJumpBoost = 5, -- added to the current speed (was 2), up to ParryMaxSpeed
 	WallJumpGap = 0.25, -- seconds between wall jumps
 	WallJumpMinAir = 0.12, -- seconds in the air before the first, so a jump beside a wall isn't spent on it
-	WallJumps = 2, -- in one time in the air
+	WallJumps = math.huge, -- in one time in the air: no limit
+	WallJumpsPerWall = 2, -- off any one wall in one time in the air
 	WallJumpSame = 0.85, -- two walls facing this much the same way count as the same wall, which can't be used twice running
 	WallJumpSteep = 0.3, -- the most a wall can lean (the upward share of its normal)
 	WallJumpLook = 0.6, -- how much of the kick goes where the player is looking, against straight off the wall
