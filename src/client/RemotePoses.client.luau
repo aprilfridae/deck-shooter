@@ -663,6 +663,18 @@ local function applyReload(body: Body, dt: number)
 	local blend = math.clamp(math.min(at - (reload.lead or 0), reload.LENGTH - at) / RELOAD_BLEND, 0, 1)
 
 	-- The body goes with it, before the hands are found, so they and the gun are carried along.
+	-- A natural reload's gun stays where it is in the air while the torso leans and turns under it: the torso's
+	-- move is there to reach the other hand to the gun, not to carry the gun about. So where the pose has the
+	-- gun and the hands on it is found now, before the lean.
+	local before = nil
+	if reload.natural then
+		local torsoBefore = through(through(body.root.CFrame, joints.Root), joints.Waist)
+		local rightBefore = through(through(through(torsoBefore, joints.RightShoulder), joints.RightElbow), joints.RightWrist)
+		local leftBefore = through(through(through(torsoBefore, joints.LeftShoulder), joints.LeftElbow), joints.LeftWrist)
+		local holdBefore = rightBefore * HeldGuns.frame(body.pose.gun)
+		before = { hold = holdBefore, Right = holdBefore:ToObjectSpace(rightBefore), Left = holdBefore:ToObjectSpace(leftBefore) }
+	end
+
 	-- The torso's lean back, turn to its left and tip to its left: what the reload says, or a share of the gun's
 	-- own turn. The hips turn a little the same way and shift against the tip.
 	local leanBack, leanTurn, leanTip, hipsTurn, hipsShift
@@ -693,6 +705,9 @@ local function applyReload(body: Body, dt: number)
 	local hold = hands.Right * HeldGuns.frame(body.pose.gun) -- the gun before the reload turns it
 	-- Where each hand is on the gun as the pose has them.
 	local onGun = { Right = hold:ToObjectSpace(hands.Right), Left = hold:ToObjectSpace(hands.Left) }
+	if before then
+		hold, onGun = before.hold, { Right = before.Right, Left = before.Left }
+	end
 	-- A pull draws the whole gun in toward the body; the hands and the places the reload gives them go with it.
 	if pose.pull then
 		hold += body.root.CFrame:VectorToWorldSpace(pose.pull)

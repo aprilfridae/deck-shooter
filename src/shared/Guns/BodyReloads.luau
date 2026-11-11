@@ -95,12 +95,13 @@ do
 	-- across into the slap, and rocks back past upright after it.
 	local BODY = {
 		{ 0, 0, 0, 0 },
-		-- The turns were twice this at first; they carried the gun arm across with them.
+		-- The gun stays where it is in the air while the torso moves (RemotePoses, for natural reloads), so these
+		-- turns reach the left hand toward it instead of carrying the gun arm about.
 		{ 0.18, 3, 3, -2 },
-		{ 0.42, 6, 6, -4 }, -- wound up
-		{ 0.56, -8, -5, 5 }, -- the slap
-		{ 0.66, -4, -3, 3 },
-		{ 0.8, 5, 4, -3 }, -- rocking back
+		{ 0.4, 5, 5, -3 }, -- wound up, opened a little to the left
+		{ 0.56, -10, -22, 4 }, -- the slap: swung to the right and leaning in, left shoulder leading
+		{ 0.66, -7, -16, 3 },
+		{ 0.8, 4, 4, -3 }, -- rocking back
 		{ LENGTH, 0, 0, 0 },
 	}
 	local function bodyAt(t: number): { pitch: number, yaw: number, roll: number }
@@ -117,10 +118,14 @@ do
 		end
 		return { pitch = math.rad(now[1]), yaw = math.rad(now[2]), roll = math.rad(now[3]) }
 	end
-	-- How far the gun comes in for the reload: to the body's right, up and back. It came 0.45 across to the middle
-	-- at first, which with the torso's turn swung the right arm well over to the left; River had that cut. It comes
-	-- further straight back instead, which keeps it in the left hand's reach.
-	local PULL = Vector3.new(-0.15, -0.1, 1.5)
+	-- How far the gun comes in for the reload: to the body's right, up and back. Held at arm's length it is about
+	-- 3.5 studs from the left shoulder and an arm is 2.3, so something has to give. At first the gun was drawn
+	-- right in (1.3, then 1.5 back), which folded the gun arm and looked like hugging it to the chest; River: "make
+	-- the left hand come to the right hand, not the other way around". So now the body does the reaching: the torso
+	-- turns to its right and leans in at the slap (BODY), which swings the left shoulder forward and the right one
+	-- back. That brings the left hand to the gun, and takes up most of this smaller pull without the gun arm
+	-- bending much.
+	local PULL = Vector3.new(-0.1, -0.1, 0.7)
 
 	-- GunView's layer over the clip (RELOADS["Energy Pistol"]): seconds, then degrees of roll, yaw and pitch and
 	-- studs across, up and back, as the camera sees them.
@@ -172,7 +177,7 @@ do
 		-- 2.3 long: the left hand couldn't get to the gun at all, and reached for it with a straight arm and a bent
 		-- wrist (River's clip, 2026-11-11). First person's gun is only 1.5 from the eye. So the gun is drawn in
 		-- toward the chest and the middle for the reload and pushed back out after.
-		local pull = PULL * (smooth(between(t, 0.03, 0.34)) * (1 - smooth(between(t, 0.74, 0.94))))
+		local pull = PULL * (smooth(between(t, 0.28, 0.54)) * (1 - smooth(between(t, 0.68, 0.9))))
 		return {
 			gun = gun,
 			mag = CFrame.identity,
