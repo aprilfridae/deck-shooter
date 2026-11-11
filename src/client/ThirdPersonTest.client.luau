@@ -52,6 +52,21 @@ player:GetAttributeChangedSignal("Zone"):Connect(function()
 	end
 end)
 
+-- Roblox's first-person camera starts each frame from the way the camera was left facing, and the body turns to
+-- face the same way. So the test view must be undone before the next frame starts, or it feeds back: turned
+-- round to the front, the camera made the game turn the body round too, every frame, and River only ever saw
+-- their back. The camera's real place is kept here and put back first thing each frame.
+local trueView: CFrame? = nil
+RunService:BindToRenderStep("ThirdPersonTestRestore", Enum.RenderPriority.First.Value - 1, function()
+	if trueView then
+		local camera = workspace.CurrentCamera
+		if camera and camera.CameraType == Enum.CameraType.Custom then
+			camera.CFrame = trueView
+		end
+		trueView = nil
+	end
+end)
+
 -- After everything else has placed and used the camera this frame.
 RunService:BindToRenderStep("ThirdPersonTest", Enum.RenderPriority.Last.Value + 10, function()
 	if not player:GetAttribute(ATTRIBUTE) then
@@ -63,6 +78,7 @@ RunService:BindToRenderStep("ThirdPersonTest", Enum.RenderPriority.Last.Value + 
 	if not camera or not character or not humanoid or humanoid.Health <= 0 or camera.CameraType ~= Enum.CameraType.Custom then
 		return
 	end
+	trueView = camera.CFrame
 	camera.CFrame *= if fromFront then FRONT else BACK
 	-- First person hides your own body; show it again.
 	for _, part in character:GetDescendants() do
