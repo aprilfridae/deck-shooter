@@ -16,6 +16,10 @@ POSES = "src/shared/Movement/BodyPoses/EnergyPistol.luau"
 RIG = "src/shared/Movement/BodyPoses/Empty.luau"
 OUT = "src/shared/Movement/PistolArms.luau"
 SKIP = {"Reload"}
+# Poses whose torso is stood up straight: the pose file leans it back about 13 degrees (hips 4, waist 9) and tips
+# it a little, and River wanted the base pose upright. The turn of the hips and shoulders is kept, so the stance is
+# still side-on; only the lean and tip are taken out, and the head faces dead ahead.
+UPRIGHT = {"Stand", "Fire"}
 
 UPPER = 0.55 + 0.62  # shoulder to elbow
 FORE = 0.55 + 0.6  # elbow to wrist
@@ -144,8 +148,24 @@ def arm(shoulder, wrist, elbow_way, swivel):
     return upper, bend, wrist
 
 
-def solve(rig, joints, gun):
+def turn_only(values):
+    """A joint's values with its lean and tip taken out, keeping only its turn about the upright axis."""
+    m = quat_to_mat(values[3:])
+    yaw = math.atan2(m[0, 2], m[2, 2])
+    return values[:3] + [0.0, math.sin(yaw / 2), 0.0, math.cos(yaw / 2)], yaw
+
+
+def solve(rig, joints, gun, upright=False):
     root = Frame([0, 0, 0], np.eye(3))
+    result = {}
+    if upright:
+        joints = dict(joints)
+        joints["Root"], hips = turn_only(joints["Root"])
+        joints["Waist"], waist = turn_only(joints["Waist"])
+        facing = -(hips + waist)  # the head undoes the body's turn
+        joints["Neck"] = [0.0, 0.0, 0.0, 0.0, math.sin(facing / 2), 0.0, math.cos(facing / 2)]
+        for name in ("Root", "Waist", "Neck"):
+            result[name] = joints[name]
 
     def joint(parent, name):
         c0, c1 = rig[name]
@@ -154,7 +174,6 @@ def solve(rig, joints, gun):
     lower = joint(root, "Root")
     upper = joint(lower, "Waist")
     head = joint(upper, "Neck")
-    result = {}
 
     # Right: the gun where first person has it, flat and level, pointing ahead.
     handle = Frame(head.p + GUN_FROM_HEAD, rot_z(GUN_ROLL))
@@ -199,17 +218,22 @@ def main():
     lines = [
         "-- Made by tools/fix_pistol_arms.py. Don't edit by hand.",
         "-- Arm joints for the Energy Pistol's third-person poses: the pistol out in front, rolled flat and level as",
-        "-- first person holds it, and the left arm hanging at the side. Values are { x, y, z, qx, qy, qz, qw }.",
+        "-- first person holds it, and the left arm hanging at the side. The standing poses also carry the hips, waist",
+        "-- and neck, stood up straight. Values are { x, y, z, qx, qy, qz, qw }.",
         "return {",
     ]
     for name, (joints, gun) in poses.items():
         if name in SKIP:
             continue
-        solved, wrist_turn, gun_at = solve(rig, joints, gun)
+        solved, wrist_turn, gun_at = solve(rig, joints, gun, name in UPRIGHT)
         print(f"{name:16} wrist turn {wrist_turn:5.1f} deg, gun from head {np.round(gun_at, 2)}")
         lines.append(f"\t{name} = {{")
-        for joint_name, matrix in solved.items():
-            quat = ", ".join(f"{round(v, 4):g}" for v in mat_to_quat(matrix))
+        for joint_name, value in solved.items():
+            if isinstance(value, list):  # a whole joint, place and turn
+                whole = ", ".join(f"{round(v, 4):g}" for v in value)
+                lines.append(f"\t\t{joint_name} = {{ {whole} }},")
+                continue
+            quat = ", ".join(f"{round(v, 4):g}" for v in mat_to_quat(value))
             lines.append(f"\t\t{joint_name} = {{ 0, 0, 0, {quat} }},")
         lines.append("\t},")
     lines.append("}")

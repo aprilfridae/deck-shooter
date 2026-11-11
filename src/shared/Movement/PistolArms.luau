@@ -1,20 +1,27 @@
 -- Made by tools/fix_pistol_arms.py. Don't edit by hand.
 -- Arm joints for the Energy Pistol's third-person poses: the pistol out in front, rolled flat and level as
--- first person holds it, and the left arm hanging at the side. Values are { x, y, z, qx, qy, qz, qw }.
+-- first person holds it, and the left arm hanging at the side. The standing poses also carry the hips, waist
+-- and neck, stood up straight. Values are { x, y, z, qx, qy, qz, qw }.
 return {
 	Stand = {
-		RightShoulder = { 0, 0, 0, 0.4461, 0.4364, 0.572, 0.5323 },
-		RightElbow = { 0, 0, 0, 0.345, 0, 0, 0.9386 },
-		RightWrist = { 0, 0, 0, -0.3495, 0.0331, 0.0462, 0.9352 },
-		LeftShoulder = { 0, 0, 0, -0.0328, -0.1966, -0.0945, 0.9754 },
+		Root = { 0.16, -0.14, 0.05, 0, -0.1908, 0, 0.9816 },
+		Waist = { 0, 0, 0, 0, 0.2672, 0, 0.9636 },
+		Neck = { 0, 0, 0, 0, -0.0784, 0, 0.9969 },
+		RightShoulder = { 0, 0, 0, 0.3835, 0.4687, 0.5307, 0.593 },
+		RightElbow = { 0, 0, 0, 0.3917, 0, 0, 0.9201 },
+		RightWrist = { 0, 0, 0, -0.378, 0.0334, 0.0335, 0.9246 },
+		LeftShoulder = { 0, 0, 0, -0.1405, -0.2124, -0.0858, 0.9632 },
 		LeftElbow = { 0, 0, 0, 0.2801, 0, 0, 0.96 },
 		LeftWrist = { 0, 0, 0, 0.0698, 0, 0, 0.9976 },
 	},
 	Fire = {
-		RightShoulder = { 0, 0, 0, 0.3191, 0.4945, 0.5002, 0.6352 },
-		RightElbow = { 0, 0, 0, 0.4336, 0, 0, 0.9011 },
-		RightWrist = { 0, 0, 0, -0.3988, 0.0306, 0.0206, 0.9163 },
-		LeftShoulder = { 0, 0, 0, -0.232, -0.2228, -0.0707, 0.9442 },
+		Root = { 0.12, -0.2, 0.18, 0, -0.1908, 0, 0.9816 },
+		Waist = { 0, 0, 0, 0, 0.2672, 0, 0.9636 },
+		Neck = { 0, 0, 0, 0, -0.0785, 0, 0.9969 },
+		RightShoulder = { 0, 0, 0, 0.3834, 0.4686, 0.5307, 0.5931 },
+		RightElbow = { 0, 0, 0, 0.3918, 0, 0, 0.92 },
+		RightWrist = { 0, 0, 0, -0.3781, 0.0334, 0.0335, 0.9246 },
+		LeftShoulder = { 0, 0, 0, -0.1405, -0.2125, -0.0858, 0.9632 },
 		LeftElbow = { 0, 0, 0, 0.2801, 0, 0, 0.96 },
 		LeftWrist = { 0, 0, 0, 0.0698, 0, 0, 0.9976 },
 	},
