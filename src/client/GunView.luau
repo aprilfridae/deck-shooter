@@ -227,7 +227,13 @@ local VIEW_KICKS: { [string]: any } = {
 		-- eases home on its own soft spring, so the gun takes its time getting back to its shooting position.
 		settle = { back = 0.08, drop = 0.035, up = 2.4, perShot = 0.3, stiff = 28, damp = 10.5 },
 	},
-	B33 = { back = 0.154, drop = 0.022, up = 3.3, roll = 1.5, stiff = 270, damp = 24.4, auto = true },
+	-- River (2026-11-10): less up, more straight back, and a smoother reset. It was back 0.154, up 3.3 on a
+	-- 270/24.4 spring with no slow layer. The spring is softer and damped so it doesn't swing past, and the slow
+	-- layer under it eases the gun home after a spray instead of snapping it there.
+	B33 = {
+		back = 0.25, drop = 0.016, up = 1.7, roll = 1.2, stiff = 215, damp = 28, auto = true,
+		settle = { back = 0.11, drop = 0.015, up = 0.9, perShot = 0.3, stiff = 26, damp = 10.4 },
+	},
 	SMG = { back = 0.099, drop = 0.011, up = 2.2, roll = 1.3, stiff = 360, damp = 29.6, auto = true },
 	-- A hard, snappy kick that never goes the same way twice: it rolls to either side (sides), and each shot's
 	-- climb, shove, roll and twist vary twice as much as other guns' (loose).
