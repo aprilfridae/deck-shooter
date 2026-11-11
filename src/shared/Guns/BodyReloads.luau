@@ -95,11 +95,12 @@ do
 	-- across into the slap, and rocks back past upright after it.
 	local BODY = {
 		{ 0, 0, 0, 0 },
-		{ 0.18, 3, 6, -2 },
-		{ 0.42, 6, 12, -4 }, -- wound up
-		{ 0.56, -8, -9, 5 }, -- the slap
-		{ 0.66, -4, -5, 3 },
-		{ 0.8, 5, 7, -3 }, -- rocking back
+		-- The turns were twice this at first; they carried the gun arm across with them.
+		{ 0.18, 3, 3, -2 },
+		{ 0.42, 6, 6, -4 }, -- wound up
+		{ 0.56, -8, -5, 5 }, -- the slap
+		{ 0.66, -4, -3, 3 },
+		{ 0.8, 5, 4, -3 }, -- rocking back
 		{ LENGTH, 0, 0, 0 },
 	}
 	local function bodyAt(t: number): { pitch: number, yaw: number, roll: number }
@@ -116,7 +117,10 @@ do
 		end
 		return { pitch = math.rad(now[1]), yaw = math.rad(now[2]), roll = math.rad(now[3]) }
 	end
-	local PULL = Vector3.new(-0.45, -0.1, 1.3) -- how far the gun comes in for the reload: to the body's right, up and back
+	-- How far the gun comes in for the reload: to the body's right, up and back. It came 0.45 across to the middle
+	-- at first, which with the torso's turn swung the right arm well over to the left; River had that cut. It comes
+	-- further straight back instead, which keeps it in the left hand's reach.
+	local PULL = Vector3.new(-0.15, -0.1, 1.5)
 
 	-- GunView's layer over the clip (RELOADS["Energy Pistol"]): seconds, then degrees of roll, yaw and pitch and
 	-- studs across, up and back, as the camera sees them.
