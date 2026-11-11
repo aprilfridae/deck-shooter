@@ -21,6 +21,7 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 | [`specs/matches.md`](specs/matches.md) | Elimination and Tower modes, rounds, arenas | Planned, not built |
 | [`specs/relay.md`](specs/relay.md) | Relay, the 1v1 map: two fog towers, a bridge, the undercity | Built as a free-play zone, not checked in Play |
 | [`specs/hex.md`](specs/hex.md) | Hex, the box 1v1 map: a ring of six walls with shooting holes, spawn cover and corner ramps | Built with a first art pass; the art pass is not checked in Play |
+| [`specs/radio.md`](specs/radio.md) | The radio: a personal playlist of River's tracks with a HUD strip and visualizer | Designed, not built |
 | [`sound-list.md`](sound-list.md) | Sounds in the game and sounds still needed | Kept current |
 
 Other places with rules:
