@@ -13,7 +13,6 @@ return {
 	-- How fast the air follows the move keys (a share closed per second, as an ease rate). On the ground the keys
 	-- take hold at once. Without this the Humanoid eases in slowly at this gravity, which River called thick air.
 	ResponseSlack = 1.5, -- studs a second the velocity may be off before the game sets it itself
-	AirResponse = 30, -- 14 felt mushy to River
 	SlideBlip = 0.3, -- a slide that leaves the ground for less than this carries on where it was, with no new boost
 	SlideJumpBoost = 3.5, -- added to current speed when a jump cancels a slide
 	ChainJumpBoost = 6.5, -- the same, from a slide reached by a fast fall

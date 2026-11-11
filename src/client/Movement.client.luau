@@ -355,7 +355,7 @@ local function onFrame(dt: number)
 
 	-- The keys take hold at once. Left to itself the Humanoid eases up to speed and back down, slowly at this
 	-- gravity, so the flat velocity is set here: straight to the keys on the ground (and to a stop with none
-	-- held), and quickly toward them in the air. Air with no keys held is left alone, so a jump, a push or a
+	-- held), and to the jump's speed on leaving the ground. In the air it is left alone, so a jump, a push or a
 	-- wall kick carries. A dash moves itself.
 	if not dash and state.mode ~= "Dash" then
 		local wish = direction
@@ -376,10 +376,9 @@ local function onFrame(dt: number)
 		elseif wish.Magnitude > 0 and previousMode ~= "Air" then
 			-- Leaving the ground: the jump's speed (a slide jump's boost) is there at once, not eased in.
 			root.AssemblyLinearVelocity = Vector3.new(goal.X, moving.Y, goal.Z)
-		elseif wish.Magnitude > 0 then
-			local flat = Vector3.new(moving.X, 0, moving.Z):Lerp(goal, 1 - math.exp(-dt * MoveConfig.AirResponse))
-			root.AssemblyLinearVelocity = Vector3.new(flat.X, moving.Y, flat.Z)
 		end
+		-- Once in the air the keys no longer steer at once: that was here (AirResponse) and River had it taken
+		-- out on 2026-11-11, "perfect air strafing ... doesn't feel right". The Humanoid's own air control is left.
 	end
 
 	local velocity = root.AssemblyLinearVelocity
