@@ -15,7 +15,7 @@ What the game already plays and what it still needs. Checked against the code on
 
 | Sound | Files | Plays when |
 | --- | --- | --- |
-| M57 shots | `gun-m4-1` to `30` | Each shot, 100ms apart. Every sound with takes picks one at random, never the same one twice in a row. |
+| M57 shots | `gun-ak47-1` to `30` (the M57 is the AK model, so River had it use the AK takes; `gun-m4-*` are now unused) | Each shot, 100ms apart. Every sound with takes picks one at random, never the same one twice in a row. |
 | B33 shots | `gun-ak47-1` to `30` | Each shot, 111ms apart |
 | SMG shots | `gun-smg-1` to `29` | Each shot, 75ms apart. Take 30 exported silent. |
 | Longscope shots | `gun-sniper-1` to `30`, without 12 | Each shot, 1.2s apart. Take 12 starts late and is much louder. |

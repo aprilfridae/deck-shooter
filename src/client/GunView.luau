@@ -222,10 +222,12 @@ local SNAPPY = { fire = true }
 -- a little past. Guns with clips (M57, Energy Pistol) move the whole view, arms and all, on top of the clip.
 local VIEW_KICKS: { [string]: any } = {
 	M57 = {
-		back = 0.066, drop = 0.011, up = 1.5, roll = 0.9, stiff = 315, damp = 27.8, auto = true,
+		-- This is the AK River plays. River (2026-11-10): less up, more straight back, a smoother reset. It was
+		-- back 0.066, up 1.5 on a 315/27.8 spring, with the slow layer at back 0.08, up 2.4 on 28/10.5.
+		back = 0.11, drop = 0.009, up = 0.8, roll = 0.8, stiff = 250, damp = 31.6, auto = true,
 		-- A slower layer under the shot kicks: each shot pushes it further (up to 1), and once firing stops it
 		-- eases home on its own soft spring, so the gun takes its time getting back to its shooting position.
-		settle = { back = 0.08, drop = 0.035, up = 2.4, perShot = 0.3, stiff = 28, damp = 10.5 },
+		settle = { back = 0.12, drop = 0.03, up = 1.2, perShot = 0.3, stiff = 22, damp = 9.6 },
 	},
 	-- River (2026-11-10): less up, more straight back, and a smoother reset. It was back 0.154, up 3.3 on a
 	-- 270/24.4 spring with no slow layer. The spring is softer and damped so it doesn't swing past, and the slow

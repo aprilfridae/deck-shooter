@@ -37,7 +37,8 @@ local GunSounds = {
 	-- Waits out the gunshot, so a hit and a shot don't land on top of each other.
 	hitDelaySeconds = 0.08,
 	shots = {
-		M4 = takes("m4", 30),
+		-- The M57 is River's AK model, so it fires the AK takes (River, 2026-11-10). It used the "m4" takes before.
+		M4 = takes("ak47", 30),
 		AK47 = takes("ak47", 30),
 		SMG = takes("smg", 29), -- take 30 exported silent
 		Sniper = takes("sniper", 30, 12), -- take 12 starts late and much louder
