@@ -121,6 +121,8 @@ local function targetFieldOfView(): number
 	return movementFieldOfView() + PlayerSettings.get().fieldOfView - FIELD_OF_VIEW
 end
 
+local DASH_SIDE_LEAST = 0.35 -- sideways input under this share of forward still counts as straight ahead
+
 local function flatLook(): Vector3
 	local look = workspace.CurrentCamera.CFrame.LookVector
 	local flat = Vector3.new(look.X, 0, look.Z)
@@ -242,8 +244,13 @@ local function startDash(distance: number)
 	if not humanoid or not root or humanoid.Health <= 0 or dash then
 		return
 	end
+	-- Holding only forward, the dash goes where the camera looks, up or down too (River: "dash in the direction
+	-- your mouse is looking if your holding W"). With any sideways input it goes the flat way you're moving.
 	local direction = humanoid.MoveDirection
-	local forward = if direction.Magnitude > 0 then direction.Unit else flatLook()
+	local camera = workspace.CurrentCamera.CFrame
+	local asked = camera:VectorToObjectSpace(direction)
+	local straight = direction.Magnitude > 0 and asked.Z < 0 and math.abs(asked.X) < DASH_SIDE_LEAST * math.abs(asked.Z)
+	local forward = if straight then camera.LookVector elseif direction.Magnitude > 0 then direction.Unit else flatLook()
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = { humanoid.Parent :: Model }
@@ -251,7 +258,8 @@ local function startDash(distance: number)
 
 	-- On the ground the path follows the slope, so a ramp does not stop the dash.
 	local ground = workspace:Raycast(root.Position, Vector3.new(0, -DASH_GROUND_REACH, 0), params)
-	if ground then
+	-- Looking up off the ground lifts off it; anything else along the ground follows it.
+	if ground and forward:Dot(ground.Normal) < 0.2 then
 		forward = (forward - ground.Normal * forward:Dot(ground.Normal)).Unit
 	end
 
@@ -283,9 +291,12 @@ local function advanceDash(path: DashPath, now: number)
 		local dashSpeed = (path.to - path.from).Magnitude / Config.DashSeconds
 		MoveState.finishDash(state, path.entrySpeed, dashSpeed, now)
 		humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
-		slideDirection = Vector3.new(path.forward.X, 0, path.forward.Z).Unit
-		local speed = MoveState.speed(state, now)
-		root.AssemblyLinearVelocity = slideDirection * speed + Vector3.yAxis * path.fallSpeed
+		local flat = Vector3.new(path.forward.X, 0, path.forward.Z)
+		slideDirection = if flat.Magnitude > 0.05 then flat.Unit else flatLook()
+		local speed = MoveState.speed(state, now) * math.min(flat.Magnitude / 0.5, 1)
+		-- A dash upward doesn't end in a drop.
+		local fall = if path.forward.Y > 0.2 then math.max(path.fallSpeed, 0) else path.fallSpeed
+		root.AssemblyLinearVelocity = slideDirection * speed + Vector3.yAxis * fall
 		airFromSlide = true
 		jumped = false
 		airStartedAt = now
