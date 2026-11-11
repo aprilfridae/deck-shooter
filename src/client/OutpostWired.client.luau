@@ -28,10 +28,13 @@ local CODE_COLORS = {
 local GLOW_COLOR = Color3.fromRGB(150, 196, 255)
 local BACK = Color3.fromRGB(8, 14, 26)
 
-local CREAM = Color3.fromRGB(236, 226, 206)
-local WAVE_RED = Color3.fromRGB(235, 60, 40)
-local WAVE_PINK = Color3.fromRGB(205, 80, 220)
-local WAVE_BLUE = Color3.fromRGB(70, 140, 255)
+-- One colour for every visualisation: the palette's Deep Navy, lifted so it reads on a black screen (River
+-- found the red-to-pink-to-blue mix weird and wanted it simple). The names are from the old mix.
+local NAVY = Color3.fromRGB(104, 126, 198)
+local CREAM = Color3.fromRGB(168, 182, 226) -- rules, ticks and readouts: the same navy, paler
+local WAVE_RED = NAVY
+local WAVE_PINK = NAVY
+local WAVE_BLUE = NAVY
 local WAVES = 11 -- curves in a scope
 local WAVE_STEPS = 18 -- straight pieces per curve, per period
 local WAVE_PERIOD = 4 -- seconds for the waves to slide one screen across
