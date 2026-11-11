@@ -26,16 +26,23 @@ local function set(on: boolean)
 	player:SetAttribute(ATTRIBUTE, if on then true else nil)
 end
 
-UserInputService.InputBegan:Connect(function(input: InputObject)
-	-- Not the "already handled" flag: Roblox's own camera uses O (and I) to zoom, so it marks O as handled and
-	-- the key never got here. Typing in a text box is the only thing that should block these.
-	if UserInputService:GetFocusedTextBox() then
-		return
-	end
-	if input.KeyCode == FLIP_KEY then
-		fromFront = not fromFront
-	elseif input.KeyCode == KEY then
+-- The keys are read every frame, not from key events. O is one of Roblox's own camera zoom keys, and its event
+-- never reached this script, even with the "already handled" flag ignored (River, twice). Asking whether the key
+-- is down doesn't depend on who else has claimed it.
+local wasDown = { [KEY] = false, [FLIP_KEY] = false }
+local function pressed(key: Enum.KeyCode): boolean
+	local down = UserInputService:IsKeyDown(key) and UserInputService:GetFocusedTextBox() == nil
+	local fresh = down and not wasDown[key]
+	wasDown[key] = down
+	return fresh
+end
+
+RunService.RenderStepped:Connect(function()
+	if pressed(KEY) then
 		set(Zones.of(player) == Zones.TestRoom and not player:GetAttribute(ATTRIBUTE))
+	end
+	if pressed(FLIP_KEY) then
+		fromFront = not fromFront
 	end
 end)
 
