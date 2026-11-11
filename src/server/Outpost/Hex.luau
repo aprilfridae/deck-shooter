@@ -20,12 +20,12 @@ local HALF_WIDE = 45 -- inside of the side walls (along Z)
 local WALL_HEIGHT = 34 -- too tall to wall jump out of
 local T = 2 -- outer wall thickness
 
-local RING = 20 -- from the centre to the middle of each ring wall
-local RING_LENGTH = 17 -- each ring wall's length; the gaps between them are about 6
-local RING_HEIGHT = 9
+local RING = 28 -- from the centre to the middle of each ring wall
+local RING_LENGTH = 25 -- each ring wall's length; the gaps between them are about 7
+local RING_HEIGHT = 13
 local RING_THICK = 1.2
 local HOLE_BOTTOM, HOLE_TOP = 3.2, 5.6 -- the shooting holes, about chest to head height
-local HOLE_WIDE = 3
+local HOLE_WIDE = 4
 
 local COVER_X = 45 -- the spawn cover's distance from the centre
 local COVER_HALF = 12 -- half its length

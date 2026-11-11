@@ -11,7 +11,7 @@ A walled box, 160 studs long and 90 wide, open to the sky, with plain walls 34 h
 - **Spawns:** one at each end, facing the middle.
 - **Spawn cover:** a slab 24 long and 11 high, 28 studs in front of each spawn.
 - **Ramp:** in the corner on each spawn's right, along the side wall. It's 22 wide, rises 8 studs toward the middle and ends on a plain flat lookout. River asked for no lip on it.
-- **Ring:** six walls in a hexagon around the centre (20 studs out, 9 high), with gaps of about 6 between them. Each wall has two holes at chest-to-head height to shoot through. A colour cap shows which side a wall is on (cyan or red).
+- **Ring:** six walls in a hexagon around the centre (28 studs out, 25 long, 13 high), with gaps of about 7 between them. Each wall has two holes at chest-to-head height to shoot through. A colour cap shows which side a wall is on (cyan or red).
 
 All the sizes are constants at the top of `Hex.luau`.
 
