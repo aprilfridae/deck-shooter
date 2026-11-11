@@ -20,6 +20,7 @@ local GunAudio = require(script.Parent:WaitForChild("GunAudio"))
 local HeldGuns = require(script.Parent:WaitForChild("HeldGuns"))
 local BodyHands = require(script.Parent:WaitForChild("BodyHands"))
 local BodyCards = require(script.Parent:WaitForChild("BodyCards"))
+local SlideSparks = require(script.Parent:WaitForChild("SlideSparks"))
 local CardFlourish = require(Guns:WaitForChild("CardFlourish"))
 local ArmReach = require(script.Parent:WaitForChild("ArmReach"))
 local AkReload = require(Guns:WaitForChild("AkReload"))
@@ -99,6 +100,32 @@ local CARD_BLEND = 0.12 -- seconds the arms take to pass to the cards
 -- the waist. The poses lean the torso in to shoulder a gun, and over a deck held out in front that read as
 -- hunched, more leaned in than with the AK or the pistol (River, 2026-11-11).
 local CARD_UPRIGHT = 0.8
+
+-- The jump. The pose files have one pose going up (a knee driven high), one coming down and one deep landing
+-- crouch, and the body used to snap between them. Now:
+-- going up blends into coming down by how fast the body is rising or falling, so the legs unfold through the top;
+-- the knee that drives up is whichever leg was swinging forward at takeoff, so it changes from jump to jump;
+-- the body tips forward off the ground, back over the top, and into the way it's travelling;
+-- and the landing crouch is as deep as the fall was fast, hit at once and risen out of, where every landing,
+-- even off a kerb, used to drop into the full crouch for a quarter second.
+local AIR_FULL = 22 -- studs a second up or down that is fully "going up" or "coming down"
+local AIR_TIP = { up = math.rad(-9), down = math.rad(7) } -- the hips' lean forward going up and back coming down
+local AIR_INTO = math.rad(9) -- lean into the way it's travelling, at a full run
+local LAND_HIT = 0.05 -- seconds to drop into the landing
+local LAND_RISE = 0.42 -- and to rise out of it
+local LAND_FULL = 50 -- studs a second of fall that lands in the full crouch
+local LAND_LEAST = 0.18 -- the share of the crouch any landing gets
+
+-- The slide. The pose is a still one, so it gets some life:
+-- going in, the body whips back past the pose and settles, and it shudders a little with the ground while moving;
+-- the left hand comes off the gun and drags its fingertips along the ground beside the hip, throwing sparks and
+-- dust (SlideSparks), with the torso tipped a little over that hand. Not while reloading or with the cards out.
+local SLIDE_WHIP = math.rad(11) -- how far past the pose the lean-back goes on the way in
+local SLIDE_SHUDDER = 0.035 -- studs the hips rattle at full speed
+local SLIDE_TIP = math.rad(9) -- the torso tips to its left, over the dragging hand
+local SLIDE_HAND = Vector3.new(-0.5, 0, 0.4) -- where the hand goes down, from under the left shoulder: out and back
+local SLIDE_HAND_UP = 0.5 -- the hand's middle above the ground, so its fingertips touch
+local SLIDE_HAND_IN = 0.16 -- seconds the hand takes to get down
 
 -- Shooting and aiming, laid over whatever pose the body is in.
 -- Looking up and down: the torso, arms and head share the bend, so the gun and the eyes point where the
@@ -186,6 +213,11 @@ type Body = {
 	wallWay: Vector3, -- and which way was out of the wall
 	cards: any, -- the card hand as last seen and when things happened to it, while a card is out
 	cardPose: any, -- this frame's flourish pose, its view from the torso and the crush, while a card is out
+	fallSpeed: number, -- the fastest it has fallen this time in the air
+	landHard: number, -- how hard the last landing was, 0 to 1
+	airLead: string, -- which knee drives up this jump: the pose's own ("Right") or the other
+	slideSince: number, -- when the slide being shown began
+	slideHand: Vector3?, -- where the dragging hand is on the ground this frame, for the sparks
 	wasReloading: boolean,
 	reloadAt: number?, -- when the reload being played started
 	codedAt: number?, -- how far into a coded reload it is, in the reload's own seconds
@@ -265,6 +297,11 @@ local function onCharacter(character: Model)
 		wallWay = Vector3.xAxis,
 		cards = nil,
 		cardPose = nil,
+		fallSpeed = 0,
+		landHard = 0,
+		airLead = "Right",
+		slideSince = -math.huge,
+		slideHand = nil,
 		wasReloading = false,
 		reloadAt = nil,
 		codedAt = nil,
@@ -291,6 +328,7 @@ local function onCharacter(character: Model)
 			HeldGuns.remove(character)
 			BodyHands.remove(character)
 			BodyCards.remove(character)
+			SlideSparks.remove(character)
 		end
 	end)
 	-- A body that's replaced is only taken out of the game here, not destroyed, so watch for it leaving too.
@@ -301,6 +339,7 @@ local function onCharacter(character: Model)
 			HeldGuns.remove(character)
 			BodyHands.remove(character)
 			BodyCards.remove(character)
+			SlideSparks.remove(character)
 		end
 	end
 	character.Destroying:Once(drop)
@@ -341,6 +380,15 @@ local function sampleStance(body: Body, now: number)
 	local airborne = not onGround(body)
 	if body.airborne and not airborne then
 		body.landedAt = now
+		body.landHard = math.clamp(body.fallSpeed / LAND_FULL, LAND_LEAST, 1)
+		body.fallSpeed = 0
+	elseif airborne and not body.airborne then
+		-- The right foot is planted for the first part of the stride, so in its first half the left leg is the
+		-- one swinging forward, and it carries on up.
+		body.airLead = if body.phase < 0.5 then "Left" else "Right"
+	end
+	if airborne then
+		body.fallSpeed = math.max(body.fallSpeed, -velocity.Y)
 	end
 	body.airborne = airborne
 	if not airborne then
@@ -385,7 +433,7 @@ local function sampleStance(body: Body, now: number)
 		airborne = airborne,
 		verticalSpeed = velocity.Y,
 		flatSpeed = flatSpeed,
-		sinceLanded = now - body.landedAt,
+		sinceLanded = math.huge, -- the landing is blended in below, as deep as the fall was hard
 		sinceShot = now - shotAt,
 		travel = body.travel,
 	})
@@ -526,17 +574,43 @@ local function sampleStance(body: Body, now: number)
 	local pistolArms = if poses == BodyPoses["Energy Pistol"] and pick.name ~= "Reload" and arms ~= poses.poses.Reload
 		then PistolArms[pick.name]
 		else nil
+
+	-- A second pose mixed into the picked one: coming down into going up, or the landing crouch into whatever
+	-- the body is doing on the ground.
+	local mixName, mixShare = nil, 0
+	if pick.name == "Jump_Up" or pick.name == "Fall" then
+		pick = { name = "Jump_Up", mirrored = body.airLead == "Left" }
+		pose = poses.poses.Jump_Up or pose
+		local falling = math.clamp(0.5 - velocity.Y / (2 * AIR_FULL), 0, 1)
+		mixName, mixShare = "Fall", falling * falling * (3 - 2 * falling)
+	elseif not airborne and body.character:GetAttribute("MovePose") ~= "Slide" then
+		local since = now - body.landedAt
+		if since < LAND_HIT + LAND_RISE then
+			local rise = math.clamp((since - LAND_HIT) / LAND_RISE, 0, 1)
+			mixName = "Land"
+			mixShare = body.landHard * math.min(since / LAND_HIT, 1) * (1 - rise * rise * (3 - 2 * rise))
+		end
+	end
+	local mix = mixName and mixShare > 0.001 and poses.poses[mixName] or nil
+	local mixArms = if mix and pistolArms then PistolArms[mixName] else nil
+
 	for name in body.joints do
-		local value = (if arms and ARM_JOINTS[name] then arms else pose).joints[name]
+		local fromArms = arms ~= nil and ARM_JOINTS[name] == true
+		local value = (if fromArms then arms else pose).joints[name]
+		local other = if mix and not fromArms then mix.joints[name] else nil
 		if pistolArms and pistolArms[name] then
 			value = pistolArms[name]
+			other = if mix then (mixArms and mixArms[name]) or other else nil
 		end
 		if pick.mirrored and GunStance.legSwap[name] then
-			local other = pose.joints[GunStance.legSwap[name]]
-			value = other and GunStance.mirror(other)
+			local swapped = pose.joints[GunStance.legSwap[name]]
+			value = swapped and GunStance.mirror(swapped)
+			local otherSwapped = mix and mix.joints[GunStance.legSwap[name]]
+			other = if otherSwapped then GunStance.mirror(otherSwapped) else other
 		end
 		if value then
-			body.held[name] = HeldGuns.frame(value)
+			local frame = HeldGuns.frame(value)
+			body.held[name] = if other then frame:Lerp(HeldGuns.frame(other), mixShare) else frame
 		end
 	end
 end
@@ -671,6 +745,88 @@ local function applyAim(body: Body, dt: number)
 	end
 	if joints.Root and kick > 0.001 then
 		joints.Root.Transform = CFrame.new(0, 0, kick * KICK_BACK) * joints.Root.Transform
+	end
+end
+
+-- In the air: the hips tip forward going up and back coming down, and lean into the way the body is travelling.
+local function applyAir(body: Body)
+	local joint = body.joints.Root
+	if not body.airborne or not joint or body.character:GetAttribute("MovePose") == "Slide" then
+		return
+	end
+	local velocity = body.root.AssemblyLinearVelocity
+	local rising = math.clamp(velocity.Y / AIR_FULL, -1, 1)
+	local tip = if rising > 0 then AIR_TIP.up * rising else AIR_TIP.down * -rising
+	local going = body.root.CFrame:VectorToObjectSpace(Vector3.new(velocity.X, 0, velocity.Z)) / 18
+	local forward, right = math.clamp(-going.Z, -1, 1), math.clamp(going.X, -1, 1)
+	joint.Transform = joint.Transform * CFrame.Angles(tip - forward * AIR_INTO, 0, -right * AIR_INTO)
+end
+
+-- The slide's own life, over its pose. Returns nothing; leaves where the dragging hand is for the sparks.
+local function applySlide(body: Body, now: number)
+	body.slideHand = nil
+	local joints = body.joints
+	if body.character:GetAttribute("MovePose") ~= "Slide" or body.airborne then
+		body.slideSince = -math.huge
+		return
+	end
+	if body.slideSince == -math.huge then
+		body.slideSince = now
+	end
+	local since = now - body.slideSince
+	local velocity = body.root.AssemblyLinearVelocity
+	local speed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
+	local much = math.clamp(speed / 28, 0, 1)
+	-- The whip going in, and the shudder while it moves.
+	local whip = SLIDE_WHIP * math.exp(-since * 7) * math.sin(math.min(since * 11, math.pi))
+	local shudder = SLIDE_SHUDDER * much * math.sin(now * 61) * math.sin(now * 23)
+	if joints.Root then
+		joints.Root.Transform = CFrame.new(0, shudder, 0) * joints.Root.Transform * CFrame.Angles(whip, 0, 0)
+	end
+	-- The hand: not when the arms are busy with a reload or the cards.
+	if body.cardPose or body.codedAt or body.wasReloading then
+		return
+	end
+	for _, name in { "Root", "Waist", "LeftShoulder", "LeftElbow", "LeftWrist" } do
+		if not joints[name] or not joints[name]:IsA("Motor6D") then
+			return
+		end
+	end
+	local reach = math.clamp(since / SLIDE_HAND_IN, 0, 1)
+	reach = reach * reach * (3 - 2 * reach)
+	joints.Waist.Transform = CFrame.Angles(0, 0, SLIDE_TIP * reach) * joints.Waist.Transform
+	if joints.Neck then
+		joints.Neck.Transform = CFrame.Angles(0, 0, -SLIDE_TIP * reach) * joints.Neck.Transform -- the head stays level
+	end
+	local torso = body.root.CFrame * joints.Root.C0 * joints.Root.Transform * joints.Root.C1:Inverse()
+	torso = torso * joints.Waist.C0 * joints.Waist.Transform * joints.Waist.C1:Inverse()
+	local shoulder, elbow, wrist = joints.LeftShoulder, joints.LeftElbow, joints.LeftWrist
+	local base = torso * shoulder.C0
+	local facing = body.root.CFrame.Rotation
+	local over = base.Position + facing * SLIDE_HAND
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { body.character }
+	local ground = workspace:Raycast(over + Vector3.new(0, 1, 0), Vector3.new(0, -5, 0), params)
+	if not ground then
+		return
+	end
+	-- Fingers pointing down and back, palm toward the body.
+	local fingers = (facing * Vector3.new(-0.15, -1, 0.45)).Unit
+	local palmUp = facing * Vector3.new(1, 0, 0)
+	local x = (palmUp - fingers * palmUp:Dot(fingers)).Unit
+	local palm = CFrame.fromMatrix(ground.Position + Vector3.new(0, SLIDE_HAND_UP, 0), x, fingers, x:Cross(fingers))
+	local arm = body.arms.Left
+	if not arm then
+		arm = ArmReach.measure(shoulder, elbow, wrist)
+		body.arms.Left = arm
+	end
+	local turns = { ArmReach.solve(arm, base, palm * BodyHands.handOnPalm("Left"), facing * Vector3.new(-0.6, 0, 1)) }
+	for index, joint in { shoulder, elbow, wrist } do
+		joint.Transform = joint.Transform:Lerp(turns[index], reach)
+	end
+	if reach > 0.7 and speed > 6 then
+		body.slideHand = ground.Position
 	end
 end
 
@@ -958,6 +1114,8 @@ RunService.PreSimulation:Connect(function(dt: number)
 			end
 			applyRun(body)
 			applyAim(body, dt)
+			applyAir(body)
+			applySlide(body, now)
 			applyWallKick(body, now)
 			if body.cardPose then
 				body.moves = nil
@@ -1007,6 +1165,13 @@ RunService.PreRender:Connect(function()
 			local deckView = if cards and cards.view and torso and torso:IsA("BasePart") then torso.CFrame * cards.view else nil
 			HeldGuns.show(character, body.gunName, body.poses, body.pose, visible and not cards, moves)
 			BodyHands.show(character, visible, if cards then cards.pose.fingers else nil)
+			if visible and body.slideHand then
+				local velocity = body.root.AssemblyLinearVelocity
+				local flat = Vector3.new(velocity.X, 0, velocity.Z)
+				SlideSparks.show(character, body.slideHand, if flat.Magnitude > 0.1 then flat.Unit else body.root.CFrame.LookVector, flat.Magnitude)
+			else
+				SlideSparks.hide(character)
+			end
 			if visible and cards and deckView then
 				BodyCards.show(character, deckView, cards.pose.cards, cards.faceUp, cards.gone)
 			else
