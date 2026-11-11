@@ -35,7 +35,10 @@ RadioHud.__index = RadioHud
 
 function RadioHud.new()
 	local self = setmetatable({}, RadioHud)
-	local unit = workspace.CurrentCamera.ViewportSize.Y / 1080
+	-- Everything is laid out for a screen 1080 high, and one scale on the root fits it to the real screen. (The
+	-- first version measured the screen once as the script started, when it was still a pixel high, and built
+	-- the whole strip at no size.)
+	local unit = 1
 	self.unit = unit
 	self.levels = table.create(BARS, 0)
 	self.changes = 0 -- counts changes, so a slide that's been overtaken stops
@@ -48,11 +51,23 @@ function RadioHud.new()
 
 	-- One group, so the whole strip can dim together. It starts at the screen's left edge so sliding text
 	-- leaves the screen, not the group.
+	local root = Instance.new("Frame")
+	root.BackgroundTransparency = 1
+	root.Size = UDim2.fromScale(1, 1)
+	root.Parent = gui
+	local scale = Instance.new("UIScale")
+	scale.Parent = root
+	local function fit()
+		scale.Scale = math.max(workspace.CurrentCamera.ViewportSize.Y / 1080, 0.01)
+	end
+	fit()
+	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
+
 	local group = Instance.new("CanvasGroup")
 	group.BackgroundTransparency = 1
 	group.Position = UDim2.fromOffset(0, TOP * unit)
 	group.Size = UDim2.fromOffset(900 * unit, (BAR_HEIGHT + 8) * unit)
-	group.Parent = gui
+	group.Parent = root
 	self.group = group
 
 	local barsWide = BARS * BAR_WIDTH + (BARS - 1) * BAR_GAP
