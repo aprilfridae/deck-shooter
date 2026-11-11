@@ -10,7 +10,7 @@ return {
 	CarryFade = 0.25,
 	SlideJumpBoost = 4, -- added to current speed when a jump cancels a slide
 	ChainJumpBoost = 8, -- the same, from a slide reached by a fast fall
-	JumpHeight = 6,
+	JumpHeight = 4.56, -- CS:GO's 57 units. With the place's gravity of 64 (CS:GO's 800) a jump lasts its 0.755s
 	StrideStuds = 9, -- ground covered between footsteps
 	ChainJumpHeight = 8,
 	FastFallAcceleration = 350,
@@ -39,7 +39,12 @@ return {
 	WallJumpLook = 0.6, -- how much of the kick goes where the player is looking, against straight off the wall
 
 	-- Air strafing, by the Source engine's rule (AirStrafe.luau). The numbers are Source's own defaults.
-	AirAccelerate = 10, -- sv_airaccelerate
+	AirAccelerate = 12, -- sv_airaccelerate, CS:GO's default
+	AirTickRate = 64, -- air movement runs in fixed steps like a CS:GO server's, so strafing gains don't depend on framerate
+	-- Bunny hopping: holding jump hops again the moment you land. A hop inside BhopWindow of landing loses no
+	-- speed to the ground and adds BhopBoost, up to AirStrafeMaxSpeed. (River wants held-space hops to speed up.)
+	BhopBoost = 2,
+	BhopWindow = 0.2,
 	AirCapShare = 30 / 250, -- the air speed cap as a share of run speed: 30 units a second against a 250 run
 	AirStrafeMaxSpeed = 40, -- the most strafing can build to. Source has no limit; the cheat checks need one
 
