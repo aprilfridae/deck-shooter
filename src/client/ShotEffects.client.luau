@@ -17,7 +17,7 @@ local remotes = ReplicatedStorage:WaitForChild("GunRemotes")
 local shotsRemote = remotes:WaitForChild("Shots") :: RemoteEvent
 local deathRemote = remotes:WaitForChild("DeathBurst") :: RemoteEvent
 
-local TRACER_SPEED = 600
+local TRACER_SPEED = 1600 -- studs a second. 600 felt slow to River; hits are instant, so this is only how the streak looks
 -- Coins burst out of a body when it dies, hang for a moment, then are pulled to whoever made the kill. They're
 -- small wireframes in Signal Acid with a streak behind each for motion blur. They burst, fall and bounce with real
 -- physics; the pull to the killer is done in code.
