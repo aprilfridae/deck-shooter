@@ -120,6 +120,7 @@ local AIR_ARMS_OUT = { Right = math.rad(58), Left = math.rad(84) } -- how far ea
 -- off the ground to back behind over the top, the left a little ahead of the right so they don't move as one,
 -- with a loose waver on top.
 local AIR_ARMS_SWEEP = { Right = math.rad(26), Left = math.rad(42) } -- how far forward, then back, each sweeps
+local AIR_ARMS_BEHIND = math.rad(22) -- the whole sweep is set this far back, so the arms trail behind the body (River: "swing kinda backwards")
 local AIR_ARMS_LAG = 0.5 -- how far behind the left the right arm's sweep runs, in radians of the sweep
 local AIR_ARMS_WAVER = math.rad(5)
 local AIR_ARMS_UP = math.rad(18) -- and how much further they lift over the top
@@ -795,7 +796,7 @@ local function applyAir(body: Body, dt: number, now: number)
 				-- The sweep runs with the jump itself: forward at takeoff (rising fast), level over the top,
 				-- back as it starts down. A turn about X swings a hanging arm forward.
 				local lag = if side == "Right" then AIR_ARMS_LAG else 0
-				local sweep = AIR_ARMS_SWEEP[side] * math.sin(rising * math.pi / 2 - lag)
+				local sweep = AIR_ARMS_SWEEP[side] * math.sin(rising * math.pi / 2 - lag) - AIR_ARMS_BEHIND
 				local waver = AIR_ARMS_WAVER * math.sin(now * 8.5 + sign * 1.3)
 				shoulder.Transform = CFrame.Angles((sweep + waver) * body.armsOut, 0, sign * (out + waver * 0.6 * body.armsOut))
 					* shoulder.Transform
