@@ -2,14 +2,14 @@
 return {
 	WalkSpeed = 16,
 	CrouchSpeed = 8,
-	SprintSpeed = 30,
-	SlideStartSpeed = 42,
+	SprintSpeed = 27, -- 30 until 2026-11-10: River slowed sprint, slide and jump speed about a tenth so phones have a chance
+	SlideStartSpeed = 38,
 	SlideFadeTime = 0.9, -- slows to sprint speed over this long; lasts while crouch is held
 	SlideCooldown = 0,
 	DashFadeTime = 0.4, -- how long a dash takes to ramp down to normal speed
 	CarryFade = 0.25,
-	SlideJumpBoost = 8, -- added to current speed when a jump cancels a slide
-	ChainJumpBoost = 16, -- the same, from a slide reached by a fast fall
+	SlideJumpBoost = 7, -- added to current speed when a jump cancels a slide
+	ChainJumpBoost = 14, -- the same, from a slide reached by a fast fall
 	JumpHeight = 6,
 	StrideStuds = 9, -- ground covered between footsteps
 	ChainJumpHeight = 8,
@@ -25,7 +25,7 @@ return {
 	ParryMaxHeight = 4.5,
 	ParryClearance = 1.5,
 	ParryBoost = 6,
-	ParryMaxSpeed = 58, -- matches the fastest chain jump
+	ParryMaxSpeed = 52, -- matches the fastest chain jump
 
 	-- Wall jump: jump again in the air beside a wall to kick off it.
 	WallJumpReach = 2.4, -- studs from the middle of the body to the wall
@@ -39,7 +39,7 @@ return {
 	WallJumpLook = 0.6, -- how much of the kick goes where the player is looking, against straight off the wall
 
 	-- Cheat checks. SpeedLimit is the fastest chain jump plus a margin.
-	SpeedLimit = 63,
+	SpeedLimit = 57,
 	SpeedWindow = 0.5,
 	LagStuds = 4,
 	MaxLagSeconds = 1.3, -- most stall time one position jump can be credited
