@@ -15,9 +15,6 @@ return {
 	ChainJumpBoost = 6.5, -- the same, from a slide reached by a fast fall
 	JumpHeight = 6,
 	StrideStuds = 9, -- ground covered between footsteps
-	ChainJumpHeight = 8,
-	FastFallAcceleration = 350,
-	FastFallMaxSpeed = 110,
 	MinAirTime = 0.1, -- the ground check can lag a jump by a frame or two
 	LandFade = 0.6, -- how long landing keeps jump speed before it fades
 	HardLandSpeed = 60, -- falling this fast plays the hard landing; a chain jump lands at about 49

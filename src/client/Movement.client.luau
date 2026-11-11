@@ -369,10 +369,6 @@ local function onFrame(dt: number)
 	end
 
 	local velocity = root.AssemblyLinearVelocity
-	local fallY = MoveState.fallVelocity(state, velocity.Y, dt)
-	if fallY ~= velocity.Y then
-		root.AssemblyLinearVelocity = Vector3.new(velocity.X, fallY, velocity.Z)
-	end
 
 	local flatSpeed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
 	local stepped

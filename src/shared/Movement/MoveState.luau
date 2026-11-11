@@ -69,8 +69,9 @@ function MoveState.speed(state: State, now: number): number
 	return base
 end
 
-function MoveState.jumpHeight(state: State): number
-	return if state.chained then MoveConfig.ChainJumpHeight else MoveConfig.JumpHeight
+function MoveState.jumpHeight(_state: State): number
+	-- Every jump is the same height. A chain jump used to go higher (8 against 6); River had that taken out.
+	return MoveConfig.JumpHeight
 end
 
 -- Launches off an edge without losing speed.
@@ -114,18 +115,6 @@ end
 function MoveState.startDash(state: State)
 	state.mode = "Dash"
 	state.chained = false
-end
-
--- Holding crouch while falling pulls the player down. A jump's rise is left
--- alone, so a slide jump with crouch still held reaches full height first.
-function MoveState.fallVelocity(state: State, velocityY: number, dt: number): number
-	if state.mode ~= "Air" or not state.crouchHeld or velocityY >= 0 then
-		return velocityY
-	end
-	if velocityY <= -MoveConfig.FastFallMaxSpeed then
-		return velocityY
-	end
-	return math.max(velocityY - MoveConfig.FastFallAcceleration * dt, -MoveConfig.FastFallMaxSpeed)
 end
 
 -- A landing is hard after a fast fall or a long drop, and soft after an ordinary jump.

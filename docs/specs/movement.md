@@ -21,7 +21,7 @@ These are the defaults. Players can rebind all but W, A, S and D in Settings (`o
 | --- | --- |
 | W, A, S, D | Move (Roblox's default controls) |
 | Left Shift | Sprint |
-| C or Left Ctrl | Crouch, slide, fast fall |
+| C or Left Ctrl | Crouch, slide |
 | Space | Jump, edge parry |
 
 ## Moves
@@ -37,8 +37,8 @@ Speeds are studs per second.
 | Slide | Crouch while sprinting. Starts at 31 (River asked twice for a faster slide after the slowdowns) and slows to sprint speed (18.5) over 0.9s, then holds it for as long as crouch is held. No cooldown. The direction is fixed when the slide starts. Letting go of crouch blends back to walk or sprint speed over 0.25s. |
 | Jump | 6 studs high |
 | Slide jump | Jumping out of a slide adds 3.5 to the current speed. The air keeps that speed, and it fades over 0.6s after landing. |
-| Fast fall | Hold crouch in the air to fall faster: 350 per second per second, up to 110. Landing while moving with crouch and sprint held starts a slide. |
-| Chain jump | A jump from a slide that began by landing from the air goes 8 studs high and adds 6.5. |
+| Fast fall | Removed 2026-11-10 (River no longer wanted holding crouch in the air to pull you down). Landing while moving with crouch and sprint held still starts a slide. |
+| Chain jump | A jump from a slide that began by landing from the air adds 6.5 to the current speed, more than a plain slide jump. It goes no higher than any other jump: it used to reach 8 studs, and River had that taken out on 2026-11-10. |
 | Wall jump | Press jump in the air with a wall within 2.4 studs (any side; it mustn't lean more than a little). Kicks off it: away from the wall and toward where the player is steering or looking (bounced off the wall if that points into it), rising 5 studs. Keeps the current speed (at least sprint speed) and adds 2, up to 37.5. Up to 3 in one time in the air, at least 0.25s apart, never off the same wall twice running, and not in the first 0.12s of a jump. An edge parry wins if both could happen. Plays the jump sound. (`MoveState.wallJump`, `tryWallJump` in `Movement.client.luau`; values in `MoveConfig`.) |
 | Edge parry | Press jump at a fixed flat edge 1 to 4.5 studs above the feet, on the ground or in the air. Keeps the current speed (at least sprint speed, 18.5) and adds 3.5, up to 37.5. It goes in the slide direction while sliding (or in the air after a slide with no move key held), otherwise the move direction, otherwise the camera's. |
 
@@ -55,8 +55,8 @@ A **fixed flat edge** is an anchored part that isn't part of a character, with a
 ## Sounds
 
 - A footstep plays every 9 studs while walking or sprinting, and a jump sound plays when a jump starts.
-- Landing after at least 0.15s in the air plays a landing sound: the hard one if the fall reached 60 studs per second (a fast fall or a long drop; a chain jump lands at about 49), else the soft one. `HardLandSpeed` in `MoveConfig.luau`.
-- Every slide plays the slide start sound as it begins, including one started by landing, so a fast fall into a slide plays both.
+- Landing after at least 0.15s in the air plays a landing sound: the hard one if the fall reached 60 studs per second (a long drop), else the soft one. `HardLandSpeed` in `MoveConfig.luau`.
+- Every slide plays the slide start sound as it begins, including one started by landing, so a landing into a slide plays both.
 - `docs/sound-list.md` lists what's still missing, such as the slide loop and the parry.
 - Roblox's default running sound is muted on every character.
 
