@@ -83,14 +83,14 @@ local function plainSpeed(state: State, now: number): number
 	return base
 end
 
--- What is left of a dash's launch: let go fast at first and then slowly, so it reads as a launch and its tail
--- hangs on. 0 when there is none.
+-- What is left of a dash's launch: held near full at first, then let go, then a soft tail (measured in River's
+-- Play, 2026-11-11: letting go fast at first had it down from 65 to 40 in 0.75s, "not enough"). 0 when there is none.
 local function dashSpeed(state: State, now: number): number
 	local alpha = (now - state.dashFadeAt) / MoveConfig.DashFadeTime
 	if alpha < 0 or alpha >= 1 then
 		return 0
 	end
-	return lerp(state.dashFadeFrom, state.dashFadeTo, 1 - (1 - alpha) ^ 3)
+	return lerp(state.dashFadeFrom, state.dashFadeTo, alpha * alpha * (3 - 2 * alpha))
 end
 
 -- A dash's launch rides over whatever else the player is doing, on the ground or in the air, through landings
