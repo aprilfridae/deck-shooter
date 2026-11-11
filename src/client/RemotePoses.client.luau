@@ -44,6 +44,15 @@ local CODED_RELOADS: { [string]: { reload: any, perMetre: number, origin: Vector
 	M57 = { reload = AkReload, perMetre = 91.09, origin = Vector3.new(-0.011, 0.0535, 0.137) },
 }
 local RELOAD_BLEND = 0.08 -- of the reload's own seconds: how long the arms take to pass to it and back
+-- The body goes with the reload (River: "make the torso turn with the reload ... more natural and more swaggy").
+-- The gun's own turn already swings, overshoots and rebounds, so the torso takes a share of it: leaning back as
+-- the muzzle comes up, turning with it, and tipping over with its roll. The hips take a little, and the head
+-- stays more level and looks down at the hands while the left one is on the magazine.
+local RELOAD_TORSO = { pitch = 0.18, yaw = 0.9, roll = 0.11 } -- shares of the gun's turn
+local RELOAD_HIPS_YAW = 0.3 -- the hips' share of the gun's yaw
+local RELOAD_HIPS_SHIFT = 0.07 -- studs the hips shift per radian the gun rolls, the other way
+local RELOAD_HEAD_LEVEL = 0.7 -- how much of the torso's turn and tip the head undoes
+local RELOAD_HEAD_DOWN = math.rad(14) -- how far the head drops to watch the magazine go in
 -- Roughly which way each elbow points while its hand is placed, in the torso's space.
 local ELBOW_WAYS = { Right = Vector3.new(0.5, -1, 0.3), Left = Vector3.new(-0.6, -1, 0.25) }
 
@@ -571,13 +580,32 @@ local function applyReload(body: Body)
 		return placed(frame) * CFrame.new(-origin)
 	end
 
+	local pose = reload.at(at)
+	-- The arms pass to the reload over its first moments and back over its last, so the elbows don't jump.
+	local blend = math.clamp(math.min(at, reload.LENGTH - at) / RELOAD_BLEND, 0, 1)
+
+	-- The body goes with it, before the hands are found, so they and the gun are carried along.
+	local pitch, yaw, roll = pose.gun:ToEulerAnglesXYZ()
+	pitch, yaw, roll = pitch * blend, yaw * blend, roll * blend
+	local lean = CFrame.Angles(pitch * RELOAD_TORSO.pitch, yaw * RELOAD_TORSO.yaw, roll * RELOAD_TORSO.roll)
+	joints.Waist.Transform = lean * joints.Waist.Transform
+	joints.Root.Transform = CFrame.new(-roll * RELOAD_HIPS_SHIFT, 0, 0)
+		* CFrame.Angles(0, yaw * RELOAD_HIPS_YAW, 0)
+		* joints.Root.Transform
+	if joints.Neck then
+		joints.Neck.Transform = CFrame.Angles(
+			-pitch * RELOAD_TORSO.pitch * RELOAD_HEAD_LEVEL - pose.weight * RELOAD_HEAD_DOWN * blend,
+			-yaw * RELOAD_TORSO.yaw * RELOAD_HEAD_LEVEL,
+			-roll * RELOAD_TORSO.roll * RELOAD_HEAD_LEVEL
+		) * joints.Neck.Transform
+	end
+
 	local torso = through(through(body.root.CFrame, joints.Root), joints.Waist)
 	local hands = {}
 	for _, side in { "Right", "Left" } do
 		hands[side] = through(through(through(torso, joints[side .. "Shoulder"]), joints[side .. "Elbow"]), joints[side .. "Wrist"])
 	end
 	local hold = hands.Right * HeldGuns.frame(body.pose.gun) -- the gun before the reload turns it
-	local pose = reload.at(at)
 	local handle = hold * moved(pose.gun)
 
 	-- Each hand goes round with the gun, and leaves it for the magazine or the charging knob.
@@ -591,8 +619,6 @@ local function applyReload(body: Body)
 		goals.Right = goals.Right:Lerp(away, pose.rightWeight) + hold.Rotation * (pose.rightSwing * per)
 	end
 
-	-- The arms pass to the reload over its first moments and back over its last, so the elbows don't jump.
-	local blend = math.clamp(math.min(at, reload.LENGTH - at) / RELOAD_BLEND, 0, 1)
 	for _, side in { "Right", "Left" } do
 		local shoulder, elbow, wrist = joints[side .. "Shoulder"], joints[side .. "Elbow"], joints[side .. "Wrist"]
 		local arm = body.arms[side]
