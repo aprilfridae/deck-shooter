@@ -14,23 +14,17 @@ end
 
 local tracks: { Track } = {
 	{ title = "SAPIENCE", artist = "EUPHEE + GRAPE MILK", sound = sound("radio-euphee-grape-milk-sapience.mp3") },
-	{ title = "BASS OR SOMETHING", artist = "OLSWEL", sound = sound("radio-olswel-bass-or-something.mp3") },
 	{ title = "BLZZDY UP THE FLOOR - FEAT. DANIEL MAURO", artist = "OLSWEL", sound = sound("radio-olswel-blzzdy-up-the-floor-feat-daniel.mp3") },
 	{ title = "CRY WHEN I YOU", artist = "OLSWEL", sound = sound("radio-olswel-cry-when-i-you.mp3") },
 	{ title = "FRIDAYY", artist = "OLSWEL", sound = sound("radio-olswel-fridayy.mp3") },
 	{ title = "L96A1", artist = "OLSWEL", sound = sound("radio-olswel-l96a1.mp3") },
-	{ title = "TRY HARD - FEAT. BANDOUM + RICKSTER", artist = "OLSWEL", sound = sound("radio-olswel-try-hard-feat-bandoum-rickster.mp3") },
-	{ title = "WERE GONNA PARTY TONIGHT", artist = "OLSWEL", sound = sound("radio-olswel-we-re-gonna-party-tonight.mp3") },
 	{ title = "HELLOMYNAMEIS", artist = "OLSWEL", sound = sound("radio-olswel-hellomynameis.mp3") },
 	{ title = "KATRIP - VIP", artist = "OLSWEL", sound = sound("radio-olswel-katrip-vip.mp3") },
 	{ title = "PRETTY AWESOME - FEAT. DILIP", artist = "OLSWEL", sound = sound("radio-olswel-pretty-awesome-feat-dilip.mp3") },
 	{ title = "DOPE1 - WITH OLSWEL", artist = "SYZY", sound = sound("radio-syzy-dope1-with-olswel.mp3") },
 	{ title = "DANCING ON MY OWN", artist = "SYZY", sound = sound("radio-syzy-dancing-on-my-own.mp3") },
-	{ title = "HEART123 - WITH KMOE", artist = "SYZY", sound = sound("radio-syzy-heart123-with-kmoe.mp3") },
-	{ title = "ILUUUU", artist = "SYZY", sound = sound("radio-syzy-iluuuu.mp3") },
 	{ title = "INDUSTRY CORPORATE FREAK", artist = "SYZY", sound = sound("radio-syzy-industry-corporate-freak.mp3") },
 	{ title = "TAKE MY ENERGY", artist = "SYZY", sound = sound("radio-syzy-take-my-energy.mp3") },
-	{ title = "KMOE - CRUSH - SYZY REMIX", artist = "SYZY", sound = sound("radio-syzy-kmoe-crush-syzy-remix.mp3") },
 	{ title = "LITEWORK", artist = "OLSWEL", sound = sound("radio-olswel-litework.mp3") },
 	{ title = "ONE HUNDRED PERCENT ORIGINAL", artist = "OLSWEL", sound = sound("radio-olswel-one-hundred-percent-original.mp3") },
 }
