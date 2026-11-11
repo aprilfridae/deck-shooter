@@ -41,6 +41,7 @@ local ROOF_THICK = 2
 local ROOF_SLABS = 24 -- flat slabs round the half circle
 local ROOF_RIBS = 4 -- each side of the middle
 local ROOF_HOLE = 13 -- the hole's radius
+local ROOF_BREAKS = 9 -- places it has fallen in (a few land too near the crown hole and are dropped)
 
 local SPAWN_X = 84
 
@@ -357,37 +358,106 @@ end
 -- The roof: one tall concrete barrel vault over the whole box, springing from the tops of the side walls and
 -- arching half a circle across to the other side, with heavier ribs along it. A round hole is left in its
 -- crown over the middle of the ring, where the light from above comes through.
+-- It is falling apart (River's ask): laid in blocks of uneven length, with ragged breaks where it has come
+-- down, slipped and cracked blocks round them, bent bars hanging out and the rubble lying underneath.
 local function roof(g)
 	local inner = HALF_WIDE -- the vault's inside radius, so it sits on the side walls
 	local middle = inner + ROOF_THICK / 2
 	local step = math.pi / ROOF_SLABS
 	local wide = 2 * (inner + ROOF_THICK) * math.tan(step / 2) -- wide enough that the slabs' outer edges meet
 	local long = HALF_LONG + T
-	-- One slab of the arc at angle (0 at one wall's top, pi at the other's), from x0 to x1.
-	local function slab(angle: number, x0: number, x1: number, radius: number, thick: number, kind: string, solid: boolean)
-		local at = CFrame.new((x0 + x1) / 2, WALL_HEIGHT + radius * math.sin(angle), radius * math.cos(angle)) * CFrame.Angles(math.pi / 2 - angle, 0, 0)
-		local part = g:solid(kind, v(x1 - x0, thick, wide), at)
-		if not solid then
-			Kit.decor(part)
+	-- Where the roof has fallen in: each is { x, how far round the arc in studs, radius }. Uneven on purpose,
+	-- more on one side than the other, and none over the hole in the crown.
+	local arcLength = math.pi * middle
+	local breaks = {}
+	for _ = 1, ROOF_BREAKS do
+		local x = g:range(-long + 10, long - 10)
+		local round = arcLength * (if g:chance(0.65) then g:range(0.12, 0.45) else g:range(0.58, 0.9))
+		if math.abs(x) > ROOF_HOLE + 14 or math.abs(round - arcLength / 2) > ROOF_HOLE + 14 then
+			table.insert(breaks, { x, round, g:range(5, 12) })
+		end
+	end
+	-- How far a point on the vault is from the nearest break's edge (negative inside one).
+	local function fromBreak(x: number, round: number): number
+		local nearest = math.huge
+		for _, hole in breaks do
+			local dx, dr = x - hole[1], round - hole[2]
+			nearest = math.min(nearest, math.sqrt(dx * dx + dr * dr) - hole[3])
+		end
+		return nearest
+	end
+	-- One course of the vault at angle, from x0 to x1, laid as blocks of uneven length. Blocks over a break are
+	-- gone; the ones round its edge have slipped, hang lower and askew, and some are cracked.
+	local function course(angle: number, x0: number, x1: number)
+		local round = angle * middle
+		local x = x0
+		while x < x1 - 0.5 do
+			local length = math.min(g:range(7, 19), x1 - x)
+			if x1 - (x + length) < 4 then
+				length = x1 - x
+			end
+			local mid = x + length / 2
+			local edge = fromBreak(mid, round)
+			if edge > 0 then
+				local loose = edge < 7
+				local drop = if loose then g:range(0.3, 1.6) elseif g:chance(0.12) then g:range(0.15, 0.5) else 0
+				local at = CFrame.new(mid, WALL_HEIGHT + (middle - drop) * math.sin(angle), (middle - drop) * math.cos(angle)) * CFrame.Angles(math.pi / 2 - angle, 0, 0)
+				if loose then
+					at *= CFrame.Angles(g:range(-0.07, 0.07), g:range(-0.04, 0.04), g:range(-0.06, 0.06))
+				end
+				g:solid(if loose and g:chance(0.5) then "darkConcrete" else "concrete", v(length - (if loose then g:range(0.2, 0.9) else 0), ROOF_THICK, wide - (if loose then g:range(0, 0.6) else 0)), at)
+				-- A crack across its underside: two or three dark strokes end to end, each at its own angle.
+				if g:chance(if loose then 0.6 else 0.14) then
+					local under = at * CFrame.new(g:range(-length, length) * 0.25, -ROOF_THICK / 2 - 0.04, g:range(-1, 1)) * CFrame.Angles(0, g:range(0, math.pi), 0)
+					for _ = 1, g.random:NextInteger(2, 3) do
+						local stroke = g:range(2, 5)
+						under *= CFrame.Angles(0, g:range(-0.7, 0.7), 0)
+						Kit.decor(g:block(v(stroke, 0.06, g:range(0.15, 0.4)), under * CFrame.new(stroke / 2, 0, 0), Color3.fromRGB(16, 18, 18), M.SmoothPlastic))
+						under *= CFrame.new(stroke, 0, 0)
+					end
+				end
+				-- A bent bar or two left hanging out of the broken edge. Short and thick, so it isn't a strand.
+				if loose and edge < 3 and g:chance(0.5) then
+					local bar = g:range(1.5, 3.5)
+					Kit.decor(g:block(v(0.3, bar, 0.3), at * CFrame.new(g:range(-length, length) * 0.4, -ROOF_THICK / 2 - bar / 2 + 0.2, g:range(-2, 2)) * CFrame.Angles(g:range(-0.6, 0.6), 0, g:range(-0.6, 0.6)), RUST, M.CorrodedMetal))
+				end
+			end
+			x += length
+		end
+		-- The ribs: deeper, darker bands under the vault. Broken off where the roof is, and here and there besides.
+		for rib = -ROOF_RIBS, ROOF_RIBS do
+			local ribX = rib * long / (ROOF_RIBS + 0.5)
+			if rib ~= 0 and fromBreak(ribX, round) > 2 and not g:chance(0.08) then
+				local at = CFrame.new(ribX, WALL_HEIGHT + (inner - 0.9) * math.sin(angle), (inner - 0.9) * math.cos(angle)) * CFrame.Angles(math.pi / 2 - angle, 0, 0)
+				Kit.decor(g:solid("darkConcrete", v(4, 1.8, wide), at))
+			end
 		end
 	end
 	for index = 1, ROOF_SLABS do
 		local angle = (index - 0.5) * step
-		-- Where this slab passes over the hole, it stops short on each side of it.
+		-- Where this course passes over the hole in the crown, it stops short on each side of it.
 		local nearest = math.max(math.abs(middle * math.cos(angle)) - wide / 2, 0)
 		if nearest < ROOF_HOLE then
 			local reach = math.sqrt(ROOF_HOLE * ROOF_HOLE - nearest * nearest)
-			slab(angle, -long, -reach, middle, ROOF_THICK, "concrete", true)
-			slab(angle, reach, long, middle, ROOF_THICK, "concrete", true)
+			course(angle, -long, -reach)
+			course(angle, reach, long)
 		else
-			slab(angle, -long, long, middle, ROOF_THICK, "concrete", true)
+			course(angle, -long, long)
 		end
-		-- Ribs: deeper, darker bands under the vault every so often along it. None crosses the hole.
-		for rib = -ROOF_RIBS, ROOF_RIBS do
-			if rib ~= 0 then
-				local x = rib * long / (ROOF_RIBS + 0.5)
-				slab(angle, x - 2, x + 2, inner - 0.9, 1.8, "darkConcrete", false)
-			end
+	end
+	-- Under each break: the rubble that came down, low enough to run over (it doesn't collide), and a thin
+	-- fall of light through the bigger ones near the top.
+	for _, hole in breaks do
+		local angle = hole[2] / middle
+		local z = middle * math.cos(angle)
+		local landZ = math.clamp(z, -HALF_WIDE + 4, HALF_WIDE - 4)
+		for _ = 1, math.floor(hole[3]) do
+			local size = v(g:range(1, 3.4), g:range(0.4, 1.1), g:range(1, 3))
+			local at = CFrame.new(hole[1] + g:range(-hole[3], hole[3]) * 0.7, size.Y / 2 - 0.1, landZ + g:range(-hole[3], hole[3]) * 0.5) * CFrame.Angles(g:range(-0.2, 0.2), g:range(0, math.pi), g:range(-0.2, 0.2))
+			Kit.decor(g:solid("darkConcrete", size, at))
+		end
+		if hole[3] > 7 and math.abs(z) < HALF_WIDE * 0.75 then
+			g:shaft(v(hole[1], WALL_HEIGHT + middle * math.sin(angle) + 30, z), v(hole[1], 0.2, z), hole[3] * 0.45, HEAVEN)
 		end
 	end
 	-- A collar round the hole, hanging a little below the vault, so its edge reads as a clean ring.
