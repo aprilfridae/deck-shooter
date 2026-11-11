@@ -332,8 +332,8 @@ local function sampleStance(body: Body, now: number)
 	body.poses = poses
 	body.pose = arms or pose -- the gun goes where the hands are
 
-	-- The pistol's arms come from PistolArms, not the pose file: held out flat and level with the left hand up
-	-- to snap, as first person has it. A reload keeps the pose file's arms.
+	-- The pistol's arms come from PistolArms, not the pose file: held out flat and level as first person has
+	-- it, with the left arm down at the side. A reload keeps the pose file's arms.
 	local pistolArms = if poses == BodyPoses["Energy Pistol"] and pick.name ~= "Reload" and arms ~= poses.poses.Reload
 		then PistolArms[pick.name]
 		else nil

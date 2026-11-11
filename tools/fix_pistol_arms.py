@@ -1,5 +1,5 @@
 # Works out third-person arm joints for the Energy Pistol so the body matches first person: the pistol held out
-# sideways (rolled flat) and level, pointing where the body faces, and the free left hand raised ready to snap.
+# sideways (rolled flat) and level, pointing where the body faces, and the free left arm hanging at the side.
 # The pose file from Blender (BodyPoses/EnergyPistol.luau) had the gun tipped and the left hand in a poor place.
 #
 # For every pose in that file except Reload it reads the body's own Root and Waist, places the hands in the
@@ -26,9 +26,10 @@ REST_ELBOW = math.radians(10)
 # First person holds it 0.565 right, 0.7 down and 1.5 ahead of the eye.
 GUN_FROM_HEAD = np.array([0.55, -0.75, -2.2])  # further ahead than first person, so the arm is nearly straight
 GUN_ROLL = math.radians(90)  # top of the gun turned to the body's left, as in first person
-# The left wrist, from the left shoulder: forearm up in front of the chest, hand ready to snap.
-LEFT_WRIST = np.array([0.15, -0.15, -1.2])
-LEFT_ELBOW_WAY = np.array([-0.6, -1.0, 0.25])  # the elbow hangs down and out
+# The left wrist, from the left shoulder: the arm hangs loose at the side, a little out and ahead, slightly bent.
+# It was raised as if to snap, but the rig has no fingers to snap with, so River had it put down.
+LEFT_WRIST = np.array([-0.3, -2.12, -0.3])
+LEFT_ELBOW_WAY = np.array([-0.3, 0.0, 1.0])  # the elbow points back
 RIGHT_REACH = 2.2  # the right arm is never quite straight
 
 
@@ -183,13 +184,13 @@ def solve(rig, joints, gun):
     result["RightElbow"] = rot_x(bend - REST_ELBOW)
     result["RightWrist"] = twist
 
-    # Left: forearm up in front of the chest, wrist straight.
+    # Left: down at the side.
     base = upper * rig["LeftShoulder"][0]
     target = base.p + root.r @ LEFT_WRIST
     turn, bend, _ = arm(base.p, target, LEFT_ELBOW_WAY, 0)
     result["LeftShoulder"] = base.r.T @ turn
     result["LeftElbow"] = rot_x(bend - REST_ELBOW)
-    result["LeftWrist"] = rot_x(math.radians(-15))  # the hand cocked back a little, fingers up
+    result["LeftWrist"] = rot_x(math.radians(8))  # the hand curled in a touch
     return result, angle_of(twist), handle.p - head.p
 
 
@@ -198,7 +199,7 @@ def main():
     lines = [
         "-- Made by tools/fix_pistol_arms.py. Don't edit by hand.",
         "-- Arm joints for the Energy Pistol's third-person poses: the pistol out in front, rolled flat and level as",
-        "-- first person holds it, and the left hand raised ready to snap. Values are { x, y, z, qx, qy, qz, qw }.",
+        "-- first person holds it, and the left arm hanging at the side. Values are { x, y, z, qx, qy, qz, qw }.",
         "return {",
     ]
     for name, (joints, gun) in poses.items():
