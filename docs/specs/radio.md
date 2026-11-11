@@ -1,6 +1,6 @@
 # Radio
 
-**Status:** built on 2026-11-10 from the design agreed with River the same day; not seen or heard in Play. River's 23 tracks were uploaded to the group on 2026-11-10 (River confirmed the artists' permission) and are in `RadioTracks.luau`; they play once Roblox's moderation clears each one. One file, "edyn - dissonance mix", was too big for Roblox (36 MB) and wasn't uploaded. Two things differ from the design below and are marked where they come up: the visualizer uses the loudness bars (the real-spectrum trial hasn't been run), and the HUD pieces are named in "How it's built".
+**Status:** built on 2026-11-10 from the design agreed with River the same day; not seen or heard in Play. River's 23 tracks were uploaded to the group on 2026-11-10 and Roblox's moderation removed many of them, for swearing among other things, so River had all of them taken out of the playlist the same day. Only the menu theme is in the track list again, as a stand-in. The next set needs clean or instrumental versions: Roblox rejects songs with swearing or other adult content. Two things differ from the design below and are marked where they come up: the visualizer uses the loudness bars (the real-spectrum trial hasn't been run), and the HUD pieces are named in "How it's built".
 
 ## The idea
 
