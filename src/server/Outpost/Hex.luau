@@ -24,8 +24,8 @@ local RING = 28 -- from the centre to the middle of each ring wall
 local RING_LENGTH = 25 -- each ring wall's length; the gaps between them are about 7
 local RING_HEIGHT = 13
 local RING_THICK = 1.2
-local HOLE_BOTTOM, HOLE_TOP = 3.2, 5.6 -- the shooting holes, about chest to head height
-local HOLE_WIDE = 4
+local HOLE_BOTTOM, HOLE_TOP = 3.8, 7.4 -- the windows, around head height (River found 3.2 to 5.6 too low)
+local HOLE_WIDE = 7
 
 local COVER_X = 45 -- the spawn cover's distance from the centre
 local COVER_HALF = 12 -- half its length
