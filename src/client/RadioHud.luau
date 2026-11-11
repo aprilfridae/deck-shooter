@@ -12,7 +12,8 @@ local Palette = require(Guns:WaitForChild("Palette"))
 local TypeLabel = require(script.Parent.TypeLabel)
 
 -- Sizes are for a screen 1080 high and scale with it.
-local LEFT, TOP = 22, 14
+local LEFT, TOP = 0, 14
+local HUD_MARGIN = 32 -- real pixels from the screen's left edge: the same as the health number (MARGIN in Hud.client.luau)
 local BARS = 9
 local BAR_WIDTH, BAR_GAP = 5, 3
 local BAR_HEIGHT = 40
@@ -52,10 +53,16 @@ function RadioHud.new()
 
 	-- One group, so the whole strip can dim together. It starts at the screen's left edge so sliding text
 	-- leaves the screen, not the group.
+	-- The holder puts the strip's left edge on the HUD's margin in real pixels; the scaled root sits inside it.
+	local holder = Instance.new("Frame")
+	holder.BackgroundTransparency = 1
+	holder.Position = UDim2.fromOffset(HUD_MARGIN, 0)
+	holder.Size = UDim2.new(1, -HUD_MARGIN, 1, 0)
+	holder.Parent = gui
 	local root = Instance.new("Frame")
 	root.BackgroundTransparency = 1
 	root.Size = UDim2.fromScale(1, 1)
-	root.Parent = gui
+	root.Parent = holder
 	local scale = Instance.new("UIScale")
 	scale.Parent = root
 	local function fit()

@@ -29,8 +29,9 @@ local SettingsPanel = require(script.Parent.SettingsPanel)
 local SoundGroups = require(script.Parent.SoundGroups)
 
 -- Shares of the unit.
-local NAV_LEFT = 0.03
-local NAV_BOTTOM = 0.03
+-- Real pixels from the screen's left and bottom edges: the same margin as the health number and the radio strip
+-- (MARGIN in Hud.client.luau), so the corners line up between the Outpost and a fight.
+local HUD_MARGIN = 32
 local NAV_WIDTH = 0.124
 local NAV_ROW = 0.032
 local NAV_LEFT_PADDING = 0.006
@@ -148,7 +149,7 @@ local function buildNav()
 	block.BorderSizePixel = 0
 	block.BackgroundColor3 = Palette.Bone
 	block.AnchorPoint = Vector2.new(0, 1)
-	block.Position = UDim2.new(0, NAV_LEFT * unit, 1, -NAV_BOTTOM * unit)
+	block.Position = UDim2.new(0, HUD_MARGIN, 1, -HUD_MARGIN)
 	block.Size = UDim2.fromOffset(NAV_WIDTH * unit, NAV_ROW * unit * #BUTTONS)
 	block.Parent = if faded > 0 then fader else gui
 	local outline = Instance.new("UIStroke")
