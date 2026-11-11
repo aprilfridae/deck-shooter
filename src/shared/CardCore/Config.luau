@@ -36,11 +36,11 @@ local Config = {
 
 	-- Perks reach full strength at Prototype.
 	PerkPower = { Field = 0.8, BlackSite = 0.9, Prototype = 1 },
-	DashSeconds = 0.12,
+	DashSeconds = 0.22, -- 0.12 until River asked for a slower boost (2026-11-11)
 	DashCamoSeconds = 1.5,
 	CamoTransparency = 0.9,
 	MoveGraceSeconds = 0.5, -- the movement guard looks away after a push
-	DashGraceSeconds = 1.2, -- and for a dash, until it has ramped back under the speed limit
+	DashGraceSeconds = 1.8, -- and for a dash, until it has ramped back under the speed limit
 	PushRadius = 15,
 	PushSpeed = 60, -- under the guard's 63 speed limit
 	PushRise = 35,

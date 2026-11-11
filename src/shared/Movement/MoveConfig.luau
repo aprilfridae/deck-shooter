@@ -8,7 +8,7 @@ return {
 	SlideRampTime = 0.18, -- the boost builds from sprint speed over this long
 	SlideFadeTime = 0.9, -- slows to sprint speed over this long; lasts while crouch is held
 	SlideCooldown = 0,
-	DashFadeTime = 0.4, -- how long a dash takes to ramp down to normal speed
+	DashFadeTime = 1.0, -- how long a dash takes to ramp down to normal speed (0.4 until River asked to keep the momentum longer)
 	CarryFade = 0.25,
 	-- How fast the air follows the move keys (a share closed per second, as an ease rate). On the ground the keys
 	-- take hold at once. Without this the Humanoid eases in slowly at this gravity, which River called thick air.
