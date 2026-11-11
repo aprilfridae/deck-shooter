@@ -96,6 +96,13 @@ local CARD_OUT = CFrame.new(0, 0, -0.45) -- and how far out from there, along it
 local CARD_LEAN = 0.9 -- the share of the torso's forward lean it takes (none of its twist or tip)
 local CARD_LOOK = 0.5 -- the share of the look's pitch it tips with
 local CARD_BLEND = 0.12 -- seconds the arms take to pass to the cards
+-- A jump with the cards out is kept quiet. The full jump drives a knee up to the chest, where the deck is being
+-- worked, tips the body about and drops into a deep crouch, and with the flourish going on in front it all looked
+-- goofy (River, 2026-11-11). So the legs mostly hang as they do coming down, the body tips far less, and the
+-- landing is shallower.
+local CARD_AIR_CALM = 0.8 -- at least this much of the coming-down pose through the whole jump
+local CARD_AIR_TIP = 0.3 -- the share of the body's tip in the air
+local CARD_LAND_SHARE = 0.45 -- the share of the landing crouch
 -- With the cards out the torso is stood up: this share of whatever forward lean the pose has is taken back out at
 -- the waist. The poses lean the torso in to shoulder a gun, and over a deck held out in front that read as
 -- hunched, more leaned in than with the AK or the pistol (River, 2026-11-11).
@@ -595,12 +602,18 @@ local function sampleStance(body: Body, now: number)
 		pose = poses.poses.Jump_Up or pose
 		local falling = math.clamp(0.5 - velocity.Y / (2 * AIR_FULL), 0, 1)
 		mixName, mixShare = "Fall", falling * falling * (3 - 2 * falling)
+		if body.cardPose then
+			mixShare = math.max(mixShare, CARD_AIR_CALM)
+		end
 	elseif not airborne and body.character:GetAttribute("MovePose") ~= "Slide" then
 		local since = now - body.landedAt
 		if since < LAND_HIT + LAND_RISE then
 			local rise = math.clamp((since - LAND_HIT) / LAND_RISE, 0, 1)
 			mixName = "Land"
 			mixShare = body.landHard * math.min(since / LAND_HIT, 1) * (1 - rise * rise * (3 - 2 * rise))
+			if body.cardPose then
+				mixShare *= CARD_LAND_SHARE
+			end
 		end
 	end
 	local mix = mixName and mixShare > 0.001 and poses.poses[mixName] or nil
@@ -800,6 +813,9 @@ local function applyAir(body: Body, dt: number, now: number)
 		return
 	end
 	local tip = if rising > 0 then AIR_TIP.up * rising else AIR_TIP.down * -rising
+	if body.cardPose then
+		tip *= CARD_AIR_TIP
+	end
 	local going = body.root.CFrame:VectorToObjectSpace(Vector3.new(velocity.X, 0, velocity.Z)) / 18
 	local forward, right = math.clamp(-going.Z, -1, 1), math.clamp(going.X, -1, 1)
 	joint.Transform = joint.Transform * CFrame.Angles(tip - forward * AIR_INTO, 0, -right * AIR_INTO)
