@@ -119,6 +119,8 @@ local AIR_ARMS_OUT = { Right = math.rad(34), Left = math.rad(52) } -- how far ea
 local AIR_ARMS_UP = math.rad(14) -- and how much further they lift over the top
 local AIR_ARMS_EASE = 9 -- how fast they go out and come back, per second
 local AIR_ARMS_QUIET = 0.6 -- seconds after a shot they stay on the gun
+local AIR_ARMS_BACK = 5 -- studs a second of fall at which they start back to the gun
+local AIR_ARMS_IN = 13 -- how fast they come back, per second: quicker than they go out
 local LAND_HIT = 0.05 -- seconds to drop into the landing
 local LAND_RISE = 0.42 -- and to rise out of it
 local LAND_FULL = 50 -- studs a second of fall that lands in the full crouch
@@ -767,8 +769,16 @@ local function applyAir(body: Body, dt: number, now: number)
 
 	-- The arms: out while in the air with free hands, eased both ways so they swing out and come back in.
 	local shotAt = body.player and lastShot[body.player] or -math.huge
-	local free = inAir and not body.cardPose and not body.codedAt and not body.wasReloading and now - shotAt > AIR_ARMS_QUIET
-	body.armsOut += ((if free then 1 else 0) - body.armsOut) * (1 - math.exp(-dt * AIR_ARMS_EASE))
+	-- They are out on the way up and over the top, and come back onto the gun once the body is properly coming
+	-- down, so it lands in its shooting position (River: "bring it back to shooting position before hitting the
+	-- ground"). A jump's fall from its top takes about 0.4s and the arms take about a quarter second to come in.
+	local free = inAir
+		and velocity.Y > -AIR_ARMS_BACK
+		and not body.cardPose
+		and not body.codedAt
+		and not body.wasReloading
+		and now - shotAt > AIR_ARMS_QUIET
+	body.armsOut += ((if free then 1 else 0) - body.armsOut) * (1 - math.exp(-dt * (if free then AIR_ARMS_EASE else AIR_ARMS_IN)))
 	if body.armsOut > 0.01 then
 		local over = 1 - math.abs(rising) -- most over the top of the jump
 		for side, sign in { Right = 1, Left = -1 } do
