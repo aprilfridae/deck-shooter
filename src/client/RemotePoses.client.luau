@@ -15,6 +15,7 @@ local BodyPoses = require(Movement:WaitForChild("BodyPoses"))
 local GunStance = require(Movement:WaitForChild("GunStance"))
 local LegCycle = require(Movement:WaitForChild("LegCycle"))
 local ShotKick = require(Movement:WaitForChild("ShotKick"))
+local PistolArms = require(Movement:WaitForChild("PistolArms"))
 local GunAudio = require(script.Parent:WaitForChild("GunAudio"))
 local HeldGuns = require(script.Parent:WaitForChild("HeldGuns"))
 
@@ -331,8 +332,16 @@ local function sampleStance(body: Body, now: number)
 	body.poses = poses
 	body.pose = arms or pose -- the gun goes where the hands are
 
+	-- The pistol's arms come from PistolArms, not the pose file: held out flat and level with the left hand up
+	-- to snap, as first person has it. A reload keeps the pose file's arms.
+	local pistolArms = if poses == BodyPoses["Energy Pistol"] and pick.name ~= "Reload" and arms ~= poses.poses.Reload
+		then PistolArms[pick.name]
+		else nil
 	for name in body.joints do
 		local value = (if arms and ARM_JOINTS[name] then arms else pose).joints[name]
+		if pistolArms and pistolArms[name] then
+			value = pistolArms[name]
+		end
 		if pick.mirrored and GunStance.legSwap[name] then
 			local other = pose.joints[GunStance.legSwap[name]]
 			value = other and GunStance.mirror(other)
