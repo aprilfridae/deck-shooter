@@ -69,6 +69,34 @@ Players.PlayerRemoving:Connect(function(player)
 	lookWindows[player] = nil
 end)
 
+-- A wall jump, so other players' copies of the body can kick off the wall too. The way is the direction out of
+-- the wall. It's only for show: the jump itself is the client's, and the speed limit judges it.
+local wallJumpRemote = Instance.new("RemoteEvent")
+wallJumpRemote.Name = "WallJump"
+wallJumpRemote.Parent = remotes
+local MAX_WALL_JUMPS_PER_SECOND = 6
+local wallJumpWindows: { [Player]: { startedAt: number, count: number } } = {}
+wallJumpRemote.OnServerEvent:Connect(function(player, way)
+	if typeof(way) ~= "Vector3" or way ~= way or math.abs(way.Magnitude - 1) > 0.05 then
+		return
+	end
+	local now = os.clock()
+	local window = wallJumpWindows[player]
+	if not window or now - window.startedAt >= 1 then
+		window = { startedAt = now, count = 0 }
+		wallJumpWindows[player] = window
+	end
+	window.count += 1
+	if window.count > MAX_WALL_JUMPS_PER_SECOND or not player.Character then
+		return
+	end
+	player.Character:SetAttribute("WallKick", way)
+	player.Character:SetAttribute("WallKickAt", workspace:GetServerTimeNow())
+end)
+Players.PlayerRemoving:Connect(function(player)
+	wallJumpWindows[player] = nil
+end)
+
 poseRemote.OnServerEvent:Connect(function(player, pose)
 	if type(pose) ~= "string" or not POSES[pose] or not allowPose(player) then
 		return

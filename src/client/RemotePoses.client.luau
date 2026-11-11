@@ -21,6 +21,7 @@ local HeldGuns = require(script.Parent:WaitForChild("HeldGuns"))
 local BodyHands = require(script.Parent:WaitForChild("BodyHands"))
 local ArmReach = require(script.Parent:WaitForChild("ArmReach"))
 local AkReload = require(Guns:WaitForChild("AkReload"))
+local BodyReloads = require(Guns:WaitForChild("BodyReloads"))
 
 local shotsRemote = ReplicatedStorage:WaitForChild("GunRemotes"):WaitForChild("Shots") :: RemoteEvent
 
@@ -40,8 +41,11 @@ local SHOULDERS = 1.5 -- how far the shoulders turn against the hips: past squar
 -- magazine, the bolt and the gun's turn), put on the third-person body. perMetre is the stored model's studs to a
 -- metre and origin is where the reload's own origin is from the model's middle, in metres, both as GunView has
 -- them for first person.
-local CODED_RELOADS: { [string]: { reload: any, perMetre: number, origin: Vector3 } } = {
+-- A reload without them (BodyReloads) is keyed straight in the held gun's own studs.
+local CODED_RELOADS: { [string]: { reload: any, perMetre: number?, origin: Vector3? } } = {
 	M57 = { reload = AkReload, perMetre = 91.09, origin = Vector3.new(-0.011, 0.0535, 0.137) },
+	["Energy Pistol"] = { reload = BodyReloads["Energy Pistol"] },
+	Longscope = { reload = BodyReloads.Longscope },
 }
 local RELOAD_BLEND = 0.08 -- of the reload's own seconds: how long the arms take to pass to it and back
 -- The body goes with the reload (River: "make the torso turn with the reload ... more natural and more swaggy").
@@ -55,6 +59,14 @@ local RELOAD_HEAD_LEVEL = 0.7 -- how much of the torso's turn and tip the head u
 local RELOAD_HEAD_DOWN = math.rad(14) -- how far the head drops to watch the magazine go in
 -- Roughly which way each elbow points while its hand is placed, in the torso's space.
 local ELBOW_WAYS = { Right = Vector3.new(0.5, -1, 0.3), Left = Vector3.new(-0.6, -1, 0.25) }
+
+-- A wall jump (the client says when, and which way is out of the wall): the body leans away from the wall, the
+-- leg nearer it shoves off it and the other tucks up, then it all eases back into the jump pose.
+local WALL_KICK_SECONDS = 0.45
+local WALL_KICK_ATTACK = 0.12 -- the share of that it takes to hit the full shove
+local WALL_KICK_LEAN = math.rad(20)
+local WALL_KICK_LEG = math.rad(42) -- how far the kicking leg swings toward the wall
+local WALL_KICK_TUCK = math.rad(50) -- how far the other leg's hip and knee fold
 
 -- Shooting and aiming, laid over whatever pose the body is in.
 -- Looking up and down: the torso, arms and head share the bend, so the gun and the eyes point where the
@@ -137,6 +149,9 @@ type Body = {
 	kick: ShotKick.Kick, -- the recoil spring
 	shotSeen: number, -- the last shot of this body's that has kicked it
 	look: number, -- how far up it is looking, radians, eased
+	kickStamp: any, -- the wall jump's stamp as last seen, to spot a new one
+	wallKickAt: number, -- when this body last kicked off a wall
+	wallWay: Vector3, -- and which way was out of the wall
 	wasReloading: boolean,
 	reloadAt: number?, -- when the reload being played started
 	codedAt: number?, -- how far into a coded reload it is, in the reload's own seconds
@@ -210,6 +225,9 @@ local function onCharacter(character: Model)
 		kick = ShotKick.new(),
 		shotSeen = -math.huge,
 		look = 0,
+		kickStamp = if player == Players.LocalPlayer then player:GetAttribute("WallKickAt") else character:GetAttribute("WallKickAt"),
+		wallKickAt = -math.huge,
+		wallWay = Vector3.xAxis,
 		wasReloading = false,
 		reloadAt = nil,
 		codedAt = nil,
@@ -349,7 +367,7 @@ local function sampleStance(body: Body, now: number)
 	if coded and body.reloadAt then
 		local id = if player then player:GetAttribute("GunId") else body.character:GetAttribute("GunId")
 		local config = id and GunConfig.guns[id]
-		local at = (now - body.reloadAt) * coded.reload.SOUND / (config and config.reload or 2)
+		local at = (now - body.reloadAt) * coded.reload.SOUND / (config and config.reload or 2) + (coded.reload.lead or 0)
 		if at >= coded.reload.LENGTH or (not reloading and at < coded.reload.SOUND * 0.95) then
 			body.reloadAt = nil
 		else
@@ -375,6 +393,18 @@ local function sampleStance(body: Body, now: number)
 		end
 	elseif KEEPS_BODY[pick.name] and poses.poses.Fire and now - shotAt < GunStance.fireTime then
 		arms = poses.poses.Fire -- shooting in a slide or the air: the gun still comes up
+	end
+
+	-- A new wall jump: your own from this client, anyone else's from the server.
+	local kicker: Instance = if player == Players.LocalPlayer then player else body.character
+	local stamp = kicker:GetAttribute("WallKickAt")
+	if stamp ~= body.kickStamp then
+		body.kickStamp = stamp
+		local way = kicker:GetAttribute("WallKick")
+		if stamp and typeof(way) == "Vector3" and way.Magnitude > 0.5 then
+			body.wallKickAt = now
+			body.wallWay = way.Unit
+		end
 	end
 
 	-- A new shot kicks the body.
@@ -548,6 +578,44 @@ local function applyAim(body: Body, dt: number)
 	end
 end
 
+-- The wall jump, over the jump pose.
+local function applyWallKick(body: Body, now: number)
+	local through = (now - body.wallKickAt) / WALL_KICK_SECONDS
+	if through < 0 or through >= 1 then
+		return
+	end
+	local joints = body.joints
+	-- A quick shove that eases away, and a slower tuck that follows it.
+	local attack = math.clamp(through / WALL_KICK_ATTACK, 0, 1)
+	local shove = attack * attack * (3 - 2 * attack) * (1 - through) ^ 2
+	local tuck = math.sin(math.pi * through) ^ 2
+	-- Out of the wall, as the body sees it: +X its right, +Z behind it.
+	local out = body.root.CFrame:VectorToObjectSpace(body.wallWay)
+	local flat = Vector3.new(out.X, 0, out.Z)
+	if flat.Magnitude < 0.1 then
+		return
+	end
+	flat = flat.Unit
+	-- Leaning away: a turn about Z tips the top to the left, one about X tips it back.
+	if joints.Root then
+		joints.Root.Transform = joints.Root.Transform * CFrame.Angles(flat.Z * WALL_KICK_LEAN * shove, 0, -flat.X * WALL_KICK_LEAN * shove)
+	end
+	-- The leg on the wall's side kicks; with the wall dead ahead or behind, the right one.
+	local kicking = if flat.X > 0.3 then "Left" else "Right"
+	local other = if kicking == "Left" then "Right" else "Left"
+	local hip, knee = joints[kicking .. "Hip"], joints[kicking .. "Knee"]
+	if hip and knee then
+		-- Toward the wall: a hip turn about Z swings the foot to the right, one about X swings it forward.
+		hip.Transform = CFrame.Angles(flat.Z * WALL_KICK_LEG * shove, 0, -flat.X * WALL_KICK_LEG * shove) * hip.Transform
+		knee.Transform = knee.Transform:Lerp(CFrame.Angles(LegCycle.restKnee, 0, 0), shove) -- straight as it shoves
+	end
+	local otherHip, otherKnee = joints[other .. "Hip"], joints[other .. "Knee"]
+	if otherHip and otherKnee then
+		otherHip.Transform = CFrame.Angles(WALL_KICK_TUCK * tuck, 0, 0) * otherHip.Transform
+		otherKnee.Transform = otherKnee.Transform * CFrame.Angles(-WALL_KICK_TUCK * 1.3 * tuck, 0, 0)
+	end
+end
+
 local function through(frame: CFrame, joint: Motor6D): CFrame
 	return frame * joint.C0 * joint.Transform * joint.C1:Inverse()
 end
@@ -570,8 +638,8 @@ local function applyReload(body: Body)
 		end
 	end
 	local reload = coded.reload
-	local per = coded.perMetre * ratio
-	local origin = middle + coded.origin * per
+	local per = if coded.perMetre then coded.perMetre * ratio else 1
+	local origin = if coded.origin then middle + coded.origin * per else Vector3.zero
 	-- A frame in the reload's metres, as a place on the gun; and a move in them, as a move of something on it.
 	local function placed(frame: CFrame): CFrame
 		return CFrame.new(origin + frame.Position * per) * frame.Rotation
@@ -580,9 +648,9 @@ local function applyReload(body: Body)
 		return placed(frame) * CFrame.new(-origin)
 	end
 
-	local pose = reload.at(at)
+	local pose = reload.at(at, { middle = middle, ratio = ratio })
 	-- The arms pass to the reload over its first moments and back over its last, so the elbows don't jump.
-	local blend = math.clamp(math.min(at, reload.LENGTH - at) / RELOAD_BLEND, 0, 1)
+	local blend = math.clamp(math.min(at - (reload.lead or 0), reload.LENGTH - at) / RELOAD_BLEND, 0, 1)
 
 	-- The body goes with it, before the hands are found, so they and the gun are carried along.
 	local pitch, yaw, roll = pose.gun:ToEulerAnglesXYZ()
@@ -606,15 +674,25 @@ local function applyReload(body: Body)
 		hands[side] = through(through(through(torso, joints[side .. "Shoulder"]), joints[side .. "Elbow"]), joints[side .. "Wrist"])
 	end
 	local hold = hands.Right * HeldGuns.frame(body.pose.gun) -- the gun before the reload turns it
-	local handle = hold * moved(pose.gun)
+	local turned = hold * moved(pose.gun)
+	-- A spin is a turn of the gun the hands don't go round with: the Longscope flipping over about the trigger.
+	local handle = if pose.spin then turned * moved(pose.spin) else turned
 
-	-- Each hand goes round with the gun, and leaves it for the magazine or the charging knob.
+	-- Each hand goes round with the gun, and leaves it for the magazine, the slide or the charging knob.
 	local goals = {
-		Right = handle * hold:ToObjectSpace(hands.Right),
-		Left = handle * hold:ToObjectSpace(hands.Left),
+		Right = turned * hold:ToObjectSpace(hands.Right),
+		Left = turned * hold:ToObjectSpace(hands.Left),
 	}
-	goals.Left = goals.Left:Lerp(hold * placed(pose.palm) * BodyHands.handOnPalm("Left"), pose.weight)
-	if pose.rightWeight > 0 then
+	if pose.palm and pose.weight > 0 then
+		goals.Left = goals.Left:Lerp(hold * placed(pose.palm) * BodyHands.handOnPalm("Left"), pose.weight)
+	end
+	if pose.leftShift then
+		goals.Left += hold.Rotation * (pose.leftShift * per)
+	end
+	if pose.rightShift then
+		goals.Right += turned.Rotation * (pose.rightShift * per)
+	end
+	if pose.right and pose.rightWeight > 0 then
 		local away = hold * placed(pose.right) * BodyHands.handOnPalm("Right")
 		goals.Right = goals.Right:Lerp(away, pose.rightWeight) + hold.Rotation * (pose.rightSwing * per)
 	end
@@ -660,6 +738,7 @@ RunService.PreSimulation:Connect(function(dt: number)
 			end
 			applyRun(body)
 			applyAim(body, dt)
+			applyWallKick(body, now)
 			applyReload(body)
 			continue
 		end

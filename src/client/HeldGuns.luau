@@ -152,11 +152,20 @@ local function build(name: string, poses: Poses): Held?
 		middle = (low + high) / 2,
 		ratio = ratio,
 	}
-	-- A model that names its own moving parts (River's AK: Mag_ and Bolt_, as first person reads them) is sorted
-	-- by those names. The pose file's boxes are the shape of the gun the poses were made on, not this one.
+	-- A model that names its own moving parts, as first person reads them, is sorted by those names: Mag_ (or
+	-- the lever rifle's Lever_) with the magazine, Bolt_ (or the pistol's Slide_) with the action. The pose
+	-- file's boxes are the shape of the gun the poses were made on, not this one.
+	local function goesWith(part: Instance): string?
+		if part.Name:find("^Mag_") or part.Name:find("^Lever_") then
+			return "mag"
+		elseif part.Name:find("^Bolt_") or part.Name:find("^Slide_") then
+			return "action"
+		end
+		return nil
+	end
 	local named = false
 	for _, part in model:GetDescendants() do
-		if part:IsA("BasePart") and (part.Name:find("^Mag_") or part.Name:find("^Bolt_")) then
+		if part:IsA("BasePart") and goesWith(part) then
 			named = true
 			break
 		end
@@ -169,7 +178,8 @@ local function build(name: string, poses: Poses): Held?
 		if part:IsA("BasePart") then
 			local group = result.body
 			if named then
-				group = if part.Name:find("^Mag_") then result.mag elseif part.Name:find("^Bolt_") then result.action else result.body
+				local with = goesWith(part)
+				group = if with == "mag" then result.mag elseif with == "action" then result.action else result.body
 			end
 			for _, entry in if named then {} else boxes do
 				if entry.bone ~= "GunMount" and not isStandIn(entry.name) and inside(part.Position, entry.low, entry.high) then
@@ -180,7 +190,7 @@ local function build(name: string, poses: Poses): Held?
 			add(group, part)
 		end
 	end
-	for _, entry in boxes do
+	for _, entry in if named then {} else boxes do
 		if isStandIn(entry.name) and entry.bone ~= "GunMount" then
 			local models = ReplicatedStorage:FindFirstChild("GunModels")
 			local source = models and models:FindFirstChild(entry.name)

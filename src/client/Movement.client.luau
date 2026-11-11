@@ -20,6 +20,7 @@ local MoveState = require(Movement:WaitForChild("MoveState"))
 local MoveConfig = require(Movement:WaitForChild("MoveConfig"))
 local poseRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("Pose") :: RemoteEvent
 local lookRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("Look") :: RemoteEvent
+local wallJumpRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("WallJump") :: RemoteEvent
 local abilityRemotes = ReplicatedStorage:WaitForChild("AbilityRemotes")
 local dashRemote = abilityRemotes:WaitForChild("Dash") :: RemoteEvent
 local pushRemote = abilityRemotes:WaitForChild("Push") :: RemoteEvent
@@ -226,6 +227,10 @@ local function tryWallJump(moveDirection: Vector3, now: number)
 	jumpSoundAt = now
 	GunAudio.playWallJump()
 	WallKick.play(nearest.Position, nearest.Normal)
+	-- For the body: yours straight away on this client, everyone else's by way of the server.
+	player:SetAttribute("WallKick", away)
+	player:SetAttribute("WallKickAt", os.clock())
+	wallJumpRemote:FireServer(away)
 end
 
 -- A dash follows a set path, then hands back to normal movement in the air.
