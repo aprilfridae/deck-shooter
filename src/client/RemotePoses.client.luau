@@ -107,6 +107,7 @@ local CARD_LAND_SHARE = 0.45 -- the share of the landing crouch
 -- the waist. The poses lean the torso in to shoulder a gun, and over a deck held out in front that read as
 -- hunched, more leaned in than with the AK or the pistol (River, 2026-11-11).
 local CARD_UPRIGHT = 0.8
+local CARD_SQUARE = 0.85 -- the share of the torso's side-on turn taken out, so the shoulders face the deck
 
 -- The jump. The pose files have one pose going up (a knee driven high), one coming down and one deep landing
 -- crouch, and the body used to snap between them. Now:
@@ -959,6 +960,16 @@ local function applyCards(body: Body)
 		torso = through(through(body.root.CFrame, joints.Root), joints.Waist)
 		lean = (facing:Inverse() * torso.Rotation):ToEulerAnglesYXZ()
 	end
+	-- The shoulders are squared up too. The gun poses stand side-on, the torso turned about 25 degrees to its
+	-- right with the right shoulder back; the deck is worked straight ahead, so the right arm had to reach in
+	-- across the body to it and looked pulled inward (River, 2026-11-11). The head keeps its facing.
+	local _, turned = (facing:Inverse() * torso.Rotation):ToEulerAnglesYXZ()
+	local square = -turned * CARD_SQUARE * blend
+	joints.Waist.Transform = CFrame.Angles(0, square, 0) * joints.Waist.Transform
+	if joints.Neck then
+		joints.Neck.Transform = CFrame.Angles(0, -square, 0) * joints.Neck.Transform
+	end
+	torso = through(through(body.root.CFrame, joints.Root), joints.Waist)
 	local view = CFrame.new(torso * CARD_NECK) * facing * CFrame.Angles(lean * CARD_LEAN + body.look * CARD_LOOK, 0, 0) * CARD_OUT
 	for _, side in { "Right", "Left" } do
 		local shoulder, elbow, wrist = joints[side .. "Shoulder"], joints[side .. "Elbow"], joints[side .. "Wrist"]
