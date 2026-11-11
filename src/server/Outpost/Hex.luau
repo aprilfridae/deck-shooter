@@ -1,7 +1,8 @@
 -- Hex: a 1v1 map in a box, from River's sketch. Two players spawn at opposite ends of a walled box. Each has
 -- a slab of cover just in front of their spawn and a ramp in the corner on their right, up to a flat lookout.
 -- In the middle is a ring of six walls with gaps between them and holes to shoot through.
--- The box's walls are tall and plain so you can sprint along them and wall jump off them.
+-- The box's walls are tall and plain so you can sprint along them and wall jump off them. A tall barrel
+-- vault roofs it over, with a round hole in its crown where a shaft of light falls on the ring.
 -- It stands in a ruined city in fog: weathered concrete, dead retro tech lying about, orange and teal
 -- emergency lamps, and broken towers looming over the walls. See docs/specs/hex.md.
 -- The map is point-symmetric. One side is built, then the same build runs turned half round.
@@ -35,6 +36,11 @@ local RAMP_FOOT, RAMP_TOP = 78, 57 -- the ramp rises toward the middle. Its foot
 local RAMP_HEIGHT = 14
 local RAMP_WIDE = 25
 local DECK_LENGTH = 14 -- the flat lookout at the ramp's top
+
+local ROOF_THICK = 2
+local ROOF_SLABS = 24 -- flat slabs round the half circle
+local ROOF_RIBS = 4 -- each side of the middle
+local ROOF_HOLE = 13 -- the hole's radius
 
 local SPAWN_X = 84
 
@@ -283,7 +289,7 @@ end
 -- One ruined tower out in the fog, standing on base (far below the arena's floor). Its top is broken:
 -- stepped stumps of what's left of the upper floors, and floor slabs hanging out. No steel frames on top: they floated
 -- off the stumps and read as letter Ms in the sky (River had them removed). Nothing here
--- collides or stops a bullet; it's only ever seen over the walls.
+-- collides or stops a bullet; it was made to be seen over the walls, and since the roof went on it shows only through the hole in it.
 local function tower(g, base: Vector3, wide: number, deep: number, height: number, lean: number)
 	local frame = CFrame.new(base) * CFrame.Angles(0, g:range(0, math.pi), 0) * CFrame.Angles(lean, 0, lean * 0.6)
 	local function chunk(size: Vector3, at: CFrame, color: Color3?): BasePart
@@ -339,13 +345,67 @@ end
 -- heavens (River's words). The beams are the shaft you see in the fog; the spotlight is the pool it throws on
 -- the floor and on anyone standing in it. It holds steady: FlickerDepth 0 keeps the flicker script off it.
 local function heavenLight(g)
-	local source = Kit.decor(g:block(v(1, 1, 1), CFrame.new(0, 58, 0), HEAVEN, M.SmoothPlastic))
+	local source = Kit.decor(g:block(v(1, 1, 1), CFrame.new(0, 59, 0), HEAVEN, M.SmoothPlastic)) -- a spotlight reaches 60 at most
 	source.Transparency = 1
 	local light = g:light(source, "SpotLight", { Face = Enum.NormalId.Bottom, Angle = 30, Range = 60, Brightness = 9, Shadows = true, Color = HEAVEN })
 	light:SetAttribute("FlickerDepth", 0)
 	-- Twice over, a narrow core inside a wide fall, so it's bright down the middle and soft at the edge.
-	g:shaft(v(0, 190, 0), v(0, 0.2, 0), 9, HEAVEN)
+	g:shaft(v(0, 190, 0), v(0, 0.2, 0), 8, HEAVEN)
 	g:shaft(v(0, 190, 0), v(0, 0.2, 0), 4.5, HEAVEN)
+end
+
+-- The roof: one tall concrete barrel vault over the whole box, springing from the tops of the side walls and
+-- arching half a circle across to the other side, with heavier ribs along it. A round hole is left in its
+-- crown over the middle of the ring, where the light from above comes through.
+local function roof(g)
+	local inner = HALF_WIDE -- the vault's inside radius, so it sits on the side walls
+	local middle = inner + ROOF_THICK / 2
+	local step = math.pi / ROOF_SLABS
+	local wide = 2 * (inner + ROOF_THICK) * math.tan(step / 2) -- wide enough that the slabs' outer edges meet
+	local long = HALF_LONG + T
+	-- One slab of the arc at angle (0 at one wall's top, pi at the other's), from x0 to x1.
+	local function slab(angle: number, x0: number, x1: number, radius: number, thick: number, kind: string, solid: boolean)
+		local at = CFrame.new((x0 + x1) / 2, WALL_HEIGHT + radius * math.sin(angle), radius * math.cos(angle)) * CFrame.Angles(math.pi / 2 - angle, 0, 0)
+		local part = g:solid(kind, v(x1 - x0, thick, wide), at)
+		if not solid then
+			Kit.decor(part)
+		end
+	end
+	for index = 1, ROOF_SLABS do
+		local angle = (index - 0.5) * step
+		-- Where this slab passes over the hole, it stops short on each side of it.
+		local nearest = math.max(math.abs(middle * math.cos(angle)) - wide / 2, 0)
+		if nearest < ROOF_HOLE then
+			local reach = math.sqrt(ROOF_HOLE * ROOF_HOLE - nearest * nearest)
+			slab(angle, -long, -reach, middle, ROOF_THICK, "concrete", true)
+			slab(angle, reach, long, middle, ROOF_THICK, "concrete", true)
+		else
+			slab(angle, -long, long, middle, ROOF_THICK, "concrete", true)
+		end
+		-- Ribs: deeper, darker bands under the vault every so often along it. None crosses the hole.
+		for rib = -ROOF_RIBS, ROOF_RIBS do
+			if rib ~= 0 then
+				local x = rib * long / (ROOF_RIBS + 0.5)
+				slab(angle, x - 2, x + 2, inner - 0.9, 1.8, "darkConcrete", false)
+			end
+		end
+	end
+	-- A collar round the hole, hanging a little below the vault, so its edge reads as a clean ring.
+	local crown = WALL_HEIGHT + inner
+	for index = 1, 16 do
+		local angle = index / 16 * math.pi * 2
+		local at = CFrame.new(math.cos(angle) * (ROOF_HOLE + 1), crown - 1.2, math.sin(angle) * (ROOF_HOLE + 1)) * CFrame.Angles(0, -angle, 0)
+		Kit.decor(g:solid("darkConcrete", v(2.4, 5, 2 * (ROOF_HOLE + 2.2) * math.tan(math.pi / 16)), at))
+	end
+	-- The two ends: the half circle above each end wall, filled in bands.
+	local bands = 10
+	for band = 1, bands do
+		local y0, y1 = (band - 1) / bands * (inner + ROOF_THICK), band / bands * (inner + ROOF_THICK)
+		local half = math.sqrt((inner + ROOF_THICK) ^ 2 - y0 * y0)
+		for _, face in { -1, 1 } do
+			g:boxOf("concrete", v(face * HALF_LONG, WALL_HEIGHT + y0, -half), v(face * (HALF_LONG + T), WALL_HEIGHT + y1, half))
+		end
+	end
 end
 
 local function makeSpawn(g): SpawnLocation
@@ -374,6 +434,7 @@ function Hex.build(origin: CFrame)
 	local base = Kit.new(folder, origin, SEED)
 	base:floor("floor", v(-HALF_LONG - T, -2, -HALF_WIDE - T), v(HALF_LONG + T, 0, HALF_WIDE + T), true)
 	skyline(base:group("Skyline"), SIDES)
+	roof(base:group("Roof"))
 	heavenLight(base:group("HeavenLight"))
 	local spawns, terminals = {}, {}
 	for index, color in SIDES do

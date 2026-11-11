@@ -6,7 +6,7 @@
 
 ## Layout
 
-A walled box, 184 studs long and 104 wide, open to the sky, with plain walls 39 high (River had the whole map made 15% bigger on 2026-11-10; the windows stayed at head height) to sprint along and wall jump off. The map is point-symmetric: one side is built, then built again turned half round.
+A walled box, 184 studs long and 104 wide, with plain walls 39 high and a barrel-vault roof over it (River had the whole map made 15% bigger on 2026-11-10; the windows stayed at head height) to sprint along and wall jump off. The map is point-symmetric: one side is built, then built again turned half round.
 
 - **Spawns:** one at each end, facing the middle.
 - **Spawn cover:** a slab 28 long and 12.5 high, 32 studs in front of each spawn.
@@ -18,8 +18,9 @@ A walled box, 184 studs long and 104 wide, open to the sky, with plain walls 39 
 - **Concrete:** the floor is one damp pour; walls, ring, cover and ramps are weathered concrete with grime and water streaks (`Kit:dirty`). Rusted bar ends poke out of walls and bleed stains down them.
 - **Side colours:** orange for one side and teal for the other (River, 2026-11-10: no green; every map keeps a teal and orange look), as thin lit strips on the ring and cover and as emergency lamps on the walls (three a side).
 - **Dressing:** each side has a heavy analog control desk and three rusted crates in the dead corner on the spawn's left; these are solid. Dead CRT monitors lie in heaps: about half are smashed, and the intact ones still scroll code (the Outpost's screen script), some casting a small stuttering glow. Thick cables snake across the floor in slack bends, some ending in a coil, and hang slack along the walls; River wants no straight or taut cables. You walk and shoot through all of those, so the lanes are unchanged.
-- **Skyline:** 16 ruined towers ring the arena, 172 to 310 studs out, with broken stepped tops, hanging floor slabs, and a few lit windows. No girders, steel frames or cables on them: River said thin parts read as string and the frames as floating letter Ms. Nothing out there collides.
+- **Skyline:** since the roof went on, this shows only through the hole in it. 16 ruined towers ring the arena, 172 to 310 studs out, with broken stepped tops, hanging floor slabs, and a few lit windows. No girders, steel frames or cables on them: River said thin parts read as string and the frames as floating letter Ms. Nothing out there collides.
 - **Flicker:** `OutpostFlicker.client.luau` flickers the lamps subtly and the monitor glow hard (the light's `FlickerDepth` attribute).
+- **Roof:** a concrete barrel vault springs from the side walls' tops (39) and arches half a circle across, 91 high at its crown, with eight darker ribs along it and the half circles above the end walls filled in. A round hole 26 across in the crown, with a collar round it, sits over the middle of the ring (`roof`; River asked for a tall arching roof with a hole for the light).
 - **Light from above:** a pale warm shaft falls from 190 studs up onto the middle of the ring, with a steady spotlight pooling on the floor (`heavenLight`). River asked for "a spotlight from the heavens".
 - **Fog and light:** `HEX_LIGHTING` and `hexEffects` in `src/client/Outpost.client.luau`: dim dusk in dense blue-green fog.
 
