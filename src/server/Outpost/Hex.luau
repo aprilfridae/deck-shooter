@@ -2,7 +2,7 @@
 -- a slab of cover just in front of their spawn and a ramp in the corner on their right, up to a flat lookout.
 -- In the middle is a ring of six walls with gaps between them and holes to shoot through.
 -- The box's walls are tall and plain so you can sprint along them and wall jump off them.
--- It stands in a ruined city in fog: weathered concrete, dead retro tech lying about, amber and green
+-- It stands in a ruined city in fog: weathered concrete, dead retro tech lying about, orange and teal
 -- emergency lamps, and broken towers looming over the walls. See docs/specs/hex.md.
 -- The map is point-symmetric. One side is built, then the same build runs turned half round.
 -- Side axes: this side's spawn is toward -X, facing +X, so its right hand is +Z.
@@ -37,8 +37,9 @@ local DECK_LENGTH = 12 -- the flat lookout at the ramp's top
 
 local SPAWN_X = 73
 
--- Each side's emergency-light colour: its caps and lamps. Amber for one, a sickly green for the other.
-local SIDES = { Color3.fromRGB(255, 170, 70), Color3.fromRGB(150, 235, 120) }
+-- Each side's emergency-light colour: its caps and lamps. Orange for one, teal for the other. River wants
+-- every map lit in teal and orange (no green).
+local SIDES = { Color3.fromRGB(255, 150, 60), Color3.fromRGB(60, 210, 200) }
 local RUST = Color3.fromRGB(128, 66, 34)
 local TOWER = Color3.fromRGB(46, 54, 58) -- the ruined city: dark, so it's a silhouette in the fog
 local GIRDER = Color3.fromRGB(30, 32, 34)
@@ -46,7 +47,7 @@ local CASES = { Color3.fromRGB(104, 106, 104), Color3.fromRGB(84, 86, 88), Color
 local GLASS = Color3.fromRGB(12, 16, 18)
 local CABLE = Color3.fromRGB(20, 21, 22)
 local SCREEN_TAG = "OutpostWiredScreen" -- the client runs code on these (OutpostWired.client.luau)
-local SCREEN_LIGHT = Color3.fromRGB(150, 220, 200)
+local SCREEN_LIGHT = Color3.fromRGB(110, 215, 210)
 
 local function v(x: number, y: number, z: number): Vector3
 	return Vector3.new(x, y, z)
