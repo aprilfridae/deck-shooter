@@ -469,8 +469,10 @@ local function applyAim(body: Body, dt: number)
 		joints.Waist.Transform = CFrame.Angles(look * LOOK_WAIST + kick * KICK_WAIST, twist, 0) * joints.Waist.Transform
 	end
 	local arms = CFrame.Angles(look * LOOK_ARMS + kick * KICK_ARMS, 0, 0)
+	-- The pistol is held in one hand: the other arm hangs at the side and doesn't lift with the aim or the shot.
+	local oneHanded = body.poses == BodyPoses["Energy Pistol"]
 	for _, name in { "RightShoulder", "LeftShoulder" } do
-		if joints[name] then
+		if joints[name] and not (oneHanded and name == "LeftShoulder") then
 			joints[name].Transform = arms * joints[name].Transform
 		end
 	end
