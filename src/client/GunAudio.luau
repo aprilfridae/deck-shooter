@@ -58,8 +58,12 @@ for _, soundId in {
 } do
 	others[soundId] = newSound(soundId)
 end
+-- River: the jump and slide sounds were far too loud. Copies keep these volumes.
+local QUIET = 0.25
+others[GunSounds.slideStart].Volume = QUIET
 for _, soundId in GunSounds.slideLayers do
 	others[soundId] = newSound(soundId)
+	others[soundId].Volume = QUIET
 end
 for _, soundId in GunSounds.shotBases do
 	others[soundId] = others[soundId] or newSound(soundId)
@@ -82,7 +86,9 @@ for _, soundId in GunSounds.whizzes do
 end
 local jumps: { Sound } = {}
 for _, soundId in GunSounds.jumps do
-	table.insert(jumps, newSound(soundId))
+	local jump = newSound(soundId)
+	jump.Volume = QUIET
+	table.insert(jumps, jump)
 end
 
 -- Loading up front stops the first shot from being late or silent.
