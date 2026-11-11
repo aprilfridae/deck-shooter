@@ -217,6 +217,9 @@ local function onFrame(dt: number)
 	previous.nextClass = keys.nextClass
 	previous.nextRifle = keys.nextRifle
 	GunView.update(dt, camera, aiming, reloading, player:GetAttribute("MoveMode") == "Sprint", CardInHand.slot ~= nil)
+	if player:GetAttribute("ThirdPersonTest") then
+		GunView.hide() -- the test view from behind (ThirdPersonTest.client.luau): the first-person gun would hang in the air
+	end
 end
 
 player.CharacterAdded:Connect(function()
