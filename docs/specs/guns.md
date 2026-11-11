@@ -65,7 +65,7 @@ Damage falls off in a straight line between the two distances, then stays flat. 
 
 ## Bullet magnetism
 
-Added 2026-11-10 at River's ask, not tried in Play. The M57 (River's AK) has `magnet = 0.4` in `GunConfig`: a shot that misses but passes within 0.4 studs of the body, or beside the head, counts as a body hit. The server does it in `Hitbox.test`, with a body cylinder 0.4 wider (radius 1.1 to 1.5). A true hit is never changed, and a near miss is never a headshot. No other gun has it. Walls still stop it.
+Added 2026-11-10 at River's ask, not tried in Play. The M57 (River's AK) has `magnet = 2` in `GunConfig` (0.4 at first; River asked for 2 the same day): a shot that misses but passes within 2 studs of the body, or beside the head, counts as a body hit. The server does it in `Hitbox.test`, with a body cylinder 2 wider (radius 1.1 to 3.1). A true hit is never changed, and a near miss is never a headshot. No other gun has it. Walls still stop it.
 
 ## Recoil
 

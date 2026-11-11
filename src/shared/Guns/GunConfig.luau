@@ -22,7 +22,7 @@ end
 GunConfig.guns = {
 	M4 = gun({
 		name = "M57",
-		magnet = 0.4, -- bullet magnetism: a shot this close to a body (studs) is pulled onto it. River's AK only
+		magnet = 2, -- bullet magnetism: a shot this close to a body (studs) is pulled onto it. River's AK only. It was 0.4; River asked for 2
 		kick = 0.12,
 		body = 24,
 		rpm = 600,
