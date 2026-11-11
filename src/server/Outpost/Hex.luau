@@ -14,28 +14,28 @@ local Relay = require(script.Parent.Relay)
 local M = Enum.Material
 
 local SEED = 61
-local HALF_LONG = 80 -- inside of the end walls, from the centre (along X)
-local HALF_WIDE = 45 -- inside of the side walls (along Z)
-local WALL_HEIGHT = 34 -- too tall to wall jump out of
+local HALF_LONG = 92 -- inside of the end walls, from the centre (along X)
+local HALF_WIDE = 52 -- inside of the side walls (along Z)
+local WALL_HEIGHT = 39 -- too tall to wall jump out of
 local T = 2 -- outer wall thickness
 
-local RING = 28 -- from the centre to the middle of each ring wall
-local RING_LENGTH = 25 -- each ring wall's length; the gaps between them are about 7
-local RING_HEIGHT = 13
+local RING = 32 -- from the centre to the middle of each ring wall
+local RING_LENGTH = 29 -- each ring wall's length; the gaps between them are about 8
+local RING_HEIGHT = 15
 local RING_THICK = 1.2
 local HOLE_BOTTOM, HOLE_TOP = 3.8, 7.4 -- the windows, around head height (River found 3.2 to 5.6 too low)
 local HOLE_WIDE = 7
 
-local COVER_X = 45 -- the spawn cover's distance from the centre
-local COVER_HALF = 12 -- half its length
-local COVER_HEIGHT = 11
+local COVER_X = 52 -- the spawn cover's distance from the centre
+local COVER_HALF = 14 -- half its length
+local COVER_HEIGHT = 12.5
 
-local RAMP_FOOT, RAMP_TOP = 78, 60 -- the ramp runs from the back corner toward the middle
-local RAMP_HEIGHT = 12
-local RAMP_WIDE = 22
-local DECK_LENGTH = 12 -- the flat lookout at the ramp's top
+local RAMP_FOOT, RAMP_TOP = 90, 69 -- the ramp runs from the back corner toward the middle
+local RAMP_HEIGHT = 14
+local RAMP_WIDE = 25
+local DECK_LENGTH = 14 -- the flat lookout at the ramp's top
 
-local SPAWN_X = 73
+local SPAWN_X = 84
 
 -- Each side's emergency-light colour: its caps and lamps. Orange for one, teal for the other. River wants
 -- every map lit in teal and orange (no green).
@@ -82,8 +82,8 @@ local function walls(g, color: Color3)
 		rustBleed(g, v(-HALF_LONG, g:range(14, WALL_HEIGHT - 2), g:range(-HALF_WIDE + 4, HALF_WIDE - 4)), v(1, 0, 0))
 	end
 	-- Emergency lamps high on the walls, in this side's colour.
-	g:lamp(v(-HALF_LONG + 0.5, 17, 0), color, 46, 1.5)
-	g:lamp(v(-40, 19, HALF_WIDE - 0.5), color, 46, 1.5)
+	g:lamp(v(-HALF_LONG + 0.5, 19, 0), color, 50, 1.5)
+	g:lamp(v(-HALF_LONG / 2, 21, HALF_WIDE - 0.5), color, 50, 1.5)
 	g:lamp(v(-HALF_LONG + 0.5, 15, -HALF_WIDE + 14), color, 30, 1.1)
 end
 
@@ -318,7 +318,7 @@ local function skyline(g, colors: { Color3 })
 	for index = 1, count do
 		local angle = (index - 1 + g:range(-0.3, 0.3)) / count * math.pi * 2
 		-- Near and far by turns. The box's corners are about 95 studs from the centre.
-		local distance = if index % 2 == 0 then g:range(150, 180) else g:range(200, 290)
+		local distance = if index % 2 == 0 then g:range(172, 205) else g:range(225, 310)
 		local wide, deep = g:range(46, 96), g:range(44, 80)
 		local height = g:range(380, 620) -- from 160 below the arena floor
 		local base = v(math.cos(angle) * distance, -160, math.sin(angle) * distance)
