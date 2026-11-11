@@ -12,7 +12,7 @@ local guns = GunConfig.guns
 describe("GunConfig", function()
 	it("matches the spec's primaries", function()
 		local expected = {
-			M4 = { 18, 600, 30, 2 },
+			M4 = { 14, 600, 30, 2 },
 			AK47 = { 24, 540, 30, 0.985 },
 			SMG = { 17, 800, 32, 2.0 },
 			Sniper = { 85, 50, 1, 1.714 },
@@ -61,10 +61,10 @@ end)
 
 describe("Damage", function()
 	it("keeps full damage to the near range, then falls in a line", function()
-		expect(Damage.hit(guns.M4, 90, false)).toBe(18)
-		expect(Damage.hit(guns.M4, 135, false)).toBeCloseTo(15.3)
-		expect(Damage.hit(guns.M4, 180, false)).toBeCloseTo(12.6)
-		expect(Damage.hit(guns.M4, 500, false)).toBeCloseTo(12.6)
+		expect(Damage.hit(guns.M4, 90, false)).toBe(14)
+		expect(Damage.hit(guns.M4, 135, false)).toBeCloseTo(11.9)
+		expect(Damage.hit(guns.M4, 180, false)).toBeCloseTo(9.8)
+		expect(Damage.hit(guns.M4, 500, false)).toBeCloseTo(9.8)
 	end)
 
 	it("falls to 60% on the SMG", function()
@@ -73,7 +73,7 @@ describe("Damage", function()
 	end)
 
 	it("doubles an M4 headshot", function()
-		expect(Damage.hit(guns.M4, 10, true)).toBe(36)
+		expect(Damage.hit(guns.M4, 10, true)).toBe(28)
 	end)
 
 	it("kills on an AK-47 headshot at any range", function()
