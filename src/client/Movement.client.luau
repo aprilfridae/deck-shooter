@@ -16,7 +16,6 @@ local Movement = ReplicatedStorage:WaitForChild("Movement")
 local Parry = require(Movement:WaitForChild("Parry"))
 local MoveState = require(Movement:WaitForChild("MoveState"))
 local MoveConfig = require(Movement:WaitForChild("MoveConfig"))
-local AirStrafe = require(Movement:WaitForChild("AirStrafe"))
 local poseRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("Pose") :: RemoteEvent
 local abilityRemotes = ReplicatedStorage:WaitForChild("AbilityRemotes")
 local dashRemote = abilityRemotes:WaitForChild("Dash") :: RemoteEvent
@@ -47,12 +46,6 @@ local humanoid: Humanoid? = nil
 local root: BasePart? = nil
 local state = MoveState.new()
 local slideDirection = Vector3.zero
--- Air strafing and bunny hops: the flat speed and direction last flown, when the last flight ended, and time
--- owed to the fixed air steps.
-local lastAirSpeed = 0
-local lastAirDirection = Vector3.zero
-local landedAt = -math.huge
-local airOwed = 0
 local airFromSlide = false
 local jumped = false
 local fieldOfView = FIELD_OF_VIEW
@@ -354,56 +347,6 @@ local function onFrame(dt: number)
 	end
 	if airFromSlide and direction.Magnitude == 0 then
 		humanoid:Move(slideDirection, false)
-	end
-
-	-- In the air you fly by Source's rule: you keep your velocity, and the keys only add a little along the
-	-- direction they ask for (AirStrafe.luau). The Humanoid would steer you straight to the keys, so it's told to
-	-- go exactly where you're already going. Not during a dash or its ramp-down.
-	if state.mode == "Air" and not dash and now - state.dashFadeAt >= MoveConfig.DashFadeTime then
-		local flying = root.AssemblyLinearVelocity
-		local vx, vz = flying.X, flying.Z
-		if previousMode ~= "Air" then
-			airOwed = 0
-			local flat = math.sqrt(vx * vx + vz * vz)
-			if keys.jump and now - landedAt < MoveConfig.BhopWindow and lastAirSpeed > 1 then
-				-- A bunny hop: off again with everything the last flight had, and a little more.
-				local goal = math.max(lastAirSpeed, math.min(lastAirSpeed + MoveConfig.BhopBoost, MoveConfig.AirStrafeMaxSpeed))
-				local heading = if flat > 1 then Vector3.new(vx / flat, 0, vz / flat) else lastAirDirection
-				vx, vz = heading.X * goal, heading.Z * goal
-			elseif flat > 1 and state.carrySpeed > flat then
-				-- Taking off: leave the ground at the speed the jump gives (a slide jump's boost lands at once).
-				vx, vz = vx / flat * state.carrySpeed, vz / flat * state.carrySpeed
-			elseif flat <= 1 and direction.Magnitude > 0 then
-				vx, vz = direction.Unit.X * state.carrySpeed, direction.Unit.Z * state.carrySpeed
-			end
-		end
-		-- Fixed steps, a CS:GO server's tick, so a faster framerate gains no more speed.
-		local tick = 1 / MoveConfig.AirTickRate
-		airOwed = math.min(airOwed + dt, tick * 8)
-		while airOwed >= tick do
-			airOwed -= tick
-			vx, vz = AirStrafe.accelerate(vx, vz, direction.X, direction.Z, tick)
-		end
-		root.AssemblyLinearVelocity = Vector3.new(vx, flying.Y, vz)
-		local flat = math.sqrt(vx * vx + vz * vz)
-		lastAirSpeed = flat
-		if flat > 0.1 then
-			lastAirDirection = Vector3.new(vx / flat, 0, vz / flat)
-		end
-		MoveState.setAirSpeed(state, flat, now)
-		humanoid.WalkSpeed = flat
-		humanoid:Move(if flat > 0.1 then Vector3.new(vx / flat, 0, vz / flat) else Vector3.zero, false)
-	end
-
-	if previousMode == "Air" and state.mode ~= "Air" then
-		landedAt = now
-	end
-	-- Between hops: with jump held you're on the ground for a frame or two, and the ground mustn't brake you or
-	-- swing you round to the keys. You carry straight on as you landed.
-	local onFoot = state.mode == "Walk" or state.mode == "Sprint"
-	if onFoot and keys.jump and now - landedAt < MoveConfig.BhopWindow and lastAirSpeed > 1 then
-		humanoid.WalkSpeed = lastAirSpeed
-		humanoid:Move(lastAirDirection, false)
 	end
 
 	local velocity = root.AssemblyLinearVelocity

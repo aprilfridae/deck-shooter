@@ -83,14 +83,6 @@ function MoveState.parry(state: State, now: number)
 	state.dashFadeAt = -math.huge
 end
 
--- The air speed follows what air strafing made of it (AirStrafe.luau), so a landing carries on from the speed
--- you really have. Not during a dash's ramp-down, which sets the speed itself.
-function MoveState.setAirSpeed(state: State, speed: number, now: number)
-	if state.mode == "Air" and now - state.dashFadeAt >= MoveConfig.DashFadeTime then
-		state.carrySpeed = speed
-	end
-end
-
 -- Kicks off a wall in the air, keeping speed and adding a little.
 function MoveState.wallJump(state: State, now: number)
 	local current = math.max(MoveState.speed(state, now), MoveConfig.SprintSpeed)

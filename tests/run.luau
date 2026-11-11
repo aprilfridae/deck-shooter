@@ -56,7 +56,6 @@ local listed = {
 	loosen_spec = true,
 	perflevel_spec = true,
 	flicker_spec = true,
-	airstrafe_spec = true,
 	codelines_spec = true,
 	killrewards_spec = true,
 	akreload_spec = true,
@@ -81,7 +80,6 @@ require("./cardflourish_spec")
 require("./loosen_spec")
 require("./perflevel_spec")
 require("./flicker_spec")
-require("./airstrafe_spec")
 require("./codelines_spec")
 require("./killrewards_spec")
 require("./akreload_spec")
