@@ -283,6 +283,28 @@ describe("MoveState", function()
 		end)
 	end)
 
+	it("carries a slide on through a moment off the ground, with no new boost", function()
+		local s = MoveState.new()
+		sprintThenSlide(s, 0)
+		local held = { moving = true, sprint = true, crouch = true, jump = false, grounded = false }
+		MoveState.step(s, on(held), 0.4) -- over a bump
+		held.grounded = true
+		MoveState.step(s, on(held), 0.55)
+		expect(s.mode).toBe("Slide")
+		expect(MoveState.speed(s, 0.55) < MoveConfig.SlideStartSpeed - 1).toBe(true)
+	end)
+
+	it("boosts again when a slide follows a real jump", function()
+		local s = MoveState.new()
+		sprintThenSlide(s, 0)
+		local held = { moving = true, sprint = true, crouch = true, jump = true, grounded = false }
+		MoveState.step(s, on(held), 0.4)
+		held.jump, held.grounded = false, true
+		MoveState.step(s, on(held), 1.2)
+		expect(s.mode).toBe("Slide")
+		expect(MoveState.speed(s, 1.2)).toBeCloseTo(MoveConfig.SlideStartSpeed)
+	end)
+
 	-- Review Focus 4
 	it("ends the slide when the player leaves the ground", function()
 		local s = MoveState.new()

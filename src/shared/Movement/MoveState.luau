@@ -14,6 +14,7 @@ export type State = {
 	crouchHeld: boolean,
 	slideStart: number,
 	nextSlide: number,
+	slideLeftAt: number,
 	carrySpeed: number,
 	carryFrom: number,
 	carryFade: number,
@@ -41,6 +42,7 @@ function MoveState.new(): State
 		crouchHeld = false,
 		slideStart = -math.huge,
 		nextSlide = -math.huge,
+		slideLeftAt = -math.huge,
 		carrySpeed = 0,
 		carryFrom = -math.huge,
 		carryFade = MoveConfig.CarryFade,
@@ -149,6 +151,7 @@ function MoveState.step(state: State, input: Input, now: number)
 			return
 		end
 		state.nextSlide = now + MoveConfig.SlideCooldown
+		state.slideLeftAt = now
 	end
 
 	if not input.grounded or (previous == "Slide" and input.jump) then
@@ -168,8 +171,13 @@ function MoveState.step(state: State, input: Input, now: number)
 	local wantsSlide = (pressed and previous == "Sprint") or (input.crouch and previous == "Air")
 	if wantsSlide and input.sprint and input.moving and now >= state.nextSlide then
 		state.mode = "Slide"
-		state.slideStart = now
-		state.chained = previous == "Air"
+		-- A slide that only lost the ground for a moment (a bump, a lip) carries on slowing from where it was.
+		-- Starting it again from full speed made the speed lurch each time, which felt like a stutter.
+		local blip = previous == "Air" and now - state.slideLeftAt < MoveConfig.SlideBlip
+		if not blip then
+			state.slideStart = now
+			state.chained = previous == "Air"
+		end
 		return
 	end
 

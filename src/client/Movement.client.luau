@@ -362,6 +362,9 @@ local function onFrame(dt: number)
 		local goal = Vector3.new(wish.X, 0, wish.Z) * humanoid.WalkSpeed
 		if state.mode ~= "Air" then
 			root.AssemblyLinearVelocity = Vector3.new(goal.X, moving.Y, goal.Z)
+		elseif wish.Magnitude > 0 and previousMode ~= "Air" then
+			-- Leaving the ground: the jump's speed (a slide jump's boost) is there at once, not eased in.
+			root.AssemblyLinearVelocity = Vector3.new(goal.X, moving.Y, goal.Z)
 		elseif wish.Magnitude > 0 then
 			local flat = Vector3.new(moving.X, 0, moving.Z):Lerp(goal, 1 - math.exp(-dt * MoveConfig.AirResponse))
 			root.AssemblyLinearVelocity = Vector3.new(flat.X, moving.Y, flat.Z)
