@@ -154,6 +154,16 @@ local wallParams = RaycastParams.new()
 wallParams.FilterType = Enum.RaycastFilterType.Exclude
 wallParams.RespectCanCollide = true
 
+-- For the instant response below: it must never drive the body into a wall. Setting the velocity toward the keys
+-- every frame while a wall was in the way pushed the body into it until it stuck (River, 2026-11-11).
+local WALL_FEEL = 1.5 -- studs ahead the body is checked for a wall
+local WALL_STEEP = 0.5 -- surfaces leaning less than this (the upward share of the normal) are walls
+local STALL_SHARE = 0.7 -- moving slower than this share of the speed just set means something is in the way
+local feelParams = RaycastParams.new()
+feelParams.FilterType = Enum.RaycastFilterType.Exclude
+feelParams.RespectCanCollide = true
+local lastPush: Vector3? = nil -- the velocity set on the last frame, if one was
+
 local function tryWallJump(moveDirection: Vector3, now: number)
 	if
 		state.mode ~= "Air"
@@ -364,18 +374,47 @@ local function onFrame(dt: number)
 		end
 		local moving = root.AssemblyLinearVelocity
 		local goal = Vector3.new(wish.X, 0, wish.Z) * humanoid.WalkSpeed
+		-- A wall just ahead: only the part of the goal that runs along it is asked for.
+		if goal.Magnitude > 0.1 then
+			feelParams.FilterDescendantsInstances = { humanoid.Parent :: Instance }
+			local wall = workspace:Blockcast(root.CFrame, root.Size * 0.9, goal.Unit * WALL_FEEL, feelParams)
+			if wall and math.abs(wall.Normal.Y) < WALL_STEEP then
+				local face = Vector3.new(wall.Normal.X, 0, wall.Normal.Z)
+				if face.Magnitude > 0.01 then
+					face = face.Unit
+					local into = goal:Dot(face)
+					if into < 0 then
+						goal -= face * into
+					end
+				end
+			end
+		end
+		-- And whatever the check can't see: if the velocity was set last frame and the body still isn't moving
+		-- that way, it is blocked, and it's left to the Humanoid until the keys change.
+		local flatMoving = Vector3.new(moving.X, 0, moving.Z)
+		local stalled = false
+		if lastPush and goal.Magnitude > 0.1 and goal.Unit:Dot(lastPush.Unit) > 0.95 then
+			stalled = flatMoving:Dot(goal.Unit) < goal.Magnitude * STALL_SHARE
+		end
 		-- Only when the velocity is really off (a key just pressed or let go, a turn, a new speed). Setting it
 		-- every frame made the camera judder, big step then small step: Roblox stops smoothing a body between
 		-- physics steps on a frame its velocity is set from a script (seen in River's clip, 2026-11-10). Once
 		-- you're at speed the Humanoid holds it and nothing is written.
 		local off = (Vector3.new(moving.X, 0, moving.Z) - goal).Magnitude
-		if off < MoveConfig.ResponseSlack then
-			-- close enough: leave it to the Humanoid
+		local push = false
+		if off < MoveConfig.ResponseSlack or stalled then
+			-- close enough, or blocked: leave it to the Humanoid
 		elseif state.mode ~= "Air" then
-			root.AssemblyLinearVelocity = Vector3.new(goal.X, moving.Y, goal.Z)
+			push = true
 		elseif wish.Magnitude > 0 and previousMode ~= "Air" then
 			-- Leaving the ground: the jump's speed (a slide jump's boost) is there at once, not eased in.
+			push = true
+		end
+		if push then
 			root.AssemblyLinearVelocity = Vector3.new(goal.X, moving.Y, goal.Z)
+			lastPush = if goal.Magnitude > 0.1 then goal else nil
+		elseif not stalled then
+			lastPush = nil
 		end
 		-- Once in the air the keys no longer steer at once: that was here (AirResponse) and River had it taken
 		-- out on 2026-11-11, "perfect air strafing ... doesn't feel right". The Humanoid's own air control is left.
