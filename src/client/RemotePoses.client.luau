@@ -13,6 +13,7 @@ local Movement = ReplicatedStorage:WaitForChild("Movement")
 local BodyPose = require(Movement:WaitForChild("BodyPose"))
 local BodyPoses = require(Movement:WaitForChild("BodyPoses"))
 local GunStance = require(Movement:WaitForChild("GunStance"))
+local LegCycle = require(Movement:WaitForChild("LegCycle"))
 local MoveConfig = require(Movement:WaitForChild("MoveConfig"))
 local GunAudio = require(script.Parent:WaitForChild("GunAudio"))
 local HeldGuns = require(script.Parent:WaitForChild("HeldGuns"))
@@ -24,6 +25,16 @@ local FEET_BELOW_ROOT = 3 -- the soldier's root sits this far above its feet
 local GROUND_REACH = 0.6 -- studs below the feet that still count as standing
 local FIRST_PERSON = 1.5 -- a camera this close to your own head is first person, so your held gun hides
 local POSE_EASE = 14 -- how fast a soldier's joints catch up with the picked pose, per second
+-- The run (LegCycle): on the ground and moving, a soldier's legs are worked out every frame from the ground it
+-- has covered, in place of the still stride poses, and laid over the pose by a weight that eases in and out.
+local LEG_EASE = 10 -- how fast the run takes over the legs and lets go of them, per second
+local TURN_EASE = 12 -- how fast the legs follow a change in which way the body is going
+-- While the run has the legs, the rest of the body holds one pose, not the two the stride used to flip between.
+local STEADY = { Sprint_Pass = "Sprint_Contact", Walk_Pass = "Walk_Contact", Crouch_Idle = "Crouch_Walk" }
+local LEGS = {
+	{ hip = "RightHip", knee = "RightKnee", ankle = "RightAnkle", offset = 0 },
+	{ hip = "LeftHip", knee = "LeftKnee", ankle = "LeftAnkle", offset = 0.5 },
+}
 
 -- Sidearms without poses of their own borrow the Energy Pistol's.
 local POSES_OF = {
@@ -71,6 +82,11 @@ type Body = {
 	airborne: boolean,
 	travel: number,
 	stepTravel: number, -- ground covered since this body's last footstep sound
+	phase: number, -- where the right foot is in its stride, 0 to 1
+	legWeight: number, -- how much the run has the legs, 0 to 1
+	runSpeed: number, -- the speed the stride is shaped for
+	goForward: number, -- which way the body is going relative to the way it faces
+	goRight: number,
 	sampledAt: number,
 	gunName: string?,
 	poses: any,
@@ -132,6 +148,11 @@ local function onCharacter(character: Model)
 		airborne = false,
 		travel = 0,
 		stepTravel = 0,
+		phase = 0,
+		legWeight = 0,
+		runSpeed = 0,
+		goForward = 1,
+		goRight = 0,
 		sampledAt = os.clock(),
 		gunName = nil,
 		poses = nil,
@@ -211,7 +232,20 @@ local function sampleStance(body: Body, now: number)
 			end
 		end
 	end
+	local dt = math.clamp(now - body.sampledAt, 0, 0.1)
 	body.sampledAt = now
+
+	-- The run: on the ground, moving, and not sliding.
+	local running = not airborne and flatSpeed > GunStance.moving and body.character:GetAttribute("MovePose") ~= "Slide"
+	body.legWeight += ((if running then 1 else 0) - body.legWeight) * (1 - math.exp(-dt * LEG_EASE))
+	if running then
+		body.runSpeed = flatSpeed
+		body.phase = (body.phase + flatSpeed * dt / LegCycle.shape(flatSpeed).length) % 1
+		local going = body.root.CFrame:VectorToObjectSpace(Vector3.new(velocity.X, 0, velocity.Z)) / flatSpeed
+		local turn = 1 - math.exp(-dt * TURN_EASE)
+		body.goForward += (-going.Z - body.goForward) * turn
+		body.goRight += (going.X - body.goRight) * turn
+	end
 
 	local player = body.player
 	local gunName, poses = gunOf(player, body.character)
@@ -225,6 +259,11 @@ local function sampleStance(body: Body, now: number)
 		sinceShot = now - (player and lastShot[player] or -math.huge),
 		travel = body.travel,
 	})
+	if running and STEADY[pick.name] then
+		pick = { name = STEADY[pick.name], mirrored = false }
+	elseif running then
+		pick = { name = pick.name, mirrored = false }
+	end
 	local pose = poses.poses[pick.name] or poses.poses.Stand
 	body.gunName = gunName
 	body.poses = poses
@@ -289,6 +328,38 @@ local function samplePose(body: Body, now: number)
 	end
 end
 
+-- Lays the run over a soldier's legs and hips. The hips' height and lean come from the pose being shown, so the
+-- feet stay on the ground whatever the rest of the body is doing.
+local function applyRun(body: Body)
+	local weight = body.legWeight
+	if weight < 0.001 then
+		return
+	end
+	local rootShown = body.shown.Root or CFrame.identity
+	local shape = LegCycle.shape(body.runSpeed)
+	local bob = LegCycle.bob(body.phase, shape) * weight
+	local lean = rootShown:ToEulerAnglesYXZ() -- the hips' pitch; forward is negative
+	local height = LegCycle.restHeight + rootShown.Y + bob
+	for _, names in LEGS do
+		local leg = LegCycle.leg(body.phase + names.offset, shape, body.goForward, body.goRight, height)
+		local frames = {
+			[names.hip] = CFrame.Angles(0, 0, leg.roll) * CFrame.Angles(leg.pitch - lean - LegCycle.restHip, 0, 0),
+			[names.knee] = CFrame.Angles(LegCycle.restKnee - leg.bend, 0, 0),
+			[names.ankle] = CFrame.Angles(leg.foot - leg.pitch + leg.bend - LegCycle.restAnkle, 0, 0) * CFrame.Angles(0, 0, -leg.roll),
+		}
+		for name, frame in frames do
+			local joint = body.joints[name]
+			if joint then
+				joint.Transform = (body.shown[name] or CFrame.identity):Lerp(frame, weight)
+			end
+		end
+	end
+	local rootJoint = body.joints.Root
+	if rootJoint then
+		rootJoint.Transform = CFrame.new(0, bob, 0) * rootShown
+	end
+end
+
 -- Runs after the Animator has written its frame, so these poses win.
 RunService.PreSimulation:Connect(function(dt: number)
 	local now = os.clock()
@@ -306,6 +377,7 @@ RunService.PreSimulation:Connect(function(dt: number)
 					joint.Transform = shown
 				end
 			end
+			applyRun(body)
 			continue
 		end
 		if frame ~= body.frame then
