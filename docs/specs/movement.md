@@ -20,8 +20,7 @@ These are the defaults. Players can rebind all but W, A, S and D in Settings (`o
 | Key | Action |
 | --- | --- |
 | W, A, S, D | Move (Roblox's default controls) |
-| Left Shift | Nothing. Sprint is automatic since 2026-11-10: River had walking taken out, so moving is always sprinting (`sprint = true` in `Movement.client.luau`). The key binding still exists in settings. |
-| C or Left Ctrl | Crouch, slide |
+| Left Shift or C | Crouch, slide (defaults since 2026-11-11; were C and Left Ctrl). Sprint has no key: moving is always sprinting, and its binding was taken out of settings. Saves still on the old default keys move to the new ones (`cleanKeys` in `Settings.luau`). |
 | Space | Jump, edge parry |
 
 ## Moves

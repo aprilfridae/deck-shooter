@@ -25,7 +25,7 @@ function Input.read(): { sprint: boolean, crouch: boolean, jump: boolean }
 	end
 	local keys = PlayerSettings.get().keys
 	return MenuState.filter(MenuState.shared, {
-		sprint = pressed(keys.sprint),
+		sprint = true, -- there is no sprint key any more
 		crouch = pressed(keys.crouch) or pressed(keys.crouchAlt),
 		jump = pressed(keys.jump),
 	})

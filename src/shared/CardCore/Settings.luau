@@ -15,9 +15,10 @@ local Settings = {}
 
 -- Listed in this order on the Settings panel.
 Settings.actions = {
-	{ id = "sprint", label = "SPRINT", key = "LeftShift" },
-	{ id = "crouch", label = "CROUCH", key = "C" },
-	{ id = "crouchAlt", label = "CROUCH 2", key = "LeftControl" },
+	-- No sprint key: moving is always sprinting. Crouch is also the slide key, and River wanted it on Left Shift
+	-- (2026-11-11); it was C, with Left Ctrl as the second.
+	{ id = "crouch", label = "CROUCH", key = "LeftShift" },
+	{ id = "crouchAlt", label = "CROUCH 2", key = "C" },
 	{ id = "jump", label = "JUMP", key = "Space" },
 	{ id = "reload", label = "RELOAD", key = "R" },
 	{ id = "primary", label = "PRIMARY", key = "One" },
@@ -119,6 +120,14 @@ local function cleanKeys(raw: any): { [string]: string }
 	local keys = defaultKeys()
 	if type(raw) ~= "table" then
 		return keys
+	end
+	-- A save from when sprint had a key. If it still has that time's defaults, crouch moves to the new ones;
+	-- either way Left Shift is free again once sprint is gone.
+	if raw.sprint ~= nil then
+		raw = table.clone(raw)
+		if raw.sprint == "LeftShift" and raw.crouch == "C" and raw.crouchAlt == "LeftControl" then
+			raw.crouch, raw.crouchAlt = nil, nil
+		end
 	end
 	local used = {}
 	for _, action in Settings.actions do

@@ -6,7 +6,23 @@ local describe, it, expect = harness.describe, harness.it, harness.expect
 describe("Settings", function()
 	it("starts on the defaults", function()
 		expect(Settings.new().fieldOfView).toBe(80)
-		expect(Settings.new().keys.sprint).toBe("LeftShift")
+		expect(Settings.new().keys.sprint).toBeNil()
+		expect(Settings.new().keys.crouch).toBe("LeftShift")
+	end)
+
+	it("moves an old save's default crouch keys to the new ones", function()
+		local keys = Settings.new().keys
+		keys.sprint, keys.crouch, keys.crouchAlt = "LeftShift", "C", "LeftControl"
+		local cleaned = Settings.clean({ keys = keys }).keys
+		expect(cleaned.crouch).toBe("LeftShift")
+		expect(cleaned.crouchAlt).toBe("C")
+		expect(cleaned.sprint).toBeNil()
+	end)
+
+	it("keeps an old save's own crouch key", function()
+		local keys = Settings.new().keys
+		keys.sprint, keys.crouch, keys.crouchAlt = "LeftShift", "V", "LeftControl"
+		expect(Settings.clean({ keys = keys }).keys.crouch).toBe("V")
 	end)
 
 	it("replaces bad values one field at a time", function()
