@@ -41,6 +41,7 @@ What the game already plays and what it still needs. Checked against the code on
 | Outpost ambience | `outpost-ambience.ogg` | Loops while you're in the Outpost after PLAY, fading in and out over 1.5s. Game volume group. |
 | Menu selection | `menu-select` | Clicking PLAY, clicks in the Outpost menu, and with each pack's opening sound. Hovering a nav row plays it quieter and higher. |
 | Landings | `move-land-soft`, `move-land-hard` | Landing after at least 0.15s in the air. Hard if the fall reached 60 studs per second (a fast fall or long drop), else soft. |
+| Other players' shots | `gun-ak47/smg/sniper/shotgun/pistol-1` to `10-mono`, `gun-sniper-base-mono` | Someone else fires. Mono copies of the shot takes, played in 3D from where they fired (`docs/specs/guns.md`). |
 | Bullet flybys | `bullet-whizz-1` to `16` | Someone else's bullet passes within 6 studs of your head and misses. Mono, played in 3D along the bullet's path (`docs/specs/guns.md`). River's takes were trimmed to 0.5s and folded to mono. |
 | Slide start | `move-slide-start-v2` | Every slide as it begins, including one started by landing (River's "SLIDE", 1.29s) |
 | Slide layer | `move-slide-layer-1` to `-15` | On top of the slide start, one take at random, never the same twice running (River's "SLIDE START" takes) |

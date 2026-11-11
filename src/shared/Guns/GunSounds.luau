@@ -23,6 +23,15 @@ local function takes(name: string, count: number, skip: number?): { string }
 	return list
 end
 
+-- The mono copies of a gun's first takes, for other players' shots.
+local function farTakes(name: string, count: number): { string }
+	local list = {}
+	for take = 1, count do
+		table.insert(list, sound(`gun-{name}-{take}-mono.wav`))
+	end
+	return list
+end
+
 local function numbered(name: string, count: number): { string }
 	local list = {}
 	for take = 1, count do
@@ -44,6 +53,19 @@ local GunSounds = {
 		Sniper = takes("sniper", 30, 12), -- take 12 starts late and much louder
 		Shotgun = takes("shotgun", 30),
 		Pistol = takes("pistol", 30),
+	},
+	-- Other players' shots, heard from where they fired. These are mono copies of each gun's first ten takes:
+	-- River asked for mono so the direction reads clearly. Your own shots keep the stereo takes above.
+	farShots = {
+		M4 = farTakes("ak47", 10),
+		AK47 = farTakes("ak47", 10),
+		SMG = farTakes("smg", 10),
+		Sniper = farTakes("sniper", 10),
+		Shotgun = farTakes("shotgun", 10),
+		Pistol = farTakes("pistol", 10),
+	},
+	farShotBases = {
+		Sniper = sound("gun-sniper-base-mono.wav"),
 	},
 	-- Played under every take of that gun's shot.
 	shotBases = {

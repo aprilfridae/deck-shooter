@@ -14,6 +14,9 @@ local GunAudio = {}
 local WHIZZ_SPEED = 60 -- studs a second
 local WHIZZ_NEAR = 2
 local WHIZZ_FAR = 40
+-- Other players' shots sound from where they fired: full volume this close, gone past this far.
+local SHOT_NEAR = 25
+local SHOT_FAR = 600
 -- Coin bursts sound from the body, loud close by and gone past this far.
 local COIN_NEAR = 8
 local COIN_FAR = 150
@@ -37,6 +40,26 @@ for gunId, soundIds in GunSounds.shots do
 	for _, soundId in soundIds do
 		table.insert(shots[gunId], newSound(soundId))
 	end
+end
+
+local function newFarSound(soundId: string): Sound
+	local sound = newSound(soundId)
+	sound.RollOffMode = Enum.RollOffMode.InverseTapered
+	sound.RollOffMinDistance = SHOT_NEAR
+	sound.RollOffMaxDistance = SHOT_FAR
+	return sound
+end
+
+local farShots: { [string]: { Sound } } = {}
+for gunId, soundIds in GunSounds.farShots do
+	farShots[gunId] = {}
+	for _, soundId in soundIds do
+		table.insert(farShots[gunId], newFarSound(soundId))
+	end
+end
+local farBases: { [string]: Sound } = {}
+for gunId, soundId in GunSounds.farShotBases do
+	farBases[gunId] = newFarSound(soundId)
 end
 
 local others: { [string]: Sound } = {}
@@ -150,6 +173,34 @@ function GunAudio.playShot(gunId: string, lateness: number)
 	if base then
 		playCopy(others[base], GunSounds.startOffset(lateness), gunId)
 	end
+end
+
+-- Someone else's shot, heard from where it was fired.
+function GunAudio.playFarShot(gunId: string, origin: Vector3)
+	local takes = farShots[gunId]
+	if not takes then
+		return
+	end
+	local anchor = Instance.new("Attachment")
+	anchor.Name = "FarShot"
+	anchor.WorldPosition = origin
+	anchor.Parent = workspace.Terrain
+	local longest: Sound? = nil
+	for _, template in { takes[pickTake(`far{gunId}`, #takes)], farBases[gunId] } do
+		local copy = template:Clone()
+		copy.Parent = anchor
+		copy.TimePosition = 0
+		copy:Play()
+		longest = copy -- the base, when there is one, outlasts the take
+	end
+	if longest then
+		longest.Ended:Once(function()
+			anchor:Destroy()
+		end)
+	end
+	task.delay(8, function() -- in case the sound never loaded, so never ended
+		anchor:Destroy()
+	end)
 end
 
 function GunAudio.playCollateral()

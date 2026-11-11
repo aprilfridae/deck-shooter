@@ -295,6 +295,10 @@ shotsRemote.OnClientEvent:Connect(function(shooter: Player, origin: Vector3, sho
 		end
 	end
 	if shooter ~= player then
+		local gunId = shooter:GetAttribute("GunId")
+		if type(gunId) == "string" then
+			GunAudio.playFarShot(gunId, origin)
+		end
 		whizz(origin, shots)
 	end
 end)
