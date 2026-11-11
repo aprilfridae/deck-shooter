@@ -31,6 +31,16 @@ local TURN_EASE = 12 -- how fast the legs follow a change in which way the body 
 -- While the run has the legs, the rest of the body holds one pose, not the two the stride used to flip between.
 local STEADY = { Sprint_Pass = "Sprint_Contact", Walk_Pass = "Walk_Contact", Crouch_Idle = "Crouch_Walk" }
 local SHOULDERS = 1.5 -- how far the shoulders turn against the hips: past square, so they swing the other way
+-- Poses that keep their own body when reloading and take only the reload's arms.
+local KEEPS_BODY = { Slide = true, Jump_Up = true, Fall = true, Land = true }
+local ARM_JOINTS = {
+	RightShoulder = true,
+	RightElbow = true,
+	RightWrist = true,
+	LeftShoulder = true,
+	LeftElbow = true,
+	LeftWrist = true,
+}
 local LEGS = {
 	{ hip = "RightHip", knee = "RightKnee", ankle = "RightAnkle", offset = 0, side = 1 },
 	{ hip = "LeftHip", knee = "LeftKnee", ankle = "LeftAnkle", offset = 0.5, side = -1 },
@@ -253,8 +263,9 @@ local function sampleStance(body: Body, now: number)
 
 	local player = body.player
 	local gunName, poses = gunOf(player, body.character)
+	local reloading = player ~= nil and player:GetAttribute("Reloading") == true
 	local pick = GunStance.pick({
-		reloading = player ~= nil and player:GetAttribute("Reloading") == true,
+		reloading = false, -- worked out just below
 		pose = body.character:GetAttribute("MovePose"),
 		airborne = airborne,
 		verticalSpeed = velocity.Y,
@@ -268,13 +279,23 @@ local function sampleStance(body: Body, now: number)
 	elseif running then
 		pick = { name = pick.name, mirrored = false }
 	end
+	-- Reloading: the reload pose is a standing one, so in a slide or in the air only its arms are used and the
+	-- rest of the body stays as it was. (River: reloading in a slide stood the torso up.)
+	local arms = nil
+	if reloading and poses.poses.Reload then
+		if KEEPS_BODY[pick.name] then
+			arms = poses.poses.Reload
+		else
+			pick = { name = "Reload", mirrored = false }
+		end
+	end
 	local pose = poses.poses[pick.name] or poses.poses.Stand
 	body.gunName = gunName
 	body.poses = poses
-	body.pose = pose
+	body.pose = arms or pose -- the gun goes where the hands are
 
 	for name in body.joints do
-		local value = pose.joints[name]
+		local value = (if arms and ARM_JOINTS[name] then arms else pose).joints[name]
 		if pick.mirrored and GunStance.legSwap[name] then
 			local other = pose.joints[GunStance.legSwap[name]]
 			value = other and GunStance.mirror(other)
