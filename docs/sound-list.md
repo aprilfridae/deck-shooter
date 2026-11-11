@@ -20,7 +20,7 @@ What the game already plays and what it still needs. Checked against the code on
 | SMG shots | `gun-smg-1` to `29` | Each shot, 75ms apart. Take 30 exported silent. |
 | Longscope shots | `gun-sniper-1` to `30`, without 12 | Each shot, 1.2s apart. Take 12 starts late and is much louder. |
 | Shotgun shots | `gun-shotgun-1` to `30` | Each shot, 0.8s apart |
-| Energy Pistol shots | `gun-pistol-1` to `30` | Each shot, 150ms apart |
+| Energy Pistol shots | `gun-pistol-1` to `30` | Each shot, as fast as 83ms apart (720 a minute) |
 | Assault reload | `reload-assault-v4` | B33 reload (0.985s; the file runs on with a silent tail) |
 | Collateral | `hit-collateral` | One bullet through two or more bodies (the Longscope). Plays once for the shooter, with the hit sounds (River's "COLLATERAL") |
 | Coin suck | `coin-suck-v2` | The kill coins being pulled into the killer (River's "COIN SUCK #", 1.7s). Plays once per kill as the first coin goes, from the killer's body |

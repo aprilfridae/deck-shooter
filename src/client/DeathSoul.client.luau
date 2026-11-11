@@ -12,9 +12,19 @@ local Guns = ReplicatedStorage:WaitForChild("Guns")
 local Palette = require(Guns:WaitForChild("Palette"))
 local TypeLabel = require(script.Parent.TypeLabel)
 
-local PUSH = 15 -- studs the soul is knocked back
-local LIFT = 5 -- and up
-local PUSH_EASE = 2.6 -- how fast it gets there: quick at first, then drifting
+local PUSH = 26 -- studs the soul is knocked back
+local LIFT = 8 -- and up
+-- The push has two parts, so it reads as a hit and then a float. Most of the way goes in a hard shove that's
+-- nearly over in a fifth of a second; the rest is a long slow drift out to the end.
+local HIT_SHARE = 0.7
+local HIT_EASE = 9
+local FLOAT_EASE = 1.1
+-- The blow also rocks the view: it's thrown back (the nose tips up) and rolled to one side, the view kicks
+-- wide, and all of it settles as the float takes over.
+local ROCK_PITCH = math.rad(16)
+local ROCK_ROLL = math.rad(11)
+local ROCK_SETTLE = 3.2
+local HIT_FOV = 104 -- the view the moment you're hit, before it settles to SOUL_FOV
 local TURN_EASE = 2.2 -- how fast it turns to look back at the body
 local FOLLOW_EASE = 4 -- how fast the look follows the body as it falls. The body moves in jolts; the look mustn't
 local TEXT_HEIGHT = 0.075 -- of the screen's height
@@ -38,6 +48,7 @@ type Soul = {
 	body: BasePart,
 	lookAt: Vector3, -- the eased point on the body the soul looks at
 	push: Vector3, -- where it ends up, from where it started
+	roll: number, -- which way the blow rolls the view: 1 or -1
 	character: Model,
 }
 
@@ -144,13 +155,16 @@ local function onFrame(dt: number)
 		return
 	end
 	local age = os.clock() - current.startedAt
-	local out = 1 - math.exp(-age * PUSH_EASE)
+	local out = HIT_SHARE * (1 - math.exp(-age * HIT_EASE)) + (1 - HIT_SHARE) * (1 - math.exp(-age * FLOAT_EASE))
 	local position = current.from.Position + current.push * out + Vector3.yAxis * DRIFT * age
 	-- It starts looking where you were looking and comes round to the body.
 	current.lookAt = current.lookAt:Lerp(current.body.Position, 1 - math.exp(-dt * FOLLOW_EASE))
 	local toBody = CFrame.lookAt(position, current.lookAt)
 	local turn = 1 - math.exp(-age * TURN_EASE)
-	camera.CFrame = CFrame.new(position) * current.from.Rotation:Lerp(toBody.Rotation, turn)
+	local rock = math.exp(-age * ROCK_SETTLE)
+	camera.CFrame = CFrame.new(position)
+		* current.from.Rotation:Lerp(toBody.Rotation, turn)
+		* CFrame.Angles(ROCK_PITCH * rock, 0, ROCK_ROLL * rock * current.roll)
 	camera.FieldOfView += (SOUL_FOV - camera.FieldOfView) * (1 - math.exp(-dt * FOV_EASE))
 	-- First person hides your own body; the soul should see it.
 	for _, part in current.character:GetDescendants() do
@@ -178,8 +192,10 @@ local function begin(character: Model)
 		lookAt = body.Position,
 		push = clearPush(from.Position, direction, character),
 		character = character,
+		roll = if math.random() < 0.5 then 1 else -1,
 	}
 	camera.CameraType = Enum.CameraType.Scriptable
+	camera.FieldOfView = HIT_FOV
 
 	local effect = Instance.new("ColorCorrectionEffect")
 	effect.Name = "DeathGrey"

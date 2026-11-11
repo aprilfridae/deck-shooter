@@ -55,7 +55,7 @@ Damage falls off in a straight line between the two distances, then stays flat. 
 | SMG | 17 | 2x | 800 | 32 | 2.0s | Auto | 0.8 | 100% to 40 studs, 60% by 90 |
 | Longscope | Kill | Kill | 50 | 1 | 1.714s | Single | 0, hipfired or scoped | No falloff |
 | Shotgun | 8 pellets of 14 | 2x per pellet | 75 | 6 | 0.5s per shell | Single | 4 per pellet | 100% to 15 studs, 0% by 45 |
-| Energy Pistol | 20 | 2x | 400 | 12 | 0.964s | Single | 0.4 | 100% to 40 studs, 70% by 90 |
+| Energy Pistol | 20 | 2x | 720 (was 400 until 2026-11-10) | 12 | 0.964s | Single | 0.4 | 100% to 40 studs, 70% by 90 |
 
 **In the data, unused:** Machine pistol (13 damage, 900 RPM, 20 rounds, 1.6s, auto, spread 1), Revolver (45, 150, 6, 2.2s, single, 0.3) and Auto-pistol (16, 550, 15, 1.5s, single, 0.6). All three do 2x on headshots and use the Energy Pistol's falloff.
 

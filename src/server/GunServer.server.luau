@@ -22,7 +22,7 @@ local PlayerCards = require(script.Parent.PlayerCards)
 local RESPAWN_SECONDS = 3
 local RECORD_EVERY_SECONDS = 0.05
 local MAX_RANGE = 1000
-local MAX_REQUESTS_PER_SECOND = 10
+local MAX_REQUESTS_PER_SECOND = 20 -- the Energy Pistol can fire 12 a second
 local DEFAULT_CLASS = "Assault"
 local DEFAULT_RIFLE = "M4"
 

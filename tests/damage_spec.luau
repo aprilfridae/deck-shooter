@@ -26,7 +26,7 @@ describe("GunConfig", function()
 
 	it("matches the spec's sidearms", function()
 		local expected = {
-			Pistol = { 20, 400, 12, 0.964 },
+			Pistol = { 20, 720, 12, 0.964 },
 			MachinePistol = { 13, 900, 20, 1.6 },
 			Revolver = { 45, 150, 6, 2.2 },
 			AutoPistol = { 16, 550, 15, 1.5 },

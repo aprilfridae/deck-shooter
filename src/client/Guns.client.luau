@@ -28,6 +28,8 @@ local ammo = 0
 local serverAmmo = 0
 local reloading = false
 local lastFire = -math.huge
+local firePressedAt = -math.huge
+local FIRE_PRESS_MEMORY = 0.15 -- seconds an early click is kept
 local AUTO_RELOAD_DELAY = 0.12 -- lets the shot's kick land before an auto reload starts
 local autoReloadAsked = false
 -- Swaps show at once, before the server answers: the gun last seen in each slot, and the slot asked for.
@@ -182,9 +184,16 @@ local function onFrame(dt: number)
 	end
 
 	local pressed = keys.fire and not previous.fire
+	-- A click a moment before the gun is ready isn't lost: it fires as soon as it can. Without this a
+	-- single-shot gun eats every click that comes early, and feels like it only fires when it wants to.
+	if pressed then
+		firePressedAt = now
+	end
+	local wanted = pressed or now - firePressedAt < FIRE_PRESS_MEMORY
 	if not CardHand.blocksFire(CardInHand, keys.fire) then
-		local shotTime = nextShot(pressed, keys.fire, now)
+		local shotTime = nextShot(wanted, keys.fire, now)
 		if shotTime then
+			firePressedAt = -math.huge
 			fire(camera, aiming, shotTime)
 		elseif pressed and gun and ammo <= 0 and not reloading then
 			reloadRemote:FireServer()

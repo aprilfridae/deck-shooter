@@ -96,7 +96,7 @@ The whole HUD, crosshair included, is hidden while the title screen is open and 
 
 Added 2026-11-10, not seen in Play. `src/client/DeathSoul.client.luau`. River's idea.
 
-- When you die, the camera leaves your body: it's shoved 15 studs the way the shot was going (from the killer through you) and 5 up, fast at first then drifting, and turns to look back at the body. The point it looks at eases after the body (`FOLLOW_EASE`), because the body falls in jolts and looking straight at it made the camera steppy. It stops short of walls. With no killer known (a fall, a reset) it goes straight back from where you were looking.
+- When you die, the camera leaves your body: it's shoved 26 studs the way the shot was going (from the killer through you) and 8 up. The push is a hard hit and then a float: 70% of the way goes in about a fifth of a second and the rest drifts out slowly. The blow tips the view back 16 degrees and rolls it 11 to one side, and kicks the view wide (104), all settling as it floats. River asked for a harder push with a good motion curve. It then turns to look back at the body. The point it looks at eases after the body (`FOLLOW_EASE`), because the body falls in jolts and looking straight at it made the camera steppy. It stops short of walls. With no killer known (a fall, a reset) it goes straight back from where you were looking.
 - The picture drains to grey over 0.7s (a `ColorCorrectionEffect` named `DeathGrey` on the camera, so the zone lighting code doesn't touch it).
 - `YOU DIED` fades in after 0.45s, in Bone, with a thin rule under it. It's set in the game's own bold monospace (`LabelBold` through `TypeLabel`).
 - Your own body is made visible while it lasts. Everything is undone when the new character arrives.
