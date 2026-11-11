@@ -311,7 +311,7 @@ local function onFrame(dt: number)
 
 	MoveState.step(state, {
 		moving = direction.Magnitude > 0 or airFromSlide,
-		sprint = keys.sprint,
+		sprint = true, -- always: River had walking taken out (2026-11-10). Moving is sprinting; the sprint key does nothing
 		crouch = keys.crouch,
 		jump = keys.jump,
 		grounded = humanoid.FloorMaterial ~= Enum.Material.Air,
