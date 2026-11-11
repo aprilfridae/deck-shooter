@@ -111,6 +111,14 @@ local CARD_UPRIGHT = 0.8
 local AIR_FULL = 22 -- studs a second up or down that is fully "going up" or "coming down"
 local AIR_TIP = { up = math.rad(-9), down = math.rad(7) } -- the hips' lean forward going up and back coming down
 local AIR_INTO = math.rad(9) -- lean into the way it's travelling, at a full run
+-- The arms go out to the sides in the air, for balance (River: "wave the arms to the side like with the gun in
+-- hand"): the right arm swings out with the gun in its hand, the left comes off the gun and swings out the other
+-- way, both lifting a little more over the top of the jump, and they come back in on landing. Not while
+-- shooting, reloading or with the cards out, when the hands are busy.
+local AIR_ARMS_OUT = { Right = math.rad(34), Left = math.rad(52) } -- how far each arm swings out from the body
+local AIR_ARMS_UP = math.rad(14) -- and how much further they lift over the top
+local AIR_ARMS_EASE = 9 -- how fast they go out and come back, per second
+local AIR_ARMS_QUIET = 0.6 -- seconds after a shot they stay on the gun
 local LAND_HIT = 0.05 -- seconds to drop into the landing
 local LAND_RISE = 0.42 -- and to rise out of it
 local LAND_FULL = 50 -- studs a second of fall that lands in the full crouch
@@ -214,6 +222,7 @@ type Body = {
 	cards: any, -- the card hand as last seen and when things happened to it, while a card is out
 	cardPose: any, -- this frame's flourish pose, its view from the torso and the crush, while a card is out
 	fallSpeed: number, -- the fastest it has fallen this time in the air
+	armsOut: number, -- how far out the arms are for a jump, 0 to 1, eased
 	landHard: number, -- how hard the last landing was, 0 to 1
 	airLead: string, -- which knee drives up this jump: the pose's own ("Right") or the other
 	slideSince: number, -- when the slide being shown began
@@ -298,6 +307,7 @@ local function onCharacter(character: Model)
 		cards = nil,
 		cardPose = nil,
 		fallSpeed = 0,
+		armsOut = 0,
 		landHard = 0,
 		airLead = "Right",
 		slideSince = -math.huge,
@@ -749,13 +759,36 @@ local function applyAim(body: Body, dt: number)
 end
 
 -- In the air: the hips tip forward going up and back coming down, and lean into the way the body is travelling.
-local function applyAir(body: Body)
+local function applyAir(body: Body, dt: number, now: number)
 	local joint = body.joints.Root
-	if not body.airborne or not joint or body.character:GetAttribute("MovePose") == "Slide" then
-		return
-	end
+	local inAir = body.airborne and body.character:GetAttribute("MovePose") ~= "Slide"
 	local velocity = body.root.AssemblyLinearVelocity
 	local rising = math.clamp(velocity.Y / AIR_FULL, -1, 1)
+
+	-- The arms: out while in the air with free hands, eased both ways so they swing out and come back in.
+	local shotAt = body.player and lastShot[body.player] or -math.huge
+	local free = inAir and not body.cardPose and not body.codedAt and not body.wasReloading and now - shotAt > AIR_ARMS_QUIET
+	body.armsOut += ((if free then 1 else 0) - body.armsOut) * (1 - math.exp(-dt * AIR_ARMS_EASE))
+	if body.armsOut > 0.01 then
+		local over = 1 - math.abs(rising) -- most over the top of the jump
+		for side, sign in { Right = 1, Left = -1 } do
+			local shoulder = body.joints[side .. "Shoulder"]
+			if shoulder then
+				-- About the torso's own axes: a turn about Z swings a hanging arm out to the body's right.
+				local out = (AIR_ARMS_OUT[side] + AIR_ARMS_UP * over) * body.armsOut
+				shoulder.Transform = CFrame.Angles(0, 0, sign * out) * shoulder.Transform
+			end
+		end
+		-- The left arm straightens some as it leaves the gun.
+		local elbow = body.joints.LeftElbow
+		if elbow then
+			elbow.Transform = elbow.Transform:Lerp(CFrame.Angles(math.rad(18), 0, 0), 0.6 * body.armsOut)
+		end
+	end
+
+	if not inAir or not joint then
+		return
+	end
 	local tip = if rising > 0 then AIR_TIP.up * rising else AIR_TIP.down * -rising
 	local going = body.root.CFrame:VectorToObjectSpace(Vector3.new(velocity.X, 0, velocity.Z)) / 18
 	local forward, right = math.clamp(-going.Z, -1, 1), math.clamp(going.X, -1, 1)
@@ -1114,7 +1147,7 @@ RunService.PreSimulation:Connect(function(dt: number)
 			end
 			applyRun(body)
 			applyAim(body, dt)
-			applyAir(body)
+			applyAir(body, dt, now)
 			applySlide(body, now)
 			applyWallKick(body, now)
 			if body.cardPose then
