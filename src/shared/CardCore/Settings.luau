@@ -43,9 +43,9 @@ local RANGES = {
 	radio = { 0, 1, 1 },
 }
 
--- Roblox moves the player with W, A, S and D, and B, N, T, Y, P and O are test keys (P is the view from behind in
--- the test room, O turns it to the front). Slash opens chat.
-local RESERVED = { W = true, A = true, S = true, D = true, B = true, N = true, T = true, Y = true, P = true, O = true, Slash = true }
+-- Roblox moves the player with W, A, S and D, and B, N, T, Y and P are test keys (P is the view of your own body in
+-- the test room). Slash opens chat.
+local RESERVED = { W = true, A = true, S = true, D = true, B = true, N = true, T = true, Y = true, P = true, Slash = true }
 
 local DIGITS = {
 	Zero = "0",
