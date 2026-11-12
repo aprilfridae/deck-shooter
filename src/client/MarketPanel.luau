@@ -20,7 +20,8 @@ local MARGIN, RIGHT = PanelKit.MARGIN, PanelKit.RIGHT
 local INK, PAPER = PanelKit.INK, PanelKit.PAPER
 
 local TABS = { "BROWSE", "SELL", "MINE" }
-local SORTS = { { "soon", "ENDING SOON" }, { "serial", "SERIAL" }, { "rarity", "RARITY" } }
+-- Each sort: its name, its button and that button's width, which has to fit its words.
+local SORTS: { { any } } = { { "soon", "ENDING SOON", 0.1 }, { "serial", "SERIAL", 0.06 }, { "rarity", "RARITY", 0.06 } }
 local LENGTHS = { 1, 6, 24 }
 local REFRESH = 10 -- seconds between fetches of the list
 local MAX_SHOWN = 40 -- cards drawn at once: each is a live card face, and hundreds would crawl
@@ -38,6 +39,7 @@ local BOX_CARD = 0.1
 local CORNER = 0.0056
 local FONT = Enum.Font.Gotham -- typed text: the game's fonts are image sheets and can't be typed into
 local TEXT_SIZE = 0.0125
+local SELLER_SHOWN = 16 -- letters of a seller's name that fit in the bid box
 
 local state = {
 	page = nil :: Frame?,
@@ -46,15 +48,15 @@ local state = {
 	sort = "soon",
 	listings = {} :: { any },
 	fetched = false,
-	serverNow = 0,
-	at = 0,
-	shown = "", -- the list as last fetched, so an unchanged one isn't redrawn
-	redrawGrid = nil :: (() -> ())?, -- redraws only BROWSE's cards, leaving the search box alone
+	serverNow = DateTime.now().UnixTimestamp, -- this machine's clock until the server's first answer
+	at = os.clock(),
+	redrawGrid = nil :: ((boolean?) -> ())?, -- redraws only BROWSE's cards, leaving the search box alone
+	failed = false, -- the last fetch didn't get through
 	creditsLabel = nil :: any?,
 	selling = nil :: any?, -- the card chosen on SELL
 	hours = 6,
 }
-local timers: { { label: any, endsAt: number } } = {}
+local timers: { any } = {}
 local changed: RBXScriptConnection? = nil
 
 local MarketPanel = {}
@@ -142,12 +144,15 @@ local function scroller(parent: Instance, top: number, rows: number): ScrollingF
 	return grid
 end
 
-local function timeLabel(parent: Instance, x: number, line: number, endsAt: number)
+-- A time-left label the page keeps counting down. `short` is the one-word form for under a card.
+local function timeLabel(parent: Instance, x: number, line: number, endsAt: number, short: boolean?): any
 	local label = PanelKit.label(parent, "Label", PanelKit.SMALL_SIZE, x, line, true)
-	local text, urgent = Market.timeLeft(endsAt - serverNow())
+	local timer = { label = label, endsAt = endsAt, short = short == true }
+	local text, urgent = (if timer.short then Market.shortTime else Market.timeLeft)(endsAt - serverNow())
 	label:set(text)
 	label:setColor(if urgent then Palette.HazardRed else INK)
-	table.insert(timers, { label = label, endsAt = endsAt })
+	table.insert(timers, timer)
+	return timer
 end
 
 -- One card in a grid, with up to two lines under it. `options` are CardFace's.
@@ -165,11 +170,12 @@ local function cell(grid: Instance, index: number, top: number, options: any, li
 		stroke.Thickness = 3
 		stroke.Parent = face
 	end
+	-- A cell is narrow: a price of six characters and a time of three is all that fits on one line.
 	if lines.price then
-		PanelKit.label(grid, "LabelBold", PanelKit.LABEL_SIZE, x, y + CARD_HEIGHT + 0.014):set(lines.price)
+		PanelKit.label(grid, "LabelBold", PanelKit.SMALL_SIZE, x, y + CARD_HEIGHT + 0.014):set(lines.price)
 	end
 	if lines.endsAt then
-		timeLabel(grid, x + CELL, y + CARD_HEIGHT + 0.014, lines.endsAt)
+		timeLabel(grid, x + CELL, y + CARD_HEIGHT + 0.014, lines.endsAt, true)
 	end
 	if lines.sub then
 		PanelKit.label(grid, "Label", PanelKit.SMALL_SIZE * 0.85, x, y + CARD_HEIGHT + 0.027):set(lines.sub)
@@ -194,9 +200,6 @@ local function fetch()
 	if state.page ~= page or not page or not page.Parent then
 		return
 	end
-	local first = not state.fetched
-	state.fetched = true
-	local parts = {}
 	if reply.ok then
 		sync(reply)
 		local listings = {}
@@ -204,20 +207,18 @@ local function fetch()
 			local listing = Market.unpack(entry)
 			if listing then
 				table.insert(listings, listing)
-				table.insert(parts, `{listing.id}:{listing.price}:{listing.endsAt}`)
 			end
 		end
 		state.listings = listings
+		state.fetched = true
 	end
-	-- Redraw only when something for sale changed, and never under an open bid box.
-	local now = table.concat(parts, "|")
-	if (now == state.shown and not first) or state.tab ~= tab or page:FindFirstChild("BidBox") then
-		state.shown = now
+	state.failed = not reply.ok
+	-- Nothing is redrawn under an open bid box. Closing the box draws the page afresh.
+	if state.tab ~= tab or page:FindFirstChild("BidBox") then
 		return
 	end
-	state.shown = now
 	if tab == "BROWSE" and state.redrawGrid then
-		state.redrawGrid()
+		state.redrawGrid(false)
 	elseif tab == "MINE" then
 		draw()
 	end
@@ -255,8 +256,20 @@ local function bidBox(listing: any)
 	box.ZIndex = 21
 	box.Parent = scrim
 	round(box)
+
+	local timer: any = nil
+	local function dropTimer()
+		local at = timer and table.find(timers, timer)
+		if at then
+			table.remove(timers, at)
+		end
+		timer = nil
+	end
+	-- Closing draws the page afresh: whatever changed while the box was open was held back.
 	local function close()
+		dropTimer()
 		scrim:Destroy()
+		draw()
 	end
 	scrim.Activated:Connect(close)
 
@@ -266,18 +279,23 @@ local function bidBox(listing: any)
 		variant = listing.variant,
 		serial = listing.serial,
 		width = BOX_CARD * u,
-		position = UDim2.fromOffset(0.015 * u, 0.02 * u),
+		position = UDim2.fromOffset(0.015 * u, 0.012 * u),
 	})
 
 	local left = BOX_CARD + 0.03
 	local body: Frame? = nil
+	local entry: TextBox? = nil
 	local sending = false
 
 	-- Draws the right-hand side from what is known: first the grid's entry, then the server's real answer.
-	local function fill(known: any, info: any?, note: string?)
+	local function fill(known: any, info: any?)
+		local typed = entry and entry.Text
+		local focused = entry ~= nil and entry:IsFocused()
 		if body then
 			body:Destroy()
 		end
+		dropTimer()
+		entry = nil
 		local made = Instance.new("Frame")
 		made.BackgroundTransparency = 1
 		made.Size = UDim2.fromScale(1, 1)
@@ -285,16 +303,17 @@ local function bidBox(listing: any)
 		made.Parent = box
 		body = made
 
-		local mine = (info and info.seller == player.UserId) or (CardData.get() and CardData.get().market.listed[known.id] ~= nil)
+		local snapshot = CardData.get()
+		local mine = (info and info.seller == player.UserId) or (snapshot ~= nil and snapshot.market.listed[known.id] ~= nil)
 		local over = (info and info.closed) or known.endsAt - serverNow() <= 0
 		PanelKit.label(made, "LabelBold", 0.02, left, 0.04):set(Market.credits(known.price))
 		PanelKit.label(made, "Label", PanelKit.SMALL_SIZE, left, 0.054):set(if known.hasBid then "CURRENT BID" else "STARTING BID")
-		timeLabel(made, BOX_WIDTH - 0.015, 0.04, known.endsAt)
+		timer = timeLabel(made, BOX_WIDTH - 0.015, 0.04, known.endsAt)
 		if info and info.sellerName then
-			PanelKit.label(made, "Label", PanelKit.SMALL_SIZE, left, 0.068):set(`SOLD BY {string.upper(info.sellerName)}`)
+			PanelKit.label(made, "Label", PanelKit.SMALL_SIZE, left, 0.068):set(`SOLD BY {string.upper(string.sub(info.sellerName, 1, SELLER_SHOWN))}`)
 		end
-		local line = PanelKit.label(made, "Label", PanelKit.SMALL_SIZE, left, 0.165)
-		line:set(note or "")
+		-- The line for what went wrong runs the box's full width, under the card: the longest is 38 letters.
+		local line = PanelKit.label(made, "Label", PanelKit.SMALL_SIZE, 0.015, BOX_HEIGHT - 0.008)
 
 		if over then
 			line:set(Market.refusal("Ended"))
@@ -302,7 +321,7 @@ local function bidBox(listing: any)
 		elseif mine then
 			PanelKit.label(made, "LabelBold", PanelKit.LABEL_SIZE, left, 0.095):set("YOUR LISTING")
 			if not known.hasBid then
-				button(made, "CANCEL", left, 0.11, 0.08, 0.024).Activated:Connect(function()
+				button(made, "CANCEL", left, 0.105, 0.08, 0.024).Activated:Connect(function()
 					if sending then
 						return
 					end
@@ -325,8 +344,12 @@ local function bidBox(listing: any)
 		end
 
 		local least = if info then info.min else if known.hasBid then nil else known.price
-		local entry = textBox(made, left, 0.082, 0.1, "YOUR BID", if least then tostring(least) else "")
-		entry.ZIndex = 23
+		local typing = textBox(made, left, 0.082, 0.1, "YOUR BID", if typed and typed ~= "" then typed else if least then tostring(least) else "")
+		typing.ZIndex = 23
+		entry = typing
+		if focused then
+			typing:CaptureFocus()
+		end
 		local function send(amount: number)
 			if sending then
 				return
@@ -344,12 +367,12 @@ local function bidBox(listing: any)
 			end
 			sending = false
 			if reply.min then
-				entry.Text = tostring(reply.min)
+				typing.Text = tostring(reply.min)
 			end
 			line:set(Market.refusal(reply.code, reply.min))
 		end
 		button(made, "BID", left + 0.108, 0.082, 0.06, BAR_HEIGHT).Activated:Connect(function()
-			local amount = Market.parseAmount(entry.Text)
+			local amount = Market.parseAmount(typing.Text)
 			if not amount or amount < 1 then
 				line:set("ENTER A WHOLE NUMBER")
 				return
@@ -358,13 +381,13 @@ local function bidBox(listing: any)
 		end)
 		if known.buyNow then
 			local buyNow = known.buyNow
-			button(made, `BUY NOW {Market.credits(buyNow)}`, left, 0.114, 0.168, BAR_HEIGHT).Activated:Connect(function()
+			button(made, `BUY NOW {Market.short(buyNow)}`, left, 0.114, 0.168, BAR_HEIGHT).Activated:Connect(function()
 				send(buyNow)
 			end)
 		end
 	end
 
-	fill(listing, nil, nil)
+	fill(listing, nil)
 	task.spawn(function()
 		local reply = CardData.ask("AuctionInfo", listing.id)
 		if not scrim.Parent or sending then
@@ -372,12 +395,11 @@ local function bidBox(listing: any)
 		end
 		if reply.ok then
 			sync(reply)
-			local real = Market.unpack(reply.auction) or listing
-			fill(real, reply, nil)
+			fill(Market.unpack(reply.auction) or listing, reply)
 		elseif reply.code == "Gone" then
 			local ended = table.clone(listing)
 			ended.endsAt = 0
-			fill(ended, nil, nil)
+			fill(ended, nil)
 		end
 	end)
 end
@@ -385,53 +407,80 @@ end
 local function drawBrowse(body: Frame)
 	local u = unit()
 	local search = textBox(body, MARGIN, BAR_TOP, 0.2, "SEARCH", state.search)
-	local sortWidth = 0.07
-	local x = RIGHT - #SORTS * sortWidth - (#SORTS - 1) * 0.004
-	for index, sort in SORTS do
-		button(body, sort[2], x + (index - 1) * (sortWidth + 0.004), BAR_TOP, sortWidth, BAR_HEIGHT, { active = state.sort == sort[1], size = PanelKit.SMALL_SIZE }).Activated:Connect(function()
+	local total = (#SORTS - 1) * 0.004
+	for _, sort in SORTS do
+		total += sort[3]
+	end
+	local x = RIGHT - total
+	for _, sort in SORTS do
+		button(body, sort[2], x, BAR_TOP, sort[3], BAR_HEIGHT, { active = state.sort == sort[1], size = PanelKit.SMALL_SIZE }).Activated:Connect(function()
 			state.sort = sort[1]
 			draw()
 		end)
+		x += sort[3] + 0.004
 	end
 
 	local holder = frame(body, GRID_TOP)
-	local function grid()
+	local drawn: string? = nil
+	local scroll: ScrollingFrame? = nil
+	-- Draws the cards. Unless forced, it leaves them alone when the ones shown haven't changed, so a refresh
+	-- every 10 seconds doesn't rebuild forty cards or throw the player back to the top.
+	local function grid(force: boolean?)
+		local list = Market.visible(state.listings, state.search, state.sort, nameOf)
+		local shown = math.min(#list, MAX_SHOWN)
+		local snapshot = CardData.get()
+		local parts = { tostring(#list), tostring(state.fetched), tostring(state.failed) }
+		local winning = {}
+		for index = 1, shown do
+			local listing = list[index]
+			local held = snapshot and snapshot.market.bids[listing.id]
+			winning[index] = held ~= nil and listing.hasBid and held.amount == listing.price
+			table.insert(parts, `{listing.id}:{listing.price}:{listing.endsAt}:{winning[index]}`)
+		end
+		local now = table.concat(parts, "|")
+		if not force and now == drawn then
+			return
+		end
+		drawn = now
+		local at = if scroll and not force then scroll.CanvasPosition else Vector2.zero
 		holder:ClearAllChildren()
 		table.clear(timers)
-		local list = Market.visible(state.listings, state.search, state.sort, nameOf)
+		scroll = nil
 		if #list == 0 then
-			local words = if not state.fetched then "LOADING" elseif #state.listings == 0 then "NOTHING FOR SALE YET" else "NO CARDS MATCH"
+			local words = if #state.listings > 0
+				then "NO CARDS MATCH"
+				elseif state.failed then "CAN'T REACH THE MARKET. TRYING AGAIN."
+				elseif not state.fetched then "LOADING"
+				else "NOTHING FOR SALE YET"
 			message(holder, words, 0.02)
 			return
 		end
-		local shown = math.min(#list, MAX_SHOWN)
 		local top = 0
 		if #list > shown then
 			message(holder, `SHOWING {shown} OF {#list}. SEARCH TO NARROW IT DOWN.`, 0.012)
 			top = 0.02
 		end
-		local scroll = scroller(holder, 0, math.ceil(shown / COLUMNS))
-		scroll.CanvasSize = UDim2.fromOffset(0, (top + math.ceil(shown / COLUMNS) * ROW) * u)
-		local snapshot = CardData.get()
+		local made = scroller(holder, 0, math.ceil(shown / COLUMNS))
+		made.CanvasSize = UDim2.fromOffset(0, (top + math.ceil(shown / COLUMNS) * ROW) * u)
+		made.CanvasPosition = at
+		scroll = made
 		for index = 1, shown do
 			local listing = list[index]
-			local held = snapshot and snapshot.market.bids[listing.id]
-			local winning = held ~= nil and listing.hasBid and held.amount == listing.price
-			cell(scroll, index, top, { cardId = listing.cardId, tier = listing.tier, variant = listing.variant, serial = listing.serial }, {
-				price = Market.credits(listing.price),
+			cell(made, index, top, { cardId = listing.cardId, tier = listing.tier, variant = listing.variant, serial = listing.serial }, {
+				price = Market.short(listing.price),
 				endsAt = listing.endsAt,
-				sub = if winning then "YOU ARE WINNING" elseif listing.buyNow then `BUY NOW {Market.credits(listing.buyNow)}` else nil,
-				bold = winning,
+				sub = if winning[index] then "WINNING" elseif listing.buyNow then `BUY {Market.short(listing.buyNow)}` else nil,
+				bold = winning[index],
 			}, function()
 				bidBox(listing)
 			end)
 		end
 	end
-	grid()
+	grid(true)
 	state.redrawGrid = grid
 	search:GetPropertyChangedSignal("Text"):Connect(function()
 		state.search = search.Text
-		grid()
+		grid(true)
 	end)
 end
 
@@ -485,11 +534,14 @@ local function drawSellForm(body: Frame, card: any)
 		end
 	end
 	drawLengths()
-	PanelKit.label(body, "Label", PanelKit.SMALL_SIZE, left, BAR_TOP + 0.142):set("YOU GET THE FULL PRICE. THE CARD LEAVES YOUR")
-	PanelKit.label(body, "Label", PanelKit.SMALL_SIZE, left, BAR_TOP + 0.154):set("COLLECTION UNTIL IT SELLS OR COMES BACK.")
-	local line = PanelKit.label(body, "Label", PanelKit.SMALL_SIZE, left, BAR_TOP + 0.205)
+	-- The page is narrow here: about 38 letters a line.
+	for index, words in { "YOU GET THE FULL PRICE.", "THE CARD LEAVES YOUR COLLECTION", "UNTIL IT SELLS OR COMES BACK." } do
+		PanelKit.label(body, "Label", PanelKit.SMALL_SIZE, left, BAR_TOP + 0.13 + index * 0.012):set(words)
+	end
+	-- What went wrong goes under everything, at the page's full width: the longest line is 45 letters.
+	local line = PanelKit.label(body, "Label", PanelKit.SMALL_SIZE, MARGIN, BAR_TOP + 0.225)
 	local sending = false
-	button(body, "LIST FOR AUCTION", left, BAR_TOP + 0.165, 0.13, 0.026).Activated:Connect(function()
+	button(body, "LIST FOR AUCTION", left, BAR_TOP + 0.176, 0.17, 0.026).Activated:Connect(function()
 		if sending then
 			return
 		end
@@ -638,7 +690,7 @@ local function drawMine(body: Frame)
 	section("YOUR LISTINGS", listed, function(id: string)
 		local mine = market.listed[id]
 		local live = byId[id]
-		local price = if live and live.hasBid then Market.credits(live.price) else "NO BIDS"
+		local price = if live and live.hasBid then Market.short(live.price) else "NO BIDS"
 		return { cardId = mine.cardId, tier = mine.tier, variant = mine.variant, serial = mine.serial },
 			{ price = price, endsAt = if live then live.endsAt else mine.endsAt, amount = mine.startBid }
 	end)
@@ -650,7 +702,7 @@ local function drawMine(body: Frame)
 		end
 		local winning = live.price == held.amount
 		return { cardId = live.cardId, tier = live.tier, variant = live.variant, serial = live.serial },
-			{ price = Market.credits(held.amount), endsAt = live.endsAt, sub = if winning then "WINNING" else "OUTBID", bold = winning, amount = held.amount }
+			{ price = Market.short(held.amount), endsAt = live.endsAt, sub = if winning then "WINNING" else "OUTBID", bold = winning, amount = held.amount }
 	end)
 	scroll.CanvasSize = UDim2.fromOffset(0, top * unit())
 end
@@ -676,7 +728,7 @@ draw = function()
 	end
 	local x = MARGIN
 	for _, tab in TABS do
-		local text = if tab == "MINE" and mine > 0 then `MINE · {mine}` else tab
+		local text = if tab == "MINE" and mine > 0 then `MINE {mine}` else tab
 		local width = if tab == "MINE" then 0.07 else 0.06
 		button(page, text, x, TAB_TOP, width, BAR_HEIGHT, { active = state.tab == tab }).Activated:Connect(function()
 			state.tab = tab
@@ -717,7 +769,21 @@ function MarketPanel.fill(page: Frame)
 	draw()
 
 	-- Your own listings, bids and Credits change under you: outbid, sold, paid.
-	local last: string? = nil
+	local function entries(): string
+		local snapshot = CardData.get()
+		local parts = {}
+		if snapshot then
+			for id in snapshot.market.listed do
+				table.insert(parts, id)
+			end
+			for id, held in snapshot.market.bids do
+				table.insert(parts, id .. held.amount)
+			end
+		end
+		table.sort(parts)
+		return table.concat(parts, "|")
+	end
+	local last = entries()
 	changed = CardData.changed:Connect(function()
 		local snapshot = CardData.get()
 		if not snapshot or state.page ~= page then
@@ -727,20 +793,14 @@ function MarketPanel.fill(page: Frame)
 		if state.creditsLabel then
 			state.creditsLabel:set(`CREDITS {Market.credits(math.floor(snapshot.credits))}`)
 		end
-		local parts = {}
-		for id in snapshot.market.listed do
-			table.insert(parts, id)
-		end
-		for id, held in snapshot.market.bids do
-			table.insert(parts, id .. held.amount)
-		end
-		table.sort(parts)
-		local now = table.concat(parts, "|")
-		local moved = now ~= last
-		last = now
-		-- What you have in the market changed. SELL is left alone: it may be half filled in.
-		if moved and state.tab ~= "SELL" and not page:FindFirstChild("BidBox") then
-			draw()
+		-- What you have in the market changed. SELL is left alone, since it may be half filled in, and so is a page
+		-- under an open bid box, which is drawn afresh when the box closes.
+		local now = entries()
+		if now ~= last and not page:FindFirstChild("BidBox") then
+			last = now
+			if state.tab ~= "SELL" then
+				draw()
+			end
 		end
 	end)
 
@@ -752,7 +812,7 @@ function MarketPanel.fill(page: Frame)
 				task.wait(1)
 				waited += 1
 				for _, timer in timers do
-					local text, urgent = Market.timeLeft(timer.endsAt - serverNow())
+					local text, urgent = (if timer.short then Market.shortTime else Market.timeLeft)(timer.endsAt - serverNow())
 					timer.label:set(text)
 					timer.label:setColor(if urgent then Palette.HazardRed else INK)
 				end

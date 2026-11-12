@@ -21,6 +21,7 @@ local Market = {}
 local URGENT = 120 -- seconds: the last stretch, when a bid pushes the end back
 local VARIANT_RANK = { Base = 0, Redacted = 1, Chromatic = 2, ZeroDay = 3 }
 local TRY_AGAIN = "TRY AGAIN IN A MOMENT"
+local SHORT_STEPS: { { any } } = { { 1e3, "K" }, { 1e6, "M" }, { 1e9, "B" }, { 1e12, "T" }, { 1e15, "Q" } }
 local REFUSALS = {
 	NotEnoughCredits = "NOT ENOUGH CREDITS",
 	Ended = "THIS AUCTION HAS ENDED",
@@ -139,6 +140,36 @@ function Market.timeLeft(seconds: number): (string, boolean)
 		return string.format("%dH %02dM", left // 3600, left % 3600 // 60), urgent
 	end
 	return `{left // 3600}H`, urgent
+end
+
+-- The same in one short word, for under a card in the grid, where there is room for three letters.
+function Market.shortTime(seconds: number): (string, boolean)
+	if seconds <= 0 then
+		return "ENDED", false
+	end
+	local left = math.floor(seconds)
+	local urgent = seconds <= URGENT
+	if left < 60 then
+		return `{math.max(left, 1)}S`, urgent
+	elseif left < 3600 then
+		return `{left // 60}M`, urgent
+	end
+	return `{left // 3600}H`, urgent
+end
+
+-- A price in six characters or fewer, for under a card. The bid box shows it in full.
+function Market.short(amount: number): string
+	if amount < 100000 then
+		return Market.credits(amount)
+	end
+	for _, step in SHORT_STEPS do
+		local size, letter = step[1], step[2]
+		if amount < size * 1000 then
+			local value = amount / size
+			return if value < 10 then string.format("%.1f%s", math.floor(value * 10) / 10, letter) else `{math.floor(value)}{letter}`
+		end
+	end
+	return "LOTS"
 end
 
 function Market.credits(amount: number): string

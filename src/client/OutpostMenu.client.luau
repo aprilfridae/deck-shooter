@@ -126,6 +126,7 @@ end
 local function choose(name: string)
 	clickSound:Play()
 	SettingsPanel.stop()
+	MarketPanel.stop()
 	-- The PROFILE button leads back to the player's own page from someone else's.
 	if name == "PROFILE" and openPage == name and profileUser ~= player.UserId then
 		profileUser = player.UserId
@@ -225,7 +226,8 @@ RunService.RenderStepped:Connect(function(dt: number)
 	local visible = Zones.of(player) == Zones.Outpost and not MenuState.isOpen(MenuState.shared)
 	if nav and income then
 		nav.Visible = not CardInspect.isOpen() -- it would sit on top of the card
-		income.Visible = nav.Visible
+		-- The market page shows your Credits itself, and its cards reach up to where this line sits.
+		income.Visible = nav.Visible and openPage ~= "MARKET"
 	end
 	if visible == gui.Enabled then
 		return
@@ -237,6 +239,7 @@ RunService.RenderStepped:Connect(function(dt: number)
 		end
 	else
 		SettingsPanel.stop()
+		MarketPanel.stop()
 		CardInspect.close()
 		PullReveal.close()
 		openPage = nil
@@ -270,6 +273,7 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt)
 	if prompt.Name == "MarketPrompt" and gui.Enabled then
 		clickSound:Play()
 		SettingsPanel.stop()
+		MarketPanel.stop()
 		profileUser = player.UserId
 		show("MARKET")
 	end
@@ -280,6 +284,7 @@ PlayerClick.listen(function()
 end, function(clicked: Player)
 	clickSound:Play()
 	SettingsPanel.stop()
+	MarketPanel.stop()
 	profileUser = clicked.UserId
 	show("PROFILE")
 end)

@@ -17,7 +17,7 @@ DATA_PATH = os.path.join(ROOT, "src", "shared", "Guns", "Hud", "GlyphData.luau")
 
 SHEET = 1024
 PADDING = 4
-LABEL_CHARACTERS = string.ascii_uppercase + string.digits + "/:.->+_"
+LABEL_CHARACTERS = string.ascii_uppercase + string.digits + "/:.->+_,'()?"  # , ' ( ) ? for prices and plain sentences in the market
 
 # Style: font file pattern, characters, size the glyphs are drawn at.
 STYLES = {

@@ -19,6 +19,7 @@ local PAD = 0.012
 local TOP = 0.03
 local SLIDE = 0.25 -- seconds
 local SHOWN_FOR = 4
+local RETRY = 2 -- seconds between asks for news that is waiting
 local WAIT_STEP = 1 -- seconds between looks at whether the player is back in the Outpost
 
 local gui = Instance.new("ScreenGui")
@@ -87,9 +88,15 @@ end
 local remotes = ReplicatedStorage:WaitForChild("CardCoreRemotes")
 remotes:WaitForChild("MarketNews").OnClientEvent:Connect(add)
 -- Anything that settled before this script was listening, such as while the player was away.
-local reply = CardData.ask("MarketNewsWaiting")
-if reply.ok then
-	for _, item in reply.news do
-		add(item)
+-- The server refuses until the save has loaded, and until this gets through it only keeps news, it doesn't send
+-- it. So keep asking.
+while true do
+	local reply = CardData.ask("MarketNewsWaiting")
+	if reply.ok then
+		for _, item in reply.news do
+			add(item)
+		end
+		break
 	end
+	task.wait(RETRY)
 end

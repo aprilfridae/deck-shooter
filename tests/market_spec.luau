@@ -135,6 +135,35 @@ describe("Market wording", function()
 		end
 	end)
 
+	it("says how long is left in one short word, for under a card", function()
+		local cases: { { any } } = { { 0, "ENDED" }, { 45, "45S" }, { 72, "1M" }, { 2280, "38M" }, { 7500, "2H" }, { 75600, "21H" } }
+		for _, case in cases do
+			expect((Market.shortTime(case[1]))).toBe(case[2])
+		end
+		local _, urgent = Market.shortTime(72)
+		expect(urgent).toBe(true)
+	end)
+
+	it("writes a price short enough to sit under a card", function()
+		local cases: { { any } } = {
+			{ 0, "0" },
+			{ 999, "999" },
+			{ 12480, "12,480" },
+			{ 99999, "99,999" },
+			{ 100000, "100K" },
+			{ 123456, "123K" },
+			{ 999999, "999K" },
+			{ 1000000, "1.0M" },
+			{ 1250000, "1.2M" },
+			{ 12500000, "12M" },
+			{ 3400000000, "3.4B" },
+		}
+		for _, case in cases do
+			expect(Market.short(case[1])).toBe(case[2])
+			expect(#Market.short(case[1]) <= 6).toBe(true)
+		end
+	end)
+
 	it("writes Credits with commas", function()
 		expect(Market.credits(0)).toBe("0")
 		expect(Market.credits(999)).toBe("999")
