@@ -137,3 +137,15 @@ Shots are instant. The server alone decides damage, health and ammo (`src/server
 - Other players' footsteps (added 2026-11-11, not tried with a second player): `RemotePoses.client.luau` counts the ground each other soldier body covers while upright and on the ground, and every 9 studs (`StrideStuds`, the same stride as your own steps) plays a mono copy of a step take from their feet (`GunAudio.playFarStep`, `farSteps`, files `step-*-mono.wav`), full volume within 6 studs and gone by 90. Crouching and sliding are silent.
 - Other players' shots (added 2026-11-11, not tried with a second player): every shot someone else fires plays from the spot it was fired, as a 3D sound, full volume within 25 studs and fading out by 600 (`GunAudio.playFarShot`, called from `ShotEffects.client.luau`). It uses mono copies of each gun's first ten takes (`farShots` in `GunSounds.luau`, files `gun-*-mono.wav`, made with ffmpeg into `assets/sounds/mono/`); River asked for mono so the direction is clear. Your own shots still play the stereo takes straight in your ears.
 - Flybys: when someone else's bullet passes within 6 studs of your head without hitting you (`Flyby.RADIUS`), a `bullet-whizz` take plays, once per shot, from the closest pellet. It's a 3D sound that starts on the bullet's path and travels along it past your head at 60 studs a second, so it comes from the side the bullet passed and moves the way it went. It's timed so the whizz peaks as the tracer reaches you. `Flyby.luau` and `ShotEffects.client.luau`.
+
+## Pull-out animations
+
+Added 2026-11-12, not seen in Play. River: "pull out animations for everything. for the pistol, for the cards, for the ar, for the sniper". The cards' pull-out is the deck flourish they already had.
+
+- A gun plays its draw whenever it comes into the hands: on spawning, on swapping to it, and after a card has been used.
+- **Pistol** (any sidearm), 0.38 seconds: a quick draw off the right hip, muzzle down, with a flick past level.
+- **Rifle** (any primary without a scope), 0.5 seconds: up from low on the left across the body, canted over, then levelled.
+- **Sniper** (any scoped gun), 0.75 seconds: from over the right shoulder, muzzle to the sky, swung down past level and brought back.
+- The draws are keys in `src/shared/Guns/GunDraw.luau`, joined by a smooth curve, and tested in `tests/gundraw_spec.luau`. `GunView.luau` moves the whole gun and both arms together by the pose.
+- The gun can fire during its draw. Nothing about damage or timing changed.
+

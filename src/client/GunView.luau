@@ -14,6 +14,7 @@ local SoldierPose = require(ReplicatedStorage.Guns.SoldierPose)
 local ArmClips = require(ReplicatedStorage.Guns.ArmClips)
 local CardFlourish = require(ReplicatedStorage.Guns.CardFlourish)
 local GunConfig = require(ReplicatedStorage.Guns.GunConfig)
+local GunDraw = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("GunDraw"))
 local CardInHand = require(script.Parent.CardInHand)
 local CardThrowFx = require(script.Parent.CardThrowFx)
 local CardView = require(script.Parent.CardView)
@@ -490,6 +491,7 @@ local shownGun: string? = nil
 local length = PRIMARY_LENGTH
 local barrelRise = 0
 local isSidearm = false
+local drawAt: number? = nil -- when the gun in hand started being pulled out
 local viewScale = 1
 local held = HIP
 
@@ -1080,7 +1082,9 @@ function GunView.setGun(gunId: string, slot: string)
 	firedAt = nil
 	keyedReloadAt = nil
 	reloadAt = nil
-	-- Swapping guns has no animation: the new gun is just there, in its hold, with nothing blending in.
+	-- A gun that comes out is pulled out: GunDraw has a draw for each kind (River, 2026-11-12). Nothing blends in
+	-- from the gun before.
+	drawAt = os.clock()
 	snapAt = nil
 	shownFrame = nil
 	shownBase = nil
@@ -1245,6 +1249,7 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 			smearFrame = nil
 			CardView.hide()
 			ViewArms.clearBlur()
+			drawAt = now -- the gun is pulled out again, not just there
 			return false
 		end
 	end
@@ -1402,6 +1407,20 @@ function GunView.update(
 			flashModel.Parent = nil
 		end
 		return
+	end
+	-- The pull-out: the gun and both arms come into place together, by the gun's own draw.
+	if drawAt and config then
+		local kind = GunDraw.kind(isSidearm, config.aimFov ~= nil)
+		local since = os.clock() - drawAt
+		if since >= GunDraw.length(kind) then
+			drawAt = nil
+		else
+			local pose = GunDraw.at(kind, since)
+			base *= CFrame.new(HIP.Position)
+				* CFrame.new(pose.x, pose.y, pose.z)
+				* CFrame.Angles(math.rad(pose.pitch), math.rad(pose.yaw), math.rad(pose.roll))
+				* CFrame.new(-HIP.Position)
+		end
 	end
 	if clips then
 		local frame, kind = clipFrame(reloading, sprinting)
