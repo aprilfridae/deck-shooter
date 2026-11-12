@@ -19,6 +19,7 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 | [`specs/outpost.md`](specs/outpost.md) | The Outpost hub, zones, travel, the safe zone | The place is built; the player market isn't |
 | [`specs/serials.md`](specs/serials.md) | Real serial numbers for every pulled card, and the fresh start | Agreed, not built. First piece of the player market |
 | [`specs/auction-house.md`](specs/auction-house.md) | Auctions: listing, bidding, Buy Now, and settling safely across servers | Agreed, not built. Second piece of the player market |
+| [`specs/market-screen.md`](specs/market-screen.md) | The market page: a wall of cards for sale, search, sort, bidding, selling | Agreed, not built. Third piece of the player market |
 | [`specs/outpost-ui.md`](specs/outpost-ui.md) | The Outpost menus: Play, Packs, Loadout, Profile, comments and Settings | Built |
 | [`specs/matches.md`](specs/matches.md) | Elimination and Tower modes, rounds, arenas | Planned, not built |
 | [`specs/relay.md`](specs/relay.md) | Relay, the 1v1 map: two fog towers, a bridge, the undercity | Built as a free-play zone, not checked in Play |
