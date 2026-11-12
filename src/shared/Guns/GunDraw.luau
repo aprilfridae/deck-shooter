@@ -22,18 +22,23 @@ local DRAWS: { [string]: { Key } } = {
 	-- A quick draw off the right hip: the arms swing up from hanging, a touch past level, and settle. It turns
 	-- about the shoulder (see PIVOTS), and barely slides: turned about the gun itself, the shoulders swung round
 	-- and it looked like the whole torso was rotating (River, 2026-11-12).
+	-- With swagger (River, 2026-11-12): it comes up canted over on its side, punches out a touch past level, and
+	-- the wrist rolls it upright last.
 	pistol = {
-		key(0, 0.1, -0.25, 0.15, -62, -8, -6),
-		key(0.15, 0.03, -0.07, 0.04, -22, -3, -3),
-		key(0.26, 0, 0.01, 0, 5, 0, 1),
-		key(0.38, 0, 0, 0, 0, 0, 0),
+		key(0, 0.1, -0.25, 0.15, -62, -10, 22),
+		key(0.14, 0.04, -0.08, 0.05, -24, -6, 28),
+		key(0.25, 0, 0.02, -0.04, 7, 3, 14),
+		key(0.34, 0, 0, 0.01, -2, -1, -4),
+		key(0.44, 0, 0, 0, 0, 0, 0),
 	},
-	-- Up from low on the left, across the body as if off a sling, canted over, then levelled.
+	-- Up from low on the left, across the body as if off a sling, canted over. With swagger: it swings past, muzzle
+	-- high and tipped the other way, then drops back into the shoulder.
 	rifle = {
 		key(0, -0.7, -1.25, 0.45, -35, 40, 35),
-		key(0.2, -0.16, -0.36, 0.14, -12, 16, 18),
-		key(0.36, 0.02, 0.04, -0.05, 3, -3, -4),
-		key(0.5, 0, 0, 0, 0, 0, 0),
+		key(0.2, -0.14, -0.3, 0.14, -8, 16, 22),
+		key(0.34, 0.04, 0.09, -0.1, 9, -5, -9),
+		key(0.45, 0, -0.03, 0.05, -2, 1, 3),
+		key(0.56, 0, 0, 0, 0, 0, 0),
 	},
 	-- Heavy, and from over the right shoulder: muzzle to the sky, swung down past level, and brought back up.
 	sniper = {
