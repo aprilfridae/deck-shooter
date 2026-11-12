@@ -1,6 +1,6 @@
 # Card face redesign
 
-**Status:** built on 2026-11-11. River has checked the still card in Play ("looks right"). The motion, each rarity's effects and the rainbow low serial are built and pass their tests but have not been seen in Play. This replaces the Layout and Rarities sections of `card-art.md`; the rest of that spec stands.
+**Status:** built on 2026-11-11. River checked the still card and then the motion, each rarity's effects and the rainbow low serial in Play the same day, and said "looks right" to both. This replaces the Layout and Rarities sections of `card-art.md`; the rest of that spec stands.
 
 **Covers:** the front of a card: its layout, type, the effect each rarity gets, and the look of serials 1 to 10.
 

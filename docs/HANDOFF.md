@@ -119,7 +119,7 @@ Serials, then the player market. River checks the Relay map in Play: fog, lights
 ## Card face redesign (2026-11-11)
 
 - Spec `docs/specs/card-face-redesign.md`, plan `docs/plans/2026-11-11-card-face-redesign.md`. Built on `feature/smooth-arms-recoil`.
-- River has seen the still card in Play. The motion, rarity effects and rainbow low serial have not been judged in Play yet; expect tuning in `CardMotion.luau` (change its tests with it).
+- River has seen all of it in Play and said "looks right". Timings live in `CardMotion.luau`; change its tests with it.
 - Studio shows stand-in serials (`CardLook.studioSerial`). Delete that when real serials are built.
 - Lines from River's SVG are baked 5 wide instead of 2. To change it, edit `STROKE` in `tools/make-card-art.py`, re-run it, upload the changed layers and update `CardArt.luau`.
 - Old card images (`CardArt` before this change) are still in the group's assets, unused.

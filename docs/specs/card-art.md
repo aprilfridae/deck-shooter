@@ -1,6 +1,6 @@
 # Card art
 
-**Status:** the front is the 2026-11-11 redesign (`card-face-redesign.md`): built, with the still card checked by River in Play and the motion and effects not yet. The back, inspecting a card in 3D and the pull reveal are built. Real serials aren't built: Studio shows stand-in serials and the live game shows `----`. Chromatic and Redacted are proposals River hasn't seen drawn yet, and show only their rarity text.
+**Status:** the front is the 2026-11-11 redesign (`card-face-redesign.md`): built and checked by River in Play. The back, inspecting a card in 3D and the pull reveal are built. Real serials aren't built: Studio shows stand-in serials and the live game shows `----`. Chromatic and Redacted are proposals River hasn't seen drawn yet, and show only their rarity text.
 
 **Covers:** how cards look, and the serial numbers printed on them. How cards work is in `cards.md`. The pull reveal is in `packs.md`, and fusion effects get their own spec.
 
