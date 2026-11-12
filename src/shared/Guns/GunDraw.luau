@@ -37,15 +37,17 @@ local DRAWS: { [string]: { Key } } = {
 		key(0.82, 0, 0, 0, 0, 0, 0),
 	},
 	-- Up from under the screen, muzzle high and off to the left, the gun laid over. It is held there while the
-	-- bolt is racked (a tug back and a snap forward), then swung down onto the target.
+	-- bolt is racked (a tug back and a snap forward), then swung down onto the target. Held high enough that the
+	-- receiver and the hand on the knob are on screen: lower, the rack happened off the bottom of it (seen in Play
+	-- by Claude, held still with PinDraw).
 	rifle = {
-		key(0, -0.5, -1.3, 0.3, 20, 30, 20),
-		key(0.14, -0.46, -0.25, 0.2, 34, 38, 26),
-		key(0.3, -0.45, 0.05, 0.15, 38, 40, 28),
-		key(0.5, -0.42, 0.02, 0.34, 35, 38, 31),
-		key(0.56, -0.45, 0.06, 0.1, 39, 40, 28),
-		key(0.64, -0.42, 0.04, 0.1, 36, 38, 26),
-		key(0.74, -0.08, -0.02, 0, 6, 7, 5),
+		key(0, -0.5, -1.1, 0.3, 15, 25, 25),
+		key(0.14, -0.52, 0.1, 0.25, 26, 30, 36),
+		key(0.3, -0.55, 0.45, 0.2, 32, 30, 40),
+		key(0.5, -0.52, 0.42, 0.38, 27, 28, 43),
+		key(0.56, -0.55, 0.46, 0.14, 31, 30, 40),
+		key(0.64, -0.52, 0.44, 0.15, 28, 28, 38),
+		key(0.74, -0.1, 0, 0, 5, 6, 6),
 		key(0.82, 0.02, -0.03, -0.04, -3, -2, -2),
 		key(0.92, 0, 0, 0, 0, 0, 0),
 	},

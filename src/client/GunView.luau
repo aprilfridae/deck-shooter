@@ -89,6 +89,20 @@ local PALM_FINGERS: { [string]: { [string]: { [string]: { rest: { Vector3 }, hel
 		},
 	},
 }
+-- The right hand's fingers while it is off the grip and on the charging knob, in its own palm's space (+Y along
+-- the fingers, +X the way the palm faces, -Z the thumb's side): hooked over the knob to pull it, thumb tucked in
+-- beside them. Left to the clip, they were the grip's shape with nothing in it, an open claw beside the knob
+-- (River, 2026-11-12: "the fingers to me look strange").
+local KNOB_HOOK = { Vector3.new(0.25, 0.97, 0).Unit, Vector3.new(0.8, 0.6, 0).Unit, Vector3.new(0.95, -0.3, 0).Unit }
+local KNOB_FINGERS: { [string]: { [string]: { Vector3 } } } = {
+	M57 = {
+		Indice = KNOB_HOOK,
+		DedoMedio = KNOB_HOOK,
+		Anular = KNOB_HOOK,
+		Menique = KNOB_HOOK,
+		Pulgar = { Vector3.new(0.3, 0.7, -0.65).Unit, Vector3.new(0.5, 0.8, -0.3).Unit, Vector3.new(0.6, 0.8, 0).Unit },
+	},
+}
 local clipPalms: { [string]: CFrame }? = nil -- this frame's moved palms, in the clip's space
 -- Fingers given another shape than the clips', by side and digit bone: which way each joint points, in the gun's own
 -- space. The M57's clips were made on the old model, and on the AK they left the trigger finger lying straight along
@@ -1622,6 +1636,20 @@ function GunView.update(
 					end
 					shapedFingers[side][digit] = aims
 				end
+			end
+			fingers = shapedFingers
+		end
+		local hooked = config and KNOB_FINGERS[config.name]
+		if hooked and palms and codePose and codePose.rightWeight > 0.5 then
+			local shapedFingers = fingers or {}
+			local palm = (clipPalms and clipPalms.Right or palms.Right).Rotation
+			shapedFingers.Right = {}
+			for digit, shape in hooked do
+				local aims = table.create(#shape)
+				for joint, aim in shape do
+					aims[joint] = palm * aim
+				end
+				shapedFingers.Right[digit] = aims
 			end
 			fingers = shapedFingers
 		end
