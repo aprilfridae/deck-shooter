@@ -120,7 +120,14 @@ Serials, then the player market. River checks the Relay map in Play: fog, lights
 
 - Spec `docs/specs/card-face-redesign.md`, plan `docs/plans/2026-11-11-card-face-redesign.md`. Built on `feature/smooth-arms-recoil`.
 - River has seen all of it in Play and said "looks right". Timings live in `CardMotion.luau`; change its tests with it.
-- Studio shows stand-in serials (`CardLook.studioSerial`). Delete that when real serials are built.
+- The Studio stand-in serials are gone: real serials are built (below).
 - Lines from River's SVG are baked 5 wide instead of 2. To change it, edit `STROKE` in `tools/make-card-art.py`, re-run it, upload the changed layers and update `CardArt.luau`.
 - Old card images (`CardArt` before this change) are still in the group's assets, unused.
+
+## Serials (2026-11-11)
+
+- Spec `docs/specs/serials.md`, plan `docs/plans/2026-11-11-serials.md`, branch `feature/serials`. First piece of the player market; the auction house and the market screen are next, each with its own spec.
+- **The reset is in the code.** Any save from before version 5 is wiped the first time it loads. River agreed to their own save being reset. It reaches other players the next time River publishes the place.
+- Counter: DataStore `SerialCounters_v1`, key `all`. Studio with API access uses the real one, so test pulls take real numbers. To start every serial from 1 again before a launch, rename the store in `SerialCounter.luau` and bump the save version so saves reset with it.
+- Not checked: nothing has been seen in Play, and two servers pulling the same card at once has not been tried.
 

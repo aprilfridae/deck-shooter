@@ -1,6 +1,6 @@
 # Serials
 
-**Status:** design agreed with River on 2026-11-11. Nothing is built. This is the first of three pieces of the player market: serials, then the auction house, then the market screen. It replaces the "Serial numbers" section of `card-art.md`.
+**Status:** built on 2026-11-11 on `feature/serials`, and passing its tests. Not yet seen in Play, and the two-server case has not been tried. This is the first of three pieces of the player market: serials, then the auction house, then the market screen. It replaces the "Serial numbers" section of `card-art.md`.
 
 **Covers:** giving every pulled card a real serial, how serials are stored and handed out, and the fresh start that comes with them. How a serial looks on a card is in `card-face-redesign.md`.
 
@@ -42,7 +42,8 @@ Every new player gets the three starter cards. If those were numbered, the first
 - **Numbers arrive in batches.** Every 5 seconds a server asks the counter once for all the numbers its players are waiting on, then writes them into their saves. Asking on every pull would break Roblox's limits: a player opens a pack every 2 seconds, and a server may write about 10 times a minute per player.
 - **If the counter can't be reached,** copies stay unnumbered and the server tries again on its next batch. A save that loads with unnumbered copies joins the next batch too, so a crash or a leaving player loses nothing.
 - **Open All** gives a pile of any size one run of numbers per kind of card, in one batch.
-- **In Studio without API access,** the counter is kept in memory, as profile comments are.
+- **In Studio without API access,** saves live in memory, so the counter does too.
+- **In Studio with API access,** saves are real, so pulls there take real numbers from the real counter, exactly as in the live game. River's pulls while testing count.
 
 A copy that is waiting for its number can't be listed in the market. In normal play that is a few seconds.
 
@@ -73,6 +74,9 @@ A player can own millions of copies, so a save can't hold one record per copy.
 
 ## How it's built
 
+- A save keeps `stacks` as plain counts, as before, and adds `serials`: for each stack, its runs as a flat list of pairs and its count of starter copies. Copies that are neither are waiting.
+- The counter is DataStore `SerialCounters_v1`, key `all` (`SerialCounter.luau`). `SerialBatch.luau` holds the batching rules and `SerialServer.luau` runs the 5-second round.
+- The client's snapshot carries `lowest`, each stack's lowest serial. A pulled card's own serial comes in a `Serials` pack event matched to its `Opened` event by `openId`; the card's face redraws its serial when its `Serial` attribute is set.
 - `Inventory.luau` keeps its job, the stacks in a save, and gains the runs: adding unnumbered copies, giving waiting copies a run of numbers, taking a single serial out, and reporting a stack's lowest serial. `count`, `add` and `remove` keep meaning what they mean today, so `Income`, `Dpr`, `Deck` and `CardIndex` don't change.
 - `SaveData.luau` moves to version 5, does the reset, and cleans runs on load.
 - A new pure module holds the batching rules: which stacks are waiting, how many numbers to ask for, and how to share out what came back.
