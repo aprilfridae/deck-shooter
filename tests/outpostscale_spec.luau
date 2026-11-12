@@ -6,8 +6,8 @@ local describe, it, expect = harness.describe, harness.it, harness.expect
 local PLAYER_HEIGHT = 5.6
 
 describe("OutpostScale", function()
-	it("shrinks the Outpost", function()
-		expect(OutpostScale.factor < 1).toBe(true)
+	it("builds the Outpost at full size", function()
+		expect(OutpostScale.factor).toBe(1)
 	end)
 
 	it("leaves the lowest doorway taller than the player", function()

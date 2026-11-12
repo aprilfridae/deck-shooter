@@ -1,4 +1,5 @@
--- Stop-motion clips for the first-person arms. A clip is a list of held frames.
+-- Clips for the first-person arms. A clip is a list of key frames at its fps; sampleAt blends between them
+-- so the arms move at full framerate.
 local ArmClip = {}
 
 -- The frame showing after elapsed seconds, or nil once a one-shot clip has ended.
@@ -9,6 +10,47 @@ function ArmClip.frameAt(clip: any, elapsed: number): any
 		return clip.frames[index % count + 1]
 	end
 	return clip.frames[index + 1]
+end
+
+-- Two frames blended: CFrames and numbers move part of the way, bones blend, anything else comes from the first.
+function ArmClip.blendFrames(from: any, to: any, share: number): any
+	if share <= 0 or from == to then
+		return from
+	end
+	local blended = {}
+	for key, a in from do
+		local b = to[key]
+		if b == nil then
+			blended[key] = a
+		elseif key == "bones" then
+			blended[key] = ArmClip.blendBones(a, b, share)
+		elseif typeof(a) == "CFrame" then
+			blended[key] = a:Lerp(b, share)
+		elseif type(a) == "number" then
+			blended[key] = a + (b - a) * share
+		else
+			blended[key] = a
+		end
+	end
+	return blended
+end
+
+-- The pose after elapsed seconds, blended between key frames, or nil once a one-shot clip has ended.
+-- A one-shot clip holds its last frame for that frame's time, as frameAt does.
+function ArmClip.sampleAt(clip: any, elapsed: number): any
+	local position = elapsed * clip.fps
+	local index = math.floor(position)
+	local share = position - index
+	local count = #clip.frames
+	if clip.loop then
+		return ArmClip.blendFrames(clip.frames[index % count + 1], clip.frames[(index + 1) % count + 1], share)
+	end
+	local from = clip.frames[index + 1]
+	if not from then
+		return nil
+	end
+	local to = clip.frames[index + 2]
+	return if to then ArmClip.blendFrames(from, to, share) else from
 end
 
 -- One of a gun's reload takes, with share from 0 up to 1 choosing which.

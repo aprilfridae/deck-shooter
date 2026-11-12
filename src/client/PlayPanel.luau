@@ -1,4 +1,5 @@
--- The Play page: the launch queues from matches.md. They say SOON until matches exist.
+-- The Play page: the areas you can travel to now (click one to go), then the launch queues from matches.md,
+-- which say SOON until matches exist.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -6,9 +7,14 @@ local Guns = ReplicatedStorage:WaitForChild("Guns")
 local PanelMotion = require(Guns:WaitForChild("Hud"):WaitForChild("PanelMotion"))
 local MenuPanel = require(script.Parent.MenuPanel)
 local PanelKit = require(script.Parent.PanelKit)
+local Zones = require(Guns:WaitForChild("Zones"))
 
 local ROUNDS = "FIRST TO 5 ROUND WINS TAKES THE MATCH."
 local QUEUES = { -- the Label font has no commas or apostrophes
+	-- Areas open now. A row with a zone travels there when clicked (the server checks the request).
+	{ mode = "1V1 MAP", size = "HEX", status = "GO", zone = Zones.Hex, about = "A RUINED HALL WITH A RING OF WALLS IN THE MIDDLE.\nFREE PLAY. NO ROUNDS YET." },
+	{ mode = "1V1 MAP", size = "RELAY", status = "GO", zone = Zones.Relay, about = "TWO TOWERS IN THE FOG AND THE BRIDGE BETWEEN THEM.\nFREE PLAY. NO ROUNDS YET." },
+	{ mode = "TEST ROOM", size = "TEST", status = "GO", zone = Zones.TestRoom, about = "TARGET DUMMIES AND ROOM TO MOVE.\nTRY GUNS AND CARDS HERE." },
 	{ mode = "ELIMINATION", size = "1V1", about = "ONE ON ONE. LAST PLAYER STANDING WINS THE ROUND.\n" .. ROUNDS },
 	{ mode = "ELIMINATION", size = "2V2", about = "TEAMS OF TWO. WIPE THE OTHER TEAM. NO RESPAWNS.\n" .. ROUNDS },
 	{ mode = "ELIMINATION", size = "3V3", about = "TEAMS OF THREE. WIPE THE OTHER TEAM. NO RESPAWNS.\n" .. ROUNDS },
@@ -24,6 +30,7 @@ local SIZE_TEXT = 0.04
 local TICK_WIDTH = 0.006
 local TEXT_GAP = 0.01 -- from the tick to the size
 local MODE_LEFT = 0.2
+local AREA_MODE_LEFT = 0.3 -- area names are longer than queue sizes
 local BLOCK_GAP = 0.02
 local BLOCK_HEIGHT = 0.05
 local ABOUT_GAP = 0.012 -- from the row's text to the first line of its description
@@ -45,8 +52,8 @@ local function buildRow(content: Frame, queue: any): any
 	local inkLeft = MARGIN + TICK_WIDTH + TEXT_GAP
 	local tick = PanelKit.block(box, MARGIN, base - capHeight, TICK_WIDTH, capHeight, PanelKit.INK)
 	PanelKit.label(box, "Title", SIZE_TEXT, inkLeft - SIZE_TEXT * PanelKit.TITLE_INSET, base):set(queue.size)
-	PanelKit.line(box, queue.mode, MODE_LEFT, labelBase)
-	PanelKit.line(box, "SOON", RIGHT, labelBase, true)
+	PanelKit.line(box, queue.mode, if queue.zone then AREA_MODE_LEFT else MODE_LEFT, labelBase)
+	PanelKit.line(box, queue.status or "SOON", RIGHT, labelBase, true)
 
 	-- The open row keeps the same space under its last line as it has above the size.
 	local smallCap = PanelKit.SMALL_SIZE * PanelKit.CAP_HEIGHT
@@ -99,6 +106,15 @@ function PlayPanel.fill(content: Frame)
 				hover(row)
 			end
 		end)
+		if queue.zone then
+			row.box.MouseButton1Click:Connect(function()
+				local remotes = ReplicatedStorage:FindFirstChild("OutpostRemotes")
+				local travel = remotes and remotes:FindFirstChild("Travel")
+				if travel then
+					(travel :: RemoteEvent):FireServer(queue.zone)
+				end
+			end)
+		end
 		row.box.MouseLeave:Connect(function()
 			if hovered == row then
 				hover(nil)

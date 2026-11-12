@@ -3,7 +3,6 @@
 -- outside the repo; to add or change a sound, upload it to the group and add its id to SoundIds.
 local SoundIds = require("./SoundIds")
 
-local HURT_HEALTH = 20
 
 local function sound(file: string): string
 	local id = SoundIds[file]
@@ -23,6 +22,15 @@ local function takes(name: string, count: number, skip: number?): { string }
 	return list
 end
 
+-- The mono copies of a gun's first takes, for other players' shots.
+local function farTakes(name: string, count: number): { string }
+	local list = {}
+	for take = 1, count do
+		table.insert(list, sound(`gun-{name}-{take}-mono.wav`))
+	end
+	return list
+end
+
 local function numbered(name: string, count: number): { string }
 	local list = {}
 	for take = 1, count do
@@ -37,18 +45,37 @@ local GunSounds = {
 	-- Waits out the gunshot, so a hit and a shot don't land on top of each other.
 	hitDelaySeconds = 0.08,
 	shots = {
-		M4 = takes("m4", 30),
+		-- The M57 is River's AK model, so it fires the AK takes (River, 2026-11-10). It used the "m4" takes before.
+		M4 = takes("ak47", 30),
 		AK47 = takes("ak47", 30),
 		SMG = takes("smg", 29), -- take 30 exported silent
 		Sniper = takes("sniper", 30, 12), -- take 12 starts late and much louder
 		Shotgun = takes("shotgun", 30),
 		Pistol = takes("pistol", 30),
 	},
-	-- Each gun's reload time in GunConfig matches the length of its sound here.
+	-- Other players' shots, heard from where they fired. These are mono copies of each gun's first ten takes:
+	-- River asked for mono so the direction reads clearly. Your own shots keep the stereo takes above.
+	farShots = {
+		M4 = farTakes("ak47", 10),
+		AK47 = farTakes("ak47", 10),
+		SMG = farTakes("smg", 10),
+		Sniper = farTakes("sniper", 10),
+		Shotgun = farTakes("shotgun", 10),
+		Pistol = farTakes("pistol", 10),
+	},
+	farShotBases = {
+		Sniper = sound("gun-sniper-base-mono.wav"),
+	},
+	-- Played under every take of that gun's shot.
+	shotBases = {
+		Sniper = sound("gun-sniper-base.wav"),
+	},
+	-- Each gun's reload time in GunConfig matches the length of its sound here. The Sniper has none: its base
+	-- shot sound covers it. The M4 (the M57, River's AK) is the exception: its reload is 2s and River's sound for
+	-- it is over by about 1.5s, with the rip at 0.36 to 0.62s and the slam at about 1.08s, which AkReload is timed to.
 	reloads = {
-		M4 = sound("reload-assault-v2.wav"),
-		AK47 = sound("reload-assault-v2.wav"),
-		Sniper = sound("reload-sniper.wav"),
+		M4 = sound("reload-assault-v5.wav"),
+		AK47 = sound("reload-assault-v4.wav"),
 		Pistol = sound("reload-pistol-v4.wav"),
 	},
 	hits = {
@@ -61,6 +88,14 @@ local GunSounds = {
 	outpostAmbience = sound("outpost-ambience.ogg"),
 	menuSelect = sound("menu-select.wav"),
 	steps = numbered("step", 10),
+	-- Other players' footsteps, heard from their feet: mono copies of the same takes (River, 2026-11-11).
+	farSteps = (function()
+		local list = {}
+		for take = 1, 10 do
+			table.insert(list, sound(`step-{take}-mono.wav`))
+		end
+		return list
+	end)(),
 	jumps = numbered("jump", 14),
 	-- Bullets flying close past you. Each take's whizz peaks this far in.
 	whizzes = numbered("bullet-whizz", 16),
@@ -71,7 +106,26 @@ local GunSounds = {
 		soft = sound("move-land-soft.wav"),
 		hard = sound("move-land-hard.wav"),
 	},
-	slideStart = sound("move-slide-start.wav"),
+	slideStart = sound("move-slide-start-v2.wav"),
+	-- Kicking off a wall: a heavy metal impact River picked from a Splice pack (2026-11-11).
+	wallJump = sound("wall-jump.wav"),
+	-- Takes layered over the slide start, one picked at random each slide.
+	slideLayers = numbered("move-slide-layer", 15),
+	-- The pistol hand's finger snap on a kill. The clip's fingers click together this far in.
+	snap = sound("pistol-snap.wav"),
+	snapDelaySeconds = 0.075, -- the click at 0.06s in the clip, which plays at 0.8 speed
+	-- The coins a body bursts into when it dies.
+	coinBurst = sound("coin-burst.wav"),
+	-- One bullet through two or more bodies: plays once for the shooter, with the hit sounds.
+	collateral = sound("hit-collateral.wav"),
+	-- The coins being pulled into whoever made the kill.
+	coinSuck = sound("coin-suck-v2.wav"),
+	-- Taking the cards out: it plays under the flourish, and is cut when the cards go away or the flourish is skipped.
+	cardFlourish = sound("card-flourish-v4.wav"),
+	-- Using a card: the right hand crushes it.
+	cardCrush = sound("card-crush.wav"),
+	-- Right click cutting the flourish short.
+	cardSkip = sound("card-skip.wav"),
 	-- Each pack rarity's opening sound.
 	packOpens = {
 		Field = sound("pack-open-common.wav"),
@@ -87,16 +141,18 @@ function GunSounds.startOffset(lateness: number): number
 	return math.clamp(lateness, 0, GunSounds.paddingSeconds)
 end
 
-function GunSounds.hitSound(headshot: boolean, killed: boolean): string
+-- The sounds a hit plays together. A headshot kill plays the headshot sound with the kill sound.
+function GunSounds.hitSounds(headshot: boolean, killed: boolean): { string }
 	if killed then
-		return GunSounds.hits.kill
+		return if headshot then { GunSounds.hits.head, GunSounds.hits.kill } else { GunSounds.hits.kill }
 	end
-	return if headshot then GunSounds.hits.head else GunSounds.hits.body
+	return { if headshot then GunSounds.hits.head else GunSounds.hits.body }
 end
 
--- A warning that you're nearly dead, not a sound for every hit.
+-- Plays every time you take damage and live. It used to be a warning at 20 health or less only; River wanted it
+-- on every hit (2026-11-11).
 function GunSounds.hurtPlays(previousHealth: number, health: number): boolean
-	return health < previousHealth and health > 0 and health <= HURT_HEALTH
+	return health < previousHealth and health > 0
 end
 
 return GunSounds

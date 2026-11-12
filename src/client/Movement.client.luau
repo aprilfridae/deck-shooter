@@ -4,10 +4,12 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local CardInHand = require(script.Parent.CardInHand)
 local GunAudio = require(script.Parent.GunAudio)
 local Input = require(script.Parent.Input)
 local Ledge = require(script.Parent.Ledge)
 local PlayerSettings = require(script.Parent.PlayerSettings)
+local WallKick = require(script.Parent.WallKick)
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local Zones = require(Guns:WaitForChild("Zones"))
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
@@ -15,7 +17,11 @@ local Config = require(CardCore:WaitForChild("Config"))
 local Movement = ReplicatedStorage:WaitForChild("Movement")
 local Parry = require(Movement:WaitForChild("Parry"))
 local MoveState = require(Movement:WaitForChild("MoveState"))
+local MoveConfig = require(Movement:WaitForChild("MoveConfig"))
 local poseRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("Pose") :: RemoteEvent
+local lookRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("Look") :: RemoteEvent
+local cardsRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("Cards") :: RemoteEvent
+local wallJumpRemote = ReplicatedStorage:WaitForChild("MovementRemotes"):WaitForChild("WallJump") :: RemoteEvent
 local abilityRemotes = ReplicatedStorage:WaitForChild("AbilityRemotes")
 local dashRemote = abilityRemotes:WaitForChild("Dash") :: RemoteEvent
 local pushRemote = abilityRemotes:WaitForChild("Push") :: RemoteEvent
@@ -30,13 +36,18 @@ local JUMP_FOV = 84
 local SLIDE_JUMP_FOV = 96
 local CHAIN_JUMP_FOV = 104
 local FOV_EASE = 7
+local SCOPE_FOV_EASE = 30 -- scoping out snaps
+local SCOPE_IN_EASE = 13 -- scoping in takes a moment, about a quarter of a second
 local LAND_CAMERA_DIP = Vector3.new(0, -0.9, 0)
 local MIN_AIR_FOR_DIP = 0.15
 local EFFECT_EASE = 7
 local POSE_SEND_GAP = 0.12 -- stays under the server's 10 per second limit
-local DASH_RADIUS = 1.5 -- keeps the body this far from a wall
-local DASH_BACK_START = 1.6
-local DASH_GROUND_REACH = 6
+local LOOK_SEND_GAP = 0.1 -- how often the server is told how far up or down you're looking, at most
+local LOOK_SEND_CHANGE = 2 -- degrees it must have changed by
+local DASH_CARRY_LEAST = 1.3 -- a dash carries you with no keys held while its speed is over this many sprints
+local dashCarryUntil = -math.huge
+local DASH_POP = 16 -- studs a second upward a dash from the ground gets at least
+local DASH_FLAT_LEAST = 0.3 -- the least share of the launch speed kept as running speed, for a dash aimed up or down
 
 local player = Players.LocalPlayer
 local humanoid: Humanoid? = nil
@@ -46,23 +57,25 @@ local slideDirection = Vector3.zero
 local airFromSlide = false
 local jumped = false
 local fieldOfView = FIELD_OF_VIEW
+local wasScoped = false
+local scopeEasing = false
 local landDip = 0
+local SLIDE_CAMERA_HOLD = 0.35 -- seconds the camera stays low after a slide blips into the air with crouch held
+local slidSeenAt = -math.huge
+local JUMP_SOUND_GAP = 0.3 -- seconds before the jump sound can play again
+local jumpSoundAt = -math.huge
 local airStartedAt = 0
 local peakFall = 0 -- the fastest fall since leaving the ground
 local sentPose = "Normal"
+local sentLook = 0
+local sentCards = { out = false, turns = 0, used = 0 }
+local cardsSentAt = -math.huge
+local CARDS_SEND_GAP = 0.08 -- stays under the server's limit
+local lookSentAt = -math.huge
 local poseSentAt = -math.huge
 local jumpHeld = false
 local stepTravel = 0
 
-type DashPath = {
-	from: Vector3,
-	to: Vector3,
-	forward: Vector3,
-	startedAt: number,
-	entrySpeed: number,
-	fallSpeed: number,
-}
-local dash: DashPath? = nil
 
 local function poseFor(mode: string): string
 	if mode == "Slide" or mode == "Crouch" then
@@ -100,6 +113,8 @@ local function targetFieldOfView(): number
 	return movementFieldOfView() + PlayerSettings.get().fieldOfView - FIELD_OF_VIEW
 end
 
+local DASH_SIDE_LEAST = 0.35 -- sideways input under this share of forward still counts as straight ahead
+
 local function flatLook(): Vector3
 	local look = workspace.CurrentCamera.CFrame.LookVector
 	local flat = Vector3.new(look.X, 0, look.Z)
@@ -129,63 +144,137 @@ local function tryParry(moveDirection: Vector3, now: number)
 	local edge = Ledge.find(humanoid.Parent :: Model, root, heading, rootHeight)
 	if edge then
 		startParry(heading, edge.height, now)
+		return true
 	end
+	return false
 end
 
--- A dash follows a set path, then hands back to normal movement in the air.
-local function startDash(distance: number)
-	if not humanoid or not root or humanoid.Health <= 0 or dash then
+-- A jump press in the air beside a wall kicks off it: away from the wall and toward where the player is looking,
+-- keeping their speed. A few to a time in the air, and never off the same wall twice running.
+local wallJumps = 0
+local wallJumpAt = -math.huge
+local kickedWalls: { Vector3 } = {} -- the way out of each wall kicked off this time in the air
+local wallParams = RaycastParams.new()
+wallParams.FilterType = Enum.RaycastFilterType.Exclude
+wallParams.RespectCanCollide = true
+
+-- For the instant response below: it must never drive the body into a wall. Setting the velocity toward the keys
+-- every frame while a wall was in the way pushed the body into it until it stuck (River, 2026-11-11).
+local WALL_FEEL = 1.5 -- studs ahead the body is checked for a wall
+local WALL_STEEP = 0.5 -- surfaces leaning less than this (the upward share of the normal) are walls
+local STALL_SHARE = 0.7 -- moving slower than this share of the speed just set means something is in the way
+local feelParams = RaycastParams.new()
+feelParams.FilterType = Enum.RaycastFilterType.Exclude
+feelParams.RespectCanCollide = true
+local lastPush: Vector3? = nil -- the velocity set on the last frame, if one was
+
+local WALL_JUMP_HEIGHTS = { 0, -2.2, 1.5 } -- studs from the middle of the body
+
+local function tryWallJump(moveDirection: Vector3, now: number)
+	if
+		state.mode ~= "Air"
+		or humanoid.FloorMaterial ~= Enum.Material.Air
+		or wallJumps >= MoveConfig.WallJumps
+		or now - wallJumpAt < MoveConfig.WallJumpGap
+		or now - airStartedAt < MoveConfig.WallJumpMinAir
+	then
 		return
 	end
-	local direction = humanoid.MoveDirection
-	local forward = if direction.Magnitude > 0 then direction.Unit else flatLook()
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { humanoid.Parent :: Model }
-	params.RespectCanCollide = true
-
-	-- On the ground the path follows the slope, so a ramp does not stop the dash.
-	local ground = workspace:Raycast(root.Position, Vector3.new(0, -DASH_GROUND_REACH, 0), params)
-	if ground then
-		forward = (forward - ground.Normal * forward:Dot(ground.Normal)).Unit
+	wallParams.FilterDescendantsInstances = { humanoid.Parent :: Instance }
+	-- The nearest wall within reach, looking all the way round.
+	local look = flatLook()
+	local nearest: RaycastResult? = nil
+	-- At three heights, the middle of the body, near the feet and near the head: with only the middle, a wall
+	-- that was low, or had a window at that height, was missed, and River found it finicky when low (2026-11-11).
+	for _, height in WALL_JUMP_HEIGHTS do
+		local from = root.Position + Vector3.new(0, height, 0)
+		for turn = 0, 7 do
+			local way = CFrame.Angles(0, turn * math.pi / 4, 0) * look
+			local hit = workspace:Raycast(from, way * MoveConfig.WallJumpReach, wallParams)
+			if hit and math.abs(hit.Normal.Y) <= MoveConfig.WallJumpSteep and (not nearest or hit.Distance < nearest.Distance) then
+				nearest = hit
+			end
+		end
 	end
-
-	-- A sphere cast misses anything it starts inside, so it starts behind the player
-	-- to catch a wall they are already touching.
-	local start = root.Position - forward * DASH_BACK_START
-	local hit = workspace:Spherecast(start, DASH_RADIUS, forward * (distance + DASH_BACK_START), params)
-	local travel = if hit then math.max(hit.Distance - DASH_BACK_START, 0) else distance
-	local from = root.Position
-	dash = {
-		from = from,
-		to = from + forward * travel,
-		forward = forward,
-		startedAt = os.clock(),
-		entrySpeed = MoveState.speed(state, os.clock()),
-		fallSpeed = root.AssemblyLinearVelocity.Y,
-	}
-	MoveState.startDash(state)
-	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+	if not nearest then
+		return
+	end
+	local away = Vector3.new(nearest.Normal.X, 0, nearest.Normal.Z).Unit
+	-- No more than WallJumpsPerWall kicks off the same wall before landing.
+	local sameWall = 0
+	for _, kicked in kickedWalls do
+		if away:Dot(kicked) > MoveConfig.WallJumpSame then
+			sameWall += 1
+		end
+	end
+	if sameWall >= MoveConfig.WallJumpsPerWall then
+		return
+	end
+	-- Where the player is steering, or looking, bounced off the wall if it points into it.
+	local aim = if moveDirection.Magnitude > 0 then moveDirection.Unit else look
+	local into = aim:Dot(away)
+	if into < 0 then
+		aim -= away * (2 * into)
+	end
+	local kick = (away + aim * MoveConfig.WallJumpLook).Unit
+	MoveState.wallJump(state, now)
+	humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+	root.AssemblyLinearVelocity = kick * MoveState.speed(state, now)
+		+ Vector3.new(0, Parry.riseSpeed(MoveConfig.WallJumpHeight, workspace.Gravity), 0)
+	slideDirection = kick
+	airFromSlide = true
+	jumped = true
+	airStartedAt = now
+	peakFall = 0
+	wallJumps += 1
+	wallJumpAt = now
+	table.insert(kickedWalls, away)
+	jumpSoundAt = now
+	GunAudio.playWallJump()
+	WallKick.play(nearest.Position, nearest.Normal)
+	-- For the body: yours straight away on this client, everyone else's by way of the server.
+	player:SetAttribute("WallKick", away)
+	player:SetAttribute("WallKickAt", os.clock())
+	wallJumpRemote:FireServer(away)
 end
 
-local function advanceDash(path: DashPath, now: number)
-	local progress = math.min((now - path.startedAt) / Config.DashSeconds, 1)
-	root.CFrame = CFrame.new(path.from:Lerp(path.to, progress)) * root.CFrame.Rotation
-	root.AssemblyLinearVelocity = Vector3.zero
-
-	if progress >= 1 then
-		dash = nil
-		local dashSpeed = (path.to - path.from).Magnitude / Config.DashSeconds
-		MoveState.finishDash(state, path.entrySpeed, dashSpeed, now)
-		humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
-		slideDirection = Vector3.new(path.forward.X, 0, path.forward.Z).Unit
-		local speed = MoveState.speed(state, now)
-		root.AssemblyLinearVelocity = slideDirection * speed + Vector3.yAxis * path.fallSpeed
-		airFromSlide = true
-		jumped = false
-		airStartedAt = now
-		peakFall = 0
+-- A dash is a launch: one hard shove of speed, then the speed is kept and let go slowly (MoveState's dash fade).
+-- It used to carry the body along a set path by placing it every frame, which looked steppy (River, 2026-11-11:
+-- "not smooth", "it should launch"): Roblox stops smoothing a body on a frame a script moves it. Now the velocity
+-- is set once and physics carries it, walls and all.
+local function startDash(distance: number)
+	if not humanoid or not root or humanoid.Health <= 0 then
+		return
 	end
+	-- Holding only forward, the dash goes where the camera looks, up or down too (River: "dash in the direction
+	-- your mouse is looking if your holding W"). With any sideways input it goes the flat way you're moving.
+	local direction = humanoid.MoveDirection
+	local camera = workspace.CurrentCamera.CFrame
+	local asked = camera:VectorToObjectSpace(direction)
+	local straight = direction.Magnitude > 0 and asked.Z < 0 and math.abs(asked.X) < DASH_SIDE_LEAST * math.abs(asked.Z)
+	local forward = if straight then camera.LookVector elseif direction.Magnitude > 0 then direction.Unit else flatLook()
+
+	local now = os.clock()
+	local peak = distance / Config.DashSeconds
+	local flat = Vector3.new(forward.X, 0, forward.Z)
+	local way = if flat.Magnitude > 0.05 then flat.Unit else flatLook()
+	-- Off the ground it always pops up a little, so the floor doesn't eat the launch.
+	local rise = forward.Y * peak
+	if humanoid.FloorMaterial ~= Enum.Material.Air then
+		rise = math.max(rise, DASH_POP)
+	end
+
+	local entrySpeed = MoveState.speed(state, now)
+	MoveState.finishDash(state, entrySpeed, peak * math.max(flat.Magnitude, DASH_FLAT_LEAST), now)
+	dashCarryUntil = now + MoveConfig.DashFadeTime
+	humanoid.WalkSpeed = MoveState.speed(state, now) -- now, not next frame: on the ground the Humanoid drags to its WalkSpeed at once
+	humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+	slideDirection = way
+	root.AssemblyLinearVelocity = flat * peak + Vector3.yAxis * rise
+	airFromSlide = true
+	jumped = false
+	airStartedAt = now
+	peakFall = 0
 end
 
 -- In the Outpost the body turns to face where it's walking. In first person this script turns it to the camera.
@@ -208,7 +297,6 @@ local function onCharacter(character: Model)
 	landDip = 0
 	sentPose = "Normal"
 	jumpHeld = false
-	dash = nil
 	workspace.CurrentCamera.FieldOfView = FIELD_OF_VIEW
 end
 
@@ -228,19 +316,20 @@ local function onFrame(dt: number)
 		humanoid.Jump = true
 	end
 
-	if jumpPressed and state.mode ~= "Dash" then
-		tryParry(direction, now)
+	if jumpPressed and state.mode ~= "Dash" and not tryParry(direction, now) then
+		tryWallJump(direction, now)
 	end
-	if dash then
-		advanceDash(dash, now)
+	if humanoid.FloorMaterial ~= Enum.Material.Air then
+		wallJumps, kickedWalls = 0, {} -- back on the ground
 	end
 
 	MoveState.step(state, {
-		moving = direction.Magnitude > 0 or airFromSlide,
-		sprint = keys.sprint,
+		moving = direction.Magnitude > 0 or airFromSlide or now < dashCarryUntil,
+		sprint = true, -- always: River had walking taken out (2026-11-10). Moving is sprinting; the sprint key does nothing
 		crouch = keys.crouch,
 		jump = keys.jump,
 		grounded = humanoid.FloorMaterial ~= Enum.Material.Air,
+		cards = CardInHand.slot ~= nil,
 	}, now)
 
 	humanoid.WalkSpeed = MoveState.speed(state, now)
@@ -274,17 +363,77 @@ local function onFrame(dt: number)
 	if airFromSlide and direction.Magnitude == 0 then
 		humanoid:Move(slideDirection, false)
 	end
+	-- So does a dash, on the ground too, while it's still well over sprint speed.
+	local dashCarry = now < dashCarryUntil and direction.Magnitude == 0
+		and MoveState.speed(state, now) > MoveConfig.SprintSpeed * DASH_CARRY_LEAST
+	if dashCarry then
+		humanoid:Move(slideDirection, false)
+	end
+
+	-- The keys take hold at once. Left to itself the Humanoid eases up to speed and back down, slowly at this
+	-- gravity, so the flat velocity is set here: straight to the keys on the ground (and to a stop with none
+	-- held), and to the jump's speed on leaving the ground. In the air it is left alone, so a jump, a push or a
+	-- wall kick carries. A dash moves itself.
+	if state.mode ~= "Dash" then
+		local wish = direction
+		if sliding or (airFromSlide and direction.Magnitude == 0) or dashCarry then
+			wish = slideDirection
+		end
+		local moving = root.AssemblyLinearVelocity
+		local goal = Vector3.new(wish.X, 0, wish.Z) * humanoid.WalkSpeed
+		-- A wall just ahead: only the part of the goal that runs along it is asked for.
+		if goal.Magnitude > 0.1 then
+			feelParams.FilterDescendantsInstances = { humanoid.Parent :: Instance }
+			local wall = workspace:Blockcast(root.CFrame, root.Size * 0.9, goal.Unit * WALL_FEEL, feelParams)
+			if wall and math.abs(wall.Normal.Y) < WALL_STEEP then
+				local face = Vector3.new(wall.Normal.X, 0, wall.Normal.Z)
+				if face.Magnitude > 0.01 then
+					face = face.Unit
+					local into = goal:Dot(face)
+					if into < 0 then
+						goal -= face * into
+					end
+				end
+			end
+		end
+		-- And whatever the check can't see: if the velocity was set last frame and the body still isn't moving
+		-- that way, it is blocked, and it's left to the Humanoid until the keys change.
+		local flatMoving = Vector3.new(moving.X, 0, moving.Z)
+		local stalled = false
+		if lastPush and goal.Magnitude > 0.1 and goal.Unit:Dot(lastPush.Unit) > 0.95 then
+			stalled = flatMoving:Dot(goal.Unit) < goal.Magnitude * STALL_SHARE
+		end
+		-- Only when the velocity is really off (a key just pressed or let go, a turn, a new speed). Setting it
+		-- every frame made the camera judder, big step then small step: Roblox stops smoothing a body between
+		-- physics steps on a frame its velocity is set from a script (seen in River's clip, 2026-11-10). Once
+		-- you're at speed the Humanoid holds it and nothing is written.
+		local off = (Vector3.new(moving.X, 0, moving.Z) - goal).Magnitude
+		local push = false
+		if off < MoveConfig.ResponseSlack or stalled then
+			-- close enough, or blocked: leave it to the Humanoid
+		elseif state.mode ~= "Air" then
+			push = true
+		elseif wish.Magnitude > 0 and previousMode ~= "Air" then
+			-- Leaving the ground: the jump's speed (a slide jump's boost) is there at once, not eased in.
+			push = true
+		end
+		if push then
+			root.AssemblyLinearVelocity = Vector3.new(goal.X, moving.Y, goal.Z)
+			lastPush = if goal.Magnitude > 0.1 then goal else nil
+		elseif not stalled then
+			lastPush = nil
+		end
+		-- Once in the air the keys no longer steer at once: that was here (AirResponse) and River had it taken
+		-- out on 2026-11-11, "perfect air strafing ... doesn't feel right". The Humanoid's own air control is left.
+	end
 
 	local velocity = root.AssemblyLinearVelocity
-	local fallY = MoveState.fallVelocity(state, velocity.Y, dt)
-	if fallY ~= velocity.Y then
-		root.AssemblyLinearVelocity = Vector3.new(velocity.X, fallY, velocity.Z)
-	end
 
 	local flatSpeed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
 	local stepped
 	stepTravel, stepped = MoveState.stepTravel(stepTravel, flatSpeed * dt, state.mode)
-	if stepped then
+	-- The soldier body's feet play its step sounds as they land (RemotePoses). This is for any other body.
+	if stepped and not (humanoid.Parent and humanoid.Parent:GetAttribute("SoldierRig")) then
 		GunAudio.playStep()
 	end
 
@@ -294,7 +443,9 @@ local function onFrame(dt: number)
 		airStartedAt = now
 		peakFall = 0
 		jumped = keys.jump
-		if jumped then
+		-- Once a jump: the ground check can flicker as the feet leave, which would count as leaving it twice.
+		if jumped and now - jumpSoundAt >= JUMP_SOUND_GAP then
+			jumpSoundAt = now
 			GunAudio.playJump()
 		end
 	elseif previousMode == "Air" and not airborne and now - airStartedAt >= MIN_AIR_FOR_DIP then
@@ -302,14 +453,54 @@ local function onFrame(dt: number)
 		GunAudio.playLand(MoveState.hardLanding(peakFall))
 	end
 	if airborne then
-		peakFall = math.max(peakFall, -fallY)
+		peakFall = math.max(peakFall, -velocity.Y)
 	end
 	landDip *= math.exp(-dt * EFFECT_EASE)
-	fieldOfView += (targetFieldOfView() - fieldOfView) * (1 - math.exp(-dt * FOV_EASE))
+	local scoped = player:GetAttribute("AimFov") ~= nil
+	if scoped ~= wasScoped then
+		wasScoped = scoped
+		scopeEasing = true
+	end
+	local targetFov = targetFieldOfView()
+	if scopeEasing and math.abs(targetFov - fieldOfView) < 1 then
+		scopeEasing = false
+	end
+	fieldOfView += (targetFov - fieldOfView) * (1 - math.exp(-dt * (if scopeEasing then (if scoped then SCOPE_IN_EASE else SCOPE_FOV_EASE) else FOV_EASE)))
 	workspace.CurrentCamera.FieldOfView = fieldOfView
 
-	local target = BODY_CAMERA + (if sliding then SLIDE_CAMERA_DROP else Vector3.zero) + LAND_CAMERA_DIP * landDip
+	-- The camera stays low through a slide's blips. A slide that loses the ground for a moment (a bump, a lip, the
+	-- start of a slope) becomes "Air" for at least MinAirTime before it can be a slide again, and with slides spammed
+	-- that happened over and over: the game had you sliding, mostly, while the camera kept being let back up and never
+	-- got down. So it also counts as low while crouch is still held just after a slide.
+	if sliding then
+		slidSeenAt = now
+	end
+	local low = sliding or (keys.crouch and state.mode == "Air" and now - slidSeenAt < SLIDE_CAMERA_HOLD)
+	local target = BODY_CAMERA + (if low then SLIDE_CAMERA_DROP else Vector3.zero) + LAND_CAMERA_DIP * landDip
 	humanoid.CameraOffset = humanoid.CameraOffset:Lerp(target, math.min(dt * CAMERA_EASE, 1))
+
+	-- The cards in your hand, for the body: yours on the player for this client, everyone else's by the server.
+	local cardsOut, cardTurns, cardUsed = CardInHand.slot ~= nil, CardInHand.turns, CardInHand.used
+	if cardsOut ~= sentCards.out or cardTurns ~= sentCards.turns or cardUsed ~= sentCards.used then
+		player:SetAttribute("CardsOut", cardsOut)
+		player:SetAttribute("CardTurns", cardTurns)
+		player:SetAttribute("CardUsed", cardUsed)
+		if now - cardsSentAt >= CARDS_SEND_GAP then
+			sentCards = { out = cardsOut, turns = cardTurns, used = cardUsed }
+			cardsSentAt = now
+			cardsRemote:FireServer(cardsOut, cardTurns, cardUsed)
+		end
+	end
+
+	-- How far up or down you're looking, for the body other players see (and your own, in the test view) to
+	-- bend to. Yours is kept on the player for this client; everyone else gets it by way of the server.
+	local lookPitch = math.deg(math.asin(math.clamp(workspace.CurrentCamera.CFrame.LookVector.Y, -1, 1)))
+	player:SetAttribute("LookPitch", lookPitch)
+	if math.abs(lookPitch - sentLook) >= LOOK_SEND_CHANGE and now - lookSentAt >= LOOK_SEND_GAP then
+		sentLook = lookPitch
+		lookSentAt = now
+		lookRemote:FireServer(lookPitch)
+	end
 
 	-- In first person (the combat zones), manually rotate character to face camera direction.
 	-- In third-person (Outpost), AutoRotate is enabled so character faces move direction.
@@ -349,7 +540,7 @@ end
 
 dashRemote.OnClientEvent:Connect(startDash)
 pushRemote.OnClientEvent:Connect(function(velocity: Vector3)
-	if humanoid and root and not dash then
+	if humanoid and root then
 		local flat = Vector3.new(velocity.X, 0, velocity.Z)
 		MoveState.launch(state, flat.Magnitude, os.clock())
 		humanoid:ChangeState(Enum.HumanoidStateType.Freefall)

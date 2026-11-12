@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local CardHand = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("CardHand"))
+local CameraSmooth = require(script.Parent.CameraSmooth)
 local CardInHand = require(script.Parent.CardInHand)
 local GunConfig = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("GunConfig"))
 local GunAudio = require(script.Parent.GunAudio)
@@ -27,6 +28,16 @@ local ammo = 0
 local serverAmmo = 0
 local reloading = false
 local lastFire = -math.huge
+local firePressedAt = -math.huge
+local FIRE_PRESS_MEMORY = 0.15 -- seconds an early click is kept
+local AUTO_RELOAD_DELAY = 0.12 -- lets the shot's kick land before an auto reload starts
+local autoReloadAsked = false
+-- Swaps show at once, before the server answers: the gun last seen in each slot, and the slot asked for.
+local SWAP_WAIT = 1 -- seconds to wait for the server before showing its gun again
+local slotGuns: { [string]: string } = {}
+local pendingSlot: string? = nil
+local pendingAt = 0
+local shownGunId: string? = nil
 local previous = { fire = false, reload = false, primary = false, sidearm = false, nextClass = false, nextRifle = false }
 
 -- The local count runs ahead while firing. A refused shot is corrected once firing stops.
@@ -41,7 +52,31 @@ local function syncGun(now: number)
 	if reloading and not wasReloading then
 		GunAudio.playReload(gunId)
 	end
-	GunView.setGun(gunId, player:GetAttribute("GunSlot"))
+	local serverSlot = player:GetAttribute("GunSlot")
+	local class = player:GetAttribute("Class") or ""
+	if serverSlot then
+		slotGuns[class .. serverSlot] = gunId
+	end
+	local showId, showSlot = gunId, serverSlot
+	if pendingSlot then
+		if serverSlot == pendingSlot or now - pendingAt > SWAP_WAIT then
+			pendingSlot = nil
+		else
+			local classInfo = GunConfig.classes[class]
+			local guess = slotGuns[class .. pendingSlot]
+				or (pendingSlot == "sidearm" and classInfo and classInfo.sidearm)
+				or nil
+			if guess then
+				showId, showSlot = guess, pendingSlot
+			end
+		end
+	end
+	if showId ~= shownGunId then
+		-- The old gun's shots and reload fade out, so they don't ring on over the new one.
+		GunAudio.fadeGuns(showId)
+		shownGunId = showId
+	end
+	GunView.setGun(showId, showSlot)
 	local latest = player:GetAttribute("Ammo")
 	if latest ~= serverAmmo or now - lastFire > AMMO_RESYNC_SECONDS then
 		ammo = latest
@@ -75,7 +110,8 @@ local function fire(camera: Camera, aiming: boolean, shotTime: number)
 end
 
 local function canShoot(): boolean
-	return gun ~= nil and ammo > 0 and not (reloading and not gun.perShell)
+	-- Not mid-swap: the server still has the old gun out.
+	return gun ~= nil and ammo > 0 and not (reloading and not gun.perShell) and pendingSlot == nil
 end
 
 local function nextShot(pressed: boolean, held: boolean, now: number): number?
@@ -106,6 +142,7 @@ end
 
 local function onFrame(dt: number)
 	local camera = workspace.CurrentCamera
+	CameraSmooth.apply(dt, camera) -- first, so the gun is drawn from the smoothed camera
 	local pitch, yaw = Recoil.advance(dt)
 	camera.CFrame *= CFrame.Angles(pitch, yaw, 0)
 
@@ -121,7 +158,9 @@ local function onFrame(dt: number)
 	local now = workspace:GetServerTimeNow()
 	syncGun(now)
 	local cardOut = CardInHand.slot ~= nil
-	local aiming = keys.aim and gun ~= nil and gun.aimFov ~= nil and not reloading and not cardOut
+	-- A scoped shot drops the scope until the bolt is worked. Still holding aim scopes back in.
+	local cycling = gun ~= nil and now < lastFire + 60 / gun.rpm
+	local aiming = keys.aim and gun ~= nil and gun.aimFov ~= nil and not reloading and not cardOut and not cycling
 	player:SetAttribute("AimFov", if aiming then gun.aimFov else nil)
 
 	for _, slot in { "primary", "sidearm" } do
@@ -129,7 +168,9 @@ local function onFrame(dt: number)
 			CardHand.putAway(CardInHand)
 			swapRemote:FireServer(slot)
 			if player:GetAttribute("GunSlot") ~= slot then
-				GunView.holster()
+				pendingSlot, pendingAt = slot, now
+			else
+				pendingSlot = nil
 			end
 		end
 	end
@@ -143,13 +184,30 @@ local function onFrame(dt: number)
 	end
 
 	local pressed = keys.fire and not previous.fire
+	-- A click a moment before the gun is ready isn't lost: it fires as soon as it can. Without this a
+	-- single-shot gun eats every click that comes early, and feels like it only fires when it wants to.
+	if pressed then
+		firePressedAt = now
+	end
+	local wanted = pressed or now - firePressedAt < FIRE_PRESS_MEMORY
 	if not CardHand.blocksFire(CardInHand, keys.fire) then
-		local shotTime = nextShot(pressed, keys.fire, now)
+		local shotTime = nextShot(wanted, keys.fire, now)
 		if shotTime then
+			firePressedAt = -math.huge
 			fire(camera, aiming, shotTime)
 		elseif pressed and gun and ammo <= 0 and not reloading then
 			reloadRemote:FireServer()
 		end
+	end
+
+	-- A gun that reloads itself asks once, just after the shot that emptied it.
+	if gun and gun.autoReload and ammo <= 0 and not reloading and now - lastFire >= AUTO_RELOAD_DELAY then
+		if not autoReloadAsked then
+			autoReloadAsked = true
+			reloadRemote:FireServer()
+		end
+	elseif reloading or ammo > 0 then
+		autoReloadAsked = false
 	end
 
 	previous.fire = keys.fire
@@ -159,6 +217,9 @@ local function onFrame(dt: number)
 	previous.nextClass = keys.nextClass
 	previous.nextRifle = keys.nextRifle
 	GunView.update(dt, camera, aiming, reloading, player:GetAttribute("MoveMode") == "Sprint", CardInHand.slot ~= nil)
+	if player:GetAttribute("ThirdPersonTest") then
+		GunView.hide() -- the test view from behind (ThirdPersonTest.client.luau): the first-person gun would hang in the air
+	end
 end
 
 player.CharacterAdded:Connect(function()

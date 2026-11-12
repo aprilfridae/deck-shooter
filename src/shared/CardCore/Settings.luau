@@ -7,6 +7,7 @@ export type Settings = {
 	sensitivity: number,
 	scopeSensitivity: number,
 	fieldOfView: number,
+	radio: number, -- 1 on, 0 off
 	keys: { [string]: string },
 }
 
@@ -14,9 +15,10 @@ local Settings = {}
 
 -- Listed in this order on the Settings panel.
 Settings.actions = {
-	{ id = "sprint", label = "SPRINT", key = "LeftShift" },
-	{ id = "crouch", label = "CROUCH", key = "C" },
-	{ id = "crouchAlt", label = "CROUCH 2", key = "LeftControl" },
+	-- No sprint key: moving is always sprinting. Crouch is also the slide key, and River wanted it on Left Shift
+	-- (2026-11-11); it was C, with Left Ctrl as the second.
+	{ id = "crouch", label = "CROUCH", key = "LeftShift" },
+	{ id = "crouchAlt", label = "CROUCH 2", key = "C" },
 	{ id = "jump", label = "JUMP", key = "Space" },
 	{ id = "reload", label = "RELOAD", key = "R" },
 	{ id = "primary", label = "PRIMARY", key = "One" },
@@ -26,6 +28,9 @@ Settings.actions = {
 	{ id = "slot3", label = "CARD 3", key = "Five" },
 	{ id = "fire", label = "FIRE", key = "MouseButton1" },
 	{ id = "aim", label = "AIM", key = "MouseButton2" },
+	{ id = "radioNext", label = "RADIO NEXT", key = "Period" },
+	{ id = "radioPrevious", label = "RADIO BACK", key = "Comma" },
+	{ id = "radioToggle", label = "RADIO ON OFF", key = "M" },
 }
 
 local RANGES = {
@@ -35,10 +40,12 @@ local RANGES = {
 	sensitivity = { 0.1, 3, 1 },
 	scopeSensitivity = { 0.1, 2, 1 },
 	fieldOfView = { 60, 100, 80 },
+	radio = { 0, 1, 1 },
 }
 
--- Roblox moves the player with W, A, S and D, and B, N, T and Y are test keys. Slash opens chat.
-local RESERVED = { W = true, A = true, S = true, D = true, B = true, N = true, T = true, Y = true, Slash = true }
+-- Roblox moves the player with W, A, S and D, and B, N, T, Y and P are test keys (P is the view of your own body in
+-- the test room). Slash opens chat.
+local RESERVED = { W = true, A = true, S = true, D = true, B = true, N = true, T = true, Y = true, P = true, Slash = true }
 
 local DIGITS = {
 	Zero = "0",
@@ -105,6 +112,7 @@ function Settings.new(): Settings
 		sensitivity = RANGES.sensitivity[3],
 		scopeSensitivity = RANGES.scopeSensitivity[3],
 		fieldOfView = RANGES.fieldOfView[3],
+		radio = RANGES.radio[3],
 		keys = defaultKeys(),
 	}
 end
@@ -113,6 +121,14 @@ local function cleanKeys(raw: any): { [string]: string }
 	local keys = defaultKeys()
 	if type(raw) ~= "table" then
 		return keys
+	end
+	-- A save from when sprint had a key. If it still has that time's defaults, crouch moves to the new ones;
+	-- either way Left Shift is free again once sprint is gone.
+	if raw.sprint ~= nil then
+		raw = table.clone(raw)
+		if raw.sprint == "LeftShift" and raw.crouch == "C" and raw.crouchAlt == "LeftControl" then
+			raw.crouch, raw.crouchAlt = nil, nil
+		end
 	end
 	local used = {}
 	for _, action in Settings.actions do

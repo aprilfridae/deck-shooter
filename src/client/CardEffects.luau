@@ -9,6 +9,12 @@ local CardMotion = require(Guns:WaitForChild("Hud"):WaitForChild("CardMotion"))
 local Palette = require(Guns:WaitForChild("Palette"))
 
 local STRIPE_TILE = 28
+-- The stripes image is 112 pixels square and holds two repeats of the pattern side by side. Only one repeat is shown
+-- as the tile, and the stripes move by sliding which 56 pixels of the image that is. The label itself never moves or
+-- sticks out of its block, so nothing depends on clipping, which Roblox drops for anything rotated (the HUD's tilted
+-- cards) and which let the stripes run off the card.
+local STRIPE_PIXELS = 112
+local STRIPE_REPEAT = 56
 local STRIPE_TIME = 1.4 -- seconds for stripes to move one tile
 local RING_THICKNESS = 1.2
 local SHINE_ROTATION = 20 -- degrees, so the band leans as it crosses
@@ -68,7 +74,8 @@ function CardEffects.rounded(gui: GuiObject, radius: UDim)
 end
 
 -- A root-sized frame showing only a slanted band. Moving the gradient's offset moves the band.
-function CardEffects.band(root: GuiObject, corner: number, halfWidth: number, color: ColorSequence, strength: number): UIGradient
+-- `rotation` is the band's lean in degrees: the shine's 20 unless given.
+function CardEffects.band(root: GuiObject, corner: number, halfWidth: number, color: ColorSequence, strength: number, rotation: number?): UIGradient
 	local frame = Instance.new("Frame")
 	frame.BackgroundColor3 = Color3.new(1, 1, 1)
 	frame.BorderSizePixel = 0
@@ -77,7 +84,7 @@ function CardEffects.band(root: GuiObject, corner: number, halfWidth: number, co
 	frame.Parent = root
 	CardEffects.rounded(frame, UDim.new(0, corner))
 	local gradient = Instance.new("UIGradient")
-	gradient.Rotation = SHINE_ROTATION
+	gradient.Rotation = rotation or SHINE_ROTATION
 	gradient.Color = color
 	gradient.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 1),
@@ -89,6 +96,15 @@ function CardEffects.band(root: GuiObject, corner: number, halfWidth: number, co
 	gradient.Offset = Vector2.new(-1, 0)
 	gradient.Parent = frame
 	return gradient
+end
+
+-- These colours as a gradient that has been turned by `phase`: see CardMotion.loop.
+function CardEffects.looped(colors: { Color3 }, phase: number): ColorSequence
+	local points = {}
+	for _, point in CardMotion.loop(#colors, phase) do
+		table.insert(points, ColorSequenceKeypoint.new(point.time, colors[point.from]:Lerp(colors[point.to], point.mix)))
+	end
+	return ColorSequence.new(points)
 end
 
 function CardEffects.stripes(root: GuiObject, unit: number, color: Color3, area: Rect): ImageLabel
@@ -103,15 +119,18 @@ function CardEffects.stripes(root: GuiObject, unit: number, color: Color3, area:
 	image.Image = CardArt.STRIPES
 	image.ImageColor3 = color
 	image.ScaleType = Enum.ScaleType.Tile
-	image.TileSize = UDim2.fromOffset(STRIPE_TILE * unit, STRIPE_TILE * unit)
-	image.Size = UDim2.new(1, STRIPE_TILE * unit, 1, 0)
+	image.ImageRectSize = Vector2.new(STRIPE_REPEAT, STRIPE_PIXELS)
+	image.TileSize = UDim2.fromOffset(STRIPE_TILE * unit * STRIPE_REPEAT / STRIPE_PIXELS, STRIPE_TILE * unit)
+	image.Size = UDim2.fromScale(1, 1)
 	image.Parent = block
 	return image
 end
 
 function CardEffects.scrolling(image: ImageLabel, unit: number): (number) -> ()
 	return function(elapsed: number)
-		image.Position = UDim2.fromOffset(-STRIPE_TILE * unit * ((elapsed % STRIPE_TIME) / STRIPE_TIME), 0)
+		-- The same speed as before: one whole tile, two repeats, every STRIPE_TIME.
+		local repeatTime = STRIPE_TIME * STRIPE_REPEAT / STRIPE_PIXELS
+		image.ImageRectOffset = Vector2.new(STRIPE_REPEAT * ((elapsed % repeatTime) / repeatTime), 0)
 	end
 end
 

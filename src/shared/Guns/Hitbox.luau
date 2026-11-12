@@ -35,12 +35,13 @@ local function raySphere(origin: Point, direction: Point, cx: number, cy: number
 end
 
 -- Returns the distance along the ray to a vertical cylinder, or nil.
-local function rayCylinder(origin: Point, direction: Point, cx: number, cz: number, bottom: number, top: number): number?
+local function rayCylinder(origin: Point, direction: Point, cx: number, cz: number, bottom: number, top: number, radius: number?): number?
 	local enter, leave = -math.huge, math.huge
 
 	local ox, oz = origin.x - cx, origin.z - cz
 	local a = direction.x * direction.x + direction.z * direction.z
-	local c = ox * ox + oz * oz - BODY_RADIUS * BODY_RADIUS
+	local reach = radius or BODY_RADIUS
+	local c = ox * ox + oz * oz - reach * reach
 	if a > 1e-9 then
 		local b = ox * direction.x + oz * direction.z
 		local discriminant = b * b - a * c
@@ -68,8 +69,12 @@ local function rayCylinder(origin: Point, direction: Point, cx: number, cz: numb
 end
 
 -- direction must be unit length. shape defaults to the soldier's.
--- Returns "Head" or "Body" and the distance, or nil.
-function Hitbox.test(origin: Point, direction: Point, target: any, shape: Shape?): (string?, number?)
+-- magnet is a gun's bullet magnetism, in studs: a shot that misses but passes within that distance of the body
+-- (or beside the head) counts as a body hit, as if the bullet were pulled in. A true head or body hit is never
+-- changed by it, and a near miss is never a headshot.
+-- Returns "Head" or "Body" and the distance, or nil. A pulled-in shot also returns the point on the body it was
+-- pulled to, for the tracer to bend onto: the side of the body nearest the bullet's path, at the path's height.
+function Hitbox.test(origin: Point, direction: Point, target: any, shape: Shape?, magnet: number?): (string?, number?, Point?)
 	local size = shape or Hitbox.shapes.soldier
 	local drop = POSE_DROP[target.pose] or 0
 	local head = raySphere(origin, direction, target.x, target.y + size.headHeight - drop, target.z)
@@ -85,6 +90,32 @@ function Hitbox.test(origin: Point, direction: Point, target: any, shape: Shape?
 		return "Head", head
 	elseif body then
 		return "Body", body
+	end
+	if magnet and magnet > 0 then
+		-- A wider cylinder, the body's and up past the head. The floor stays where it is.
+		local near = rayCylinder(
+			origin,
+			direction,
+			target.x,
+			target.z,
+			target.y + size.bodyBottom,
+			target.y + size.headHeight + HEAD_RADIUS - drop + magnet,
+			BODY_RADIUS + magnet
+		)
+		if near then
+			-- Where the path comes closest to the body's middle line, seen from above.
+			local flat = direction.x * direction.x + direction.z * direction.z
+			local along = near
+			if flat > 1e-9 then
+				along = math.max(near, ((target.x - origin.x) * direction.x + (target.z - origin.z) * direction.z) / flat)
+			end
+			local offX = origin.x + direction.x * along - target.x
+			local offZ = origin.z + direction.z * along - target.z
+			local off = math.sqrt(offX * offX + offZ * offZ)
+			local scale = if off > 1e-6 then BODY_RADIUS / off else 0
+			local height = math.clamp(origin.y + direction.y * along, target.y + size.bodyBottom, target.y + size.bodyTop - drop)
+			return "Body", near, { x = target.x + offX * scale, y = height, z = target.z + offZ * scale }
+		end
 	end
 	return nil, nil
 end

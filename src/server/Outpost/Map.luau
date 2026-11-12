@@ -10,6 +10,7 @@ local Palette = require(Guns:WaitForChild("Palette"))
 local Gable = require(script.Parent.Gable)
 local Kit = require(script.Parent.Kit)
 local OutpostScale = require(script.Parent.OutpostScale)
+local Wired = require(script.Parent.Wired)
 
 local M = Enum.Material
 
@@ -293,9 +294,9 @@ local function sideHall(kit, name: string, turn: CFrame?)
 	wallWithWindows(g, "x", CROSS_SOUTH - WALL, CROSS_SOUTH, HALL_WEST, -VAULT_OUT, { -100, -64 }, 1)
 	wallWithWindows(g, "x", CROSS_NORTH, CROSS_NORTH + WALL, HALL_WEST, -VAULT_OUT, { -82, -46 }, -1)
 	if turn then
-		g:panels("concrete", v(HALL_WEST, DECK, CROSS_SOUTH), v(wallEnd, SPRING, CROSS_Z - 3), 14, "wall")
-		g:panels("concrete", v(HALL_WEST, DECK, CROSS_Z + 3), v(wallEnd, SPRING, CROSS_NORTH), 14, "wall")
-		g:dirty(g:boxOf("concrete", v(HALL_WEST, 14, CROSS_Z - 3), v(wallEnd, SPRING, CROSS_Z + 3)), "wall")
+		g:panels("concrete", v(HALL_WEST, DECK, CROSS_SOUTH), v(wallEnd, SPRING, CROSS_Z - 6), 14, "wall")
+		g:panels("concrete", v(HALL_WEST, DECK, CROSS_Z + 6), v(wallEnd, SPRING, CROSS_NORTH), 14, "wall")
+		g:dirty(g:boxOf("concrete", v(HALL_WEST, 17, CROSS_Z - 6), v(wallEnd, SPRING, CROSS_Z + 6)), "wall")
 	else
 		g:panels("concrete", v(HALL_WEST, DECK, CROSS_SOUTH), v(wallEnd, SPRING, CROSS_NORTH), 14, "wall")
 	end
@@ -645,30 +646,30 @@ end
 
 local function rangeCorridor(kit)
 	local g = kit:group("RangeCorridor")
-	g:floor("tileFloor", v(23, SLAB_BOTTOM, 59), v(52, DECK, 73), false)
-	g:panels("tile", v(23, DECK, 59), v(52, 17, 61), 8, "wall")
-	g:panels("tile", v(23, DECK, 71), v(52, 17, 73), 8, "wall")
-	g:dirty(g:boxOf("tile", v(50, DECK, 61), v(52, 17, 71)), "wall")
-	g:dirty(g:boxOf("darkConcrete", v(23, 15, 61), v(50, 17, 71)), "shell")
+	g:floor("tileFloor", v(23, SLAB_BOTTOM, 56), v(52, DECK, 76), false)
+	g:panels("tile", v(23, DECK, 56), v(52, 21, 58), 8, "wall")
+	g:panels("tile", v(23, DECK, 74), v(52, 21, 76), 8, "wall")
+	g:dirty(g:boxOf("tile", v(50, DECK, 58), v(52, 21, 74)), "wall")
+	g:dirty(g:boxOf("darkConcrete", v(23, 19, 58), v(50, 21, 74)), "shell")
 
 	-- Standing water over the floor, lifted clear of it so the two don't flicker.
-	local water = Kit.decor(g:box(v(23, DECK + 0.12, 61), v(50, DECK + 0.3, 71), Color3.fromRGB(44, 70, 66), M.Glass))
+	local water = Kit.decor(g:box(v(23, DECK + 0.12, 58), v(50, DECK + 0.3, 74), Color3.fromRGB(44, 70, 66), M.Glass))
 	water.Transparency = 0.45
 	water.Reflectance = 0.25
 
 	for index, x in { 28, 36, 44 } do
-		local panel = g:neon(v(3.2, 0.2, 3), CFrame.new(x, 14.85, 66), FLUORESCENT)
+		local panel = g:neon(v(3.2, 0.2, 3), CFrame.new(x, 18.85, 66), FLUORESCENT)
 		g:light(panel, "SurfaceLight", {
 			Face = Enum.NormalId.Bottom,
 			Color = FLUORESCENT,
 			Brightness = 1.4,
-			Range = 14,
+			Range = 18,
 			Angle = 100,
 			Shadows = index == 2,
 		})
 	end
 	local color, material = g:surface("tile")
-	g:post(v(26.5, DECK, 62.6), 9, 2.6, color, material)
+	g:post(v(26.5, DECK, 59.6), 13, 2.6, color, material)
 
 	-- Lift doors to the test room. The frame's head sits on its jambs rather than overlapping them.
 	g:boxOf("steel", v(49.6, DECK, 62.6), v(50, 14, 63.2))
@@ -711,6 +712,8 @@ function Map.build(origin: CFrame)
 	hallShell(kit)
 	sideHall(kit, "WestHall")
 	sideHall(kit, "EastHall", EAST_TURN)
+	Wired.sideHall(kit, "WestHall")
+	Wired.sideHall(kit, "EastHall", EAST_TURN)
 	local market = hallInside(kit)
 	local matchmaking = matchmakingBooth(kit)
 	local testRoomDoor = rangeCorridor(kit)

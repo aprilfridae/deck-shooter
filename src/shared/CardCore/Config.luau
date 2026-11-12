@@ -36,15 +36,14 @@ local Config = {
 
 	-- Perks reach full strength at Prototype.
 	PerkPower = { Field = 0.8, BlackSite = 0.9, Prototype = 1 },
-	DashSeconds = 0.12,
+	DashSeconds = 0.14, -- a dash launches at its distance over this, in studs a second
 	DashCamoSeconds = 1.5,
 	CamoTransparency = 0.9,
 	MoveGraceSeconds = 0.5, -- the movement guard looks away after a push
-	DashGraceSeconds = 1, -- and for a dash, until it has ramped back under the speed limit
+	DashGraceSeconds = 3, -- and for a dash, until it has ramped back under the speed limit
 	PushRadius = 15,
 	PushSpeed = 60, -- under the guard's 63 speed limit
 	PushRise = 35,
-	CooldownSegments = 10,
 
 	StarterDeck = { "phase_dash", "overclock", "recon_pulse" },
 

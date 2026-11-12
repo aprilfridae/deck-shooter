@@ -43,6 +43,89 @@ local function allowPose(player: Player): boolean
 	return window.count <= MAX_POSES_PER_SECOND
 end
 
+-- How far up or down a player is looking, in degrees, so other players' copies of the body can bend to it.
+local lookRemote = Instance.new("RemoteEvent")
+lookRemote.Name = "Look"
+lookRemote.Parent = remotes
+local MAX_LOOKS_PER_SECOND = 15
+local lookWindows: { [Player]: { startedAt: number, count: number } } = {}
+lookRemote.OnServerEvent:Connect(function(player, pitch)
+	if type(pitch) ~= "number" or pitch ~= pitch then
+		return
+	end
+	local now = os.clock()
+	local window = lookWindows[player]
+	if not window or now - window.startedAt >= 1 then
+		window = { startedAt = now, count = 0 }
+		lookWindows[player] = window
+	end
+	window.count += 1
+	if window.count > MAX_LOOKS_PER_SECOND or not player.Character then
+		return
+	end
+	player.Character:SetAttribute("LookPitch", math.round(math.clamp(pitch, -89, 89)))
+end)
+Players.PlayerRemoving:Connect(function(player)
+	lookWindows[player] = nil
+end)
+
+-- A wall jump, so other players' copies of the body can kick off the wall too. The way is the direction out of
+-- the wall. It's only for show: the jump itself is the client's, and the speed limit judges it.
+local wallJumpRemote = Instance.new("RemoteEvent")
+wallJumpRemote.Name = "WallJump"
+wallJumpRemote.Parent = remotes
+local MAX_WALL_JUMPS_PER_SECOND = 6
+local wallJumpWindows: { [Player]: { startedAt: number, count: number } } = {}
+wallJumpRemote.OnServerEvent:Connect(function(player, way)
+	if typeof(way) ~= "Vector3" or way ~= way or math.abs(way.Magnitude - 1) > 0.05 then
+		return
+	end
+	local now = os.clock()
+	local window = wallJumpWindows[player]
+	if not window or now - window.startedAt >= 1 then
+		window = { startedAt = now, count = 0 }
+		wallJumpWindows[player] = window
+	end
+	window.count += 1
+	if window.count > MAX_WALL_JUMPS_PER_SECOND or not player.Character then
+		return
+	end
+	player.Character:SetAttribute("WallKick", way)
+	player.Character:SetAttribute("WallKickAt", workspace:GetServerTimeNow())
+end)
+Players.PlayerRemoving:Connect(function(player)
+	wallJumpWindows[player] = nil
+end)
+
+-- The cards in a player's hand, so other players' copies of the body can play the deck flourish: whether a card
+-- is out, how many times the held card has been turned to the next, and how many have been used. Only for show.
+local cardsRemote = Instance.new("RemoteEvent")
+cardsRemote.Name = "Cards"
+cardsRemote.Parent = remotes
+local MAX_CARDS_PER_SECOND = 15
+local cardsWindows: { [Player]: { startedAt: number, count: number } } = {}
+cardsRemote.OnServerEvent:Connect(function(player, out, turns, used)
+	if type(out) ~= "boolean" or type(turns) ~= "number" or type(used) ~= "number" or turns ~= turns or used ~= used then
+		return
+	end
+	local now = os.clock()
+	local window = cardsWindows[player]
+	if not window or now - window.startedAt >= 1 then
+		window = { startedAt = now, count = 0 }
+		cardsWindows[player] = window
+	end
+	window.count += 1
+	if window.count > MAX_CARDS_PER_SECOND or not player.Character then
+		return
+	end
+	player.Character:SetAttribute("CardsOut", out)
+	player.Character:SetAttribute("CardTurns", math.clamp(math.floor(turns), 0, 1e6))
+	player.Character:SetAttribute("CardUsed", math.clamp(math.floor(used), 0, 1e6))
+end)
+Players.PlayerRemoving:Connect(function(player)
+	cardsWindows[player] = nil
+end)
+
 poseRemote.OnServerEvent:Connect(function(player, pose)
 	if type(pose) ~= "string" or not POSES[pose] or not allowPose(player) then
 		return

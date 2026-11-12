@@ -42,14 +42,41 @@ describe("CardLook", function()
 		expect(CardLook.look("Field", Variant.Redacted)).toBe("Field")
 	end)
 
-	it("pads serials to two digits, and shows a gap with none", function()
-		expect(CardLook.serialText(7)).toBe("07")
-		expect(CardLook.serialText(1284)).toBe("1284")
-		expect(CardLook.serialText(nil)).toBe("--")
+	it("prints the name in capitals with no spaces", function()
+		expect(CardLook.faceName("Phase Dash")).toBe("PHASEDASH")
+		expect(CardLook.faceName("Overclock")).toBe("OVERCLOCK")
 	end)
 
-	it("shrinks the big serial past two digits", function()
-		expect(CardLook.bigSerialSize("01")).toBe(1)
-		expect(CardLook.bigSerialSize("1284")).toBe(0.5)
+	it("prints the rarity in lowercase, tier then variant", function()
+		expect(CardLook.faceRarity("Field", "Base")).toBe("field")
+		expect(CardLook.faceRarity("BlackSite", "Base")).toBe("redline")
+		expect(CardLook.faceRarity("Field", Variant.ZeroDay)).toBe("field zero-day")
+		expect(#CardLook.faceRarity("Prototype", Variant.Chromatic)).toBe(19) -- the longest; CardLayout checks it fits
+	end)
+
+	it("pads a serial to four digits and shows longer ones in full", function()
+		expect(CardLook.faceSerial(42)).toBe("0042")
+		expect(CardLook.faceSerial(12345)).toBe("12345")
+		expect(CardLook.faceSerial(nil)).toBe("----")
+	end)
+
+	it("gives serials 1 to 10 the low look and no others", function()
+		for _, serial in { 1, 10 } do
+			expect(CardLook.isLowSerial(serial)).toBe(true)
+		end
+		for _, serial in { 0, -3, 11, 1000 } do
+			expect(CardLook.isLowSerial(serial)).toBe(false)
+		end
+		expect(CardLook.isLowSerial(nil)).toBe(false)
+		expect(CardLook.lowSerialText(1)).toBe("01")
+		expect(CardLook.lowSerialText(10)).toBe("10")
+	end)
+
+	it("has a stand-in serial for each card in Studio, one of them low", function()
+		expect(CardLook.studioSerial("phase_dash")).toBe(1)
+		expect(CardLook.studioSerial("overclock")).toBe(7)
+		expect(CardLook.studioSerial("recon_pulse")).toBe(42)
+		expect(CardLook.studioSerial("aegis_shell")).toBe(117)
+		expect(CardLook.studioSerial("no_such_card")).toBe(nil)
 	end)
 end)

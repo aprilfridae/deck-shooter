@@ -49,9 +49,21 @@ local listed = {
 	panelmotion_spec = true,
 	cardindex_spec = true,
 	comments_spec = true,
+	cardlayout_spec = true,
 	cardlook_spec = true,
 	cardmotion_spec = true,
 	cardspin_spec = true,
+	cardflourish_spec = true,
+	loosen_spec = true,
+	perflevel_spec = true,
+	flicker_spec = true,
+	radio_spec = true,
+	legcycle_spec = true,
+	shotkick_spec = true,
+	codelines_spec = true,
+	killrewards_spec = true,
+	akreload_spec = true,
+	skipburst_spec = true,
 	cardtext_spec = true,
 	cardart_spec = true,
 	packs_spec = true,
@@ -65,9 +77,21 @@ local listed = {
 require("./tier_spec")
 require("./soldierpose_spec")
 require("./cards_spec")
+require("./cardlayout_spec")
 require("./cardlook_spec")
 require("./cardmotion_spec")
 require("./cardspin_spec")
+require("./cardflourish_spec")
+require("./loosen_spec")
+require("./perflevel_spec")
+require("./flicker_spec")
+require("./radio_spec")
+require("./legcycle_spec")
+require("./shotkick_spec")
+require("./codelines_spec")
+require("./killrewards_spec")
+require("./akreload_spec")
+require("./skipburst_spec")
 require("./cardtext_spec")
 require("./cardart_spec")
 require("./packs_spec")

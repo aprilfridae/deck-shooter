@@ -17,6 +17,7 @@ local DIGITS = {
 }
 
 export type Grip = { wrist: Vector3, along: Vector3, thumb: Vector3 }
+export type Fingers = { [string]: { Vector3 } } -- by digit bone: which way each of its three joints points
 
 local function restOf(name: string): CFrame
 	return CFrame.new(table.unpack(SoldierArmsData.frames[name]))
@@ -129,9 +130,9 @@ local function aimed(rest: CFrame, restEnd: Vector3, from: Vector3, to: Vector3)
 	return CFrame.new(from) * turn * rest.Rotation
 end
 
-local function poseArm(side: any, hand: CFrame, palm: CFrame, parts: any)
+local function poseArm(side: any, hand: CFrame, palm: CFrame, parts: any, shoulder: Vector3?)
 	local wrist = palm.Position
-	local shoulder = side.shoulder
+	shoulder = shoulder or side.shoulder
 	local reach = (wrist - shoulder).Magnitude
 	local direction = (wrist - shoulder).Unit
 	local longest = side.upperLength + side.foreLength
@@ -181,16 +182,36 @@ function SoldierPose.palm(gun: CFrame, grip: Grip): CFrame
 end
 
 -- One clip frame, as a frame for each part. offset is the clip's meshOffset.
-function SoldierPose.fromBones(pose: any, offset: CFrame, bones: any): { [string]: CFrame }
+-- palms puts a hand's palm somewhere other than where the clip has it, by side name, in the space the offset puts
+-- the clip in: for a gun whose shape isn't the one the clip was made on. Its fingers keep the clip's shape, turned
+-- with the palm.
+-- fingers gives a digit another shape than the clip's, by side name and digit bone: which way each of its three
+-- joints points, in the same space as palms.
+function SoldierPose.fromBones(
+	pose: any,
+	offset: CFrame,
+	bones: any,
+	palms: { [string]: CFrame }?,
+	fingers: { [string]: { [string]: { Vector3 } } }?
+): { [string]: CFrame }
 	local parts = {}
 	for _, side in { pose.right, pose.left } do
 		local palm = offset * palmOf(bones, side.prefix)
+		local turned = CFrame.identity
+		local moved = palms and palms[side.name]
+		if moved then
+			turned = moved.Rotation * palm.Rotation:Inverse()
+			palm = moved
+		end
 		local hand = palm * side.handOnPalm
 		poseArm(side, hand, palm, parts)
 		for _, digit in side.digits do
-			local aims = digitAims(bones, side.prefix, digit.bone)
-			for index, aim in aims do
-				aims[index] = offset:VectorToWorldSpace(aim)
+			local shaped = fingers and fingers[side.name] and fingers[side.name][digit.bone]
+			local aims = if shaped then table.clone(shaped) else digitAims(bones, side.prefix, digit.bone)
+			if not shaped then
+				for index, aim in aims do
+					aims[index] = turned * offset:VectorToWorldSpace(aim)
+				end
 			end
 			poseDigit(digit.segments, hand, aims, parts)
 		end
@@ -199,15 +220,77 @@ function SoldierPose.fromBones(pose: any, offset: CFrame, bones: any): { [string
 end
 
 -- Both hands on a gun that has no clip.
-function SoldierPose.fromPalms(pose: any, right: CFrame, left: CFrame): { [string]: CFrame }
+-- Turns a thumb's segments toward the gun's middle line, more at each joint out to the tip, so it wraps the gun.
+local function wrapThumb(aims: { Vector3 }, palm: CFrame, gun: CFrame, amount: number)
+	local local_ = gun:PointToObjectSpace(palm.Position)
+	local toward = gun:PointToWorldSpace(Vector3.new(0, 0, local_.Z)) - palm.Position
+	if toward.Magnitude < 1e-3 then
+		return
+	end
+	toward = toward.Unit
+	for index, aim in aims do
+		local axis = aim:Cross(toward)
+		if axis.Magnitude > 1e-3 then
+			local most = math.acos(math.clamp(aim:Dot(toward), -1, 1))
+			local angle = math.min(amount * index / #aims, most)
+			aims[index] = CFrame.fromAxisAngle(axis.Unit, angle) * aim
+		end
+	end
+end
+
+-- Where a hand part sits on its palm: hand = palm * this. sideName is "Right" or "Left".
+function SoldierPose.handOnPalm(pose: any, sideName: string): CFrame
+	return (if sideName == "Right" then pose.right else pose.left).handOnPalm
+end
+
+-- One hand's palm and fingers, for a hand already in place: the third-person body's hand part, which sits where
+-- these arms' hand does. sideName is "Right" or "Left". fingers gives the digits a shape other than the gun grip
+-- (which way each of a digit's three joints points, in the palm's space).
+function SoldierPose.handParts(pose: any, sideName: string, hand: CFrame, fingers: Fingers?): { [string]: CFrame }
+	local side = if sideName == "Right" then pose.right else pose.left
+	local palm = hand * side.handOnPalm:Inverse()
+	local parts = { [side.name .. "Hand"] = hand }
+	for _, digit in side.digits do
+		local shape = fingers and fingers[digit.bone] or digit.grip
+		local aims = {}
+		for index, aim in shape do
+			aims[index] = palm:VectorToWorldSpace(aim)
+		end
+		poseDigit(digit.segments, hand, aims, parts)
+	end
+	return parts
+end
+
+-- Where a clip frame has each palm, relative to the camera, by side name.
+function SoldierPose.clipPalms(offset: CFrame, bones: any): { [string]: CFrame }
+	return { Right = offset * palmOf(bones, PREFIXES.Right), Left = offset * palmOf(bones, PREFIXES.Left) }
+end
+
+-- shoulders moves either shoulder from its usual place, in camera space, for a gun held differently.
+-- wraps curls either thumb around the gun by up to that many radians at the tip; it needs gun.
+-- fingers gives either hand another finger shape than the gun grip.
+function SoldierPose.fromPalms(
+	pose: any,
+	right: CFrame,
+	left: CFrame,
+	shoulders: { [string]: Vector3 }?,
+	gun: CFrame?,
+	wraps: { [string]: number }?,
+	fingers: { [string]: Fingers }?
+): { [string]: CFrame }
 	local parts = {}
 	for side, palm in { [pose.right] = right, [pose.left] = left } do
 		local hand = palm * side.handOnPalm
-		poseArm(side, hand, palm, parts)
+		poseArm(side, hand, palm, parts, shoulders and shoulders[side.name])
 		for _, digit in side.digits do
+			local shape = fingers and fingers[side.name] and fingers[side.name][digit.bone] or digit.grip
 			local aims = {}
-			for index, aim in digit.grip do
+			for index, aim in shape do
 				aims[index] = palm:VectorToWorldSpace(aim)
+			end
+			local wrap = wraps and wraps[side.name]
+			if wrap and gun and digit.bone == "Pulgar" then
+				wrapThumb(aims, palm, gun, wrap)
 			end
 			poseDigit(digit.segments, hand, aims, parts)
 		end

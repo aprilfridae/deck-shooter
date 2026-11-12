@@ -65,6 +65,34 @@ describe("Hitbox", function()
 		expect(distance).toBeCloseTo(18.9, 1e-3)
 	end)
 
+	it("pulls a shot just past the shoulder onto the body with magnetism", function()
+		local zone = Hitbox.test({ x = -20, y = 3, z = 1.4 }, east, target(), nil, 0.4)
+		expect(zone).toBe("Body")
+	end)
+
+	it("gives the point on the body a pulled shot bends to", function()
+		local _, _, pull = Hitbox.test({ x = -20, y = 3, z = 1.4 }, east, target(), nil, 0.4)
+		expect(pull.x).toBeCloseTo(target().x)
+		expect(pull.z).toBeCloseTo(target().z + 1.1)
+		expect(pull.y).toBeCloseTo(3)
+		local _, _, none = Hitbox.test({ x = -20, y = 3, z = 0 }, east, target())
+		expect(none).toBeNil()
+	end)
+
+	it("still misses with magnetism when the shot isn't really close", function()
+		expect((Hitbox.test({ x = -20, y = 3, z = 1.6 }, east, target(), nil, 0.4))).toBeNil()
+	end)
+
+	it("counts a near miss beside the head as a body hit, never a headshot", function()
+		local zone = Hitbox.test({ x = -20, y = 5.9, z = 1 }, east, target(), nil, 0.4)
+		expect(zone).toBe("Body")
+	end)
+
+	it("leaves a true headshot a headshot with magnetism", function()
+		local zone = Hitbox.test({ x = -20, y = 5.9, z = 0 }, east, target(), nil, 0.4)
+		expect(zone).toBe("Head")
+	end)
+
 	it("misses past the shoulder", function()
 		expect((Hitbox.test({ x = -20, y = 3, z = 1.5 }, east, target()))).toBeNil()
 	end)
@@ -140,6 +168,19 @@ describe("ShotRequest", function()
 		local rewound = { x = 0, y = 0, z = 0 }
 		expect(ShotRequest.originAllowed({ x = 0, y = 5.9, z = 0 }, rewound)).toBe(true)
 		expect(ShotRequest.originAllowed({ x = 0, y = 6.1, z = 0 }, rewound)).toBe(false)
+	end)
+
+	it("lets a fast shooter's shot start further from their recorded body", function()
+		local rewound = { x = 0, y = 0, z = 0 }
+		expect(ShotRequest.originSlack(0, 0)).toBe(6)
+		-- Sprinting at 30 with no ping, the server trails by about a tenth of a second: 3 studs more.
+		expect(ShotRequest.originSlack(30, 0)).toBeCloseTo(9)
+		expect(ShotRequest.originAllowed({ x = 8, y = 2, z = 0 }, rewound, ShotRequest.originSlack(30, 0))).toBe(true)
+		expect(ShotRequest.originAllowed({ x = 8, y = 2, z = 0 }, rewound, ShotRequest.originSlack(0, 0))).toBe(false)
+		-- Ping adds to it, up to a limit, and so does speed.
+		expect(ShotRequest.originSlack(30, 0.1)).toBeCloseTo(12)
+		expect(ShotRequest.originSlack(30, 5)).toBeCloseTo(15)
+		expect(ShotRequest.originSlack(9999, 0)).toBeCloseTo(17)
 	end)
 end)
 

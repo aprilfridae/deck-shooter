@@ -31,7 +31,7 @@ Roblox can't import font files, so `TextLabel` can't use these fonts. Text is dr
 | `tools/export_font_atlas.py` | Run with Python and Pillow on a folder of font files. Writes one 1024 by 1024 sheet per style to `assets/hud/<style>.png` (local only, 4 pixels between glyphs) and generates `src/shared/Guns/Hud/GlyphData.luau`. Never edit `GlyphData.luau` by hand. |
 | `src/shared/Guns/Hud/FontImages.luau` | One group image id per style, kept by hand, so a re-export never wipes the ids. |
 | `src/shared/Guns/Hud/TypeLayout.luau` | Pure layout: `lay(text, style, size, tracking)` returns the width and the placed glyphs. Uppercases the text. Tracking goes between characters only. |
-| `src/shared/Guns/Hud/HudText.luau` | Pure formatting: health, shield, ammo, gun label, ability key and cooldown segments, and the HUD's scale. |
+| `src/shared/Guns/Hud/HudText.luau` | Pure formatting: health, shield, ammo, gun label, ability key and how much of a card's colour is back, and the HUD's scale. |
 | `src/client/TypeLabel.luau` | Text on screen. `new(parent, options)` takes style, size, tracking, colour and left or right alignment. `:set(text)` redraws only when the text changes. Also `:width()`, `:setColor()`, `:setPosition()` and `:setVisible()`. |
 
 - Every character has a Deep Navy shadow behind it, offset by (1, 2). `:setColor()` recolours the glyph, not the shadow.
@@ -52,26 +52,26 @@ Sizes are in pixels on a 720-pixel-tall screen. All text is capitals.
 
 | Item | Place | Style | Colour |
 | --- | --- | --- | --- |
-| Health | Bottom left, baseline 32 from the bottom, 32 from the left | `Number` 46 | Bone |
+| Health | Bottom left, baseline 32 from the bottom, 32 from the left | `Number` 46 | Data Cyan at full, running to Hazard Red at none |
 | Shield `+40` | 8 after the health number, only while shielded | `NumberThin` 46 | Bone |
-| `HEALTH` | 44 above the baseline, 34 from the left | `Label` 12, tracking 3 | Bone |
-| Class | Same line, 108 from the left | `Label` 12, tracking 3 | Bone |
-| Ammo | Bottom right, same baseline and margin | `Number` 46 | Bone |
-| Gun label `M57  /  30` | 44 above the ammo baseline, right aligned 34 from the edge | `Label` 12, tracking 3 | Bone |
+| `HEALTH` | 44 above the baseline, 34 from the left | `LabelBold` 12, tracking 3 | Bone |
+| Ammo | Bottom right, same baseline and margin | `Number` 46 | Data Cyan with a full magazine, running to Hazard Red at empty |
+| Gun label `M57  /  30` | 44 above the ammo baseline, right aligned 34 from the edge | `LabelBold` 12, tracking 3 | Bone |
 | `RELOADING` | Replaces the gun label. The ammo number stays. | `LabelBold` 12, tracking 3 | Bone |
-| Ability rows | 3 rows above health, the first 130 above the baseline, 25 apart | See below | |
+| Card spread | The equipped cards fanned out above `HEALTH` | See below | |
 
-Each ability row is 220 wide, starting 34 from the left, with tracking 2 throughout:
+The spread shows each equipped card's face, 82.5 by 132 (it was 60 by 96), drawn by `CardFace` with its name and rarity printed on it. There are no keys or bars:
 
-- The key (3, 4 or 5) in `LabelBold` 12, in Bone.
-- The card name, 18 from the row's left edge, in `Label` 12.
-- The tier on the right edge in `Label` 10, in Bone.
-- 5 below the baseline, a cooldown bar of 10 segments, 2 tall and 2 apart. Filled segments are Bone, empty ones Deep Navy.
+- To start, slot 1 is on top, slot 2 under it and slot 3 under that. A card taken in hand glitches out of the spread and back in on top of the others, in 0.42s (`HudText.glitch`), and stays on top after. First half: it flickers lit Data Cyan and jumps up to 8 sideways, harder as it goes, while a Data Cyan and a Hazard Red copy of its shape pull up to 9 apart behind it and 3 lines of static jump about over it; then it's gone, with only the copies taking turns. Second half: it snaps back in over the others 1.2 times its size with a white flash, drops out for one more beat, and settles as the copies close up. Slot 2 stands upright in the middle, its bottom 26 above the `HEALTH` line. Slots 1 and 3 sit 34 to its left and right, lean 14 degrees outward and sit 6 lower.
+- A card on cooldown is greyed out: a grey lies over it. The colour comes back evenly over the cooldown (`HudText.colour`), and is all back when the card is ready.
+- The card in hand slides up 10, and back down when it's put away (most of the way in 0.07s).
 - An empty slot shows nothing.
 
 Health and shield round up, so a player on 0.4 health shows 1.
 
-**Crosshair and hit marker:** the crosshair is a 4 by 4 Bone square. A hit shows 4 Bone dashes in an X around it for 0.3s. It starts 1.6 times bigger and shrinks, and a kill's marker is 1.5 times bigger. Neither is scaled with the rest of the HUD.
+**Health and ammo colour:** each number is blended between Data Cyan and Hazard Red by how much is left (health out of 100, ammo out of the magazine), and the colour eases to its new place over about a quarter of a second instead of snapping.
+
+**Crosshair and hit marker:** the crosshair is a Bone plus, two bars 12 long and 2 wide. A hit shows 4 Signal Acid (green) dashes in an X around it for 0.3s. It starts 1.6 times bigger and shrinks, and a kill's marker is 1.5 times bigger. Neither is scaled with the rest of the HUD.
 
 ## Scaling
 
@@ -91,3 +91,13 @@ The whole HUD, crosshair included, is hidden while the title screen is open and 
 - A low-health colour or animation.
 - Numbers animating when they change.
 - A scoreboard.
+
+## Death: the soul knocked out
+
+Added 2026-11-10, not seen in Play. `src/client/DeathSoul.client.luau`. River's idea.
+
+- When you die, the camera leaves your body: it's shoved 26 studs the way the shot was going (from the killer through you) and 8 up. The push is a hard hit and then a float: 70% of the way goes in about a fifth of a second and the rest drifts out slowly. The blow tips the view back 16 degrees and rolls it 11 to one side, and kicks the view wide (104), all settling as it floats. River asked for a harder push with a good motion curve. It then turns to look back at the body. The point it looks at eases after the body (`FOLLOW_EASE`), because the body falls in jolts and looking straight at it made the camera steppy. It stops short of walls. With no killer known (a fall, a reset) it goes straight back from where you were looking.
+- The picture drains to grey over 0.7s (a `ColorCorrectionEffect` named `DeathGrey` on the camera, so the zone lighting code doesn't touch it).
+- `YOU DIED` fades in after 0.45s, in Bone, with a thin rule under it. It's set in the game's own bold monospace (`LabelBold` through `TypeLabel`).
+- Your own body is made visible while it lasts. Everything is undone when the new character arrives.
+- The push direction comes from the `DeathBurst` remote (position and killer), which the coin burst already used.

@@ -1,4 +1,5 @@
--- Client side of ability cards: a card's key pulls it out, a click uses it, and this shows what the server reveals.
+-- Client side of ability cards: the first card key pulls the cards out, the aim key turns to the next one, a click
+-- uses it, and this shows what the server reveals.
 local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -42,11 +43,18 @@ RunService.Heartbeat:Connect(function()
 	if not Zones.allowsCombat(Zones.of(player)) then
 		CardHand.putAway(CardInHand)
 	else
-		for index = 1, 3 do
+		local ready = { isReady(1), isReady(2), isReady(3) }
+		if keys.slot1 and not previous.slot1 then
+			CardHand.open(CardInHand, ready)
+		end
+		for index = 2, 3 do -- the other two keys still go straight to their cards
 			local key = `slot{index}`
 			if keys[key] and not previous[key] then
-				CardHand.press(CardInHand, index, isReady(index))
+				CardHand.press(CardInHand, index, ready[index])
 			end
+		end
+		if keys.cycle and not previous.cycle then
+			CardHand.cycle(CardInHand, ready)
 		end
 		if keys.use and not previous.use then
 			local used = CardHand.click(CardInHand)

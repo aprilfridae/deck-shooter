@@ -33,7 +33,7 @@ The map is point-symmetric. One side is built, then the same build runs again tu
 
 - **Railings** are 3.6 studs. An invisible wall keeps feet in, while bullets and the edge check pass through it, so you can't parry off a railing into the fog. You can still jump over one on purpose.
 - **Windows** over the fog have invisible panes that stop falls but not bullets. The barred windows on the flats also have iron bars.
-- **How walls let bullets through:** Roblox ignores `CanQuery = false` on a part that collides, so the invisible walls and panes sit in the `WalkOnly` collision group instead. Shots on the server, blood splats and the edge check cast with the `Shots` group, which doesn't collide with `WalkOnly` (`src/shared/Guns/Collision.luau`). Before this, River's first Play test showed bullet holes hanging on a pane.
+- **How walls let bullets through:** Roblox ignores `CanQuery = false` on a part that collides, so the invisible walls and panes sit in the `WalkOnly` collision group instead. Shots on the server and the edge check cast with the `Shots` group, which doesn't collide with `WalkOnly` (`src/shared/Guns/Collision.luau`). Before this, River's first Play test showed bullet holes hanging on a pane.
 - **Ladders** are an invisible `TrussPart` (what Roblox's Humanoid climbs, from any side) in the `WalkOnly` group, with rails, rungs and a post drawn over it. The central one runs 4 studs past the top floor, so you can climb over.
 - **Stairs** walk on an invisible ramp under the treads (at most about 39.4 degrees, on the flats stair; the spec checks under 40).
 - **Decoration** (pipes, cables, dishes, masts, signs, snow) never collides and never stops bullets (`Kit.decor`).

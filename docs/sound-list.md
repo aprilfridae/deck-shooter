@@ -15,25 +15,37 @@ What the game already plays and what it still needs. Checked against the code on
 
 | Sound | Files | Plays when |
 | --- | --- | --- |
-| M57 shots | `gun-m4-1` to `30` | Each shot, 100ms apart. Every sound with takes picks one at random, never the same one twice in a row. |
+| M57 shots | `gun-ak47-1` to `30` (the M57 is the AK model, so River had it use the AK takes; `gun-m4-*` are now unused) | Each shot, 100ms apart. Every sound with takes picks one at random, never the same one twice in a row. |
 | B33 shots | `gun-ak47-1` to `30` | Each shot, 111ms apart |
 | SMG shots | `gun-smg-1` to `29` | Each shot, 75ms apart. Take 30 exported silent. |
 | Longscope shots | `gun-sniper-1` to `30`, without 12 | Each shot, 1.2s apart. Take 12 starts late and is much louder. |
 | Shotgun shots | `gun-shotgun-1` to `30` | Each shot, 0.8s apart |
-| Energy Pistol shots | `gun-pistol-1` to `30` | Each shot, 150ms apart |
-| Assault reload | `reload-assault-v2` | M57 and B33 reloads (0.985s) |
-| Longscope reload | `reload-sniper` | Reload (1.714s) |
+| Energy Pistol shots | `gun-pistol-1` to `30` | Each shot, as fast as 83ms apart (720 a minute) |
+| Assault reload | `reload-assault-v4` | B33 reload (0.985s; the file runs on with a silent tail) |
+| Collateral | `hit-collateral` | One bullet through two or more bodies (the Longscope). Plays once for the shooter, with the hit sounds (River's "COLLATERAL") |
+| Coin suck | `coin-suck-v2` | The kill coins being pulled into the killer (River's "COIN SUCK #", 1.7s). Plays once per kill as the first coin goes, from the killer's body |
+| Card crush | `card-crush` | Using a card: starts as the right hand begins to crush it (River's "CRUSH CARD", 1.7s), and rings out after the cards are gone |
+| Card skip | `card-skip` | Every right click with the cards out, which turns to the next card and cuts the flourish short if it's still playing (River's "RIGHT CLICK SKIP", 0.86s) |
+| Card flourish | `card-flourish-v4` | Taking the cards out (River's "CARD ANIMATION TEST 1", 3.64s, about the flourish's 3.6s). Starts with the flourish; faded over 0.15s when the cards go away or the flourish is skipped |
+| AK reload | `reload-assault-v5` | M57 reload (River's "assult reload like deadass", 1.714s file, over by about 1.5s; the reload is 2s) |
+| Longscope shot base | `gun-sniper-base` | Every Longscope shot, under the take (the Longscope has no reload sound) |
+| Coin burst | `coin-burst` | A kill's coins, from the body |
+| Pistol snap | `pistol-snap` | The pistol hand's finger snap on a kill |
 | Energy Pistol reload | `reload-pistol-v4` | Reload (0.964s) |
 | Hits | `hit-body`, `hit-head`, `hit-kill` | Your shot hits a body, a head, or gets a kill |
-| Low health | `hurt` | Damage leaves you at 20 health or less |
+| Hurt | `hurt` | Every time you take damage and live (only at 20 health or less until 2026-11-11) |
 | Footsteps | `step-1` to `10` | Every 9 studs while walking or sprinting |
 | Jumps | `jump-1` to `14` | A jump with Space (walking off an edge plays nothing). Each take opens with 0.1s of silence, which the game skips. |
 | Menu music | `menu-music-v2.mp3` | Loops on the title screen only, and fades out over 0.6s after PLAY. |
+| Radio tracks | `radio-*.mp3` (20) | The radio's playlist (`RadioTracks.luau`, `specs/radio.md`). The mp3s are in `assets/sounds/radio2/`, converted from River's m4a files with ffmpeg (the `imageio-ffmpeg` Python package). |
 | Outpost ambience | `outpost-ambience.ogg` | Loops while you're in the Outpost after PLAY, fading in and out over 1.5s. Game volume group. |
 | Menu selection | `menu-select` | Clicking PLAY, clicks in the Outpost menu, and with each pack's opening sound. Hovering a nav row plays it quieter and higher. |
 | Landings | `move-land-soft`, `move-land-hard` | Landing after at least 0.15s in the air. Hard if the fall reached 60 studs per second (a fast fall or long drop), else soft. |
+| Other players' footsteps | `step-1` to `10-mono` | Another player runs. Mono copies of the footsteps, played in 3D from their feet. |
+| Other players' shots | `gun-ak47/smg/sniper/shotgun/pistol-1` to `10-mono`, `gun-sniper-base-mono` | Someone else fires. Mono copies of the shot takes, played in 3D from where they fired (`docs/specs/guns.md`). |
 | Bullet flybys | `bullet-whizz-1` to `16` | Someone else's bullet passes within 6 studs of your head and misses. Mono, played in 3D along the bullet's path (`docs/specs/guns.md`). River's takes were trimmed to 0.5s and folded to mono. |
-| Slide start | `move-slide-start` | Every slide as it begins, including one started by landing |
+| Slide start | `move-slide-start-v2` | Every slide as it begins, including one started by landing (River's "SLIDE", 1.29s) |
+| Slide layer | `move-slide-layer-1` to `-15` | On top of the slide start, one take at random, never the same twice running (River's "SLIDE START" takes) |
 | Pack open | `pack-open-common`, `-rarer`, `-rarest` | Once as a pack spins in, in the Menu volume group. Common for Field, rarer for Redline and Prototype, rarest for Zero-Day. |
 
 ## Still needed
@@ -66,7 +78,7 @@ Other players' footsteps can't be heard either, because Roblox's default footste
 | `bullet-impact` | A shot hits a wall or floor. Keep it neutral until arenas have real materials | Mono | 3 | 0.2s | |
 | `death` | You die | Stereo | 1 | 0.8s | |
 
-Also open: the M57's reload hit isn't aligned to `reload-assault-v2`.
+The M57's reload is keyed in `AkReload.luau` and timed to `reload-assault-v5`: the rip on its first rattle (0.36 to 0.62s), the slam on its big hit (1.08s) and the bolt flying home on its last click (about 1.47s).
 
 ### 3. Cards and movement extras
 

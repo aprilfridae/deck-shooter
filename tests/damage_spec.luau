@@ -12,10 +12,10 @@ local guns = GunConfig.guns
 describe("GunConfig", function()
 	it("matches the spec's primaries", function()
 		local expected = {
-			M4 = { 24, 600, 30, 0.985 },
+			M4 = { 14, 600, 30, 2 },
 			AK47 = { 24, 540, 30, 0.985 },
 			SMG = { 17, 800, 32, 2.0 },
-			Sniper = { 85, 50, 5, 1.714 },
+			Sniper = { 85, 50, 1, 1.714 },
 			Shotgun = { 14, 75, 6, 0.5 },
 		}
 		for id, row in expected do
@@ -26,7 +26,7 @@ describe("GunConfig", function()
 
 	it("matches the spec's sidearms", function()
 		local expected = {
-			Pistol = { 20, 400, 12, 0.964 },
+			Pistol = { 20, 720, 12, 0.964 },
 			MachinePistol = { 13, 900, 20, 1.6 },
 			Revolver = { 45, 150, 6, 2.2 },
 			AutoPistol = { 16, 550, 15, 1.5 },
@@ -61,10 +61,10 @@ end)
 
 describe("Damage", function()
 	it("keeps full damage to the near range, then falls in a line", function()
-		expect(Damage.hit(guns.M4, 90, false)).toBe(24)
-		expect(Damage.hit(guns.M4, 135, false)).toBeCloseTo(20.4)
-		expect(Damage.hit(guns.M4, 180, false)).toBeCloseTo(16.8)
-		expect(Damage.hit(guns.M4, 500, false)).toBeCloseTo(16.8)
+		expect(Damage.hit(guns.M4, 90, false)).toBe(14)
+		expect(Damage.hit(guns.M4, 135, false)).toBeCloseTo(11.9)
+		expect(Damage.hit(guns.M4, 180, false)).toBeCloseTo(9.8)
+		expect(Damage.hit(guns.M4, 500, false)).toBeCloseTo(9.8)
 	end)
 
 	it("falls to 60% on the SMG", function()
@@ -73,16 +73,17 @@ describe("Damage", function()
 	end)
 
 	it("doubles an M4 headshot", function()
-		expect(Damage.hit(guns.M4, 10, true)).toBe(48)
+		expect(Damage.hit(guns.M4, 10, true)).toBe(28)
 	end)
 
 	it("kills on an AK-47 headshot at any range", function()
 		expect(Damage.hit(guns.AK47, 500, true)).toBe(Damage.KILL)
 	end)
 
-	it("kills on a Sniper headshot, and has no falloff", function()
+	it("kills on any Sniper hit, head or body, at any range", function()
 		expect(Damage.hit(guns.Sniper, 900, true)).toBe(Damage.KILL)
-		expect(Damage.hit(guns.Sniper, 900, false)).toBe(85)
+		expect(Damage.hit(guns.Sniper, 900, false)).toBe(Damage.KILL)
+		expect(Damage.hit(guns.Sniper, 5, false)).toBe(Damage.KILL)
 	end)
 
 	it("scales each shotgun pellet to nothing by 45 studs", function()
@@ -161,12 +162,12 @@ describe("GunSounds.startOffset", function()
 	end)
 end)
 
-describe("GunSounds.hitSound", function()
-	it("matches what the shot did, with a kill first", function()
-		expect(GunSounds.hitSound(false, false)).toBe(GunSounds.hits.body)
-		expect(GunSounds.hitSound(true, false)).toBe(GunSounds.hits.head)
-		expect(GunSounds.hitSound(false, true)).toBe(GunSounds.hits.kill)
-		expect(GunSounds.hitSound(true, true)).toBe(GunSounds.hits.kill)
+describe("GunSounds.hitSounds", function()
+	it("matches what the shot did, and a headshot kill plays both", function()
+		expect(GunSounds.hitSounds(false, false)).toEqual({ GunSounds.hits.body })
+		expect(GunSounds.hitSounds(true, false)).toEqual({ GunSounds.hits.head })
+		expect(GunSounds.hitSounds(false, true)).toEqual({ GunSounds.hits.kill })
+		expect(GunSounds.hitSounds(true, true)).toEqual({ GunSounds.hits.head, GunSounds.hits.kill })
 	end)
 
 	it("has an uploaded sound for every hit and the hurt sound", function()
@@ -177,13 +178,10 @@ describe("GunSounds.hitSound", function()
 end)
 
 describe("GunSounds.hurtPlays", function()
-	it("plays when damage leaves you at 20 health or less", function()
+	it("plays whenever damage leaves you alive", function()
+		expect(GunSounds.hurtPlays(100, 79)).toBe(true)
 		expect(GunSounds.hurtPlays(45, 20)).toBe(true)
 		expect(GunSounds.hurtPlays(20, 7)).toBe(true)
-	end)
-
-	it("stays quiet above 20 health", function()
-		expect(GunSounds.hurtPlays(100, 21)).toBe(false)
 	end)
 
 	it("stays quiet when health doesn't drop", function()

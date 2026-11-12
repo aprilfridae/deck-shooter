@@ -6,10 +6,13 @@ local ArmClips = require(ReplicatedStorage.Guns.ArmClips)
 local ArmPose = require(ReplicatedStorage.Guns.ArmPose)
 local SoldierArmsData = require(ReplicatedStorage.Guns.SoldierArmsData)
 local SoldierPose = require(ReplicatedStorage.Guns.SoldierPose)
+local Palette = require(ReplicatedStorage.Guns.Palette)
+local Perf = require(script.Parent.Perf)
 
 local FINGER_JITTER = 1.2 -- degrees at every finger and thumb joint
 local ARM_JITTER = 0.4
 local HAND_JITTER = 1
+local GHOST_MIN_MOVE = 0.06 -- studs a part must be from the real one for its blur copy to show
 
 export type Grip = SoldierPose.Grip
 
@@ -22,6 +25,13 @@ for name in SoldierArmsData.frames do
 end
 
 local rig: any = nil
+
+-- Motion blur for the hands with the cards: faint copies of the arms trail back along the way they came.
+local BLUR_FADES = { 0.93, 0.94, 0.95, 0.958, 0.966, 0.973, 0.98, 0.986 } -- how see-through each copy is, nearest the arms first
+local BLUR_SHUTTER = 0.09 -- seconds of movement the arms are smeared over
+local BLUR_MIN_MOVE = 0.012 -- studs a part must be from the real one for its copy to show
+local blurRigs: { any } = {}
+local blurHistory: { { at: number, parts: { [string]: CFrame } } } = {} -- where the arms were lately, oldest first
 local jitterStep = -1
 
 -- The part a mesh belongs to, from a name like RightIndex1_seg.001_metal.
@@ -71,8 +81,9 @@ local function makeRig(lit: boolean?): any
 	}
 end
 
-local function placeRig(target: any, camera: Camera)
-	local view = camera.CFrame
+-- view is where the arms hang from: the camera, or the camera with the gun's sway on it.
+local function placeRig(target: any, camera: Camera, view: CFrame?)
+	view = view or camera.CFrame
 	for index, group in target.groups do
 		local shake = target.jitter[group] or CFrame.identity
 		target.frames[index] = view * target.parts[group] * shake * target.offsets[index]
@@ -84,35 +95,89 @@ end
 local ViewArms = {}
 
 -- Bends the arms. gun is the held gun relative to the camera.
-function ViewArms.pose(gun: CFrame, right: Grip, left: Grip)
+-- rightGun and leftGun, if given, are where each hand holds instead, such as while the gun spins.
+function ViewArms.pose(
+	gun: CFrame,
+	right: Grip,
+	left: Grip,
+	shoulders: { [string]: Vector3 }?,
+	wraps: { [string]: number }?,
+	rightGun: CFrame?,
+	leftGun: CFrame?
+)
 	rig = rig or makeRig(true)
 	if rig then
-		rig.parts = SoldierPose.fromPalms(solver, SoldierPose.palm(gun, right), SoldierPose.palm(gun, left))
+		local rightPalm = SoldierPose.palm(rightGun or gun, right)
+		local leftPalm = SoldierPose.palm(leftGun or gun, left)
+		rig.parts = SoldierPose.fromPalms(solver, rightPalm, leftPalm, shoulders, gun, wraps)
+	end
+end
+
+-- Holds the deck of cards: each palm sits on the frame it's given, relative to the camera, with its fingers in the
+-- shape given.
+function ViewArms.holdCards(right: CFrame, left: CFrame, fingers: { [string]: SoldierPose.Fingers })
+	rig = rig or makeRig(true)
+	if rig then
+		rig.parts = SoldierPose.fromPalms(solver, right, left, nil, nil, nil, fingers)
 	end
 end
 
 -- Shows one exported frame.
-function ViewArms.showFrame(offset: CFrame, bones: { [string]: { number } })
+function ViewArms.showFrame(
+	offset: CFrame,
+	bones: { [string]: { number } },
+	palms: { [string]: CFrame }?,
+	fingers: { [string]: { [string]: { Vector3 } } }?
+)
 	rig = rig or makeRig(true)
 	if rig then
-		rig.parts = SoldierPose.fromBones(solver, offset, bones)
+		rig.parts = SoldierPose.fromBones(solver, offset, bones, palms, fingers)
 	end
 end
 
--- A faded copy of the arms for the motion blur, or nil if the arms model is missing.
-function ViewArms.makeGhost(): any
-	return makeRig()
-end
-
-function ViewArms.poseGhost(ghost: any, offset: CFrame, bones: { [string]: { number } })
-	ghost.parts = SoldierPose.fromBones(solver, offset, bones)
-end
-
-function ViewArms.placeGhost(ghost: any, camera: Camera, transparency: number)
+-- Makes a rig a glowing copy in one flat colour, for the motion blur: white near the arms, blue further back.
+local function tint(ghost: any, near: number)
+	local color = Palette.blur(near)
 	for _, mesh in ghost.meshes do
-		mesh.Transparency = transparency
+		mesh.Color = color
+		mesh.Material = Enum.Material.Neon
+		if mesh:IsA("MeshPart") then
+			mesh.TextureID = ""
+		end
+		for _, look in mesh:GetChildren() do
+			if look:IsA("SurfaceAppearance") or look:IsA("Decal") or look:IsA("Texture") then
+				look:Destroy()
+			end
+		end
 	end
-	placeRig(ghost, camera)
+end
+
+-- A faded copy of the arms for the motion blur, or nil if the arms model is missing. near is 1 for the copy nearest
+-- the arms and 0 for the furthest.
+function ViewArms.makeGhost(near: number?): any
+	local ghost = makeRig()
+	if ghost then
+		tint(ghost, near or 1)
+	end
+	return ghost
+end
+
+function ViewArms.poseGhost(ghost: any, offset: CFrame, bones: { [string]: { number } }, palms: { [string]: CFrame }?)
+	ghost.parts = SoldierPose.fromBones(solver, offset, bones, palms)
+end
+
+function ViewArms.placeGhost(ghost: any, camera: Camera, transparency: number, view: CFrame?)
+	-- A part that has hardly moved gets no blur: a see-through copy sitting right on top of the real part only
+	-- makes it flicker.
+	for index, mesh in ghost.meshes do
+		local group = ghost.groups[index]
+		local real = rig and rig.parts and rig.parts[group]
+		-- It fades in over the next couple of GHOST_MIN_MOVEs, so it never pops on or off.
+		local away = if real then (ghost.parts[group].Position - real.Position).Magnitude else math.huge
+		local shows = math.clamp((away - GHOST_MIN_MOVE) / (GHOST_MIN_MOVE * 2), 0, 1)
+		mesh.Transparency = 1 - (1 - transparency) * shows
+	end
+	placeRig(ghost, camera, view)
 end
 
 function ViewArms.hideGhost(ghost: any)
@@ -142,9 +207,79 @@ function ViewArms.jitter(step: number, strength: number)
 	end
 end
 
-function ViewArms.place(camera: Camera)
+-- Trails the blur copies behind the arms as they are now. Call it every frame the blur is wanted, after place.
+function ViewArms.blur(camera: Camera, view: CFrame?)
+	if not rig or not rig.parts then
+		return
+	end
+	local now = os.clock()
+	local was = blurHistory[1]
+	if was and now - was.at < 0.2 then
+		local back = math.min(BLUR_SHUTTER / (now - was.at), 1)
+		-- How many copies follows the machine. Fewer copies are each a little stronger and cover the same trail.
+		local copies = Perf.pick(#BLUR_FADES, 4, 2)
+		-- Nothing is drawn at all unless some part of the arms has moved enough to blur: a still hand costs nothing.
+		local furthest = 0
+		for group, frame in rig.parts do
+			local old = was.parts[group]
+			if old then
+				furthest = math.max(furthest, (frame.Position - old.Position).Magnitude)
+			end
+		end
+		local moving = furthest * back > BLUR_MIN_MOVE
+		for copy, fade in BLUR_FADES do
+			local ghost = blurRigs[copy]
+			if copy > copies or not moving then
+				if ghost then
+					ghost.model.Parent = nil
+				end
+				continue
+			end
+			if not ghost then
+				ghost = makeRig()
+				if not ghost then
+					break
+				end
+				tint(ghost, 1 - (copy - 1) / math.max(#BLUR_FADES - 1, 1))
+				ghost.fades = table.create(#ghost.meshes, -1)
+				blurRigs[copy] = ghost
+			end
+			local parts = {}
+			for group, frame in rig.parts do
+				local old = was.parts[group]
+				parts[group] = if old then frame:Lerp(old, back * copy / copies) else frame
+			end
+			ghost.parts = parts
+			for index, mesh in ghost.meshes do
+				local group = ghost.groups[index]
+				local moved = (parts[group].Position - rig.parts[group].Position).Magnitude
+				-- It fades in as the part gets further from the real one, so it never pops on or off.
+				local shows = math.clamp((moved - BLUR_MIN_MOVE) / (BLUR_MIN_MOVE * 3), 0, 1)
+				local transparency = 1 - (1 - fade) * shows
+				if math.abs(transparency - ghost.fades[index]) > 0.004 then
+					ghost.fades[index] = transparency
+					mesh.Transparency = transparency
+				end
+			end
+			placeRig(ghost, camera, view)
+		end
+	end
+	table.insert(blurHistory, { at = now, parts = table.clone(rig.parts) })
+	while blurHistory[2] and now - blurHistory[2].at >= BLUR_SHUTTER do
+		table.remove(blurHistory, 1)
+	end
+end
+
+function ViewArms.clearBlur()
+	table.clear(blurHistory)
+	for _, ghost in blurRigs do
+		ghost.model.Parent = nil
+	end
+end
+
+function ViewArms.place(camera: Camera, view: CFrame?)
 	if rig and rig.parts then
-		placeRig(rig, camera)
+		placeRig(rig, camera, view)
 	end
 end
 

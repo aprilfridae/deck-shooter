@@ -1,4 +1,5 @@
--- The player's Credits and income, in the Outpost's top left corner.
+-- The player's Credits and income, in the Outpost's top right corner. It was top left until the radio's strip
+-- went there (2026-11-10); River means to rework this readout later, so it has only been moved.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PackText = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("PackText"))
@@ -8,7 +9,7 @@ local MenuPanel = require(script.Parent.MenuPanel)
 local TypeLabel = require(script.Parent.TypeLabel)
 
 -- Shares of the unit.
-local LEFT = 0.03
+local RIGHT = 0.03 -- in from the right edge
 local CREDITS_LINE = 0.07
 local INCOME_LINE = 0.09
 local CREDITS_SIZE = 0.016
@@ -30,7 +31,8 @@ function IncomeLine.new(parent: Instance): Frame
 			size = size * unit,
 			tracking = TRACKING * unit,
 			color = Palette.Bone,
-			position = UDim2.fromOffset(LEFT * unit, y * unit),
+			right = true,
+			position = UDim2.new(1, -RIGHT * unit, 0, y * unit),
 		})
 	end
 	local credits = line("LabelBold", CREDITS_SIZE, CREDITS_LINE)

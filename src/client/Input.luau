@@ -25,7 +25,7 @@ function Input.read(): { sprint: boolean, crouch: boolean, jump: boolean }
 	end
 	local keys = PlayerSettings.get().keys
 	return MenuState.filter(MenuState.shared, {
-		sprint = pressed(keys.sprint),
+		sprint = true, -- there is no sprint key any more
 		crouch = pressed(keys.crouch) or pressed(keys.crouchAlt),
 		jump = pressed(keys.jump),
 	})
@@ -56,9 +56,22 @@ function Input.readGun(): { [string]: boolean }
 	}))
 end
 
+-- The radio's keys work everywhere but the title screen.
+function Input.readRadio(): { next: boolean, previous: boolean, toggle: boolean }
+	if UserInputService:GetFocusedTextBox() or MenuState.isOpen(MenuState.shared) then
+		return { next = false, previous = false, toggle = false }
+	end
+	local keys = PlayerSettings.get().keys
+	return {
+		next = pressed(keys.radioNext),
+		previous = pressed(keys.radioPrevious),
+		toggle = pressed(keys.radioToggle),
+	}
+end
+
 function Input.readAbility(): { [string]: boolean }
 	if UserInputService:GetFocusedTextBox() then
-		return { slot1 = false, slot2 = false, slot3 = false, use = false, testDeck = false, testTier = false }
+		return { slot1 = false, slot2 = false, slot3 = false, use = false, cycle = false, testDeck = false, testTier = false }
 	end
 	local keys = PlayerSettings.get().keys
 	return Zones.filter(Zones.of(player), MenuState.filter(MenuState.shared, {
@@ -66,6 +79,7 @@ function Input.readAbility(): { [string]: boolean }
 		slot2 = pressed(keys.slot2),
 		slot3 = pressed(keys.slot3),
 		use = pressed(keys.fire),
+		cycle = pressed(keys.aim), -- with a card out there's no aiming, so the aim key turns to the next card
 		testDeck = UserInputService:IsKeyDown(Enum.KeyCode.T),
 		testTier = UserInputService:IsKeyDown(Enum.KeyCode.Y),
 	}))

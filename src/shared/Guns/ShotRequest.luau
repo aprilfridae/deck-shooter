@@ -3,6 +3,11 @@ local MAX_COORDINATE = 1e5
 local MAX_REWIND = 0.2
 local MAX_ORIGIN_OFFSET = 6
 local MIN_DIRECTION = 1e-6
+-- A moving shooter is ahead of where the server has them: their position takes their ping and a few frames to
+-- arrive. So the faster they move, the further from their recorded body a shot may start.
+local LEAD_BASE = 0.1 -- seconds the server's copy of a player trails them even with no ping
+local LEAD_MOST_PING = 0.2
+local LEAD_MOST_SPEED = 110 -- the fastest fall
 
 type Point = { x: number, y: number, z: number }
 
@@ -55,9 +60,23 @@ function ShotRequest.shooterTime(firedAt: number, ping: number, serverNow: numbe
 	return math.min(firedAt + ping, serverNow)
 end
 
-function ShotRequest.originAllowed(origin: Point, rewound: Point): boolean
+-- How many seconds ahead of the server's copy of them a shooter with this ping can be.
+function ShotRequest.lead(ping: number): number
+	return LEAD_BASE + math.clamp(ping, 0, LEAD_MOST_PING)
+end
+
+-- How far from the shooter's recorded body a shot may start, moving at this speed (studs a second).
+function ShotRequest.originSlack(speed: number, ping: number): number
+	return MAX_ORIGIN_OFFSET + math.clamp(speed, 0, LEAD_MOST_SPEED) * ShotRequest.lead(ping)
+end
+
+function ShotRequest.originDistance(origin: Point, rewound: Point): number
 	local dx, dy, dz = origin.x - rewound.x, origin.y - rewound.y, origin.z - rewound.z
-	return math.sqrt(dx * dx + dy * dy + dz * dz) <= MAX_ORIGIN_OFFSET
+	return math.sqrt(dx * dx + dy * dy + dz * dz)
+end
+
+function ShotRequest.originAllowed(origin: Point, rewound: Point, slack: number?): boolean
+	return ShotRequest.originDistance(origin, rewound) <= (slack or MAX_ORIGIN_OFFSET)
 end
 
 return ShotRequest

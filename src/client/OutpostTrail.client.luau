@@ -8,6 +8,7 @@ local Workspace = game:GetService("Workspace")
 
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local Palette = require(Guns:WaitForChild("Palette"))
+local Perf = require(script.Parent.Perf)
 local Zones = require(Guns:WaitForChild("Zones"))
 
 local BODY_GROUP = "BodyMesh" -- from CharacterBody.server.luau; it never touches the world
@@ -180,7 +181,7 @@ local function stamp(current: Trail, now: number)
 		return
 	end
 	current.nextCopy = current.nextCopy % COPIES + 1
-	current.nextStamp = now + STAMP_EVERY
+	current.nextStamp = now + STAMP_EVERY * Perf.pick(1, 2, 4) -- fewer copies in the trail on a slower machine
 	copy.bornAt = now
 	local nudge = Vector3.new(random:NextNumber(-1, 1), random:NextNumber(-1, 1), random:NextNumber(-1, 1)) * SPREAD
 	for index, part in copy.parts do

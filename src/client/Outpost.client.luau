@@ -26,11 +26,13 @@ local VERTICAL_FILL = 0.86
 
 -- While you're in the Outpost. The test room keeps the place's own lighting.
 -- RELAY_LIGHTING must set the same keys, so leaving either puts every one back.
+-- A dim blue evening, so the monitors' glow carries the room (River wanted it to feel wired, like a room
+-- full of old screens at night). It was a grey morning at ClockTime 8.
 local OUTPOST_LIGHTING = {
-	Ambient = Color3.fromRGB(38, 46, 50),
-	OutdoorAmbient = Color3.fromRGB(96, 110, 112),
-	Brightness = 1.4,
-	ClockTime = 8,
+	Ambient = Color3.fromRGB(30, 36, 54),
+	OutdoorAmbient = Color3.fromRGB(70, 84, 112),
+	Brightness = 1,
+	ClockTime = 18.4,
 	EnvironmentDiffuseScale = 0.45,
 	EnvironmentSpecularScale = 1,
 	ExposureCompensation = -0.1,
@@ -48,6 +50,19 @@ local RELAY_LIGHTING = {
 	ExposureCompensation = 0,
 	GlobalShadows = true,
 	ShadowSoftness = 0.6,
+}
+-- The Hex map: the last light of a cold day in a ruined city, deep in blue-green fog. Dim, so the amber and
+-- green emergency lamps carry the arena and the towers outside are only shapes.
+local HEX_LIGHTING = {
+	Ambient = Color3.fromRGB(46, 62, 70),
+	OutdoorAmbient = Color3.fromRGB(78, 104, 114),
+	Brightness = 0.7,
+	ClockTime = 17.6,
+	EnvironmentDiffuseScale = 0.4,
+	EnvironmentSpecularScale = 0.6,
+	ExposureCompensation = -0.15,
+	GlobalShadows = true,
+	ShadowSoftness = 0.7,
 }
 -- Effects the Outpost and the Relay map replace while you're there.
 local REPLACED = {
@@ -74,17 +89,17 @@ local outpostEffects = {
 	effect("Atmosphere", {
 		Density = 0.44,
 		Offset = 0.12,
-		Color = Color3.fromRGB(148, 170, 170),
-		Decay = Color3.fromRGB(88, 106, 110),
+		Color = Color3.fromRGB(110, 130, 168),
+		Decay = Color3.fromRGB(56, 68, 100),
 		Glare = 0,
 		Haze = 2.6,
 	}),
 	effect("Sky", { CelestialBodiesShown = false, StarCount = 0 }),
 	effect("ColorCorrectionEffect", {
-		Saturation = -0.2,
-		Contrast = 0.1,
-		Brightness = -0.02,
-		TintColor = Color3.fromRGB(226, 240, 238),
+		Saturation = -0.12,
+		Contrast = 0.12,
+		Brightness = -0.03,
+		TintColor = Color3.fromRGB(208, 222, 248),
 	}),
 	effect("BloomEffect", { Intensity = 0.9, Size = 28, Threshold = 1.3 }),
 }
@@ -108,9 +123,29 @@ local relayEffects = {
 	effect("BloomEffect", { Intensity = 1, Size = 30, Threshold = 1.2 }),
 }
 
+local hexEffects = {
+	effect("Atmosphere", {
+		Density = 0.46,
+		Offset = 0,
+		Color = Color3.fromRGB(84, 116, 126),
+		Decay = Color3.fromRGB(40, 62, 72),
+		Glare = 0,
+		Haze = 2.8,
+	}),
+	effect("Sky", { CelestialBodiesShown = false, StarCount = 0 }),
+	effect("ColorCorrectionEffect", {
+		Saturation = -0.15,
+		Contrast = 0.14,
+		Brightness = -0.02,
+		TintColor = Color3.fromRGB(200, 232, 240),
+	}),
+	effect("BloomEffect", { Intensity = 1.1, Size = 32, Threshold = 1.1 }),
+}
+
 local PROFILES = {
 	[Zones.Outpost] = { lighting = OUTPOST_LIGHTING, effects = outpostEffects },
 	[Zones.Relay] = { lighting = RELAY_LIGHTING, effects = relayEffects },
+	[Zones.Hex] = { lighting = HEX_LIGHTING, effects = hexEffects },
 }
 
 local original: { [string]: any } = {}

@@ -12,7 +12,9 @@ local Spread = require(Guns:WaitForChild("Spread"))
 local Weapon = require(Guns:WaitForChild("Weapon"))
 local Zones = require(Guns:WaitForChild("Zones"))
 local Collision = require(Guns:WaitForChild("Collision"))
+local KillRewards = require(Guns:WaitForChild("KillRewards"))
 local Requests = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Requests"))
+local CardConfig = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Config"))
 local GunTargets = require(script.Parent.GunTargets)
 local loadouts = require(script.Parent.Loadouts)
 local PlayerCards = require(script.Parent.PlayerCards)
@@ -20,7 +22,7 @@ local PlayerCards = require(script.Parent.PlayerCards)
 local RESPAWN_SECONDS = 3
 local RECORD_EVERY_SECONDS = 0.05
 local MAX_RANGE = 1000
-local MAX_REQUESTS_PER_SECOND = 10
+local MAX_REQUESTS_PER_SECOND = 20 -- the Energy Pistol can fire 12 a second
 local DEFAULT_CLASS = "Assault"
 local DEFAULT_RIFLE = "M4"
 
@@ -40,6 +42,10 @@ local swapRemote = remote("Swap")
 local hitRemote = remote("HitConfirm")
 local impactRemote = remote("Impacts")
 local shotsRemote = remote("Shots")
+local rewardRemote = remote("KillReward") -- to the killer: the lines a shot's kills earned and the Credits they add up to
+-- What each player's kills have earned lately: their streak, and when each victim last paid them. Not saved.
+local records: { [Player]: KillRewards.Record } = {}
+local deathRemote = remote("DeathBurst") -- where someone died and who killed them, for the coin burst
 local loadoutRemote = remote("SetLoadout")
 remotes.Parent = ReplicatedStorage
 
@@ -73,39 +79,79 @@ local function firstWall(origin: Vector3, direction: Vector3): RaycastResult?
 	return workspace:Raycast(origin, direction, params)
 end
 
--- A shot must start near the shooter, with no wall between their body and its origin.
+-- A shot must start near the shooter, with no wall between their body and its origin. "Near" grows with how fast
+-- they're moving: the server's copy of a player trails them, so at speed or in a fall their camera is well ahead of
+-- it, and a fixed 6 studs threw those shots away without a word.
+local SPEED_OVER = 0.15 -- seconds of their recorded path their speed is measured over
+local lastRefusalWarned = 0
 local function originValid(shooter: GunTargets.Target, shot: any, ping: number, now: number): boolean
 	local origin = Vector3.new(shot.origin.x, shot.origin.y, shot.origin.z)
+	-- Their speed comes from where the server recorded them, not from a velocity their client could make up.
+	local latest, before = History.at(shooter.history, now), History.at(shooter.history, now - SPEED_OVER)
+	local velocity = Vector3.zero
+	if latest and before then
+		velocity = Vector3.new(latest.x - before.x, latest.y - before.y, latest.z - before.z) / SPEED_OVER
+	end
+	local slack = ShotRequest.originSlack(velocity.Magnitude, ping)
+	local ahead = velocity * ShotRequest.lead(ping)
+	local nearest = math.huge
+	local walled = false
 	for _, time in { ShotRequest.shooterTime(shot.firedAt, ping, now), now } do
 		local past = History.at(shooter.history, time)
-		if past and ShotRequest.originAllowed(shot.origin, past) then
+		if past then
+			nearest = math.min(nearest, ShotRequest.originDistance(shot.origin, past))
+		end
+		if past and ShotRequest.originAllowed(shot.origin, past, slack) then
 			local body = Vector3.new(past.x, past.y, past.z)
 			if not firstWall(body, origin - body) then
 				return true
 			end
+			-- Round a corner at speed, the straight line from where they were cuts the corner. So it may also be
+			-- reached by way of where their movement was carrying them, if nothing was in the way of that.
+			local carried = body + ahead
+			if ahead.Magnitude > 0.5 and not firstWall(body, ahead) and not firstWall(carried, origin - carried) then
+				return true
+			end
+			walled = true
 		end
+	end
+	if os.clock() - lastRefusalWarned > 1 then
+		lastRefusalWarned = os.clock()
+		warn(
+			string.format(
+				"[Guns] refused a shot from %s: %s (%.1f studs from their body, %.1f allowed, moving %.0f)",
+				shooter.model.Name,
+				if walled then "a wall between their body and where it started" else "it started too far from their body",
+				nearest,
+				slack,
+				velocity.Magnitude
+			)
+		)
 	end
 	return false
 end
 
--- The nearest living target this ray reaches before a wall, and the wall if there is one.
-local function nearestHit(shooter: GunTargets.Target, shot: any, direction: any, viewAt: number)
+-- Every living target this ray passes through before a wall, nearest first, and the wall if there is one.
+local function hitsAlong(shooter: GunTargets.Target, shot: any, direction: any, viewAt: number, magnet: number?)
 	local origin = Vector3.new(shot.origin.x, shot.origin.y, shot.origin.z)
 	local wall = firstWall(origin, Vector3.new(direction.x, direction.y, direction.z) * MAX_RANGE)
-	local nearest = if wall then wall.Distance else MAX_RANGE
-	local found, foundZone = nil, nil
+	local reach = if wall then wall.Distance else MAX_RANGE
+	local hits = {}
 	for _, target in GunTargets.all() do
 		if target ~= shooter and GunTargets.isAlive(target) then
 			local past = History.at(target.history, viewAt)
 			if past then
-				local zone, distance = Hitbox.test(shot.origin, direction, past, target.shape)
-				if zone and distance < nearest then
-					found, foundZone, nearest = target, zone, distance
+				local zone, distance, pull = Hitbox.test(shot.origin, direction, past, target.shape, magnet)
+				if zone and distance < reach then
+					table.insert(hits, { target = target, zone = zone, distance = distance, pull = pull })
 				end
 			end
 		end
 	end
-	return found, foundZone, nearest, wall
+	table.sort(hits, function(a, b)
+		return a.distance < b.distance
+	end)
+	return hits, reach, wall
 end
 
 local function onFire(player: Player, raw: any)
@@ -133,38 +179,112 @@ local function onFire(player: Player, raw: any)
 	local angle = Spread.angle(gun, shot.aiming)
 	local viewAt = ShotRequest.viewTime(shot.firedAt, ping, now)
 	local totals: { [GunTargets.Target]: number } = {}
+	-- A collateral, on guns that have them: a bullet that goes through two or more bodies kills every one of
+	-- them, however far apart.
+	local collaterals: { [GunTargets.Target]: boolean } = {}
 	local headshot = false
+	-- For the kill rewards: how many of this shot's bullets hit each target, and whether one hit its head.
+	local struck: { [GunTargets.Target]: { bullets: number, head: boolean } } = {}
+	local function strike(target: GunTargets.Target, head: boolean)
+		local hit = struck[target] or { bullets = 0, head = false }
+		hit.bullets += 1
+		hit.head = hit.head or head
+		struck[target] = hit
+	end
 	local impacts = {}
 	local shots = {}
 	local origin = Vector3.new(shot.origin.x, shot.origin.y, shot.origin.z)
 	for _ = 1, gun.pellets do
 		local direction = Spread.apply(shot.direction, angle, rng)
-		local target, zone, distance, wall = nearestHit(shooter, shot, direction, viewAt)
-		if target then
-			local isHead = zone == "Head"
-			totals[target] = (totals[target] or 0) + Damage.hit(gun, distance, isHead)
-			headshot = headshot or isHead
-		elseif wall then
-			table.insert(impacts, { position = wall.Position, normal = wall.Normal })
-		end
+		local hits, reach, wall = hitsAlong(shooter, shot, direction, viewAt, gun.magnet)
 		local line = Vector3.new(direction.x, direction.y, direction.z)
-		table.insert(shots, {
-			to = origin + line * distance,
-			direction = line,
-			hit = if target then target.model else nil,
-			head = zone == "Head",
-		})
+		local first = hits[1]
+		if gun.collateral and #hits >= 2 then
+			-- It passes through them all, so the tracer runs on to whatever stops it, with blood on each body.
+			for _, hit in hits do
+				collaterals[hit.target] = true
+				strike(hit.target, hit.zone == "Head")
+				headshot = headshot or hit.zone == "Head"
+				table.insert(shots, {
+					to = origin + line * hit.distance,
+					direction = line,
+					hit = hit.target.model,
+					head = hit.zone == "Head",
+					through = true,
+				})
+			end
+			if wall then
+				table.insert(impacts, { position = wall.Position, normal = wall.Normal })
+			end
+			table.insert(shots, { to = origin + line * reach, direction = line })
+		else
+			if first then
+				local isHead = first.zone == "Head"
+				totals[first.target] = (totals[first.target] or 0) + Damage.hit(gun, first.distance, isHead)
+				strike(first.target, isHead)
+				headshot = headshot or isHead
+			elseif wall then
+				table.insert(impacts, { position = wall.Position, normal = wall.Normal })
+			end
+			-- A shot magnetism pulled in ends on the body, and the tracer bends onto it (pulled).
+			local pull = if first then first.pull else nil
+			table.insert(shots, {
+				to = if pull then Vector3.new(pull.x, pull.y, pull.z) else origin + line * (if first then first.distance else reach),
+				direction = line,
+				hit = if first then first.target.model else nil,
+				head = first ~= nil and first.zone == "Head",
+				pulled = pull ~= nil or nil,
+			})
+		end
 	end
 	shotsRemote:FireAllClients(player, origin, shots)
 	if #impacts > 0 then
 		impactRemote:FireAllClients(impacts)
 	end
 
+	for target in collaterals do
+		totals[target] = math.huge
+	end
+	local announced = false -- a collateral is told to the shooter once, however many bodies it went through
+	local kills: { KillRewards.Kill } = {}
 	for target, amount in totals do
 		if amount > 0 then
-			local killed = GunTargets.damage(target, amount)
-			hitRemote:FireClient(player, { headshot = headshot, killed = killed })
+			local fullHealth = target.shield == nil and target.health >= target.humanoid.MaxHealth
+			local killed = if collaterals[target] then GunTargets.kill(target) else GunTargets.damage(target, amount)
+			if killed then
+				deathRemote:FireAllClients(target.root.Position, player) -- the killer, who the coins fly to
+				local hit = struck[target]
+				table.insert(kills, {
+					victim = target.player or target.model,
+					-- Players pay, and so will anything else given the PaysKill attribute (River's bots, later).
+					-- The test dummy has neither and never pays.
+					pays = target.player ~= nil or target.model:GetAttribute("PaysKill") == true,
+					head = hit ~= nil and hit.head,
+					fullHealth = fullHealth,
+					bullets = if hit then hit.bullets else 1,
+					distance = (target.root.Position - shooter.root.Position).Magnitude,
+				})
+				local victim = target.player
+				if victim and records[victim] then
+					KillRewards.died(records[victim])
+				end
+			end
+			local collateral = collaterals[target] == true and not announced
+			announced = announced or collateral
+			hitRemote:FireClient(player, { headshot = headshot, killed = killed, collateral = collateral })
 		end
+	end
+	if #kills > 0 then
+		-- The server alone decides what the kills are worth and adds it to the killer's saved Credits.
+		local record = records[player] or KillRewards.newRecord()
+		records[player] = record
+		local lines, total = KillRewards.forShot(kills, next(collaterals) ~= nil, record, os.clock())
+		local data = PlayerCards.get(player)
+		if total > 0 and data then
+			data.credits = math.min(data.credits + total, CardConfig.MaxCredits)
+			PlayerCards.changed(player)
+		end
+		rewardRemote:FireClient(player, lines, total)
 	end
 end
 
@@ -227,6 +347,9 @@ end
 
 local function onPlayer(player: Player)
 	local function onCharacter(character: Model)
+		if records[player] then
+			KillRewards.died(records[player]) -- a new life, however the last one ended
+		end
 		applyLoadout(player)
 		GunTargets.add(character, player)
 	end
@@ -249,6 +372,7 @@ for _, player in Players:GetPlayers() do
 end
 Players.PlayerRemoving:Connect(function(player)
 	loadouts[player] = nil
+	records[player] = nil
 	requestWindows[player] = nil
 end)
 

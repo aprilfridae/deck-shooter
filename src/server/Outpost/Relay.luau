@@ -1119,9 +1119,9 @@ function Relay.build(origin: CFrame)
 end
 
 -- A console in another room that leads to the map.
-function Relay.buildTerminal(parent: Instance, base: Vector3, facing: Vector3): ProximityPrompt
+function Relay.buildTerminal(parent: Instance, base: Vector3, facing: Vector3, text: string?): ProximityPrompt
 	local kit = Kit.new(parent, CFrame.identity, SEED)
-	return terminal(kit, base, facing, "RELAY 1V1")
+	return terminal(kit, base, facing, text or "RELAY 1V1")
 end
 
 return Relay

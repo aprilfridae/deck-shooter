@@ -74,7 +74,8 @@ Rolling, opening, rebirths and the odds. `specs/packs.md` has the page and how i
 | --- | --- | --- |
 | Music, Game and Menu volume | 0 to 100% | 100% |
 | Mouse sensitivity | 0.1 to 3 times | 1 |
-| Longscope sensitivity | 0.1 to 2 times mouse sensitivity | 1 |
+| Radio next, back and on/off keys | Rebindable; `.`, `,` and `M` by default (`radio.md`). Whether the radio is on is saved too. | |
+| Longscope sensitivity | 0.1 to 2 times mouse sensitivity. At 1 the view turns exactly as far scoped as unscoped; there is no extra slowdown for the zoom (removed 2026-11-10 at River's ask). | 1 |
 | Field of view | 60 to 100 | 80 |
 | Keybinds | Any keyboard key, or Mouse 1 and 2 | The current keys |
 
@@ -116,3 +117,7 @@ Pure rules go in shared modules with Lune tests: setting ranges and repair, key 
 - A tool for reading reports.
 - Touch and controller support.
 - Viewing players who aren't in the server.
+
+## Play page: areas
+
+Added 2026-11-10, not checked in Play. The Play page lists the areas open now above the queues: `HEX` and `RELAY` (1v1 maps) and `TEST` (the test room), each marked `GO`. Clicking one fires `OutpostRemotes.Travel` with the zone; the server (`Outpost.server.luau`) takes it only from a player in the Outpost and only for those three zones, with the usual travel cooldown. The menu only exists in the Outpost, so the way back is still each area's `OUTPOST` terminal. River asked for this instead of walking to terminals; add new areas to `QUEUES` in `PlayPanel.luau` and `MENU_AREAS` on the server.

@@ -8,18 +8,22 @@ export type Input = {
 	crouch: boolean,
 	jump: boolean,
 	grounded: boolean,
+	cards: boolean?, -- the cards are in hand
 }
 export type State = {
 	mode: Mode,
+	cards: boolean,
 	crouchHeld: boolean,
 	slideStart: number,
 	nextSlide: number,
+	slideLeftAt: number,
 	carrySpeed: number,
 	carryFrom: number,
 	carryFade: number,
 	airSince: number,
 	chained: boolean,
 	dashFadeFrom: number,
+	dashFadeTo: number,
 	dashFadeAt: number,
 }
 
@@ -38,30 +42,40 @@ end
 function MoveState.new(): State
 	return {
 		mode = "Walk",
+		cards = false,
 		crouchHeld = false,
 		slideStart = -math.huge,
 		nextSlide = -math.huge,
+		slideLeftAt = -math.huge,
 		carrySpeed = 0,
 		carryFrom = -math.huge,
 		carryFade = MoveConfig.CarryFade,
 		airSince = -math.huge,
 		chained = false,
 		dashFadeFrom = 0,
+		dashFadeTo = 0,
 		dashFadeAt = -math.huge,
 	}
 end
 
-function MoveState.speed(state: State, now: number): number
+local function plainSpeed(state: State, now: number): number
+	-- Holding the cards makes you faster on the ground (River, 2026-11-11). The air keeps whatever speed you left
+	-- the ground with, so it carries the bonus without getting it twice.
+	local cards = if state.cards then MoveConfig.CardSpeed else 1
 	if state.mode == "Slide" then
-		local alpha = math.min((now - state.slideStart) / MoveConfig.SlideFadeTime, 1)
-		return lerp(MoveConfig.SlideStartSpeed, MoveConfig.SprintSpeed, alpha)
+		-- The boost builds over SlideRampTime instead of arriving at once (River: "come on a little slower", like
+		-- Call of Duty), then fades as before. The speed is whichever of the two lines is lower.
+		local since = now - state.slideStart
+		local alpha = math.min(since / MoveConfig.SlideFadeTime, 1)
+		local fade = lerp(MoveConfig.SlideStartSpeed, MoveConfig.SprintSpeed, alpha)
+		local ramp = lerp(MoveConfig.SprintSpeed, MoveConfig.SlideStartSpeed, math.clamp(since / MoveConfig.SlideRampTime, 0, 1))
+		return math.min(fade, ramp) * cards
 	elseif state.mode == "Air" then
-		local alpha = (now - state.dashFadeAt) / MoveConfig.DashFadeTime
-		return if alpha < 1 then lerp(state.dashFadeFrom, state.carrySpeed, alpha) else state.carrySpeed
+		return state.carrySpeed
 	elseif state.mode == "Dash" then
 		return 0
 	end
-	local base = BASE_SPEED[state.mode]
+	local base = BASE_SPEED[state.mode] * cards
 	local alpha = (now - state.carryFrom) / state.carryFade
 	if alpha < 1 then
 		return lerp(state.carrySpeed, base, alpha)
@@ -69,18 +83,47 @@ function MoveState.speed(state: State, now: number): number
 	return base
 end
 
-function MoveState.jumpHeight(state: State): number
-	return if state.chained then MoveConfig.ChainJumpHeight else MoveConfig.JumpHeight
+-- What is left of a dash's launch: held near full at first, then let go, then a soft tail (measured in River's
+-- Play, 2026-11-11: letting go fast at first had it down from 65 to 40 in 0.75s, "not enough"). 0 when there is none.
+local function dashSpeed(state: State, now: number): number
+	local alpha = (now - state.dashFadeAt) / MoveConfig.DashFadeTime
+	if alpha < 0 or alpha >= 1 then
+		return 0
+	end
+	return lerp(state.dashFadeFrom, state.dashFadeTo, alpha * alpha * (3 - 2 * alpha))
+end
+
+-- A dash's launch rides over whatever else the player is doing, on the ground or in the air, through landings
+-- and jumps, until it has eased away (River, 2026-11-11: "keep momentum for a long time"; it used to be cut to a
+-- short fade by the first landing).
+function MoveState.speed(state: State, now: number): number
+	if state.mode == "Dash" then
+		return 0
+	end
+	return math.max(plainSpeed(state, now), dashSpeed(state, now))
+end
+
+function MoveState.jumpHeight(_state: State): number
+	-- Every jump is the same height. A chain jump used to go higher (8 against 6); River had that taken out.
+	return MoveConfig.JumpHeight
 end
 
 -- Launches off an edge without losing speed.
 function MoveState.parry(state: State, now: number)
-	local current = math.max(MoveState.speed(state, now), MoveConfig.SprintSpeed)
+	local current = math.max(plainSpeed(state, now), MoveConfig.SprintSpeed)
 	state.carrySpeed = math.min(current + MoveConfig.ParryBoost, MoveConfig.ParryMaxSpeed)
 	state.mode = "Air"
 	state.airSince = now
 	state.chained = false
-	state.dashFadeAt = -math.huge
+end
+
+-- Kicks off a wall in the air, keeping speed and adding a little.
+function MoveState.wallJump(state: State, now: number)
+	local current = math.max(plainSpeed(state, now), MoveConfig.SprintSpeed)
+	state.carrySpeed = math.max(current, math.min(current + MoveConfig.WallJumpBoost, MoveConfig.ParryMaxSpeed))
+	state.mode = "Air"
+	state.airSince = now
+	state.chained = false
 end
 
 -- Thrown into the air at this speed, for shoves from abilities.
@@ -97,6 +140,7 @@ function MoveState.finishDash(state: State, entrySpeed: number, dashSpeed: numbe
 	local settled = math.max(entrySpeed, MoveConfig.SprintSpeed)
 	MoveState.launch(state, settled, now)
 	state.dashFadeFrom = math.max(dashSpeed, settled)
+	state.dashFadeTo = settled
 	state.dashFadeAt = now
 end
 
@@ -104,18 +148,6 @@ end
 function MoveState.startDash(state: State)
 	state.mode = "Dash"
 	state.chained = false
-end
-
--- Holding crouch while falling pulls the player down. A jump's rise is left
--- alone, so a slide jump with crouch still held reaches full height first.
-function MoveState.fallVelocity(state: State, velocityY: number, dt: number): number
-	if state.mode ~= "Air" or not state.crouchHeld or velocityY >= 0 then
-		return velocityY
-	end
-	if velocityY <= -MoveConfig.FastFallMaxSpeed then
-		return velocityY
-	end
-	return math.max(velocityY - MoveConfig.FastFallAcceleration * dt, -MoveConfig.FastFallMaxSpeed)
 end
 
 -- A landing is hard after a fast fall or a long drop, and soft after an ordinary jump.
@@ -137,7 +169,8 @@ end
 
 function MoveState.step(state: State, input: Input, now: number)
 	local previous = state.mode
-	local current = MoveState.speed(state, now)
+	local current = plainSpeed(state, now)
+	state.cards = input.cards == true
 	local pressed = input.crouch and not state.crouchHeld
 	state.crouchHeld = input.crouch
 
@@ -150,6 +183,7 @@ function MoveState.step(state: State, input: Input, now: number)
 			return
 		end
 		state.nextSlide = now + MoveConfig.SlideCooldown
+		state.slideLeftAt = now
 	end
 
 	if not input.grounded or (previous == "Slide" and input.jump) then
@@ -161,7 +195,6 @@ function MoveState.step(state: State, input: Input, now: number)
 			state.carrySpeed = current + boost
 			state.airSince = now
 			state.mode = "Air"
-			state.dashFadeAt = -math.huge
 		end
 		return
 	end
@@ -169,8 +202,13 @@ function MoveState.step(state: State, input: Input, now: number)
 	local wantsSlide = (pressed and previous == "Sprint") or (input.crouch and previous == "Air")
 	if wantsSlide and input.sprint and input.moving and now >= state.nextSlide then
 		state.mode = "Slide"
-		state.slideStart = now
-		state.chained = previous == "Air"
+		-- A slide that only lost the ground for a moment (a bump, a lip) carries on slowing from where it was.
+		-- Starting it again from full speed made the speed lurch each time, which felt like a stutter.
+		local blip = previous == "Air" and now - state.slideLeftAt < MoveConfig.SlideBlip
+		if not blip then
+			state.slideStart = now
+			state.chained = previous == "Air"
+		end
 		return
 	end
 

@@ -1,7 +1,6 @@
--- Gun and class data. Times are seconds, distances are studs, spread and recoil are degrees.
--- pattern is the spray: { shots fired, degrees up, degrees sideways } for where bullets land
--- relative to the aim, joined by straight lines. recovery is shots forgiven per second.
--- Automatics climb nearly straight for a third of the magazine, then sweep side to side.
+-- Gun and class data. magnet is bullet magnetism (see Hitbox.test); guns without it have none. Times are seconds, distances are studs, spread and kick are degrees.
+-- kick is how far each shot nudges the view up. It settles straight back, and bullets always go where
+-- the crosshair is, so there's no spray to learn.
 local SIDEARM_FULL_TO = 40
 local SIDEARM_LOW_TO = 90
 local SIDEARM_LOW_SCALE = 0.7
@@ -12,6 +11,7 @@ local function gun(fields: { [string]: any }): { [string]: any }
 	fields.pellets = fields.pellets or 1
 	fields.perShell = fields.perShell == true
 	fields.automatic = fields.automatic == true
+	fields.collateral = fields.collateral == true -- a bullet through two or more bodies kills them all
 	fields.headshot = fields.headshot or "Double"
 	fields.fullTo = fields.fullTo or SIDEARM_FULL_TO
 	fields.lowTo = fields.lowTo or SIDEARM_LOW_TO
@@ -22,35 +22,21 @@ end
 GunConfig.guns = {
 	M4 = gun({
 		name = "M57",
-		body = 24,
+		magnet = 2, -- bullet magnetism: a shot this close to a body (studs) is pulled onto it. River's AK only. It was 0.4; River asked for 2
+		kick = 0.12,
+		body = 14, -- 24, then 18, then 14 on 2026-11-11: River wanted a longer time to kill, twice. Eight body shots (0.7s); it was five (0.4s)
 		rpm = 600,
 		mag = 30,
-		reload = 0.985,
+		reload = 2,
 		automatic = true,
 		fullTo = 90,
 		lowTo = 180,
 		lowScale = 0.7,
 		spread = 0.2,
-		pattern = {
-			{ 1, 0.3, 0 },
-			{ 2, 0.8, 0 },
-			{ 4, 2.1, 0.1 },
-			{ 7, 4, 0.2 },
-			{ 10, 5, 0.3 },
-			{ 12, 5.2, 0.9 },
-			{ 15, 5.4, 1.6 },
-			{ 17, 5.3, 1.2 },
-			{ 19, 5.4, 0 },
-			{ 22, 5.5, -1.6 },
-			{ 24, 5.4, -1.2 },
-			{ 26, 5.5, 0 },
-			{ 28, 5.5, 1 },
-			{ 30, 5.5, 1.2 },
-		},
-		recovery = 12,
 	}),
 	AK47 = gun({
 		name = "B33",
+		kick = 0.15,
 		body = 24,
 		headshot = "Kill",
 		rpm = 540,
@@ -61,26 +47,10 @@ GunConfig.guns = {
 		lowTo = 180,
 		lowScale = 0.7,
 		spread = 0.4,
-		pattern = {
-			{ 1, 0.4, 0 },
-			{ 2, 1.2, 0.05 },
-			{ 4, 3, 0.2 },
-			{ 7, 5.6, 0.4 },
-			{ 10, 7.2, 0.6 },
-			{ 12, 7.6, 1.4 },
-			{ 15, 7.8, 2.6 },
-			{ 17, 7.6, 2.1 },
-			{ 19, 7.7, 0 },
-			{ 22, 7.9, -2.6 },
-			{ 24, 7.8, -2.1 },
-			{ 26, 8, 0 },
-			{ 28, 8, 1.9 },
-			{ 30, 8, 2.2 },
-		},
-		recovery = 11,
 	}),
 	SMG = gun({
 		name = "SMG",
+		kick = 0.08,
 		body = 17,
 		rpm = 800,
 		mag = 32,
@@ -90,40 +60,27 @@ GunConfig.guns = {
 		lowTo = 90,
 		lowScale = 0.6,
 		spread = 0.8,
-		pattern = {
-			{ 1, 0.2, 0 },
-			{ 3, 0.9, 0.05 },
-			{ 6, 2.1, 0.15 },
-			{ 10, 3.1, 0.3 },
-			{ 13, 3.3, 0.8 },
-			{ 16, 3.4, 1.3 },
-			{ 18, 3.4, 0.9 },
-			{ 20, 3.5, 0 },
-			{ 24, 3.6, -1.3 },
-			{ 26, 3.6, -0.9 },
-			{ 29, 3.7, 0.3 },
-			{ 32, 3.7, 1 },
-		},
-		recovery = 16,
 	}),
 	Sniper = gun({
 		name = "Longscope",
+		kick = 1.2,
 		body = 85,
 		headshot = "Kill",
+		bodyshot = "Kill", -- one shot anywhere kills
 		rpm = 50,
-		mag = 5,
+		mag = 1, -- one in the chamber: every shot needs a reload
+		autoReload = true, -- starts reloading by itself right after the shot
+		collateral = true,
 		reload = 1.714,
 		fullTo = math.huge,
 		lowTo = math.huge,
 		lowScale = 1,
 		spread = 0,
-		hipSpread = 7,
-		pattern = { { 1, 5, 0.4 }, { 2, 6.4, -0.3 } },
-		recovery = 1.6,
-		aimFov = 30, -- only guns with this can aim down sights
+		aimFov = 18, -- only guns with this can aim down sights
 	}),
 	Shotgun = gun({
 		name = "Shotgun",
+		kick = 0.6,
 		body = 14,
 		pellets = 8,
 		rpm = 75,
@@ -134,59 +91,43 @@ GunConfig.guns = {
 		lowTo = 45,
 		lowScale = 0,
 		spread = 4,
-		pattern = { { 1, 3.5, 0.2 }, { 3, 7, -0.4 }, { 6, 8.4, 0.4 } },
-		recovery = 2.5,
 	}),
 	Pistol = gun({
 		name = "Energy Pistol",
+		kick = 0.25,
 		body = 20,
-		rpm = 400,
+		rpm = 720, -- as fast as anyone can click. 400 dropped fast clicks and felt unusable to River
 		mag = 12,
 		reload = 0.964,
 		spread = 0.4,
-		pattern = { { 1, 0.6, 0 }, { 4, 2.1, 0.1 }, { 8, 3.5, 0.2 }, { 12, 4.2, -0.45 } },
-		recovery = 10,
 	}),
 	MachinePistol = gun({
 		name = "Machine pistol",
+		kick = 0.06,
 		body = 13,
 		rpm = 900,
 		mag = 20,
 		reload = 1.6,
 		automatic = true,
 		spread = 1,
-		pattern = {
-			{ 1, 0.3, 0 },
-			{ 3, 1.1, -0.05 },
-			{ 6, 2.8, -0.2 },
-			{ 8, 3.4, -0.7 },
-			{ 10, 3.6, -1.3 },
-			{ 13, 3.7, 0 },
-			{ 16, 3.8, 1.3 },
-			{ 18, 3.8, 0.9 },
-			{ 20, 3.8, 0.5 },
-		},
-		recovery = 16,
 	}),
 	Revolver = gun({
 		name = "Revolver",
+		kick = 0.5,
 		body = 45,
 		rpm = 150,
 		mag = 6,
 		reload = 2.2,
 		spread = 0.3,
-		pattern = { { 1, 2.1, 0.15 }, { 3, 4.9, -0.4 }, { 6, 7, 0.6 } },
-		recovery = 5,
 	}),
 	AutoPistol = gun({
 		name = "Auto-pistol",
+		kick = 0.1,
 		body = 16,
 		rpm = 550,
 		mag = 15,
 		reload = 1.5,
 		spread = 0.6,
-		pattern = { { 1, 0.35, 0 }, { 4, 1.5, 0.1 }, { 8, 2.7, 0.2 }, { 15, 3.4, 0.7 } },
-		recovery = 13,
 	}),
 }
 
