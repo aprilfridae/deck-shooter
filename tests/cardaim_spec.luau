@@ -45,7 +45,7 @@ describe("CardAim", function()
 
 	it("takes longer to throw a card further", function()
 		expect(CardAim.flight(CardAim.THROW_SPEED)).toBe(1)
-		expect(CardAim.flight(700) > CardAim.flight(350)).toBe(true)
+		expect(CardAim.flight(500) > CardAim.flight(250)).toBe(true)
 	end)
 
 	it("keeps a close throw in the air long enough to see", function()

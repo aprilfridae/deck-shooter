@@ -694,11 +694,12 @@ function CardFlourish.throw(elapsed: number, since: number, turns: number?): Cru
 	local home = smooth(math.clamp((since - THROW_RELEASE - 0.08) / (THROW - THROW_RELEASE - 0.08), 0, 1))
 	local settled = pose.right:Lerp(final.right, grab)
 	local offset = THROW_DRAW * (grab - whip) + THROW_REACH * (whip - home)
-	-- Turned about the camera's own axes, at the hand: tipped back then chopped forward, and rolled onto its edge.
+	-- Turned about the camera's own axes, at the hand: tipped back then chopped forward. The wrist isn't rolled:
+	-- that twisted the hand inward (River, 2026-11-12). The card turns onto its edge in the fingers instead.
 	local tip = THROW_COCK * (grab - whip) + THROW_SNAP * (whip - home)
-	local edge = THROW_EDGE * (grab - home)
+	local edge = THROW_EDGE * grab
 	local at = settled.Position + offset
-	local right = CFrame.new(at) * CFrame.Angles(tip, 0, 0) * CFrame.Angles(0, 0, edge) * settled.Rotation
+	local right = CFrame.new(at) * CFrame.Angles(tip, 0, 0) * settled.Rotation
 	local carried = right * settled:Inverse() -- how the hand moved: the card in it goes the same way
 	pose.right = right
 	pose.left = pose.left:Lerp(final.left, grab)
@@ -730,7 +731,8 @@ function CardFlourish.throw(elapsed: number, since: number, turns: number?): Cru
 		pose.cards[index] = frame:Lerp(to, grab)
 		pose.sides[index] += ((if index == chosen then 1 else 0) - pose.sides[index]) * grab
 	end
-	pose.cards[chosen] = carried * pose.cards[chosen]
+	local card = carried * pose.cards[chosen]
+	pose.cards[chosen] = CFrame.new(card.Position) * CFrame.Angles(0, 0, edge) * card.Rotation
 	local palm = (pose.right * CFrame.new(0.06, 0.32, 0)).Position
 	return { pose = pose, crushed = if since >= THROW_RELEASE then 1 else 0, palm = palm, card = chosen, thrown = true }
 end

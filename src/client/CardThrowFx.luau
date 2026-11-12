@@ -14,11 +14,15 @@ local CardLook = require(CardCore:WaitForChild("CardLook"))
 local Variant = require(CardCore:WaitForChild("Variant"))
 
 local CARD_SIZE = Vector3.new(1.5, 0.05, 2.4) -- lying flat: wide, thin, long
-local SPIN = 30 -- radians a second: it flies on its edge and tumbles end over end, as an overhand throw does
+-- It tumbles slowly: at 30 radians a second it was only a blur (River, 2026-11-12: "make the card look like a
+-- card"). A little over half a turn in a long throw.
+local SPIN = 7 -- radians a second, end over end
+local CARD_SCALE = 1.5 -- bigger than a real card, so it reads at this speed
 local EDGE = CFrame.Angles(0, 0, math.rad(90)) -- stands the card on its edge
 local BLUE = Color3.fromRGB(70, 150, 255)
 local PAPER = Color3.fromRGB(232, 230, 223) -- the card's own edge before it changes
-local MORPH = 0.5 -- of the flight: by here the card is all blue
+local MORPH_FROM = 0.35 -- of the flight: until here it is plainly the card
+local MORPH = 0.85 -- and by here it is all blue
 local GHOST = 0.5 -- how see-through the blue card is
 local OWN_REACH = 4 -- studs: a throw starting this near the camera is your own
 local OWN_HAND = CFrame.new(0.4, 0.1, -1.6) -- where your right hand lets go, from the camera
@@ -57,8 +61,9 @@ function CardThrowFx.throw(from: Vector3, to: Vector3, hit: boolean, tier: any)
 	card.CanQuery = false
 	card.CanTouch = false
 	card.CastShadow = false
-	card.Size = CARD_SIZE
-	card.Material = Enum.Material.Neon
+	card.Size = CARD_SIZE * CARD_SCALE
+	-- Plain card stock to begin with. Glowing from the start, it was a white smear.
+	card.Material = Enum.Material.SmoothPlastic
 	card.Color = PAPER
 	local image = if type(tier) == "string" then CardArt.base("switchback", CardLook.look(tier, Variant.Base)) else nil
 	local faces: { Decal } = {}
@@ -73,7 +78,7 @@ function CardThrowFx.throw(from: Vector3, to: Vector3, hit: boolean, tier: any)
 
 	-- The trail is drawn between two points on the card's edges, so it is a ribbon as wide as the card.
 	local left, right = Instance.new("Attachment"), Instance.new("Attachment")
-	left.Position, right.Position = Vector3.new(-TRAIL_HALF, 0, 0), Vector3.new(TRAIL_HALF, 0, 0)
+	left.Position, right.Position = Vector3.new(-TRAIL_HALF * CARD_SCALE, 0, 0), Vector3.new(TRAIL_HALF * CARD_SCALE, 0, 0)
 	left.Parent, right.Parent = card, card
 	local trail = Instance.new("Trail")
 	trail.Attachment0, trail.Attachment1 = left, right
@@ -98,7 +103,8 @@ function CardThrowFx.throw(from: Vector3, to: Vector3, hit: boolean, tier: any)
 		local share = math.min(age / flight, 1)
 		card.CFrame = (level + forward * length * share) * CFrame.Angles(-age * SPIN, 0, 0) * EDGE
 		-- The change: its print fades, and the card goes blue, bright and see-through.
-		local changed = math.min(share / MORPH, 1)
+		local changed = math.clamp((share - MORPH_FROM) / (MORPH - MORPH_FROM), 0, 1)
+		card.Material = if changed > 0.4 then Enum.Material.Neon else Enum.Material.SmoothPlastic
 		card.Color = PAPER:Lerp(BLUE, changed)
 		card.Transparency = GHOST * changed
 		light.Brightness = 3 * changed
