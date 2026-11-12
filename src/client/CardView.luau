@@ -440,7 +440,8 @@ function CardView.show(
 		end
 		parts[crush.card].Size = CardFlourish.CARD_SIZE * Vector3.new(left, 1, left);
 		(fist :: BasePart).CFrame = view * CFrame.new(crush.palm)
-		if crush.crushed >= 1 and not burst then
+		-- A thrown card has left the hand whole: it is only hidden here, and the world draws it flying.
+		if crush.crushed >= 1 and not burst and not crush.thrown then
 			burst = true;
 			(shards :: ParticleEmitter):Emit(SHARDS);
 			(sparks :: ParticleEmitter):Emit(SPARKS)

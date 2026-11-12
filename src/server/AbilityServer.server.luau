@@ -212,8 +212,8 @@ handlers.switchback = function(player, target, slot, aim)
 	end
 	local landing = enemy.root.Position
 	fxRemote:FireAllClients("card", hand, landing, true, slot.tier)
-	-- The swap happens when the card lands, not when it is thrown. Either of them may have died by then.
-	task.delay(CardAim.flight((landing - hand).Magnitude), function()
+	-- The swap happens when the card lands: after the hand's wind-up and the flight. Either may have died by then.
+	task.delay(CardAim.THROW_WINDUP + CardAim.flight((landing - hand).Magnitude), function()
 		if not (GunTargets.isAlive(target) and GunTargets.isAlive(enemy)) then
 			return
 		end

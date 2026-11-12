@@ -7,6 +7,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 
+local CardAim = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("CardAim"))
 local CardHand = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("CardHand"))
 local Zones = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Zones"))
 local CardInHand = require(script.Parent.CardInHand)
@@ -58,7 +59,8 @@ fxRemote.OnClientEvent:Connect(function(kind: any, from: any, to: any, hit: any,
 		return
 	end
 	if kind == "card" then
-		CardThrowFx.throw(from, to, hit == true, tier)
+		-- It leaves the hand after the throw's wind-up, which is when the first-person hand lets go.
+		task.delay(CardAim.THROW_WINDUP, CardThrowFx.throw, from, to, hit == true, tier)
 		return
 	end
 	local color = FX_COLORS[kind]

@@ -1,6 +1,7 @@
--- Draws Switchback's throw: the card itself spins flat through the air to its target, leaving a see-through blue
--- trail (River, 2026-11-12). It replaced a chain the same day. On a hit it flashes as the two players swap; on a
--- miss it fades where it lands. The flight time is CardAim's, the same the server waits before swapping.
+-- Draws Switchback's throw: the card leaves the hand as itself and, in the air, turns blue, glowing and
+-- see-through, with a blue trail behind it (River, 2026-11-12: "in mid air it morphs blue and turns
+-- transluscent but its like hitscan so you throw it really fast"). On a hit it flashes as the two players swap; on
+-- a miss it fades where it lands. The flight time is CardAim's, the same the server waits before swapping.
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -16,6 +17,11 @@ local CARD_SIZE = Vector3.new(1.5, 0.05, 2.4) -- lying flat: wide, thin, long
 local SPIN = 26 -- radians a second, about its flat face
 local TILT = math.rad(12) -- it banks a little, like a thrown card
 local BLUE = Color3.fromRGB(70, 150, 255)
+local PAPER = Color3.fromRGB(232, 230, 223) -- the card's own edge before it changes
+local MORPH = 0.5 -- of the flight: by here the card is all blue
+local GHOST = 0.5 -- how see-through the blue card is
+local OWN_REACH = 4 -- studs: a throw starting this near the camera is your own
+local OWN_HAND = CFrame.new(0.45, -0.25, -1.6) -- where your right hand lets go, from the camera
 local TRAIL_SECONDS = 0.45
 local TRAIL_FADE = 0.45 -- how see-through the trail starts
 local TRAIL_HALF = 0.7 -- studs from the card's middle to each edge of the trail
@@ -25,15 +31,21 @@ local FLASH_SIZE = 5 -- studs across, the burst on a hit
 
 local CardThrowFx = {}
 
-local function face(card: Part, side: Enum.NormalId, image: string)
+local function face(card: Part, side: Enum.NormalId, image: string): Decal
 	local decal = Instance.new("Decal")
 	decal.Face = side
 	decal.Texture = image
 	decal.Parent = card
+	return decal
 end
 
 -- Throws the card from one point to another. `hit` is whether it caught someone.
 function CardThrowFx.throw(from: Vector3, to: Vector3, hit: boolean, tier: any)
+	-- Your own throw starts where your hand let go of it, not in your chest.
+	local camera = workspace.CurrentCamera
+	if camera and (camera.CFrame.Position - from).Magnitude < OWN_REACH then
+		from = (camera.CFrame * OWN_HAND).Position
+	end
 	local length = (to - from).Magnitude
 	if length < 1 then
 		return
@@ -46,16 +58,17 @@ function CardThrowFx.throw(from: Vector3, to: Vector3, hit: boolean, tier: any)
 	card.CanTouch = false
 	card.CastShadow = false
 	card.Size = CARD_SIZE
-	card.Material = Enum.Material.SmoothPlastic
-	card.Color = BLUE
+	card.Material = Enum.Material.Neon
+	card.Color = PAPER
 	local image = if type(tier) == "string" then CardArt.base("switchback", CardLook.look(tier, Variant.Base)) else nil
+	local faces: { Decal } = {}
 	if image then
-		face(card, Enum.NormalId.Top, image)
-		face(card, Enum.NormalId.Bottom, image)
+		faces = { face(card, Enum.NormalId.Top, image), face(card, Enum.NormalId.Bottom, image) }
 	end
 	local light = Instance.new("PointLight")
 	light.Color = BLUE
 	light.Range = GLOW_RANGE
+	light.Brightness = 0
 	light.Parent = card
 
 	-- The trail is drawn between two points on the card's edges, so it is a ribbon as wide as the card.
@@ -69,6 +82,7 @@ function CardThrowFx.throw(from: Vector3, to: Vector3, hit: boolean, tier: any)
 	trail.Lifetime = TRAIL_SECONDS
 	trail.LightEmission = 0.7
 	trail.FaceCamera = true
+	trail.Enabled = false -- it starts once the card has begun to change
 	trail.Parent = card
 
 	local forward = (to - from).Unit
@@ -83,6 +97,15 @@ function CardThrowFx.throw(from: Vector3, to: Vector3, hit: boolean, tier: any)
 		local age = os.clock() - started
 		local share = math.min(age / flight, 1)
 		card.CFrame = (level + forward * length * share) * CFrame.Angles(0, age * SPIN, TILT)
+		-- The change: its print fades, and the card goes blue, bright and see-through.
+		local changed = math.min(share / MORPH, 1)
+		card.Color = PAPER:Lerp(BLUE, changed)
+		card.Transparency = GHOST * changed
+		light.Brightness = 3 * changed
+		trail.Enabled = changed > 0.15
+		for _, decal in faces do
+			decal.Transparency = changed
+		end
 		if share < 1 then
 			return
 		end
@@ -91,11 +114,6 @@ function CardThrowFx.throw(from: Vector3, to: Vector3, hit: boolean, tier: any)
 		trail.Enabled = false
 		local fade = TweenInfo.new(END_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 		TweenService:Create(card, fade, { Transparency = 1 }):Play()
-		for _, child in card:GetChildren() do
-			if child:IsA("Decal") then
-				TweenService:Create(child, fade, { Transparency = 1 }):Play()
-			end
-		end
 		TweenService:Create(light, fade, { Brightness = 0 }):Play()
 		Debris:AddItem(card, math.max(END_SECONDS, TRAIL_SECONDS) + 0.1)
 		if hit then

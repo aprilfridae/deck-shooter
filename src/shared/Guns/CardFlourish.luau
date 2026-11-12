@@ -30,6 +30,14 @@ local SPEED = 1.6 -- how much faster than its keys the whole flourish plays
 local LANDED_AT = SPRING_TO + FLIGHT -- the last card is in the left hand
 local CRUSH = 0.4 -- seconds the right hand takes to crush its card, once it's used
 local BURST_AT = 0.16 -- into the crush, the card is gone
+-- A card that is thrown, not crushed (Switchback): the right hand draws back, whips forward and lets go.
+local THROW = 0.36 -- seconds the whole throw takes
+local THROW_BACK = 0.07 -- the hand is drawn back by now
+local THROW_RELEASE = 0.12 -- and the card leaves it now: CardAim.THROW_WINDUP is the same moment
+local THROW_DRAW = Vector3.new(0.16, 0.06, 0.2) -- where the hand draws back to, from where it was: right, up, toward you
+local THROW_REACH = Vector3.new(-0.14, 0.1, -0.5) -- and where the whip ends: across, up, away from you
+local THROW_COCK = math.rad(35) -- how far the wrist cocks back
+local THROW_SNAP = math.rad(-65) -- and snaps through
 
 local FAN_PIVOT = Vector3.new(0.05, 0, 0.13) -- on the card, under the right thumb
 local FAN_TOP = -60 -- degrees the top card leans
@@ -420,6 +428,7 @@ local CardFlourish = {
 	CARD_SIZE = CARD_SIZE,
 	CRUSH = CRUSH,
 	BURST_AT = BURST_AT,
+	THROW = THROW,
 }
 
 -- sides is whose each card is: 0 in the left hand, 1 in the right, and between on its way across.
@@ -619,7 +628,8 @@ function CardFlourish.tempo(elapsed: number, life: number): number
 	return elapsed + TEMPO * wander(life, 13) * through(elapsed, 0, 0.3) * (1 - through(elapsed, length - 0.5, length))
 end
 
-export type Crush = { pose: Pose, crushed: number, palm: Vector3, card: number }
+-- thrown is set when the card is being thrown, not crushed: it leaves the hand whole, with no fist and no burst.
+export type Crush = { pose: Pose, crushed: number, palm: Vector3, card: number, thrown: boolean? }
 
 -- The card being used: `since` seconds ago, with the flourish `elapsed` seconds in. Wherever things were, the right
 -- hand snatches its card and closes into a fist around it, and the rest of the deck squares up in the left.
@@ -667,6 +677,56 @@ function CardFlourish.crush(elapsed: number, since: number, turns: number?): Cru
 	end
 	pose.fingers.Right = digits
 	return { pose = pose, crushed = fist, palm = palm, card = chosen }
+end
+
+-- The card being thrown: like crush, but the right hand draws back and whips forward, and the card leaves it
+-- whole at THROW_RELEASE. crushed is 0 while the card is in the hand and 1 once it has gone.
+function CardFlourish.throw(elapsed: number, since: number, turns: number?): Crush
+	local turned = turns or 0
+	local chosen = CardFlourish.top(turned)
+	local pose = if turned > 0 then CardFlourish.turn(turned, 10) else CardFlourish.at(elapsed)
+	local final = final()
+	local grab = smooth(math.clamp(since / THROW_BACK, 0, 1))
+	local whip = smooth(math.clamp((since - THROW_BACK) / (THROW_RELEASE + 0.05 - THROW_BACK), 0, 1))
+	local home = smooth(math.clamp((since - THROW_RELEASE - 0.08) / (THROW - THROW_RELEASE - 0.08), 0, 1))
+	local settled = pose.right:Lerp(final.right, grab)
+	local offset = THROW_DRAW * (grab - whip) + THROW_REACH * (whip - home)
+	local wrist = THROW_COCK * (grab - whip) + THROW_SNAP * (whip - home)
+	local right = (settled + offset) * CFrame.Angles(0, wrist, 0)
+	local carried = right * settled:Inverse() -- how the hand moved: the card in it goes the same way
+	pose.right = right
+	pose.left = pose.left:Lerp(final.left, grab)
+	local holding: Shape = {}
+	for bone, aims in pose.fingers.Left do
+		local held = {}
+		for joint, direction in aims do
+			held[joint] = direction:Lerp(final.fingers.Left[bone][joint], grab).Unit
+		end
+		holding[bone] = held
+	end
+	pose.fingers.Left = holding
+	local digits: Shape = {}
+	for bone, aims in pose.fingers.Right do
+		local held = {}
+		for joint, direction in aims do
+			held[joint] = direction:Lerp(final.fingers.Right[bone][joint], grab).Unit
+		end
+		digits[bone] = held
+	end
+	pose.fingers.Right = digits
+	for index, frame in pose.cards do
+		local to = final.cards[index]
+		if index == chosen then
+			to = final.cards[CHOSEN] -- held up in the right hand
+		elseif index == CHOSEN then
+			to = TOP_FRAME
+		end
+		pose.cards[index] = frame:Lerp(to, grab)
+		pose.sides[index] += ((if index == chosen then 1 else 0) - pose.sides[index]) * grab
+	end
+	pose.cards[chosen] = carried * pose.cards[chosen]
+	local palm = (pose.right * CFrame.new(0.06, 0.32, 0)).Position
+	return { pose = pose, crushed = if since >= THROW_RELEASE then 1 else 0, palm = palm, card = chosen, thrown = true }
 end
 
 return CardFlourish

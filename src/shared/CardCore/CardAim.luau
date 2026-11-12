@@ -41,10 +41,13 @@ end
 
 -- Switchback's card is thrown, and takes this long to cover the distance. The server swaps the two players when
 -- it lands, and the client draws it flying for the same time.
-CardAim.THROW_SPEED = 260 -- studs a second
+-- It is thrown hard: close to a hitscan, with just enough time in the air to be seen turning blue.
+CardAim.THROW_SPEED = 700 -- studs a second
+CardAim.THROW_LEAST = 0.1 -- seconds: the shortest a throw takes, however close the target
+CardAim.THROW_WINDUP = 0.12 -- seconds from using the card to it leaving the hand
 
 function CardAim.flight(length: number): number
-	return length / CardAim.THROW_SPEED
+	return math.max(length / CardAim.THROW_SPEED, CardAim.THROW_LEAST)
 end
 
 -- The speed that carries a body `height` studs straight up against this gravity.
