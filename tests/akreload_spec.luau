@@ -91,7 +91,7 @@ describe("AkReload", function()
 		expect(pulling.rightWeight > 0.99).toBe(true)
 		-- The right hand is outside the gun's right side, and goes back with the handle.
 		local wrist = pulling.gun:ToObjectSpace(pulling.right).Position
-		expect(wrist.X > 0.1).toBe(true) -- well clear of the receiver, which ends at about 0.02
+		expect(wrist.X > 0.05).toBe(true) -- clear of the receiver, which ends at about 0.02: its palm lies along it
 		local before, after = AkReload.at(0.865), AkReload.at(0.93)
 		local moved = after.gun:ToObjectSpace(after.right).Position.Z - before.gun:ToObjectSpace(before.right).Position.Z
 		expect(moved > AkReload.TRAVEL * 0.7).toBe(true)

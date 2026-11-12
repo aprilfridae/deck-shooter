@@ -90,17 +90,19 @@ local PALM_FINGERS: { [string]: { [string]: { [string]: { rest: { Vector3 }, hel
 	},
 }
 -- The right hand's fingers while it is off the grip and on the charging knob, in its own palm's space (+Y along
--- the fingers, +X the way the palm faces, -Z the thumb's side): hooked over the knob to pull it, thumb tucked in
--- beside them. Left to the clip, they were the grip's shape with nothing in it, an open claw beside the knob
--- (River, 2026-11-12: "the fingers to me look strange").
-local KNOB_HOOK = { Vector3.new(0.25, 0.97, 0).Unit, Vector3.new(0.8, 0.6, 0).Unit, Vector3.new(0.95, -0.3, 0).Unit }
+-- the fingers, +X the way the palm faces, -Z the thumb's side). The hand points forward along the gun: the index
+-- and middle fingers wrap round the front of the knob, the other two lie half curled beside the receiver, and the
+-- thumb comes round under the knob. Left to the clip, they were the grip's shape with nothing in it, an open claw
+-- beside the knob (River, 2026-11-12: "the fingers to me look strange").
+local KNOB_WRAP = { Vector3.new(0.5, 0.85, 0).Unit, Vector3.new(0.98, 0.2, 0).Unit, Vector3.new(0.7, -0.7, 0).Unit }
+local KNOB_LOOSE = { Vector3.new(0.2, 0.98, 0).Unit, Vector3.new(0.5, 0.85, 0).Unit, Vector3.new(0.75, 0.65, 0).Unit }
 local KNOB_FINGERS: { [string]: { [string]: { Vector3 } } } = {
 	M57 = {
-		Indice = KNOB_HOOK,
-		DedoMedio = KNOB_HOOK,
-		Anular = KNOB_HOOK,
-		Menique = KNOB_HOOK,
-		Pulgar = { Vector3.new(0.3, 0.7, -0.65).Unit, Vector3.new(0.5, 0.8, -0.3).Unit, Vector3.new(0.6, 0.8, 0).Unit },
+		Indice = KNOB_WRAP,
+		DedoMedio = KNOB_WRAP,
+		Anular = KNOB_LOOSE,
+		Menique = KNOB_LOOSE,
+		Pulgar = { Vector3.new(0.4, 0.6, -0.7).Unit, Vector3.new(0.85, 0.5, 0).Unit, Vector3.new(0.7, 0.3, 0.65).Unit },
 	},
 }
 local clipPalms: { [string]: CFrame }? = nil -- this frame's moved palms, in the clip's space

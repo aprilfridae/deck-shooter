@@ -68,11 +68,12 @@ end
 -- curves forward, with its wrist below: higher up, the hand sat in the right hand's fingers at the trigger.
 local MAG_HOLD = h(0.107, 0, -0.125)
 local ON_MAG = grip(MAG_HOLD, 0.085, 0.035, Vector3.new(0.2, 0.6, -0.8), Vector3.new(1, 0, 0))
--- The right hand on the knob: well out from the gun's right side and below the knob, reaching in with only its
--- fingertips on the knob's end, palm facing back to pull. The hand is big next to the gun, so anything closer puts
--- its palm through the receiver.
+-- The right hand on the knob: beside the gun's right side, pointing forward along it, palm to the gun, with the
+-- knob just past its knuckles so the index and middle fingers wrap round the front of it and the thumb comes round
+-- under it (River, 2026-11-12: "the hand should be facing forward, with the index and middle wraping around the
+-- tab, and the thumb wrapping around the bottom"). It reached in from the side with its palm facing back before.
 local KNOB_END = KNOB + Vector3.new(0.014, 0, 0)
-local ON_KNOB = grip(KNOB_END, 0.14, 0.012, Vector3.new(-0.62, 0.74, -0.25), Vector3.new(0, 0, 1), true)
+local ON_KNOB = grip(KNOB_END, 0.17, 0.02, Vector3.new(0, 0.12, -1), Vector3.new(-1, 0, 0), true)
 -- A magazine in the hand down out of view, in the hold.
 local FETCHED = CFrame.new(-0.2, -0.36, 0.02) * CFrame.Angles(0, 0, math.rad(50))
 
