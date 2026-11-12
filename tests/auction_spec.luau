@@ -40,6 +40,11 @@ local function bid(data: any, userId: number, record: any, amount: number, now: 
 	return Auction.accept(record, userId, "Bidder", amount, now) or record
 end
 
+-- Closes an auction whose time is up, the way a server does before anyone settles.
+local function closed(record: any, now: number): any
+	return Auction.close(record, now) or record
+end
+
 local function copies(serial: number, saves: { any }): number
 	local total = 0
 	for _, data in saves do
@@ -262,6 +267,14 @@ describe("Auction settling", function()
 		expect(Auction.settle(seller, SELLER, "a1", record, NOW)).toBe("Wait")
 		expect(seller.market.listed.a1.live).toBe(true)
 
+		-- Time is up, but nothing is handed over until the record is closed to new bids.
+		expect(Auction.settle(alice, ALICE, "a1", record, after)).toBe("Close")
+		expect(Auction.settle(seller, SELLER, "a1", record, after)).toBe("Close")
+		expect(alice.stacks[KEY]).toBe(nil)
+		expect(seller.credits).toBe(0)
+		record = closed(record, after)
+		expect(record.closed).toBe(true)
+
 		expect(Auction.settle(alice, ALICE, "a1", record, after)).toBe("Collected")
 		expect(alice.credits).toBe(750)
 		expect(alice.market.settled.a1).toBe(true)
@@ -283,6 +296,7 @@ describe("Auction settling", function()
 		local everyone = { seller, bob }
 		expect(copies(4, everyone)).toBe(1)
 		local after = record.endsAt + 1
+		record = closed(record, after)
 		expect(Auction.settle(bob, BOB, "a1", record, after)).toBe("Collected")
 		expect(Auction.settle(seller, SELLER, "a1", record, after)).toBe("Paid")
 		expect(copies(4, everyone)).toBe(1)
@@ -297,6 +311,7 @@ describe("Auction settling", function()
 		bob.credits = 500
 		record = bid(bob, BOB, record, 100, NOW)
 		local after = record.endsAt + 1
+		record = closed(record, after)
 		-- The save is as it was before collecting, but the record already says the winner is done.
 		local done = Auction.finish(record, "winner")
 		expect(Auction.settle(bob, BOB, "a1", done, after)).toBe("Done")
@@ -323,6 +338,9 @@ describe("Auction settling", function()
 
 	it("returns an unsold card with its serial", function()
 		local seller, record = listing()
+		expect(Auction.settle(seller, SELLER, "a1", record, record.endsAt)).toBe("Close")
+		expect(seller.market.listed.a1.serial).toBe(4)
+		record = closed(record, record.endsAt)
 		expect(Auction.settle(seller, SELLER, "a1", record, record.endsAt)).toBe("Returned")
 		expect(seller.serials[KEY].runs).toEqual({ 3, 5 })
 		expect(seller.market.listed.a1).toBe(nil)
@@ -391,6 +409,7 @@ describe("Auction settling", function()
 			bob.credits = 500
 			record = bid(bob, BOB, record, 100, NOW)
 			local muchLater = record.endsAt + 90 * 24 * 3600
+			record = closed(record, record.endsAt)
 			local first, second = if sellerFirst then "seller" else "winner", if sellerFirst then "winner" else "seller"
 			local function settle(side: string, at: number): string
 				return if side == "seller" then Auction.settle(seller, SELLER, "a1", record, at) else Auction.settle(bob, BOB, "a1", record, at)
@@ -413,6 +432,49 @@ describe("Auction settling", function()
 		expect(delete).toBe(true)
 		_, delete = Auction.finish(Auction.cancel(record, SELLER, NOW) :: any, "seller")
 		expect(delete).toBe(true)
+	end)
+
+	it("closes an auction only once its time is up, and only once", function()
+		local _, record = listing({ buyNow = "none" })
+		expect(Auction.close(record, record.endsAt - 1)).toBe(nil)
+		local shut = Auction.close(record, record.endsAt) :: any
+		expect(shut.closed).toBe(true)
+		expect(record.closed).toBe(nil)
+		expect(Auction.close(shut, record.endsAt + 5)).toBe(nil)
+		expect(Auction.close(Auction.cancel(record, SELLER, NOW) :: any, record.endsAt)).toBe(nil)
+	end)
+
+	it("takes no bid on a closed auction, whatever the bidder's clock says", function()
+		local _, record = listing({ buyNow = "none" })
+		local shut = closed(record, record.endsAt)
+		-- A server whose clock runs behind still thinks there is time left.
+		expect(Auction.accept(shut, ALICE, "Alice", 100, record.endsAt - 2)).toBe(nil)
+		local _, code = Auction.canBid(save(1000), ALICE, shut, 100, record.endsAt - 2)
+		expect(code).toBe("Ended")
+		expect(Auction.cancel(shut, SELLER, record.endsAt - 2)).toBe(nil)
+	end)
+
+	it("closes at once on Buy Now, so a second buyer on a slow clock is refused", function()
+		local _, record = listing()
+		local bought = Auction.accept(record, ALICE, "Alice", 500, NOW) :: any
+		expect(bought.closed).toBe(true)
+		expect(Auction.accept(bought, BOB, "Bob", 500, NOW - 3)).toBe(nil)
+	end)
+
+	it("lets a late bid win over a check that read the record just before it", function()
+		-- A check reads the record with no bids. Before it acts, a last-second bid lands and pushes the end back.
+		local seller, stale = listing({ buyNow = "none" })
+		local bob = SaveData.new()
+		bob.credits = 500
+		local fresh = bid(bob, BOB, stale, 100, stale.endsAt - 1)
+		local after = stale.endsAt + 1
+		-- The check, now past the old end, may not hand the card back from what it read.
+		expect(Auction.settle(seller, SELLER, "a1", stale, after)).toBe("Close")
+		expect(seller.market.listed.a1.serial).toBe(4)
+		-- Its attempt to close meets the real record, which has more time, so nothing closes.
+		expect(Auction.close(fresh, after)).toBe(nil)
+		expect(Auction.settle(seller, SELLER, "a1", fresh, after)).toBe("Wait")
+		expect(copies(4, { seller, bob })).toBe(1)
 	end)
 
 	it("clears a save's note once the record is marked", function()

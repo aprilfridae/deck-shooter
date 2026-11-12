@@ -13,6 +13,9 @@ local PlayerStore = ProfileStore.New("PlayerData_v1", {})
 local profiles: { [Player]: any } = {}
 
 local SAVE_WAIT = 15 -- seconds
+local SAVE_RETRY = 4 -- seconds before asking for the save again
+local SERVER_ID = game:GetService("HttpService"):GenerateGUID(false) -- tells this server's save stamps from another's
+local saveCount = 0
 
 local remotes = Instance.new("Folder")
 remotes.Name = "CardCoreRemotes"
@@ -74,20 +77,35 @@ function PlayerCards.save(player: Player)
 	end
 end
 
--- Saves and waits to hear it landed, for a purchase that mustn't count until it has.
+-- Saves and waits to hear that a save holding the data as it is now has landed, for changes that mustn't count
+-- until they are stored: a purchase, a card going up for auction, a bid.
+-- ProfileStore's signal fires for every save of the profile, including one already on its way that was taken
+-- before the change. So the data is stamped first, and only a save carrying that stamp or a later one counts.
 function PlayerCards.saveAndWait(player: Player): boolean
 	local profile = profiles[player]
 	if not profile then
 		return false
 	end
+	saveCount += 1
+	local mark = saveCount
+	profile.Data.saveMark = { SERVER_ID, mark }
 	local saved = false
-	local connection = profile.OnAfterSave:Connect(function()
-		saved = true
+	local connection = profile.OnAfterSave:Connect(function(last: any)
+		local stamp = type(last) == "table" and last.saveMark
+		if type(stamp) == "table" and stamp[1] == SERVER_ID and type(stamp[2]) == "number" and stamp[2] >= mark then
+			saved = true
+		end
 	end)
 	profile:Save()
 	local deadline = os.clock() + SAVE_WAIT
-	while not saved and os.clock() < deadline do
+	local asked = os.clock()
+	while not saved and os.clock() < deadline and profiles[player] == profile do
 		task.wait(0.1)
+		-- A save that fails isn't announced or retried, so ask again now and then.
+		if not saved and os.clock() - asked >= SAVE_RETRY then
+			asked = os.clock()
+			profile:Save()
+		end
 	end
 	connection:Disconnect()
 	return saved

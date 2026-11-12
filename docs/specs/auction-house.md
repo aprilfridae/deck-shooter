@@ -54,6 +54,7 @@ Every step is ordered so that a crash at any point leaves something a later load
 | --- | --- | --- |
 | List | The card moves into the save's "listed" entry and the save is written. Then the shared record is created. | The save has an entry with no record. On the next load the record is created, by the auction's own id, so it can't be made twice. |
 | Bid | The Credits move into the save's "bid" entry. Then the shared record is asked to accept the bid. | The save holds a bid the record doesn't show. On the next check the Credits go back. |
+| Close | Once the time is up, a server closes the record to bids through the same one-at-a-time update that takes bids. Nothing is handed over before that. | A late bid that landed first wins and the auction runs on. A record left unclosed is closed by the next check. |
 | Outbid | The record now names someone else. | Nothing is at risk: the old bidder's Credits are still in their own save and return on their next check. |
 | Win | The winner's save takes the card and notes the auction as settled, in one write. | Either the write landed or it didn't. The note is what stops a second collection. |
 | Sold | The seller's save drops the listed entry and adds the price, in one write. | The same: the entry is there or it isn't. |
@@ -99,7 +100,7 @@ The snapshot the client already receives gains the player's listed cards and ope
 - A server module owns the shared record, the browsing map and the announcements, in the way `SerialCounter.luau` owns the counter. Another runs the requests and the checks.
 - `Rebirth.luau` refuses while bids are open.
 
-**As built:** the rules are `CardCore/Auction.luau`; the shared parts `server/AuctionStore.luau` (records in DataStore `Auctions_v1`, the browsing window in MemoryStore maps `Auctions_<cardId>`, announcements on topic `Auctions`); the requests and checks `server/AuctionServer.luau`. A save's entries are `market.listed`, `market.bids` and `market.settled`, at save version 6. The walkthrough is `server/AuctionWalk.luau`: during Play in Studio, with the Server view selected, run `require(game.ServerScriptService.CardCoreServer.AuctionWalk)()` in the command bar.
+**As built:** the rules are `CardCore/Auction.luau`; the shared parts `server/AuctionStore.luau` (records in DataStore `Auctions_v1`, the browsing window in MemoryStore maps `Auctions_<cardId>`, announcements on topic `Auctions`); the requests and checks `server/AuctionServer.luau`. A save's entries are `market.listed`, `market.bids` and `market.settled`, at save version 6. The walkthrough is `server/AuctionWalk.luau`: during Play in Studio, with the Server view selected, run `game.ServerStorage.AuctionWalk:Fire()` in the command bar and read the Output window.
 
 ## Order of work
 

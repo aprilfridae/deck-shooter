@@ -1,7 +1,10 @@
 -- A walkthrough of one auction for River to run in Studio, because the market has no screen yet
 -- (docs/specs/auction-house.md). During Play, in the command bar with the Server view selected:
 --
---   require(game.ServerScriptService.CardCoreServer.AuctionWalk)()
+--   game.ServerStorage.AuctionWalk:Fire()
+--
+-- CardCore.server.luau makes that event in Studio. Requiring this module from the command bar wouldn't work: it
+-- would get its own copies of the server modules, with no players loaded in them.
 --
 -- It uses the real requests in AuctionServer on the first player's own save. Studio only.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

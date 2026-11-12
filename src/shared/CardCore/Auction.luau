@@ -25,6 +25,9 @@ export type Record = {
 	bidder: number?,
 	bidderName: string?,
 	cancelled: boolean?,
+	-- Set through the shared record once the time is up (or by Buy Now). No bid lands after it, and nothing is
+	-- handed over before it, so a check can never settle from a record a late bid is about to change.
+	closed: boolean?,
 	sellerDone: boolean?, -- the seller's save has its Credits or its card back, and that save is written
 	winnerDone: boolean?, -- the winner's save has the card, and that save is written
 }
@@ -128,7 +131,18 @@ function Auction.record(id: string, seller: number, sellerName: string, listed: 
 end
 
 function Auction.ended(record: Record, now: number): boolean
-	return record.cancelled == true or now >= record.endsAt
+	return record.cancelled == true or record.closed == true or now >= record.endsAt
+end
+
+-- The record closed to new bids, or nil if it isn't time or it is closed or cancelled already. Clocks differ by a
+-- second or two between servers, so the time passing isn't enough on its own to settle: this is.
+function Auction.close(record: Record, now: number): Record?
+	if record.closed or record.cancelled or now < record.endsAt then
+		return nil
+	end
+	local shut = table.clone(record)
+	shut.closed = true
+	return shut
 end
 
 -- The least the next bid can be.
@@ -199,6 +213,7 @@ function Auction.accept(record: Record, userId: number, name: string, amount: nu
 	taken.bidderName = name
 	if record.buyNow and amount >= record.buyNow then
 		taken.endsAt = now -- Buy Now ends it at once
+		taken.closed = true
 	elseif record.endsAt - now <= Auction.LATE_SECONDS then
 		taken.endsAt = now + Auction.LATE_SECONDS
 	end
@@ -236,11 +251,15 @@ local function settleListed(data: any, userId: number, id: string, listed: any, 
 		-- The record says this side was settled and saved. An entry that survives that is a stale copy.
 		market.listed[id] = nil
 		return "Done"
+	elseif record.cancelled then
+		return back()
 	elseif not Auction.ended(record, now) then
 		listed.live = true
 		listed.endsAt = record.endsAt
 		return "Wait"
-	elseif record.bidder and not record.cancelled then
+	elseif not record.closed then
+		return "Close"
+	elseif record.bidder then
 		market.listed[id] = nil
 		data.credits = math.min(data.credits + (record.bid :: number), Config.MaxCredits)
 		return "Paid"
@@ -267,6 +286,8 @@ local function settleBid(data: any, userId: number, id: string, held: any, recor
 	elseif record.winnerDone or market.settled[id] then
 		market.bids[id] = nil
 		return "Done"
+	elseif not record.closed then
+		return "Close"
 	end
 	local key = Inventory.key(record.cardId, record.tier, record.variant)
 	if not Inventory.give(data, key, record.serial) and not holds(data, key, record.serial) then
@@ -282,6 +303,7 @@ end
 -- none), and says what it did:
 --   "Publish"   a listed card has no record yet: the caller creates one
 --   "Wait"      nothing is due yet
+--   "Close"     its time is up but the record isn't closed to bids: the caller closes it and settles again
 --   "Paid"      the seller got the winning bid
 --   "Returned"  the seller got the card back (unsold, cancelled, or its record is gone)
 --   "Refunded"  a bidder got Credits back
