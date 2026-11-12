@@ -10,6 +10,7 @@ local Fusion = require(CardCore.Fusion)
 local Income = require(CardCore.Income)
 local Requests = require(CardCore.Requests)
 local Settings = require(CardCore.Settings)
+local AuctionServer = require(script.Parent.AuctionServer)
 local PackServer = require(script.Parent.PackServer)
 local SerialServer = require(script.Parent.SerialServer)
 local PlayerCards = require(script.Parent.PlayerCards)
@@ -167,6 +168,15 @@ end)
 
 PackServer.start(remote, rng)
 SerialServer.start(PackServer.announce)
+AuctionServer.start(remote)
+-- The auction walkthrough for Studio. A command-bar require would get its own copies of these modules, with no
+-- players in them, so the walk is run from here and started by firing this event (see AuctionWalk.luau).
+if game:GetService("RunService"):IsStudio() then
+	local walk = Instance.new("BindableEvent")
+	walk.Name = "AuctionWalk"
+	walk.Parent = game:GetService("ServerStorage")
+	walk.Event:Connect(require(script.Parent.AuctionWalk))
+end
 Purchases.start(remote, rng)
 PlayerCards.start()
 

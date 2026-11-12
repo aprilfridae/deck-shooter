@@ -125,3 +125,68 @@ describe("Requests.parseDeck", function()
 		expect(Requests.parseCommentTarget({ owner = 5 })).toBe(nil)
 	end)
 end)
+
+describe("Requests for the auction house", function()
+	local function listing(): any
+		return { cardId = "aegis_shell", tier = "Prototype", variant = "Base", serial = 4, startBid = 100, hours = 6, buyNow = 500 }
+	end
+	local BAD_NUMBERS: { any } = { 1.5, -1, 0 / 0, math.huge, "5", {}, true }
+
+	it("parses a listing, with or without Buy Now", function()
+		expect(Requests.parseListing(listing())).toEqual(listing())
+		local plain = listing()
+		plain.buyNow = nil
+		expect(Requests.parseListing(plain)).toEqual(plain)
+	end)
+
+	it("drops fields it doesn't know", function()
+		local extra = listing()
+		extra.credits = 99999
+		expect(Requests.parseListing(extra)).toEqual(listing())
+	end)
+
+	it("refuses a listing of the wrong shape", function()
+		expect(Requests.parseListing(nil)).toBe(nil)
+		expect(Requests.parseListing("junk")).toBe(nil)
+		for _, field in { "cardId", "tier", "variant" } do
+			for _, value in { 5, {}, string.rep("x", 65) } :: { any } do
+				local bad = listing()
+				bad[field] = value
+				expect(Requests.parseListing(bad)).toBe(nil)
+			end
+		end
+		for _, field in { "serial", "startBid", "hours", "buyNow" } do
+			for _, value in BAD_NUMBERS do
+				local bad = listing()
+				bad[field] = value
+				expect(Requests.parseListing(bad)).toBe(nil)
+			end
+		end
+		for _, field in { "cardId", "serial", "startBid", "hours" } do
+			local bad = listing()
+			bad[field] = nil
+			expect(Requests.parseListing(bad)).toBe(nil)
+		end
+	end)
+
+	it("parses a bid and refuses the wrong shape", function()
+		expect(Requests.parseBid({ id = "abc", amount = 250 })).toEqual({ id = "abc", amount = 250 })
+		expect(Requests.parseBid({ id = "abc" })).toBe(nil)
+		expect(Requests.parseBid({ amount = 5 })).toBe(nil)
+		expect(Requests.parseBid({ id = "", amount = 5 })).toBe(nil)
+		expect(Requests.parseBid({ id = string.rep("x", 65), amount = 5 })).toBe(nil)
+		expect(Requests.parseBid({ id = { "abc" }, amount = 5 })).toBe(nil)
+		expect(Requests.parseBid({ id = { id = "abc" }, amount = 5 })).toBe(nil)
+		for _, value in BAD_NUMBERS do
+			expect(Requests.parseBid({ id = "abc", amount = value })).toBe(nil)
+		end
+		expect(Requests.parseBid(nil)).toBe(nil)
+	end)
+
+	it("parses an auction id", function()
+		expect(Requests.parseAuctionId("abc")).toBe("abc")
+		expect(Requests.parseAuctionId("")).toBe(nil)
+		expect(Requests.parseAuctionId(string.rep("x", 65))).toBe(nil)
+		expect(Requests.parseAuctionId(5)).toBe(nil)
+	end)
+end)

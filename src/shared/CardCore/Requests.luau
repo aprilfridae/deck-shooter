@@ -8,6 +8,46 @@ local Tier = require("./Tier")
 
 local Requests = {}
 
+local MAX_TEXT = 64 -- the longest id or name a request may carry
+
+local function text(raw: any): boolean
+	return type(raw) == "string" and #raw >= 1 and #raw <= MAX_TEXT
+end
+
+-- A whole number of at least 0 that isn't NaN or infinite.
+local function count(raw: any): boolean
+	return type(raw) == "number" and raw == raw and raw ~= math.huge and raw >= 0 and raw == math.floor(raw)
+end
+
+-- These check a request's shape only. Auction.luau decides whether what it asks for is allowed.
+function Requests.parseListing(raw: any): any
+	if type(raw) ~= "table" or not (text(raw.cardId) and text(raw.tier) and text(raw.variant)) then
+		return nil
+	elseif not (count(raw.serial) and count(raw.startBid) and count(raw.hours)) or (raw.buyNow ~= nil and not count(raw.buyNow)) then
+		return nil
+	end
+	return {
+		cardId = raw.cardId,
+		tier = raw.tier,
+		variant = raw.variant,
+		serial = raw.serial,
+		startBid = raw.startBid,
+		hours = raw.hours,
+		buyNow = raw.buyNow,
+	}
+end
+
+function Requests.parseBid(raw: any): any
+	if type(raw) ~= "table" or not text(raw.id) or not count(raw.amount) then
+		return nil
+	end
+	return { id = raw.id, amount = raw.amount }
+end
+
+function Requests.parseAuctionId(raw: any): string?
+	return if text(raw) then raw else nil
+end
+
 function Requests.parseFuse(raw: any): any
 	if type(raw) ~= "table" or not Cards.isValid(raw.cardId) or not Tier.isValid(raw.tier) then
 		return nil

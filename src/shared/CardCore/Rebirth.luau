@@ -11,6 +11,10 @@ end
 function Rebirth.perform(data: any): (boolean, string?)
 	if data.credits < Rebirth.price(data.rebirths) then
 		return false, "NotEnoughCredits"
+	elseif data.market and next(data.market.bids) then
+		-- A rebirth trades all your Credits for luck. Credits set aside in a bid would dodge that and come back
+		-- afterwards (docs/specs/auction-house.md).
+		return false, "BidsOpen"
 	end
 	data.credits = 0
 	data.creditRemainder = 0

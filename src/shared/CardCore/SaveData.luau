@@ -17,6 +17,9 @@ export type SaveData = {
 	creditRemainder: number,
 	stacks: { [string]: number },
 	serials: { [string]: { runs: { number }, plain: number } }, -- see Inventory
+	-- What this player has in the market: cards up for auction, Credits set aside in bids, and auctions whose
+	-- card has been collected. See Auction.luau.
+	market: { listed: { [string]: any }, bids: { [string]: any }, settled: { [string]: boolean } },
 	deck: { DeckSlot },
 	gunLevels: { number },
 	catalysts: number,
@@ -31,7 +34,7 @@ export type SaveData = {
 }
 
 local SaveData = {
-	CURRENT_VERSION = 5,
+	CURRENT_VERSION = 6,
 	SERIALS_VERSION = 5, -- the first version with serials. Older saves are reset.
 }
 
@@ -42,6 +45,7 @@ function SaveData.new(): SaveData
 		creditRemainder = 0,
 		stacks = {},
 		serials = {},
+		market = { listed = {}, bids = {}, settled = {} },
 		deck = {},
 		gunLevels = { 0, 0 },
 		catalysts = 0,
@@ -117,6 +121,57 @@ local function cleanSerials(data: SaveData, raw: any)
 			local plain = entry.plain
 			if runs and isCount(plain, have) and total + plain <= have and total + plain > 0 then
 				data.serials[key] = { runs = runs, plain = plain }
+			end
+		end
+	end
+end
+
+local function isWhole(n: any, min: number, max: number): boolean
+	return type(n) == "number" and n == math.floor(n) and n >= min and n <= max
+end
+
+-- Market entries hold real cards and Credits, so every well-formed one is kept, however many there are. A damaged
+-- one is dropped: what it held can't be trusted.
+local function cleanMarket(data: SaveData, raw: any)
+	if type(raw) ~= "table" then
+		return
+	end
+	if type(raw.listed) == "table" then
+		for id, entry in raw.listed do
+			local good = type(id) == "string"
+				and type(entry) == "table"
+				and type(entry.cardId) == "string"
+				and Tier.isValid(entry.tier)
+				and Variant.isValid(entry.variant)
+				and isWhole(entry.serial, 1, math.huge)
+				and isWhole(entry.startBid, 1, Config.MaxCredits)
+				and (entry.buyNow == nil or (isWhole(entry.buyNow, 1, Config.MaxCredits) and entry.buyNow > entry.startBid))
+				and type(entry.endsAt) == "number"
+			if good then
+				data.market.listed[id] = {
+					cardId = entry.cardId,
+					tier = entry.tier,
+					variant = entry.variant,
+					serial = entry.serial,
+					startBid = entry.startBid,
+					buyNow = entry.buyNow,
+					endsAt = entry.endsAt,
+					live = entry.live == true,
+				}
+			end
+		end
+	end
+	if type(raw.bids) == "table" then
+		for id, entry in raw.bids do
+			if type(id) == "string" and type(entry) == "table" and isWhole(entry.amount, 1, Config.MaxCredits) and type(entry.endsAt) == "number" then
+				data.market.bids[id] = { amount = entry.amount, endsAt = entry.endsAt }
+			end
+		end
+	end
+	if type(raw.settled) == "table" then
+		for id, done in raw.settled do
+			if type(id) == "string" and done == true then
+				data.market.settled[id] = true
 			end
 		end
 	end
@@ -237,6 +292,7 @@ function SaveData.load(raw: any): (SaveData?, string?)
 	data.stacks = cleanStacks(raw.stacks)
 	data.serials = {}
 	cleanSerials(data, raw.serials)
+	cleanMarket(data, raw.market)
 	if isCount(raw.credits, Config.MaxCredits) then
 		data.credits = raw.credits
 	end

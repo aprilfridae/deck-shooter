@@ -197,3 +197,36 @@ describe("Inventory serials", function()
 		expect(Inventory.lowest(old, key)).toBe(9)
 	end)
 end)
+
+describe("Inventory.give", function()
+	local key = Inventory.key("phase_dash", "Field", "Base")
+
+	it("puts one numbered copy back, joining the runs round it", function()
+		local data: any = { stacks = {}, serials = {} }
+		Inventory.add(data, "phase_dash", "Field", "Base", 5)
+		Inventory.number(data, key, 1, 5)
+		Inventory.take(data, key, 3)
+		expect(Inventory.give(data, key, 3)).toBe(true)
+		expect(data.serials[key].runs).toEqual({ 1, 5 })
+		expect(data.stacks[key]).toBe(5)
+		expect(Inventory.give(data, key, 3)).toBe(false)
+		expect(data.stacks[key]).toBe(5)
+	end)
+
+	it("starts a stack that isn't there, and leaves waiting copies waiting", function()
+		local data: any = { stacks = {}, serials = {} }
+		expect(Inventory.give(data, key, 9)).toBe(true)
+		expect(data.stacks[key]).toBe(1)
+		expect(data.serials[key].runs).toEqual({ 9, 9 })
+		Inventory.add(data, "phase_dash", "Field", "Base", 2)
+		expect(Inventory.give(data, key, 4)).toBe(true)
+		expect(Inventory.waiting(data, key)).toBe(2)
+		expect(data.serials[key].runs).toEqual({ 4, 4, 9, 9 })
+	end)
+
+	it("refuses a full stack", function()
+		local data: any = { stacks = { [key] = Config.MaxStackCount }, serials = {} }
+		expect(Inventory.give(data, key, 5)).toBe(false)
+		expect(data.stacks[key]).toBe(Config.MaxStackCount)
+	end)
+end)

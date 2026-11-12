@@ -75,7 +75,7 @@ All 4 are in set `set_01`. Stats are listed Field / Redline / Prototype.
 `src/shared/CardCore/SaveData.luau`, saved with ProfileStore (`src/server/vendor/ProfileStore.luau`, from MadStudioRoblox at commit `45c9847`, Apache-2.0, licence in `licenses/`).
 
 - Store `PlayerData_v1`, key `Player_<UserId>`. Session locking stops copies being duplicated across servers.
-- **Version 5 fields:** `version`, `credits`, `creditRemainder`, `stacks`, `serials` (see `serials.md`), `deck`, `gunLevels` (2 numbers), `catalysts`, `class`, `rifle`, `settings`, `commentsOff`, `packs`, `rebirths`, `openAllCredits`, `receipts`.
+- **Version 6 fields:** `version`, `credits`, `creditRemainder`, `stacks`, `serials` (see `serials.md`), `market` (cards up for auction and Credits set aside in bids; see `auction-house.md`), `deck`, `gunLevels` (2 numbers), `catalysts`, `class`, `rifle`, `settings`, `commentsOff`, `packs`, `rebirths`, `openAllCredits`, `receipts`.
 - **The fresh start:** a save from before version 5 is reset the first time it loads (River, 2026-11-11), keeping only settings, comments off, class, rifle, receipts and waiting Open All purchases. `serials.md` says why.
 - **Loading** starts from a new save and copies in each valid field. A save from a newer version is never overwritten: the server ends the session and kicks the player with "This server is out of date. Please rejoin."
 - **Corrupt values** reset to their default one field at a time: stack, pack, rebirth and Catalyst counts above 1,000,000, Credits above 2^53, gun levels above 100, unknown classes or rifles, and badly formed stack keys. Copies of unknown cards are kept, so a removed card can come back.
