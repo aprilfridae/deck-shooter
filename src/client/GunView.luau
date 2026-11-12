@@ -91,17 +91,16 @@ local PALM_FINGERS: { [string]: { [string]: { [string]: { rest: { Vector3 }, hel
 }
 -- The right hand's fingers while it is off the grip and on the charging knob, in its own palm's space (+Y along
 -- the fingers, +X the way the palm faces, -Z the thumb's side). The hand is over the knob, palm down: the index
--- and middle fingers wrap down round the front of the knob, the other two lie half curled beside the receiver, and the
--- thumb comes round under the knob. Left to the clip, they were the grip's shape with nothing in it, an open claw
+-- and middle fingers wrap down round the front of the knob, the other two curl the same way beside them (half
+-- open, they stuck out; River, 2026-11-12), and the thumb comes round under the knob. Left to the clip, they were the grip's shape with nothing in it, an open claw
 -- beside the knob (River, 2026-11-12: "the fingers to me look strange").
 local KNOB_WRAP = { Vector3.new(0.5, 0.85, 0).Unit, Vector3.new(0.98, 0.2, 0).Unit, Vector3.new(0.7, -0.7, 0).Unit }
-local KNOB_LOOSE = { Vector3.new(0.2, 0.98, 0).Unit, Vector3.new(0.5, 0.85, 0).Unit, Vector3.new(0.75, 0.65, 0).Unit }
 local KNOB_FINGERS: { [string]: { [string]: { Vector3 } } } = {
 	M57 = {
 		Indice = KNOB_WRAP,
 		DedoMedio = KNOB_WRAP,
-		Anular = KNOB_LOOSE,
-		Menique = KNOB_LOOSE,
+		Anular = KNOB_WRAP,
+		Menique = KNOB_WRAP,
 		Pulgar = { Vector3.new(0.35, 0.25, 0.9).Unit, Vector3.new(0.7, 0.2, 0.68).Unit, Vector3.new(0.4, 0.2, 0.9).Unit },
 	},
 }
