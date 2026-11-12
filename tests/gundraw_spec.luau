@@ -30,8 +30,17 @@ describe("GunDraw", function()
 	it("starts every gun well away from its place", function()
 		for _, kind in KINDS do
 			local start = GunDraw.at(kind, 0)
-			expect(math.abs(start.x) + math.abs(start.y) + math.abs(start.z) > 1).toBe(true)
+			-- Slid a long way, or swung a long way round.
+			local slid = math.abs(start.x) + math.abs(start.y) + math.abs(start.z)
+			expect(slid > 1 or math.abs(start.pitch) > 45).toBe(true)
 		end
+	end)
+
+	it("swings a pistol up from the shoulder, and the others about the gun", function()
+		local shoulder = GunDraw.pivot("pistol") :: any
+		expect(shoulder.z > 0).toBe(true) -- behind the camera, where a shoulder is
+		expect(GunDraw.pivot("rifle")).toBeNil()
+		expect(GunDraw.pivot("sniper")).toBeNil()
 	end)
 
 	it("ends every gun exactly at rest, and keeps it there", function()

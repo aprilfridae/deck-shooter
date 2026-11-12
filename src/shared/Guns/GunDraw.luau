@@ -19,11 +19,13 @@ local REST: Pose = { x = 0, y = 0, z = 0, pitch = 0, yaw = 0, roll = 0 }
 local FIELDS = { "x", "y", "z", "pitch", "yaw", "roll" }
 
 local DRAWS: { [string]: { Key } } = {
-	-- A quick draw off the right hip: muzzle down, up fast, a flick past level, and settled.
+	-- A quick draw off the right hip: the arms swing up from hanging, a touch past level, and settle. It turns
+	-- about the shoulder (see PIVOTS), and barely slides: turned about the gun itself, the shoulders swung round
+	-- and it looked like the whole torso was rotating (River, 2026-11-12).
 	pistol = {
-		key(0, 0.25, -1.3, 0.5, -70, 0, -20),
-		key(0.15, 0.06, -0.3, 0.12, -22, 6, -10),
-		key(0.26, 0, 0.06, -0.04, 7, -2, 4),
+		key(0, 0.1, -0.25, 0.15, -62, -8, -6),
+		key(0.15, 0.03, -0.07, 0.04, -22, -3, -3),
+		key(0.26, 0, 0.01, 0, 5, 0, 1),
 		key(0.38, 0, 0, 0, 0, 0, 0),
 	},
 	-- Up from low on the left, across the body as if off a sling, canted over, then levelled.
@@ -41,6 +43,16 @@ local DRAWS: { [string]: { Key } } = {
 		key(0.75, 0, 0, 0, 0, 0, 0),
 	},
 }
+
+-- The point a draw turns about, from the camera: x right, y up, z toward you. A kind not listed turns about the
+-- gun's own place at the hip.
+local PIVOTS: { [string]: { x: number, y: number, z: number } } = {
+	pistol = { x = 0.35, y = -0.45, z = 0.4 }, -- the right shoulder
+}
+
+function GunDraw.pivot(kind: string): { x: number, y: number, z: number }?
+	return PIVOTS[kind]
+end
 
 -- Which draw a gun uses: a sidearm is a pistol, a scoped gun is a sniper, and anything else is a rifle.
 function GunDraw.kind(sidearm: boolean, scoped: boolean): string
