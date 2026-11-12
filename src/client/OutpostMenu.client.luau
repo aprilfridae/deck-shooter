@@ -20,6 +20,7 @@ local MenuCamera = require(script.Parent.MenuCamera)
 local LoadoutPanel = require(script.Parent.LoadoutPanel)
 local MenuPanel = require(script.Parent.MenuPanel)
 local NavButton = require(script.Parent.NavButton)
+local MarketPanel = require(script.Parent.MarketPanel)
 local PacksPanel = require(script.Parent.PacksPanel)
 local PlayerClick = require(script.Parent.PlayerClick)
 local PlayPanel = require(script.Parent.PlayPanel)
@@ -42,7 +43,7 @@ local NAV_OUTLINE = 2 -- pixels
 local HOVER_PITCH = 1.6
 local HOVER_VOLUME = 0.25
 
-local BUTTONS = { "PLAY", "PACKS", "LOADOUT", "PROFILE", "SETTINGS" }
+local BUTTONS = { "PLAY", "PACKS", "MARKET", "LOADOUT", "PROFILE", "SETTINGS" }
 
 local player = Players.LocalPlayer
 
@@ -94,6 +95,7 @@ end
 
 local function fillPage(name: string)
 	panel:clear()
+	MarketPanel.stop()
 	-- Each page gets its own frame, so a reply that arrives after a swap can tell it's out of date.
 	local page = Instance.new("Frame")
 	page.BackgroundTransparency = 1
@@ -105,6 +107,8 @@ local function fillPage(name: string)
 		PlayPanel.fill(page)
 	elseif name == "PACKS" then
 		PacksPanel.fill(page)
+	elseif name == "MARKET" then
+		MarketPanel.fill(page)
 	elseif name == "LOADOUT" then
 		LoadoutPanel.fill(page)
 	else
@@ -261,13 +265,13 @@ CardData.packEvent:Connect(function(event: any)
 	end
 end)
 
--- The Market stall opens the packs until the player market exists.
+-- The Market stall opens the market.
 ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt)
 	if prompt.Name == "MarketPrompt" and gui.Enabled then
 		clickSound:Play()
 		SettingsPanel.stop()
 		profileUser = player.UserId
-		show("PACKS")
+		show("MARKET")
 	end
 end)
 

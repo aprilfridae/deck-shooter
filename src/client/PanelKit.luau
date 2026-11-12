@@ -11,6 +11,7 @@ local TITLE_LINE = 0.095
 local RULE_FADE = 0.5
 local PRESSED_SHRINK = 0.97
 local QUIET_HOVER = 3 -- pixels
+local ROUNDED = 0.0056 -- a rounded button's corner
 
 local PanelKit = {
 	MARGIN = 0.025,
@@ -112,7 +113,7 @@ function PanelKit.button(
 	top: number,
 	width: number,
 	height: number,
-	options: { active: boolean?, disabled: boolean?, quiet: boolean?, size: number? }?
+	options: { active: boolean?, disabled: boolean?, quiet: boolean?, size: number?, rounded: boolean? }?
 ): TextButton
 	local choice = options or {}
 	local unit = MenuPanel.unit()
@@ -129,6 +130,12 @@ function PanelKit.button(
 	stroke.Thickness = border
 	stroke.Transparency = if choice.disabled then 0.7 else 0
 	stroke.Parent = button
+	if choice.rounded then
+		-- The market's buttons are rounded (River, 2026-11-11). The rest of the menu stays square.
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, ROUNDED * unit)
+		corner.Parent = button
+	end
 	local scale = Instance.new("UIScale")
 	scale.Parent = button
 	local word = PanelKit.label(button, "LabelBold", size, 0, 0, nil, ink)
