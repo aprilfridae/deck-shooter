@@ -354,6 +354,37 @@ local RELOADS: { [string]: any } = {
 	},
 }
 
+-- Pull-outs keyed like the reloads above, for guns that are thrown about in the hands, not just brought up
+-- (GunDraw has the plain ones). Seconds into the draw; `length` is how long it runs, and nothing stretches.
+--
+-- The Longscope's follows its reload (River, 2026-11-12: "it should feel like the reload ... a spin downwards
+-- sort of and it should be quicker and not tilt the camera as much ... the left arm is connected to the sniper the
+-- whole time and the way it should work it should like catch it"). The gun drops in from above the top of the
+-- screen in the right hand alone, turning over once round the trigger finger, muzzle down and under. The left hand
+-- waits below, off the gun (its place takes away the gun's own, so it stays where it is while the gun falls), and
+-- catches it by the fore-end as the turn ends. Both sink with the weight, it is lifted and canted, and the lever is
+-- thrown open and slammed shut. Only the gun and hands move: the view isn't turned.
+local KEYED_DRAWS: { [string]: any } = {
+	Longscope = {
+		length = 1,
+		spin = { from = 0, to = 0.4, points = { { 0, 0, -3.2 }, { 0.4, -1, -1.2 } } },
+		lever = { { 0.56, 0 }, { 0.64, 1 }, { 0.7, 1 }, { 0.78, 0 } },
+		keys = {
+			key(0, tilt(0, 0, 0, 0.1, 2.6, 0.2), Vector3.new(-0.1, -2.75, -0.1)),
+			key(0.16, tilt(0, 0, 0, 0.06, 1.2, 0.12), Vector3.new(-0.06, -1.38, -0.05), "flow"),
+			key(0.3, tilt(0, 0, 0, 0.02, 0.4, 0.05), Vector3.new(-0.02, -0.5, 0), "flow"),
+			key(0.4, tilt(3, -1, 2, 0, 0.14, 0.02), Vector3.zero, "flow"), -- it lands in the left hand
+			key(0.47, tilt(8, -3, -5, -0.01, -0.06, 0.03), Vector3.new(0, -0.03, 0), "flow"), -- both drop with the weight
+			key(0.56, tilt(11, -4, 6, -0.04, 0.46, 0.05), Vector3.zero, "flow"), -- lifted and canted, so the lever shows
+			key(0.64, tilt(9.5, -3, 9, -0.03, 0.38, -0.04), Vector3.zero, "flow"), -- the lever hits its stop, open
+			key(0.7, tilt(10.5, -4, 7, -0.04, 0.41, -0.02), Vector3.zero, "flow"),
+			key(0.78, tilt(6, -2, 2, -0.02, 0.46, 0.07), Vector3.zero, "flow"), -- slammed shut
+			key(0.88, tilt(-1, 0.3, -0.5, 0.002, -0.01, 0.015), Vector3.zero, "flow"),
+			key(1, CFrame.identity, Vector3.zero, "flow"),
+		},
+	},
+}
+
 local flowHand: (any, number, number) -> Vector3
 local flowing: (any, number, number) -> CFrame
 local function eased(ease: string, u: number): number
@@ -1463,11 +1494,15 @@ function GunView.update(
 	if typeof(pinned) == "number" then
 		drawAt = os.clock() - pinned
 	end
+	local keyedDraw = if config and not clips then KEYED_DRAWS[config.name] else nil
+	local keyedDrawAt: number? = nil -- how far into a keyed pull-out the gun is
 	if drawAt and config then
 		local kind = GunDraw.kind(isSidearm, config.aimFov ~= nil)
 		local since = os.clock() - drawAt
-		if since >= GunDraw.length(kind) then
+		if since >= (if keyedDraw then keyedDraw.length else GunDraw.length(kind)) then
 			drawAt = nil
+		elseif keyedDraw then
+			keyedDrawAt = since -- the gun and hands are moved below, as in a keyed reload
 		else
 			drawKind, drawSince = kind, since
 			local pose = GunDraw.at(kind, since)
@@ -1703,6 +1738,9 @@ function GunView.update(
 		end
 		if drawKind and leverOpen == 0 then
 			leverOpen = GunDraw.lever(drawKind, drawSince) -- the pull-out cocks the lever
+		end
+		if keyedDraw and keyedDrawAt and not keyedReloadAt then
+			reloadGun, reloadHand, spin, leverOpen = reloadPose(keyedDraw, keyedDrawAt, keyedDraw.length)
 		end
 		local right, left = grips()
 		-- The hands go by the gun before its spin: the right stays put with its finger in the trigger guard while the
