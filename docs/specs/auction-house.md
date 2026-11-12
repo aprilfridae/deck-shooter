@@ -1,6 +1,6 @@
 # The auction house
 
-**Status:** built on 2026-11-11 on `feature/auction-house` (which builds on `feature/serials`), and passing its tests. Nothing has been run in Play. Two servers bidding on one auction has not been tried. This is the second of three pieces of the player market: serials (`serials.md`), the auction house, then the market screen.
+**Status:** built on 2026-11-11 on `feature/auction-house` (which builds on `feature/serials`), and passing its tests. River ran the walkthrough in Studio on 2026-11-11 and every step matched, but with API access off, so only the in-memory stand-ins were used: the real data store, memory store and messaging calls have not run. Two servers bidding on one auction has not been tried. This is the second of three pieces of the player market: serials (`serials.md`), the auction house, then the market screen.
 
 **Covers:** the rules of auctions and the server that runs them: listing, bidding, Buy Now, ending, and getting your card or Credits. The screens are the next spec. Until they exist there is nothing to click, so this piece is proven by tests and by server checks.
 

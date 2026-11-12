@@ -137,5 +137,5 @@ Serials, then the player market. River checks the Relay map in Play: fog, lights
 - River's choices: bids plus optional Buy Now, no market cut, lengths of 1, 6 or 24 hours.
 - The ordering rule at the top of `AuctionServer.luau` is what keeps cards and Credits from being copied or lost. Read it before changing any request or check.
 - There is no screen. `AuctionWalk.luau` walks one auction in Studio (the command is in the spec). It removes one card from the tester's save and adds 10 Credits.
-- Not checked: nothing has been run in Play, and two servers bidding on one auction needs the live game with two players.
+- River ran the walkthrough in Studio and it matched, with API access off (in-memory stand-ins only). Not checked: the real storage calls, and two servers bidding on one auction, which needs the live game with two players.
 
