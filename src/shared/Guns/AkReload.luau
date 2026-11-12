@@ -74,8 +74,13 @@ local ON_MAG = grip(MAG_HOLD, 0.085, 0.035, Vector3.new(0.2, 0.6, -0.8), Vector3
 -- index and middle wrapping around the tab, and the thumb naturally wraping around the bottom of the tab"). With
 -- the palm down the forearm runs back to an elbow that is out and down, as it would be. It first reached in from
 -- the side with its palm facing back, then lay along the gun with its palm to the receiver.
-local KNOB_END = KNOB + Vector3.new(0.014, 0, 0)
-local ON_KNOB = grip(KNOB_END, 0.11, 0.03, Vector3.new(-0.3, 0, -1), Vector3.new(-0.3, -0.95, 0), true)
+-- The hand is big next to the gun: a finger is wider than the knob is long. So the hand is out to the right far
+-- enough that its index finger, the innermost, is over the knob and clear of the receiver's wall, and high enough
+-- that the palm and the thumb's root clear the receiver's top edge. Measured in Play against the gun's parts
+-- (River, 2026-11-12: "make sure the fingers arent clipping either"): turned in toward the gun, the index finger
+-- and the thumb were inside the receiver.
+local KNOB_END = KNOB + Vector3.new(0.045, 0, 0)
+local ON_KNOB = grip(KNOB_END, 0.127, 0.05, Vector3.new(0, 0, -1), Vector3.new(0, -1, 0), true)
 -- A magazine in the hand down out of view, in the hold.
 local FETCHED = CFrame.new(-0.2, -0.36, 0.02) * CFrame.Angles(0, 0, math.rad(50))
 

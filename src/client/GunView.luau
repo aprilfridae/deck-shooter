@@ -102,7 +102,7 @@ local KNOB_FINGERS: { [string]: { [string]: { Vector3 } } } = {
 		DedoMedio = KNOB_WRAP,
 		Anular = KNOB_LOOSE,
 		Menique = KNOB_LOOSE,
-		Pulgar = { Vector3.new(0.2, 0.5, -0.85).Unit, Vector3.new(0.8, 0.4, -0.4).Unit, Vector3.new(0.9, 0.2, 0.4).Unit },
+		Pulgar = { Vector3.new(0.35, 0.25, 0.9).Unit, Vector3.new(0.7, 0.2, 0.68).Unit, Vector3.new(0.4, 0.2, 0.9).Unit },
 	},
 }
 local clipPalms: { [string]: CFrame }? = nil -- this frame's moved palms, in the clip's space
