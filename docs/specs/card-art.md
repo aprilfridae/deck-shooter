@@ -1,8 +1,6 @@
 # Card art
 
-**Status:** step 1 is built: the art in the menus and the pull reveal, and inspecting a card in 3D. The card in hand and serials aren't built, so serials show `--`. Chromatic and Redacted are proposals River hasn't seen drawn yet, and show only their rarity text. Checked against the code on 2026-11-07.
-
-**Redesign pending:** `card-face-redesign.md` (agreed 2026-11-11, not built) replaces the Layout and Rarities sections below once it's built.
+**Status:** the front is the 2026-11-11 redesign (`card-face-redesign.md`): built, with the still card checked by River in Play and the motion and effects not yet. The back, inspecting a card in 3D and the pull reveal are built. Real serials aren't built: Studio shows stand-in serials and the live game shows `----`. Chromatic and Redacted are proposals River hasn't seen drawn yet, and show only their rarity text.
 
 **Covers:** how cards look, and the serial numbers printed on them. How cards work is in `cards.md`. The pull reveal is in `packs.md`, and fusion effects get their own spec.
 
@@ -15,51 +13,17 @@ Common cards stay calm in the game's navy and Bone, so rare ones hit hard. Every
 - The Black-Site tier is shown to players as **Redline**. Its id stays `BlackSite`, so saves don't change. The shown names are `TIER_NAMES` in `src/shared/CardCore/CardLook.luau`.
 - Each card has a two-letter monogram: `PD` Phase Dash, `OC` Overclock, `RP` Recon Pulse, `AS` Aegis Shell. A new card needs one.
 
-## Layout
+## Layout, rarities and effects
 
-Cards are vertical, in the proportions 150 by 240. Positions below are in those units, measured from the card's top left. Corners are rounded by 10. The card has no connector tab.
-
-| Part | Where | Notes |
-| --- | --- | --- |
-| Monogram | Left 12 to 104, top 12 to 158 | Heavy weight, turned 90 degrees to read up the card. Every monogram fills exactly this box, with no cuts and nothing past the card's edge. |
-| Small serial | Top right, inset 10 | Upright. Field, Redline and Prototype only. |
-| Crosshair | Centred on (130, 42) | Circle of radius 7, with arms from 120 to 140 and from 32 to 52. |
-| Ticks | 5 lines from 125 to 135, at y 62 to 94, 8 apart | Centred under the crosshair. |
-| Slashes | 4 slashes from x 116 to 140, y 182 to 192 | |
-| Lower block | Left 12 to 104, top 160 to 198 | Hazard stripes, or Zero-Day's big serial. |
-| Rule | y 204, from 10 to 140 | A hairline. |
-| Card name | Bottom left, above the rarity | Upright. |
-| Rarity | Bottom left, inset 7 | Upright. |
-| Set code | Bottom right, inset 7 | `S01` for `set_01`. Dropped on a card whose rarity text is long enough to reach it, like `PROTOTYPE ZERO-DAY`. |
-
-- All small text is upright when the card is held vertically, and uses `Label`.
-- The crosshair, ticks, slashes and rule are identical on every card, in the card's ink colour.
-- Stats aren't printed on the card's face. They show on its back when it's inspected.
-
-## Rarities
-
-| Rarity | Background | Monogram | Ink | Lower block | Shine strength |
-| --- | --- | --- | --- | --- | --- |
-| Field | Deep Navy | Bone, Bone glow | Bone | Bone stripes | 28% |
-| Redline | Bone, Hazard Red outline | Hazard Red, red glow | Deep Navy, rarity text in Red | Red stripes | 70% |
-| Prototype | Signal Acid, Deep Navy outline | Deep Navy | Deep Navy | Deep Navy stripes, scrolling | 50% |
-| Zero-Day | `#0E1018`, Data Cyan outline | Data Cyan, cyan glow | Bone, rarity text in Cyan | Big serial | 60% |
-
-- **Outline:** 2 wide, just inside the edge. Field has none.
-- **Shine:** every card has a slanted white band that crosses it every 2.6s.
-- **Prototype:** an outline of its monogram pulses outward and fades every 1.8s, and its stripes scroll.
-- **Zero-Day** adds three things:
-  - A soft foil band of cyan, blue and cyan travels with the shine.
-  - The crosshair is filled with cyan and sends out a fading ring every 2s.
-  - The serial scrambles through random characters and settles every 2.4s, at `PanelMotion.DECODE_FPS`.
+The front of the card was redesigned on 2026-11-11 around River's micrographics. Its layout, type, colours, the motion every card has, each rarity's effects and the look of serials 1 to 10 are in `card-face-redesign.md`.
 
 ## Variants
 
 Tiers and variants are separate: a card has one of each, so any tier can be Zero-Day.
 
-- **Zero-Day** looks the same at every tier, and its rarity text names both, like `FIELD ZERO-DAY`.
-- **Chromatic** keeps the tier's look, and its rarity text reads like `FIELD CHROMATIC`. The shine cycles through Signal Acid, Data Cyan and Bone. (Proposal.)
-- **Redacted** keeps the tier's look with a solid bar over the monogram that lifts under the mouse. Rarity text reads like `FIELD REDACTED`. (Proposal.)
+- **Zero-Day** looks the same at every tier, and its rarity text names both, like `field zero-day` on the front and `FIELD ZERO-DAY` on the back.
+- **Chromatic** keeps the tier's look, and its rarity text reads like `field chromatic`. The shine cycles through Signal Acid, Data Cyan and Bone. (Proposal.)
+- **Redacted** keeps the tier's look with a solid bar over the monogram that lifts under the mouse. Rarity text reads like `field redacted`. (Proposal.)
 
 ## Colour rules
 
@@ -82,7 +46,7 @@ Clicking a card in the Profile index or the pull reveal holds it up in the 3D wo
 
 - Every copy of a card has a serial, given when it's created. The first copy made is `01`, the second `02`.
 - Serials count separately for each card, tier and variant, so a Zero-Day Aegis Shell `01` and a Field Aegis Shell `01` can both exist.
-- Serials are padded to two digits, and longer numbers show in full. Zero-Day's big serial shrinks to fit past two digits.
+- Serials are padded to four digits, and longer numbers show in full. Serials 1 to 10 show as a big two-digit rainbow number.
 - Serials never change and are never reused, even when a copy is spent.
 
 **What this changes in `cards.md`:**
@@ -94,12 +58,12 @@ Clicking a card in the Profile index or the pull reveal holds it up in the 3D wo
 
 ## How it's built
 
-- **Art:** the background, monogram, glow and fixed details are one image per card and rarity, because Roblox UI can't blur text. Images are group assets, ids kept with the others. The monogram uses KH Interference Bold, the same as the menu titles. `tools/make-card-art.py` makes the images.
-- **Live parts** are drawn over the image: the serial and name through `TypeLabel`, the shine and foil as moving frames with `UIGradient`, the stripes as a scrolling image.
-- **Foil:** Roblox UI can't blend colours into what's beneath, so the band sits on top at partial transparency. River judges it in Play.
-- **Where cards show:** `CardFace.luau` draws a card in the Loadout slots, the Profile index and the pull reveal. `CardView.luau` is the 3D card held in hand, still drawn from the `Card` model without this art.
+- **Art:** the front is white image layers the game tints and moves: River's graphics, the acronym, the baked name, the barcode and the effect images. `tools/make-card-art.py` bakes them from River's SVG and the two fonts, and `CardLayout.luau` holds where each sits. Images are group assets, ids in `CardArt.luau`.
+- **Live parts:** the rarity and serial through `TypeLabel`, the shine and the other bands as frames with a moving `UIGradient`, particles as small frames. `CardFaceFx.luau` builds each rarity's effects and `CardMotion.luau` holds the timing rules.
+- **Foil and glow:** Roblox UI can't blend colours into what's beneath or blur text, so foil sits on top at partial transparency and the low serial's glow is a blurred picture. River judges them in Play.
+- **Where cards show:** `CardFace.luau` draws a card in the Loadout slots, the Profile index and the pull reveal. `CardView.luau` is the 3D card held in hand. It shows one flat image per card and look: the still face with the name, without rarity text, serial or motion.
 - **In the panels:** a Loadout slot's number moves under the card. An index card shows its copy count where the serial goes, since it stands for every copy of that card.
-- **Small sizes:** hairlines are baked in at 1.2 units so they survive the Profile index. Motion runs only while a card is on screen.
+- **Small sizes:** lines are baked 5 units wide (of 1280) so they survive the Profile index, and cards under 160 pixels wide show half the particles. Motion runs only while a card is on screen.
 
 ## Order of work
 

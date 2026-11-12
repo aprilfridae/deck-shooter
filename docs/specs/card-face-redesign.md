@@ -1,6 +1,6 @@
 # Card face redesign
 
-**Status:** design agreed with River in mockups on 2026-11-11. Nothing is built. When it is, this replaces the Layout and Rarities sections of `card-art.md`; the rest of that spec (inspecting, the back, how serials are given out) stands.
+**Status:** built on 2026-11-11. River has checked the still card in Play ("looks right"). The motion, each rarity's effects and the rainbow low serial are built and pass their tests but have not been seen in Play. This replaces the Layout and Rarities sections of `card-art.md`; the rest of that spec stands.
 
 **Covers:** the front of a card: its layout, type, the effect each rarity gets, and the look of serials 1 to 10.
 
@@ -13,7 +13,8 @@ Success is River looking at the card in Play and saying it matches the last mock
 ## Source art
 
 - River's file is `E:\CARD DESIGNS\BASE DESIGN\SVG\Artboard 1.svg`, 1280 by 2048. A copy goes in `assets/cards/source/`, which stays out of git like the rest of `assets/`.
-- All positions below are in that file's units, from the card's top left. The card is still 5:8 with corners rounded by 85 (the old 10 in 150).
+- All positions below are in that file's units, from the card's top left. The game keeps them in `CardLayout.luau`.
+- River's lines are 2 wide in the file. They are baked 5 wide so they survive on small cards. River hasn't objected; it is theirs to change. The card is still 5:8 with corners rounded by 85 (the old 10 in 150).
 - The margins are River's: 45 on the left, right and bottom, 69 at the top.
 
 ## Layout
@@ -81,7 +82,7 @@ The glow is weaker on Redline and Prototype, because their backgrounds are light
 ## Things the mockups showed that are not in this design
 
 - **"/1000":** every mockup had `/1000` after the serial. Cards have no limit on copies, so there is no total to print. It is left off until River sets one.
-- **Serials are not in the game yet.** `card-art.md` lists them as step 3, and cards show `--` today. The serial's place, type and the low-serial look are built now and tested with made-up numbers, but real ones appear only when that step is done.
+- **Serials are not in the game yet.** `card-art.md` lists them as step 3, and cards show `--` today. Until then Studio shows stand-in serials so both looks can be judged (`CardLook.studioSerial`: Phase Dash 1, Overclock 7, Recon Pulse 42, Aegis Shell 117), and the live game shows `----`.
 - **Light that follows the mouse or the card's tilt** on Zero-Day was an idea, not a decision. The band runs on a timer. Inspecting a card already ties the shine to its angle, and the light band follows the shine there.
 
 ## How it's built
