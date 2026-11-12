@@ -15,6 +15,7 @@ local ArmClips = require(ReplicatedStorage.Guns.ArmClips)
 local CardFlourish = require(ReplicatedStorage.Guns.CardFlourish)
 local GunConfig = require(ReplicatedStorage.Guns.GunConfig)
 local CardInHand = require(script.Parent.CardInHand)
+local CardThrowFx = require(script.Parent.CardThrowFx)
 local CardView = require(script.Parent.CardView)
 local ViewArms = require(script.Parent.ViewArms)
 
@@ -611,8 +612,10 @@ local snapAt: number? = nil
 local cardAt: number? = nil
 local cardUsed = 0 -- how many cards had been used when this one came out
 local THROWN = { switchback = true } -- cards whose use is a throw
+local THROWN_THICK = Vector3.new(0, 0.006, 0) -- a card in the hand is too thin to see edge on
 local crushAt: number? = nil -- when the card in hand was used
 local throwing = false -- that card is thrown, not crushed
+local released = false -- and has left the hand
 local cardTurns = 0 -- CardInHand.turns as of the last look
 local turns = 0 -- how many times the card held has been changed since the cards came out
 local turnAt = 0 -- when it last was
@@ -1228,6 +1231,7 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 			crushAt = now
 			local used = CardInHand.lastUsed
 			throwing = used ~= nil and THROWN[Players.LocalPlayer:GetAttribute(`Ability{used}Id`)] == true
+			released = false
 			if throwing then
 				GunAudio.stopCards() -- no crush sound: the card isn't crushed
 			else
@@ -1282,6 +1286,11 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 	pose, rightMoved = CardFlourish.sway(pose, cardLife + now)
 	if crush then
 		crush.palm = rightMoved * crush.palm
+		if crush.thrown and crush.crushed >= 1 and not released then
+			-- The card leaves the hand: the world carries on with it from exactly where and how it was held.
+			released = true
+			CardThrowFx.release(held * pose.cards[crush.card], CardFlourish.CARD_SIZE + THROWN_THICK, camera.CFrame)
+		end
 	end
 	ViewArms.holdCards(pose.right, pose.left, pose.fingers)
 	CardView.show(camera, held, pose.cards, crush, CardFlourish.top(turns), if crush then nil else pose.bends)

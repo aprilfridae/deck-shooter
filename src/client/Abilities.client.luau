@@ -7,7 +7,6 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 
-local CardAim = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("CardAim"))
 local CardHand = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("CardHand"))
 local Zones = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Zones"))
 local CardInHand = require(script.Parent.CardInHand)
@@ -54,13 +53,16 @@ local function fade(part: Part, goal: { [string]: any })
 	Debris:AddItem(part, FX_SECONDS + 0.1)
 end
 
-fxRemote.OnClientEvent:Connect(function(kind: any, from: any, to: any, hit: any, tier: any)
+fxRemote.OnClientEvent:Connect(function(kind: any, from: any, to: any, hit: any, tier: any, thrower: any)
 	if typeof(from) ~= "Vector3" or typeof(to) ~= "Vector3" then
 		return
 	end
 	if kind == "card" then
-		-- It leaves the hand after the throw's wind-up, which is when the first-person hand lets go.
-		task.delay(CardAim.THROW_WINDUP, CardThrowFx.throw, from, to, hit == true, tier)
+		if thrower == player.UserId then
+			CardThrowFx.report(to, hit == true, tier) -- your own: drawn from your hand when it lets go
+		else
+			CardThrowFx.throw(from, to, hit == true, tier)
+		end
 		return
 	end
 	local color = FX_COLORS[kind]

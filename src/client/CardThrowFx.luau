@@ -1,7 +1,11 @@
--- Draws Switchback's throw: the card leaves the hand on its edge, tumbling, and in the air turns blue, glowing and
--- see-through, with a blue trail behind it (River, 2026-11-12: "in mid air it morphs blue and turns
--- transluscent but its like hitscan so you throw it really fast"). On a hit it flashes as the two players swap; on
--- a miss it fades where it lands. The flight time is CardAim's, the same the server waits before swapping.
+-- Draws Switchback's throw in the world: the card flies on its edge, tumbling slowly, and on the way turns from
+-- itself into a blue, glowing, see-through card with a blue trail (River, 2026-11-12). On a hit it flashes as the
+-- two players swap; on a miss it fades where it lands.
+--
+-- Your own throw is one motion with the first-person hand. The server's report of where the card goes is kept
+-- here (`report`), and the hand's view hands over the very card it was holding, where it was and how it was
+-- turned, at the moment it lets go (`release`). A separate card used to appear in front of the camera.
+-- Everyone else's throw starts at the thrower's chest after the same wind-up.
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -13,27 +17,28 @@ local CardArt = require(CardCore:WaitForChild("CardArt"))
 local CardLook = require(CardCore:WaitForChild("CardLook"))
 local Variant = require(CardCore:WaitForChild("Variant"))
 
-local CARD_SIZE = Vector3.new(1.5, 0.05, 2.4) -- lying flat: wide, thin, long
--- It tumbles slowly: at 30 radians a second it was only a blur (River, 2026-11-12: "make the card look like a
--- card"). A little over half a turn in a long throw.
-local SPIN = 7 -- radians a second, end over end
-local CARD_SCALE = 1.5 -- bigger than a real card, so it reads at this speed
+local CARD_SIZE = Vector3.new(2.25, 0.07, 3.6) -- in the world: far bigger than a real card, so it reads at this speed
+local GROW = 0.45 -- of the flight: a card that left a hand has grown to that size by here
+local SETTLE = 0.25 -- of the flight: by here it has eased from how the hand held it onto its edge, down the throw
+local SPIN = 7 -- radians a second, end over end. Faster was only a blur.
 local EDGE = CFrame.Angles(0, 0, math.rad(90)) -- stands the card on its edge
 local BLUE = Color3.fromRGB(70, 150, 255)
 local PAPER = Color3.fromRGB(232, 230, 223) -- the card's own edge before it changes
 local MORPH_FROM = 0.35 -- of the flight: until here it is plainly the card
 local MORPH = 0.85 -- and by here it is all blue
 local GHOST = 0.5 -- how see-through the blue card is
-local OWN_REACH = 4 -- studs: a throw starting this near the camera is your own
-local OWN_HAND = CFrame.new(0.4, 0.1, -1.6) -- where your right hand lets go, from the camera
 local TRAIL_SECONDS = 0.45
 local TRAIL_FADE = 0.45 -- how see-through the trail starts
-local TRAIL_HALF = 0.7 -- studs from the card's middle to each edge of the trail
+local TRAIL_HALF = 0.31 -- of the card's width, from its middle to each edge of the trail
 local GLOW_RANGE = 10
 local END_SECONDS = 0.25
 local FLASH_SIZE = 5 -- studs across, the burst on a hit
+local REPORT_KEPT = 1 -- seconds a report waits for the hand to let go before it is forgotten
+local BLIND_RANGE = 80 -- studs your own card flies if the server's report hasn't arrived by the release
 
 local CardThrowFx = {}
+
+local reported: { to: Vector3, hit: boolean, tier: any, at: number }? = nil
 
 local function face(card: Part, side: Enum.NormalId, image: string): Decal
 	local decal = Instance.new("Decal")
@@ -43,13 +48,9 @@ local function face(card: Part, side: Enum.NormalId, image: string): Decal
 	return decal
 end
 
--- Throws the card from one point to another. `hit` is whether it caught someone.
-function CardThrowFx.throw(from: Vector3, to: Vector3, hit: boolean, tier: any)
-	-- Your own throw starts where your hand let go of it, not in your chest.
-	local camera = workspace.CurrentCamera
-	if camera and (camera.CFrame.Position - from).Magnitude < OWN_REACH then
-		from = (camera.CFrame * OWN_HAND).Position
-	end
+-- Flies a card from `start` (where it is and how it is turned, at `startSize`) to `to`.
+local function fly(start: CFrame, startSize: Vector3, to: Vector3, hit: boolean, tier: any)
+	local from = start.Position
 	local length = (to - from).Magnitude
 	if length < 1 then
 		return
@@ -61,7 +62,7 @@ function CardThrowFx.throw(from: Vector3, to: Vector3, hit: boolean, tier: any)
 	card.CanQuery = false
 	card.CanTouch = false
 	card.CastShadow = false
-	card.Size = CARD_SIZE * CARD_SCALE
+	card.Size = startSize
 	-- Plain card stock to begin with. Glowing from the start, it was a white smear.
 	card.Material = Enum.Material.SmoothPlastic
 	card.Color = PAPER
@@ -78,7 +79,6 @@ function CardThrowFx.throw(from: Vector3, to: Vector3, hit: boolean, tier: any)
 
 	-- The trail is drawn between two points on the card's edges, so it is a ribbon as wide as the card.
 	local left, right = Instance.new("Attachment"), Instance.new("Attachment")
-	left.Position, right.Position = Vector3.new(-TRAIL_HALF * CARD_SCALE, 0, 0), Vector3.new(TRAIL_HALF * CARD_SCALE, 0, 0)
 	left.Parent, right.Parent = card, card
 	local trail = Instance.new("Trail")
 	trail.Attachment0, trail.Attachment1 = left, right
@@ -91,8 +91,10 @@ function CardThrowFx.throw(from: Vector3, to: Vector3, hit: boolean, tier: any)
 	trail.Parent = card
 
 	local forward = (to - from).Unit
-	local level = CFrame.lookAt(from, to)
-	card.CFrame = level
+	-- On its edge, pointing down the throw. It starts turned the way the hand had it and eases onto that.
+	local level = (CFrame.lookAt(from, to) * EDGE).Rotation
+	local held = start.Rotation
+	card.CFrame = start
 	card.Parent = workspace
 
 	local flight = CardAim.flight(length)
@@ -101,7 +103,12 @@ function CardThrowFx.throw(from: Vector3, to: Vector3, hit: boolean, tier: any)
 	connection = RunService.RenderStepped:Connect(function()
 		local age = os.clock() - started
 		local share = math.min(age / flight, 1)
-		card.CFrame = (level + forward * length * share) * CFrame.Angles(-age * SPIN, 0, 0) * EDGE
+		local size = startSize:Lerp(CARD_SIZE, math.min(share / GROW, 1))
+		card.Size = size
+		left.Position, right.Position = Vector3.new(-size.X * TRAIL_HALF, 0, 0), Vector3.new(size.X * TRAIL_HALF, 0, 0)
+		-- Tumbling end over end: about the card's own thin axis, which lies level once it is on its edge.
+		local turned = held:Lerp(level, math.min(share / SETTLE, 1)) * CFrame.Angles(0, -age * SPIN, 0)
+		card.CFrame = CFrame.new(from + forward * length * share) * turned
 		-- The change: its print fades, and the card goes blue, bright and see-through.
 		local changed = math.clamp((share - MORPH_FROM) / (MORPH - MORPH_FROM), 0, 1)
 		card.Material = if changed > 0.4 then Enum.Material.Neon else Enum.Material.SmoothPlastic
@@ -140,6 +147,32 @@ function CardThrowFx.throw(from: Vector3, to: Vector3, hit: boolean, tier: any)
 			Debris:AddItem(flash, END_SECONDS + 0.1)
 		end
 	end)
+end
+
+-- Someone else's throw: from their chest to where it lands, after the wind-up.
+function CardThrowFx.throw(from: Vector3, to: Vector3, hit: boolean, tier: any)
+	if (to - from).Magnitude < 1 then
+		return
+	end
+	task.delay(CardAim.THROW_WINDUP, fly, CFrame.lookAt(from, to) * EDGE, CARD_SIZE, to, hit, tier)
+end
+
+-- The server's word on where your own throw goes. It is drawn when your hand lets go.
+function CardThrowFx.report(to: Vector3, hit: boolean, tier: any)
+	reported = { to = to, hit = hit, tier = tier, at = os.clock() }
+end
+
+-- Your hand has let go of the card: `card` is where it was and how it was turned, `size` its size in the hand,
+-- and `look` the way you are looking. It carries on from exactly there.
+function CardThrowFx.release(card: CFrame, size: Vector3, look: CFrame)
+	local known = reported
+	reported = nil
+	if known and os.clock() - known.at <= REPORT_KEPT then
+		fly(card, size, known.to, known.hit, known.tier)
+	else
+		-- The report is late: fly it the way you're looking, as a miss. The swap, if there is one, still happens.
+		fly(card, size, look.Position + look.LookVector * BLIND_RANGE, false, nil)
+	end
 end
 
 return CardThrowFx

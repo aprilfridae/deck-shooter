@@ -207,11 +207,12 @@ handlers.switchback = function(player, target, slot, aim)
 	if not enemy then
 		-- The card flies until it meets a wall or runs out.
 		local wall = workspace:Raycast(from, asVector(aim) * reach, without(target.model))
-		fxRemote:FireAllClients("card", hand, if wall then wall.Position else from + asVector(aim) * reach, false, slot.tier)
+		local ends = if wall then wall.Position else from + asVector(aim) * reach
+		fxRemote:FireAllClients("card", hand, ends, false, slot.tier, player.UserId)
 		return MISS
 	end
 	local landing = enemy.root.Position
-	fxRemote:FireAllClients("card", hand, landing, true, slot.tier)
+	fxRemote:FireAllClients("card", hand, landing, true, slot.tier, player.UserId)
 	-- The swap happens when the card lands: after the hand's wind-up and the flight. Either may have died by then.
 	task.delay(CardAim.THROW_WINDUP + CardAim.flight((landing - hand).Magnitude), function()
 		if not (GunTargets.isAlive(target) and GunTargets.isAlive(enemy)) then
