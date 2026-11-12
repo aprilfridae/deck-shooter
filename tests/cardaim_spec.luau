@@ -43,6 +43,12 @@ describe("CardAim", function()
 		expect(CardAim.pick(ORIGIN, AHEAD, 40, 3, {})).toBe(nil)
 	end)
 
+	it("takes longer to throw a card further", function()
+		expect(CardAim.flight(CardAim.THROW_SPEED)).toBe(1)
+		expect(CardAim.flight(80) > CardAim.flight(40)).toBe(true)
+		expect(CardAim.flight(0)).toBe(0)
+	end)
+
 	it("launches fast enough to reach the height", function()
 		local speed = CardAim.launchSpeed(24, 196.2)
 		expect(math.round(speed * speed / (2 * 196.2))).toBe(24)

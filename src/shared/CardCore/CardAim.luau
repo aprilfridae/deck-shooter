@@ -39,6 +39,14 @@ function CardAim.pick(origin: Point, direction: Point, reach: number, width: num
 	return best
 end
 
+-- Switchback's card is thrown, and takes this long to cover the distance. The server swaps the two players when
+-- it lands, and the client draws it flying for the same time.
+CardAim.THROW_SPEED = 260 -- studs a second
+
+function CardAim.flight(length: number): number
+	return length / CardAim.THROW_SPEED
+end
+
 -- The speed that carries a body `height` studs straight up against this gravity.
 function CardAim.launchSpeed(height: number, gravity: number): number
 	return math.sqrt(2 * gravity * height)

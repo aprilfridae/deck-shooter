@@ -8,7 +8,6 @@ local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local Ability = require(CardCore:WaitForChild("Ability"))
 local CardAim = require(CardCore:WaitForChild("CardAim"))
 local Cards = require(CardCore:WaitForChild("Cards"))
-local ChainShape = require(CardCore:WaitForChild("ChainShape"))
 local Config = require(CardCore:WaitForChild("Config"))
 local Deck = require(CardCore:WaitForChild("Deck"))
 local Tier = require(CardCore:WaitForChild("Tier"))
@@ -40,7 +39,7 @@ local function remote(name: string): RemoteEvent
 end
 local useRemote = remote("Use")
 local testDeckRemote = remote("TestDeck")
-local fxRemote = remote("Fx") -- to everyone: a chain, bolt or blast to draw, with where it starts and ends (a chain also says if it hit)
+local fxRemote = remote("Fx") -- to everyone: a thrown card, bolt or blast to draw, with where it starts and ends (a card also says if it hit, and its tier)
 local dashRemote = remote("Dash")
 local pushRemote = remote("Push")
 remotes.Parent = ReplicatedStorage
@@ -196,25 +195,25 @@ local function aimedEnemy(player: Player, target: GunTargets.Target, aim: CardAi
 	return enemy
 end
 
--- A chain: you and the enemy it catches swap places when it lands.
+-- The card is thrown: you and the enemy it reaches swap places when it lands.
 handlers.switchback = function(player, target, slot, aim)
 	if not aim then
 		return false
 	end
 	local reach = Cards.stat(slot.cardId, slot.tier, "range")
 	local from = eye(target)
-	local hand = target.root.Position -- the chain is drawn from the chest, not out of the eyes
+	local hand = target.root.Position -- the card is thrown from the chest, not out of the eyes
 	local enemy = aimedEnemy(player, target, aim, reach)
 	if not enemy then
-		-- The chain flies until it meets a wall or runs out, then winds back in.
+		-- The card flies until it meets a wall or runs out.
 		local wall = workspace:Raycast(from, asVector(aim) * reach, without(target.model))
-		fxRemote:FireAllClients("chain", hand, if wall then wall.Position else from + asVector(aim) * reach, false)
+		fxRemote:FireAllClients("card", hand, if wall then wall.Position else from + asVector(aim) * reach, false, slot.tier)
 		return MISS
 	end
 	local landing = enemy.root.Position
-	fxRemote:FireAllClients("chain", hand, landing, true)
-	-- The swap happens when the chain lands, not when it is thrown. Either of them may have died by then.
-	task.delay(ChainShape.flight((landing - hand).Magnitude), function()
+	fxRemote:FireAllClients("card", hand, landing, true, slot.tier)
+	-- The swap happens when the card lands, not when it is thrown. Either of them may have died by then.
+	task.delay(CardAim.flight((landing - hand).Magnitude), function()
 		if not (GunTargets.isAlive(target) and GunTargets.isAlive(enemy)) then
 			return
 		end

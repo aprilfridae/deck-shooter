@@ -38,7 +38,7 @@ All 6 are in set `set_01`. Stats are listed Field / Redline / Prototype.
 | Siphon | `siphon` | Speed stolen 15 / 22 / 30% for 3 / 4.5 / 6s | 18s | None |
 
 - **Phase Dash** was already strong at Prototype, so River had its lower tiers made worse instead of its top tier better.
-- **Switchback** throws a chain the way you look: a glowing hook on dark metal and cyan links that swings and hangs as it flies at 260 studs a second, then pulls tight (`ChainShape.luau`, `ChainFx.luau`). If it catches an enemy, the two of you swap places when it lands, each keeping the way they faced, and the chain breaks apart. On a miss it stops at a wall or its range and winds back in. Not seen in Play.
+- **Switchback** throws the card itself the way you look: it spins flat through the air at 260 studs a second with a see-through blue trail behind it (`CardThrowFx.luau`). If it reaches an enemy, the two of you swap places when it lands, each keeping the way they faced. On a miss it stops at a wall or its range and fades. A chain was tried first and replaced the same day. Not seen in Play.
 - **Kickplate** blasts the surface you aim at, if it is within 14 studs, and throws you straight away from that point. Aimed at your feet it sends you up by its height. With nothing in reach it does nothing and isn't spent.
 - **Siphon** shoots a bolt the way you look. The enemy it hits is slowed and you are sped up by the same share. It does no damage.
 - **Aimed cards are forgiving:** Switchback and Siphon hit the nearest enemy within 3 studs of your line of sight, with nothing solid in between. A miss brings the card back in 4 seconds, not its full cooldown.
