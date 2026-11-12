@@ -131,3 +131,11 @@ Serials, then the player market. River checks the Relay map in Play: fog, lights
 - Counter: DataStore `SerialCounters_v1`, key `all`. Studio with API access uses the real one, so test pulls take real numbers. To start every serial from 1 again before a launch, rename the store in `SerialCounter.luau` and bump the save version so saves reset with it.
 - River tried it in Play and said it looks great. Not checked: two servers pulling the same card at once.
 
+## Auction house (2026-11-11)
+
+- Spec `docs/specs/auction-house.md`, plan `docs/plans/2026-11-11-auction-house.md`, branch `feature/auction-house`, cut from `feature/serials`. Second piece of the player market; the market screen is next and has no spec yet.
+- River's choices: bids plus optional Buy Now, no market cut, lengths of 1, 6 or 24 hours.
+- The ordering rule at the top of `AuctionServer.luau` is what keeps cards and Credits from being copied or lost. Read it before changing any request or check.
+- There is no screen. `AuctionWalk.luau` walks one auction in Studio (the command is in the spec). It removes one card from the tester's save and adds 10 Credits.
+- Not checked: nothing has been run in Play, and two servers bidding on one auction needs the live game with two players.
+

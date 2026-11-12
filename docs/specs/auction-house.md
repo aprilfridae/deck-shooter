@@ -1,6 +1,6 @@
 # The auction house
 
-**Status:** design agreed with River on 2026-11-11. Nothing is built. This is the second of three pieces of the player market: serials (`serials.md`, built), the auction house, then the market screen. It builds on `feature/serials`.
+**Status:** built on 2026-11-11 on `feature/auction-house` (which builds on `feature/serials`), and passing its tests. Nothing has been run in Play. Two servers bidding on one auction has not been tried. This is the second of three pieces of the player market: serials (`serials.md`), the auction house, then the market screen.
 
 **Covers:** the rules of auctions and the server that runs them: listing, bidding, Buy Now, ending, and getting your card or Credits. The screens are the next spec. Until they exist there is nothing to click, so this piece is proven by tests and by server checks.
 
@@ -98,6 +98,8 @@ The snapshot the client already receives gains the player's listed cards and ope
 - `SaveData.luau` gains the save's market entries (listed cards, bids, settled auctions) and cleans them on load. The save version moves to 6; a version 5 save simply gains empty entries.
 - A server module owns the shared record, the browsing map and the announcements, in the way `SerialCounter.luau` owns the counter. Another runs the requests and the checks.
 - `Rebirth.luau` refuses while bids are open.
+
+**As built:** the rules are `CardCore/Auction.luau`; the shared parts `server/AuctionStore.luau` (records in DataStore `Auctions_v1`, the browsing window in MemoryStore maps `Auctions_<cardId>`, announcements on topic `Auctions`); the requests and checks `server/AuctionServer.luau`. A save's entries are `market.listed`, `market.bids` and `market.settled`, at save version 6. The walkthrough is `server/AuctionWalk.luau`: during Play in Studio, with the Server view selected, run `require(game.ServerScriptService.CardCoreServer.AuctionWalk)()` in the command bar.
 
 ## Order of work
 
