@@ -45,9 +45,10 @@ local function shape(parent: Instance, image: string, color: Color3): ImageLabel
 	return label
 end
 
-local function stepped(elapsed: number, duration: number): number
-	local frame = math.floor(elapsed * PanelMotion.FPS + 1e-6)
-	return math.min(frame / PanelMotion.FPS / duration, 1)
+-- How far through a move, 0 to 1. Every frame: River had the stepped, low-frame-rate motion taken off these
+-- buttons (2026-11-11). The panels still move in steps.
+local function progress(elapsed: number, duration: number): number
+	return math.clamp(elapsed / duration, 0, 1)
 end
 
 function NavButton.new(options: Options): any
@@ -129,12 +130,12 @@ end
 
 function NavButton:step(dt: number)
 	self.elapsed += dt
-	local share = PanelMotion.share(self.from, self:target(), stepped(self.elapsed, KICK_TIME))
+	local share = PanelMotion.share(self.from, self:target(), progress(self.elapsed, KICK_TIME))
 	if share ~= self.share then
 		self.share = share
 		self:paint()
 	end
-	if self.elapsed >= KICK_TIME + 1 / PanelMotion.FPS then
+	if self.elapsed >= KICK_TIME then
 		self.connection:Disconnect()
 		self.connection = nil
 	end
@@ -168,9 +169,9 @@ function NavButton:enter()
 	self.button.Position = UDim2.fromOffset(-self.width, self.top)
 	self.entering = RunService.RenderStepped:Connect(function(dt)
 		elapsed += dt
-		local progress = stepped(math.max(elapsed, 0), ENTER_TIME)
-		self.button.Position = UDim2.fromOffset(self.width * (PanelMotion.share(0, 1, progress) - 1), self.top)
-		if progress >= 1 then
+		local done = progress(math.max(elapsed, 0), ENTER_TIME)
+		self.button.Position = UDim2.fromOffset(self.width * (PanelMotion.share(0, 1, done) - 1), self.top)
+		if done >= 1 then
 			self.entering:Disconnect()
 			self.entering = nil
 		end
