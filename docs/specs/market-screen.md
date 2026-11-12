@@ -1,6 +1,6 @@
 # The market screen
 
-**Status:** design agreed with River in mockups on 2026-11-11 (`assets/preview/market-mockup.html`). Nothing is built. This is the third of three pieces of the player market: serials (`serials.md`), the auction house (`auction-house.md`), then this screen. Both of those are built and merged.
+**Status:** built on 2026-11-11 on `feature/market-screen`. The rules pass their tests. None of the screen has been seen in Play, and bidding between two players has not been tried. This is the third of three pieces of the player market: serials (`serials.md`), the auction house (`auction-house.md`), then this screen.
 
 **Covers:** what players see and click to browse, bid, buy, sell and collect. The rules of auctions are in `auction-house.md` and don't change here, except for how the browsing list is kept.
 
@@ -83,6 +83,15 @@ Browsing was built as one list per card, because the first plan was to pick a ca
 - **A ceiling of 600 auctions,** soonest to end first. Search and sort work on those. An auction past the ceiling still runs and settles; it shows once others end. With few players online the memory limit is reached before 600, and auctions that don't fit behave the same way.
 - **Each server reads the list once every 10 seconds** while anyone has the market open, and every player on it shares that copy.
 - The server tells a player's client which auction ended and how, so the lines above can be shown.
+
+## As built, where it differs from the mockup
+
+- **Under a card** there is room for about nine letters, so the price is short past 99,999 (`120K`, `1.2M`) and the time is one word (`2H`, `38M`, `45S`). The bid box shows both in full. The small line reads `BUY 5,000` or `WINNING`.
+- **At most 40 cards are drawn at once.** Each is a live card face. Past 40 the page says how many there are and to search.
+- **The tabs are rounded buttons,** not underlined words.
+- **The income line** at the top right of the menu hides while the market is open: the page shows your Credits itself.
+- **The label font sheets gained** `, ' ( ) ?`, for prices and plain sentences.
+- **To fill the market when testing alone:** during Play in Studio, Server view, run `game.ServerStorage.MarketFill:Fire()`. It lists up to five of your numbered cards. Nobody can bid on their own listing, so bidding needs a second player.
 
 ## Cost
 

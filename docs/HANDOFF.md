@@ -139,3 +139,11 @@ Serials, then the player market. River checks the Relay map in Play: fog, lights
 - There is no screen. `AuctionWalk.luau` walks one auction in Studio (the command is in the spec). It removes one card from the tester's save and adds 10 Credits.
 - River ran the walkthrough in Studio and it matched, with API access off (in-memory stand-ins only). Not checked: the real storage calls, and two servers bidding on one auction, which needs the live game with two players.
 
+## Market screen (2026-11-11)
+
+- Spec `docs/specs/market-screen.md`, plan `docs/plans/2026-11-11-market-screen.md`, branch `feature/market-screen`. Third and last piece of the player market.
+- The page is `MarketPanel.luau`; its wording, search and sort rules are `CardCore/Market.luau`; the alert line is `MarketNews.client.luau`.
+- The browsing list is now one memory store map for every card. Roblox allows about 64 KB plus 1 KB per player online, which is the real ceiling on how many auctions can be seen.
+- Studio helpers, Server view during Play: `game.ServerStorage.MarketFill:Fire()` lists up to five of your cards; `game.ServerStorage.AuctionWalk:Fire()` walks one auction.
+- Not checked: the screen in Play, bidding between two players, phones.
+
