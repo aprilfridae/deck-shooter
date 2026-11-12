@@ -66,6 +66,7 @@ local listed = {
 	akreload_spec = true,
 	skipburst_spec = true,
 	cardtext_spec = true,
+	auction_spec = true,
 	cardart_spec = true,
 	packs_spec = true,
 	rebirth_spec = true,
@@ -94,6 +95,7 @@ require("./killrewards_spec")
 require("./akreload_spec")
 require("./skipburst_spec")
 require("./cardtext_spec")
+require("./auction_spec")
 require("./cardart_spec")
 require("./packs_spec")
 require("./rebirth_spec")
