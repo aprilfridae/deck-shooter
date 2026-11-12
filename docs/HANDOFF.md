@@ -147,3 +147,24 @@ Serials, then the player market. River checks the Relay map in Play: fog, lights
 - Studio helpers, Server view during Play: `game.ServerStorage.MarketFill:Fire()` lists up to five of your cards; `game.ServerStorage.AuctionWalk:Fire()` walks one auction.
 - Not checked: the screen in Play, bidding between two players, phones.
 
+## HUD redesign (2026-11-11)
+
+Spec `docs/specs/hud-redesign.md`, plan `docs/plans/2026-11-11-hud-redesign.md`. River has seen it in Play and steered it there; the kill feed has only been seen with one player.
+
+- **Shapes** come from `tools/make-hud-shapes.py` (two from River's shape pack, the rest drawn) and are listed in `src/shared/Guns/Hud/HudShapes.luau`.
+- **Nav:** `NavButton.luau` is a slanted plate that flips colour, with no wipe. It moves every frame, not in steps (River's call). Sizes are the `NAV_*` constants in `OutpostMenu.client.luau`.
+- **Credits and rebirths** are `IncomeLine.luau`, top left, hung from where the radio strip really ends. The number uses `PackText.balance` (1K, 1M, 1B, 1T).
+- **Page buttons** have cut corners through `PanelKit.button`. A `quiet` button keeps plain corners because it holds a card.
+- **Kill feed:** `GunServer` fires `KillFeed` to everyone for each gun kill; `Guns/Hud/KillFeed.luau` holds the list rules and `KillFeed.client.luau` draws it.
+- **Also in this stretch:** auto roll now waits for the bar before its first pack; the market page was laid out like `PACKS`.
+
+## New cards (2026-11-11)
+
+Details in `docs/specs/cards.md`. River tried the cards in Play and said they work for now; a second player has not been tried.
+
+- Switchback, Kickplate and Siphon were added, Recon Pulse was removed, and Prototype is now about twice Field.
+- Aimed cards send the camera's look direction with `Use`. The server works out the hit itself (`CardCore/CardAim.luau`, `AbilityServer.server.luau`).
+- Pressing the key of the card already in hand uses it. Only a weapon key or another card's key puts a card away.
+- **Open from the review:** Kickplate pauses the movement guard for 3 seconds; Siphon's slow is applied by the slowed player's own client; the nav rebuilds on every frame of a window resize.
+- Effects are placeholders, with no sounds or arm animations.
+

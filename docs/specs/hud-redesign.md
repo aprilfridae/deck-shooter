@@ -1,6 +1,6 @@
 # Outpost and HUD redesign
 
-**Status:** designed with River on 2026-11-11, not built. The agreed look is the fourth-pass mockup, `assets/preview/hud-redesign.html` (built by a throwaway script, not kept in the repo).
+**Status:** built on 2026-11-11 and steered by River in Play. As built it differs in places: the nav is about 15% bigger than first specified and moves every frame, the Credits number uses the title font and shortens from a thousand, the plate outline is cut from the solid plate, and buttons that hold a card keep plain corners. The kill feed has only been seen with one player. The agreed look is the fourth-pass mockup, `assets/preview/hud-redesign.html` (built by a throwaway script, not kept in the repo).
 
 **Covers:** the look of the Outpost's menu buttons, its Credits and rebirth readout, the buttons on the menu pages, a striped bar under health and ammo, and a server-wide kill feed. No rules or saves change. The only server change is sending the feed.
 
