@@ -11,6 +11,19 @@ describe("Rebirth", function()
 		expect(Rebirth.price(2)).toBe(156250)
 	end)
 
+	it("waits for open bids to end", function()
+		local data = SaveData.new()
+		data.credits = 30000
+		data.market.bids.a = { amount = 500, endsAt = 900 }
+		local ok, code = Rebirth.perform(data)
+		expect(ok).toBe(false)
+		expect(code).toBe("BidsOpen")
+		expect(data.credits).toBe(30000)
+		expect(data.rebirths).toBe(0)
+		data.market.bids.a = nil
+		expect((Rebirth.perform(data))).toBe(true)
+	end)
+
 	it("needs the full price", function()
 		local data = SaveData.new()
 		data.credits = 24999

@@ -75,8 +75,8 @@ describe("SaveData.load", function()
 		expect(SaveData.load({ version = 5, rebirths = 1.5 }).rebirths).toBe(0)
 	end)
 
-	it("is on version 5", function()
-		expect(SaveData.CURRENT_VERSION).toBe(5)
+	it("is on version 6", function()
+		expect(SaveData.CURRENT_VERSION).toBe(6)
 	end)
 
 	it("gives a version 2 save default settings", function()
@@ -286,7 +286,7 @@ describe("SaveData serials and the fresh start", function()
 			old.packs[pack] = 7
 		end
 		local data = SaveData.load(old)
-		expect(data.version).toBe(5)
+		expect(data.version).toBe(6)
 		expect(data.credits).toBe(0)
 		expect(data.rebirths).toBe(0)
 		expect(data.catalysts).toBe(0)
@@ -350,5 +350,92 @@ describe("SaveData serials and the fresh start", function()
 		local other = Inventory.key("overclock", "Prototype", "Base")
 		local data = withRuns({ [other] = { runs = { 1, 2 }, plain = 0 } })
 		expect(data.serials[other]).toBe(nil)
+	end)
+end)
+
+describe("SaveData market entries", function()
+	local Inventory = require("../src/shared/CardCore/Inventory")
+	local Config = require("../src/shared/CardCore/Config")
+	local KEY = Inventory.key("aegis_shell", "Prototype", "Base")
+	local GOOD = { cardId = "aegis_shell", tier = "Prototype", variant = "Base", serial = 4, startBid = 10, buyNow = 50, endsAt = 1000, live = true }
+
+	local function load(market: any): any
+		return SaveData.load({ version = 6, credits = 40, market = market })
+	end
+
+	it("starts with nothing in the market", function()
+		expect(SaveData.new().market).toEqual({ listed = {}, bids = {}, settled = {} })
+	end)
+
+	it("gives a version 5 save an empty market and keeps the rest", function()
+		local data = SaveData.load({ version = 5, credits = 40, stacks = { [KEY] = 2 }, serials = { [KEY] = { runs = { 3, 4 }, plain = 0 } } })
+		expect(data.version).toBe(6)
+		expect(data.credits).toBe(40)
+		expect(data.serials[KEY].runs).toEqual({ 3, 4 })
+		expect(data.market).toEqual({ listed = {}, bids = {}, settled = {} })
+	end)
+
+	it("keeps well-formed entries", function()
+		local data = load({ listed = { a = GOOD }, bids = { b = { amount = 25, endsAt = 900 } }, settled = { c = true } })
+		expect(data.market.listed.a).toEqual(GOOD)
+		expect(data.market.bids.b).toEqual({ amount = 25, endsAt = 900 })
+		expect(data.market.settled.c).toBe(true)
+	end)
+
+	it("keeps a listing with no Buy Now, and marks one with no live flag as not live", function()
+		local plain = table.clone(GOOD)
+		plain.buyNow = nil
+		plain.live = nil :: any
+		local data = load({ listed = { a = plain } })
+		expect(data.market.listed.a.buyNow).toBe(nil)
+		expect(data.market.listed.a.live).toBe(false)
+	end)
+
+	it("drops damaged listings", function()
+		local changes: { { any } } = {
+			{ "cardId", 5 },
+			{ "tier", "Mythic" },
+			{ "variant", "Shiny" },
+			{ "serial", 0 },
+			{ "serial", 1.5 },
+			{ "startBid", 0 },
+			{ "startBid", Config.MaxCredits * 2 },
+			{ "buyNow", 10 },
+			{ "buyNow", "lots" },
+			{ "endsAt", "soon" },
+		}
+		for _, change in changes do
+			local bad = table.clone(GOOD);
+			(bad :: any)[change[1]] = change[2]
+			expect(load({ listed = { a = bad } }).market.listed.a).toBe(nil)
+		end
+		expect(load({ listed = { a = "junk", [7] = GOOD } }).market.listed).toEqual({})
+	end)
+
+	it("drops damaged bids and settled marks", function()
+		for _, amount in { 0, -5, 2.5, Config.MaxCredits * 2, "ten" } :: { any } do
+			expect(load({ bids = { b = { amount = amount, endsAt = 900 } } }).market.bids.b).toBe(nil)
+		end
+		expect(load({ bids = { b = { amount = 5 } } }).market.bids.b).toBe(nil)
+		expect(load({ bids = { b = 5 } }).market.bids.b).toBe(nil)
+		expect(load({ settled = { c = "yes", d = true } }).market.settled).toEqual({ d = true })
+		expect(load("junk").market).toEqual({ listed = {}, bids = {}, settled = {} })
+	end)
+
+	it("keeps every entry past the limits, because they hold real cards and Credits", function()
+		local listed, bids = {}, {}
+		for index = 1, 30 do
+			listed[`l{index}`] = GOOD
+			bids[`b{index}`] = { amount = 1, endsAt = 900 }
+		end
+		local data = load({ listed = listed, bids = bids })
+		local count = 0
+		for _ in data.market.listed do
+			count += 1
+		end
+		for _ in data.market.bids do
+			count += 1
+		end
+		expect(count).toBe(60)
 	end)
 end)

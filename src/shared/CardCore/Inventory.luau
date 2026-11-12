@@ -195,6 +195,28 @@ function Inventory.take(data: any, key: string, serial: number): boolean
 	return false
 end
 
+-- Puts one numbered copy into a stack: a card won at auction, or one coming back unsold. False, changing nothing,
+-- if the stack already holds that serial or is full.
+function Inventory.give(data: any, key: string, serial: number): boolean
+	local have = data.stacks[key] or 0
+	if have >= Config.MaxStackCount then
+		return false
+	end
+	-- Number the new copy directly: an older copy waiting for a serial must not be handed this one.
+	local waiting = Inventory.waiting(data, key)
+	data.stacks[key] = have + 1
+	local found = record(data, key, true)
+	found.plain += waiting -- hide the waiting copies from number() for a moment
+	local used = Inventory.number(data, key, serial, serial)
+	found = record(data, key, true)
+	found.plain -= waiting
+	if used == 0 then
+		data.stacks[key] = if have == 0 then nil else have
+	end
+	tidy(data, key)
+	return used == 1
+end
+
 function Inventory.ownsCard(data: any, cardId: string): boolean
 	for key in data.stacks do
 		if Inventory.parse(key) == cardId then
