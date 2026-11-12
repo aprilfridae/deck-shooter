@@ -90,14 +90,19 @@ RunService.Heartbeat:Connect(function()
 		CardHand.putAway(CardInHand)
 	else
 		local ready = { isReady(1), isReady(2), isReady(3) }
+		-- Pressing the key of the card already out uses it, like a click.
+		local used: number? = nil
 		if keys.slot1 and not previous.slot1 then
-			CardHand.open(CardInHand, ready)
+			used = CardHand.open(CardInHand, ready)
 		end
 		for index = 2, 3 do -- the other two keys still go straight to their cards
 			local key = `slot{index}`
 			if keys[key] and not previous[key] then
-				CardHand.press(CardInHand, index, ready[index])
+				used = CardHand.press(CardInHand, index, ready[index]) or used
 			end
+		end
+		if used then
+			useRemote:FireServer(used, workspace.CurrentCamera.CFrame.LookVector)
 		end
 		if keys.cycle and not previous.cycle then
 			CardHand.cycle(CardInHand, ready)
