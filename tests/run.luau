@@ -49,6 +49,7 @@ local listed = {
 	panelmotion_spec = true,
 	cardindex_spec = true,
 	comments_spec = true,
+	cardlayout_spec = true,
 	cardlook_spec = true,
 	cardmotion_spec = true,
 	cardspin_spec = true,
@@ -76,6 +77,7 @@ local listed = {
 require("./tier_spec")
 require("./soldierpose_spec")
 require("./cards_spec")
+require("./cardlayout_spec")
 require("./cardlook_spec")
 require("./cardmotion_spec")
 require("./cardspin_spec")
