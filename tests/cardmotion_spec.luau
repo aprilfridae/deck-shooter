@@ -121,6 +121,36 @@ describe("CardMotion", function()
 		end
 	end)
 
+	it("slides a loop of colours round without a seam", function()
+		local points = CardMotion.loop(4, 0)
+		expect(#points).toBe(5)
+		for index, point in points do
+			expect(near(point.time, (index - 1) / 4)).toBe(true)
+			expect(point.from).toBe((index - 1) % 4 + 1)
+			expect(near(point.mix, 0)).toBe(true)
+		end
+		points = CardMotion.loop(4, 0.125)
+		expect(#points).toBe(6)
+		expect(points[1].time).toBe(0)
+		expect(points[1].from).toBe(1)
+		expect(points[1].to).toBe(2)
+		expect(near(points[1].mix, 0.5)).toBe(true)
+		expect(near(points[2].time, 0.125)).toBe(true)
+		expect(points[2].from).toBe(2)
+		expect(points[6].time).toBe(1)
+		expect(points[6].from).toBe(1)
+		expect(near(points[6].mix, 0.5)).toBe(true)
+		-- Times always climb, whatever the phase, or Roblox rejects the gradient.
+		for phase = 0, 2, 0.013 do
+			local last = -1
+			for _, point in CardMotion.loop(6, phase) do
+				expect(point.time > last).toBe(true)
+				last = point.time
+			end
+			expect(last).toBe(1)
+		end
+	end)
+
 	it("pulses the low serial's glow", function()
 		expect(near(CardMotion.glow(0), 0.25)).toBe(true)
 		expect(near(CardMotion.glow(0.8), 0)).toBe(true)

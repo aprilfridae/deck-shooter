@@ -17,6 +17,7 @@ export type Options = {
 	color: Color3,
 	right: boolean?,
 	shadow: boolean?, -- false for dark text on a light page
+	keepCase: boolean?, -- true to draw lowercase as lowercase, for a style that has it
 	position: UDim2,
 }
 
@@ -43,6 +44,7 @@ function TypeLabel.new(parent: GuiObject, options: Options): any
 	self.color = options.color
 	self.right = options.right
 	self.shadow = options.shadow ~= false
+	self.keepCase = options.keepCase
 	self.text = ""
 	self.textWidth = 0
 	self.pieces = {}
@@ -64,7 +66,7 @@ function TypeLabel:set(text: string)
 		return
 	end
 	self.text = text
-	local width, placed = TypeLayout.lay(text, self.style, self.size, self.tracking)
+	local width, placed = TypeLayout.lay(text, self.style, self.size, self.tracking, self.keepCase)
 	self.textWidth = width
 	local toSheet = self.source / self.size
 	local start = if self.right then -width else 0

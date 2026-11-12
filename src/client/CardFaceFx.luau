@@ -48,6 +48,8 @@ local FOIL = ColorSequence.new({
 	ColorSequenceKeypoint.new(1, Palette.DataCyan),
 })
 
+local FOIL_COLORS = { Palette.DataCyan, Color3.fromRGB(122, 92, 255), Color3.fromRGB(255, 79, 216), Color3.fromRGB(255, 209, 102) }
+
 local function frame(parent: GuiObject, color: Color3): Frame
 	local made = Instance.new("Frame")
 	made.BackgroundColor3 = color
@@ -206,7 +208,7 @@ local function zeroDay(root: GuiObject, face: number, width: number, parts: Part
 		star.ImageColor3 = Color3.new(1, 1, 1)
 		local foil = Instance.new("UIGradient")
 		foil.Rotation = 20
-		foil.Color = FOIL
+		foil.Color = CardEffects.looped(FOIL_COLORS, 0)
 		foil.Parent = star
 		table.insert(foils, foil)
 	end
@@ -223,9 +225,9 @@ local function zeroDay(root: GuiObject, face: number, width: number, parts: Part
 	return {
 		function(elapsed: number, shine: number)
 			light.Offset = Vector2.new(shine, 0)
-			local slide = CardMotion.foilShift(elapsed) * 2 - 1
+			local colors = CardEffects.looped(FOIL_COLORS, CardMotion.foilShift(elapsed))
 			for _, foil in foils do
-				foil.Offset = Vector2.new(slide, 0)
+				foil.Color = colors
 			end
 			for index, twinkle in twinkles do
 				local _, _, size = CardMotion.twinkle(index - 1, elapsed)

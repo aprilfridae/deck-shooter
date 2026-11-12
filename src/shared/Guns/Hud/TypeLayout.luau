@@ -16,14 +16,15 @@ export type Placed = {
 
 -- The text's width and its drawn letters at display size, from the start of the baseline.
 -- A character the style doesn't have takes up a space and draws nothing.
-function TypeLayout.lay(text: string, style: string, size: number, tracking: number): (number, { Placed })
+-- Text is drawn in capitals unless `keepCase` is set, which only suits a style that has lowercase letters.
+function TypeLayout.lay(text: string, style: string, size: number, tracking: number, keepCase: boolean?): (number, { Placed })
 	local font = GlyphData[style]
 	local scale = size / font.source
 	local placed: { Placed } = {}
 	if text == "" then
 		return 0, placed
 	end
-	local characters = text:upper():split("")
+	local characters = (if keepCase then text else text:upper()):split("")
 	local pen = 0
 	for index, character in characters do
 		local glyph = font.glyphs[character]

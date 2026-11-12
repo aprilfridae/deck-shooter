@@ -98,6 +98,15 @@ function CardEffects.band(root: GuiObject, corner: number, halfWidth: number, co
 	return gradient
 end
 
+-- These colours as a gradient that has been turned by `phase`: see CardMotion.loop.
+function CardEffects.looped(colors: { Color3 }, phase: number): ColorSequence
+	local points = {}
+	for _, point in CardMotion.loop(#colors, phase) do
+		table.insert(points, ColorSequenceKeypoint.new(point.time, colors[point.from]:Lerp(colors[point.to], point.mix)))
+	end
+	return ColorSequence.new(points)
+end
+
 function CardEffects.stripes(root: GuiObject, unit: number, color: Color3, area: Rect): ImageLabel
 	local block = Instance.new("Frame")
 	block.BackgroundTransparency = 1

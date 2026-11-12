@@ -24,6 +24,7 @@ local FOIL_TIME = 6
 local RAINBOW_TIME = 2.6
 local GLOW_TIME = 1.6
 local GLOW_DIM = 0.25
+local LOOP_SLACK = 1e-4 -- gradient points closer than this to an end are dropped
 
 local function share(elapsed: number, time: number): number
 	return (elapsed % time) / time
@@ -112,6 +113,28 @@ end
 -- How far the rainbow on a low serial has slid, from 0 to 1.
 function CardMotion.rainbowShift(elapsed: number): number
 	return share(elapsed, RAINBOW_TIME)
+end
+
+-- A ring of `count` evenly spaced colours, turned by `phase` (0 to 1 is once round), as the points of a gradient:
+-- each has its time along the gradient and the two colours it sits between. Sliding a gradient's offset instead
+-- clamps at its ends, which reads as a wipe; turning the colours themselves has no seam.
+function CardMotion.loop(count: number, phase: number): { { time: number, from: number, to: number, mix: number } }
+	local points = {}
+	local start = (phase % 1) * count
+	local function at(time: number, position: number)
+		local whole = math.floor(position + LOOP_SLACK)
+		local from = whole % count + 1
+		table.insert(points, { time = time, from = from, to = from % count + 1, mix = math.clamp(position - whole, 0, 1) })
+	end
+	at(0, start)
+	for step = math.floor(start) + 1, math.ceil(start + count) - 1 do
+		local time = (step - start) / count
+		if time > LOOP_SLACK and time < 1 - LOOP_SLACK then
+			at(time, step)
+		end
+	end
+	at(1, start + count)
+	return points
 end
 
 -- The transparency of a low serial's glow.

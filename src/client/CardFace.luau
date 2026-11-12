@@ -56,16 +56,16 @@ local SHINE_HALF_WIDTH = 0.07 -- of the gradient
 local DOTS = { { 20, 6, 1, 0 }, { 15, 4.4, -1, 1.5 }, { 12, 3, 1, 0.8 } }
 local SPARKLE_TIME = 3
 local BURST_TIME = 1.2
--- A full rainbow for serials 1 to 10 (River, 2026-11-11: "rainbow and glowing"). It ends where it starts.
-local RAINBOW = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 45, 85)),
-	ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 159, 10)),
-	ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 230, 0)),
-	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(48, 224, 96)),
-	ColorSequenceKeypoint.new(0.67, Color3.fromRGB(1, 213, 255)),
-	ColorSequenceKeypoint.new(0.83, Color3.fromRGB(138, 92, 255)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 45, 85)),
-})
+-- A full rainbow for serials 1 to 10 (River, 2026-11-11: "rainbow and glowing"), turned round and round.
+local RAINBOW = {
+	Color3.fromRGB(255, 45, 85),
+	Color3.fromRGB(255, 159, 10),
+	Color3.fromRGB(255, 230, 0),
+	Color3.fromRGB(48, 224, 96),
+	Color3.fromRGB(1, 213, 255),
+	Color3.fromRGB(138, 92, 255),
+}
+local CORNER_SIZE = 64 -- words in the serial's place, like EQUIPPED, are smaller so they clear a long name
 local WHOLE = { x = 0, y = 0, w = CardLayout.WIDTH, h = CardLayout.HEIGHT }
 
 -- `mark` colours the acronym and serial on the front. `rarity` and `outline` are the back's.
@@ -160,6 +160,7 @@ end
 local function faceText(root: GuiObject, face: number, style: string, size: number, tracking: number, color: Color3, x: number, line: number, right: boolean?): any
 	return TypeLabel.new(root, {
 		style = style,
+		keepCase = true, -- the rarity is lowercase; the other styles used here have only capitals to give
 		size = size * face,
 		tracking = size * tracking * face,
 		color = color,
@@ -234,15 +235,19 @@ function CardFace.new(parent: Instance, options: Options): GuiObject
 		for _, label in { glow :: ImageLabel, placed(root, face, CardArt.lowSerial(serial :: number), CardLayout.LOW_SERIAL, white) } do
 			local rainbow = Instance.new("UIGradient")
 			rainbow.Rotation = 20
-			rainbow.Color = RAINBOW
+			rainbow.Color = CardEffects.looped(RAINBOW, 0)
 			rainbow.Parent = label
 			table.insert(rainbows, rainbow)
 		end
 	else
 		placed(root, face, CardArt.layer("barcode"), CardLayout.BARCODE, style.ink)
 		local place = CardLayout.SERIAL
-		faceText(root, face, "LabelLarge", place.size, 0, style.mark, place.right, place.line, true)
-			:set(options.corner or CardLook.faceSerial(serial))
+		if options.corner then
+			faceText(root, face, "LabelBold", CORNER_SIZE, 0, style.mark, place.right, place.line, true):set(string.upper(options.corner))
+		else
+			faceText(root, face, "LabelLarge", place.size, 0, style.mark, place.right, place.line, true)
+				:set(CardLook.faceSerial(serial))
+		end
 	end
 
 	root.Parent = parent
@@ -259,6 +264,7 @@ function CardFace.new(parent: Instance, options: Options): GuiObject
 		ball.BorderSizePixel = 0
 		ball.AnchorPoint = Vector2.new(0.5, 0.5)
 		ball.Size = UDim2.fromOffset(dot[1] * 2 * face, dot[1] * 2 * face)
+		ball.Visible = false -- until the first step puts it on its ring
 		ball.Parent = root
 		CardEffects.rounded(ball, UDim.new(0.5, 0))
 		dots[index] = ball
@@ -301,6 +307,7 @@ function CardFace.new(parent: Instance, options: Options): GuiObject
 			local ring = DOTS[index]
 			local across, down = CardMotion.orbit(elapsed + ring[4], ring[2], ring[3])
 			ball.Position = UDim2.fromOffset((globe.x + globe.rings[index] * across) * face, (globe.y + globe.ry * down) * face)
+			ball.Visible = true
 		end
 
 		for _, effect in effects do
@@ -308,9 +315,9 @@ function CardFace.new(parent: Instance, options: Options): GuiObject
 		end
 
 		if glow then
-			local slide = CardMotion.rainbowShift(elapsed) * 2 - 1
+			local colors = CardEffects.looped(RAINBOW, CardMotion.rainbowShift(elapsed))
 			for _, rainbow in rainbows do
-				rainbow.Offset = Vector2.new(slide, 0)
+				rainbow.Color = colors
 			end
 			glow.ImageTransparency = CardMotion.glow(elapsed)
 		end
