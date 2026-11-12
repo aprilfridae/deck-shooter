@@ -46,6 +46,7 @@ function PlayerCards.snapshot(player: Player): any?
 		credits = data.credits,
 		stacks = data.stacks,
 		lowest = lowest,
+		market = { listed = data.market.listed, bids = data.market.bids }, -- cards up for auction and Credits set aside
 		deck = data.deck,
 		catalysts = data.catalysts,
 		dpr = Dpr.compute(data.deck, data.gunLevels),
