@@ -39,7 +39,7 @@ All 6 are in set `set_01`. Stats are listed Field / Redline / Prototype.
 
 - **Phase Dash** was already strong at Prototype, so River had its lower tiers made worse instead of its top tier better.
 - **Switchback** is thrown, as one motion from hand to target (`CardFlourish.throw`, `CardThrowFx.luau`). Not seen in Play since the last rework.
-  - **The hand:** an overhand throw copied from a video River filmed. The card twirls once in the fingers on the way up, the hand tips back, then chops forward in a curve with a flick, and hangs out there a beat. The wrist doesn't roll.
+  - **The hand:** an overhand throw copied from a video River filmed. The card twirls once in the fingers on the way up, the hand tips back, then chops forward in a curve with a flick, and hangs out there a beat. The wrist doesn't roll. The left hand takes the deck down and left out of the way, lazily: it sets off late, swings out in an arc, tips the deck over as it goes and is the last thing back.
   - **Leaving the hand:** 0.22 seconds after you use it. By then the card is on its edge, pointing exactly the way you look, just right of and under the crosshair.
   - **The handover:** the world's card starts as the very card in the hand, same place, turn and size, then grows as it flies. A separate card used to pop up in front of the camera.
   - **In the air:** 500 studs a second, never less than 0.14 seconds. It tumbles slowly, stays plainly the card for the first third, then turns blue, glowing and see-through with a blue trail.

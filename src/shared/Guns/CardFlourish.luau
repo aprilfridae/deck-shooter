@@ -51,8 +51,16 @@ local THROW_DRAW = Vector3.new(0.1, 0.34, 0.16) -- where the hand lifts to, from
 local THROW_LEAVES = Vector3.new(0.1, -0.1, -1.15)
 local THROW_AIMED = CFrame.Angles(0, 0, math.rad(90))
 -- The left hand takes the deck down and out to the left while the right throws, so it isn't in the way (River,
--- 2026-11-12), and brings it back as the right hand comes home.
+-- 2026-11-12), and brings it back after the right hand has come home. River wanted it "swaggy and effortless": it
+-- sets off a touch late, swings out in an arc, not a straight line, tips the deck over lazily as it goes, gives a
+-- little as it gets there, and is the last thing to wander back.
 local THROW_CLEAR = Vector3.new(-0.3, -0.22, 0.1) -- left, down, toward you
+local THROW_CLEAR_LAG = 0.04 -- seconds it sets off after the right hand
+local THROW_CLEAR_TIME = 0.26 -- seconds it takes to get out there
+local THROW_CLEAR_ARC = Vector3.new(-0.06, 0.07, 0) -- how far the swing bows out and up on the way
+local THROW_CLEAR_TIP = CFrame.Angles(math.rad(-14), math.rad(20), math.rad(-16)) -- the deck's lazy tilt out there
+local THROW_CLEAR_BACK = 0.1 -- seconds after the right hand starts home that this one does
+local THROW_CLEAR_GIVE = 0.025 -- how far it sinks as it arrives
 local THROW_COCK = math.rad(50) -- how far the hand tips back at the top
 local THROW_SNAP = math.rad(-75) -- and how far it chops through
 
@@ -719,9 +727,9 @@ function CardFlourish.throw(elapsed: number, since: number, turns: number?): Cru
 	local settled = pose.right:Lerp(final.right, grab)
 
 	-- The card as it would sit in the still hand, before the throw moves it.
-	local resting = pose.cards[chosen]:Lerp(final.cards[CHOSEN], grab)
+	local cardRest = pose.cards[chosen]:Lerp(final.cards[CHOSEN], grab)
 	-- The chop carries the card to the point it leaves from, so the hand goes by however far the card has to.
-	local reach = THROW_LEAVES - resting.Position
+	local reach = THROW_LEAVES - cardRest.Position
 	local offset = THROW_DRAW * (grab - whip)
 		+ reach * (whip - home)
 		+ THROW_SWEEP * math.sin(math.pi * whip) -- out and round, not straight down the middle
@@ -733,9 +741,19 @@ function CardFlourish.throw(elapsed: number, since: number, turns: number?): Cru
 	local flick = THROW_FLICK * (whip - home)
 	local right = CFrame.new(at) * CFrame.Angles(tip, flick, 0) * settled.Rotation
 	local carried = right * settled:Inverse() -- how the hand moved: the card in it goes the same way
-	local clear = THROW_CLEAR * (grab - home)
+	-- The left hand's way out and back. Everything in it goes with it, turned about the hand.
+	local out = smoother(math.clamp((since - THROW_CLEAR_LAG) / THROW_CLEAR_TIME, 0, 1))
+	local backFrom = homeFrom + THROW_CLEAR_BACK
+	local back = smoother(math.clamp((since - backFrom) / (THROW - backFrom), 0, 1))
+	local away = out - back
+	local resting = pose.left:Lerp(final.left, grab)
+	local swing = THROW_CLEAR * away
+		+ THROW_CLEAR_ARC * math.sin(math.pi * away)
+		+ SINK * (THROW_CLEAR_GIVE * knock(since - THROW_CLEAR_LAG - THROW_CLEAR_TIME))
+	local left = CFrame.new(resting.Position + swing) * CFrame.new():Lerp(THROW_CLEAR_TIP, away) * resting.Rotation
+	local clear = left * resting:Inverse() -- how the left hand moved: the deck in it goes the same way
 	pose.right = right
-	pose.left = pose.left:Lerp(final.left, grab) + clear
+	pose.left = left
 	local holding: Shape = {}
 	for bone, aims in pose.fingers.Left do
 		local held = {}
@@ -759,14 +777,14 @@ function CardFlourish.throw(elapsed: number, since: number, turns: number?): Cru
 			local to = if index == CHOSEN then TOP_FRAME else final.cards[index]
 			-- A card that was under the thrown one in the right hand is put straight back on the deck. Eased
 			-- there, it could be seen sliding across to the left hand under the throw (River's clip, 2026-11-12).
-			pose.cards[index] = (if pose.sides[index] > 0.5 then to else frame:Lerp(to, grab)) + clear -- the deck goes with its hand
+			pose.cards[index] = clear * (if pose.sides[index] > 0.5 then to else frame:Lerp(to, grab)) -- the deck goes with its hand
 			pose.sides[index] *= if pose.sides[index] > 0.5 then 0 else 1 - grab
 		end
 	end
 	pose.sides[chosen] += (1 - pose.sides[chosen]) * grab
 	-- The thrown card: it spins once on its own face on the way up, then comes onto its edge, pointing straight
 	-- down the throw, at the very point the world's card carries on from. So what leaves the hand is aimed.
-	local card = carried * resting * CFrame.Angles(0, THROW_TWIRL * grab, 0)
+	local card = carried * cardRest * CFrame.Angles(0, THROW_TWIRL * grab, 0)
 	pose.cards[chosen] = CFrame.new(card.Position:Lerp(THROW_LEAVES, aimed)) * card.Rotation:Lerp(THROW_AIMED, aimed)
 	local palm = (pose.right * CFrame.new(0.06, 0.32, 0)).Position
 	return { pose = pose, crushed = if since >= THROW_RELEASE then 1 else 0, palm = palm, card = chosen, thrown = true }
