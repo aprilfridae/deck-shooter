@@ -75,7 +75,7 @@ local ON_MAG = grip(MAG_HOLD, 0.085, 0.035, Vector3.new(0.2, 0.6, -0.8), Vector3
 -- the palm down the forearm runs back to an elbow that is out and down, as it would be. It first reached in from
 -- the side with its palm facing back, then lay along the gun with its palm to the receiver.
 local KNOB_END = KNOB + Vector3.new(0.014, 0, 0)
-local ON_KNOB = grip(KNOB_END, 0.16, 0.03, Vector3.new(-0.3, 0, -1), Vector3.new(-0.3, -0.95, 0), true)
+local ON_KNOB = grip(KNOB_END, 0.11, 0.03, Vector3.new(-0.3, 0, -1), Vector3.new(-0.3, -0.95, 0), true)
 -- A magazine in the hand down out of view, in the hold.
 local FETCHED = CFrame.new(-0.2, -0.36, 0.02) * CFrame.Angles(0, 0, math.rad(50))
 
