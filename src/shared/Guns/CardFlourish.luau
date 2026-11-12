@@ -30,14 +30,17 @@ local SPEED = 1.6 -- how much faster than its keys the whole flourish plays
 local LANDED_AT = SPRING_TO + FLIGHT -- the last card is in the left hand
 local CRUSH = 0.4 -- seconds the right hand takes to crush its card, once it's used
 local BURST_AT = 0.16 -- into the crush, the card is gone
--- A card that is thrown, not crushed (Switchback): the right hand draws back, whips forward and lets go.
-local THROW = 0.36 -- seconds the whole throw takes
-local THROW_BACK = 0.07 -- the hand is drawn back by now
+-- A card that is thrown, not crushed (Switchback). It is an overhand throw with the card on edge, from River's
+-- own video (2026-11-12): the right hand turns the card upright, lifts it up beside the head, then chops down
+-- and forward and lets go.
+local THROW = 0.4 -- seconds the whole throw takes
+local THROW_BACK = 0.08 -- the hand is up and cocked by now
 local THROW_RELEASE = 0.12 -- and the card leaves it now: CardAim.THROW_WINDUP is the same moment
-local THROW_DRAW = Vector3.new(0.16, 0.06, 0.2) -- where the hand draws back to, from where it was: right, up, toward you
-local THROW_REACH = Vector3.new(-0.14, 0.1, -0.5) -- and where the whip ends: across, up, away from you
-local THROW_COCK = math.rad(35) -- how far the wrist cocks back
-local THROW_SNAP = math.rad(-65) -- and snaps through
+local THROW_DRAW = Vector3.new(0.1, 0.34, 0.16) -- where the hand lifts to, from where it was: right, up, toward you
+local THROW_REACH = Vector3.new(-0.06, -0.14, -0.5) -- and where the chop ends: across, down, away from you
+local THROW_COCK = math.rad(50) -- how far the hand tips back at the top
+local THROW_SNAP = math.rad(-75) -- and how far it chops through
+local THROW_EDGE = math.rad(90) -- the turn that stands the card on its edge
 
 local FAN_PIVOT = Vector3.new(0.05, 0, 0.13) -- on the card, under the right thumb
 local FAN_TOP = -60 -- degrees the top card leans
@@ -679,7 +682,7 @@ function CardFlourish.crush(elapsed: number, since: number, turns: number?): Cru
 	return { pose = pose, crushed = fist, palm = palm, card = chosen }
 end
 
--- The card being thrown: like crush, but the right hand draws back and whips forward, and the card leaves it
+-- The card being thrown: like crush, but the right hand lifts the card on its edge and chops it forward, and the card leaves it
 -- whole at THROW_RELEASE. crushed is 0 while the card is in the hand and 1 once it has gone.
 function CardFlourish.throw(elapsed: number, since: number, turns: number?): Crush
 	local turned = turns or 0
@@ -691,8 +694,11 @@ function CardFlourish.throw(elapsed: number, since: number, turns: number?): Cru
 	local home = smooth(math.clamp((since - THROW_RELEASE - 0.08) / (THROW - THROW_RELEASE - 0.08), 0, 1))
 	local settled = pose.right:Lerp(final.right, grab)
 	local offset = THROW_DRAW * (grab - whip) + THROW_REACH * (whip - home)
-	local wrist = THROW_COCK * (grab - whip) + THROW_SNAP * (whip - home)
-	local right = (settled + offset) * CFrame.Angles(0, wrist, 0)
+	-- Turned about the camera's own axes, at the hand: tipped back then chopped forward, and rolled onto its edge.
+	local tip = THROW_COCK * (grab - whip) + THROW_SNAP * (whip - home)
+	local edge = THROW_EDGE * (grab - home)
+	local at = settled.Position + offset
+	local right = CFrame.new(at) * CFrame.Angles(tip, 0, 0) * CFrame.Angles(0, 0, edge) * settled.Rotation
 	local carried = right * settled:Inverse() -- how the hand moved: the card in it goes the same way
 	pose.right = right
 	pose.left = pose.left:Lerp(final.left, grab)

@@ -1,4 +1,4 @@
--- Draws Switchback's throw: the card leaves the hand as itself and, in the air, turns blue, glowing and
+-- Draws Switchback's throw: the card leaves the hand on its edge, tumbling, and in the air turns blue, glowing and
 -- see-through, with a blue trail behind it (River, 2026-11-12: "in mid air it morphs blue and turns
 -- transluscent but its like hitscan so you throw it really fast"). On a hit it flashes as the two players swap; on
 -- a miss it fades where it lands. The flight time is CardAim's, the same the server waits before swapping.
@@ -14,14 +14,14 @@ local CardLook = require(CardCore:WaitForChild("CardLook"))
 local Variant = require(CardCore:WaitForChild("Variant"))
 
 local CARD_SIZE = Vector3.new(1.5, 0.05, 2.4) -- lying flat: wide, thin, long
-local SPIN = 26 -- radians a second, about its flat face
-local TILT = math.rad(12) -- it banks a little, like a thrown card
+local SPIN = 30 -- radians a second: it flies on its edge and tumbles end over end, as an overhand throw does
+local EDGE = CFrame.Angles(0, 0, math.rad(90)) -- stands the card on its edge
 local BLUE = Color3.fromRGB(70, 150, 255)
 local PAPER = Color3.fromRGB(232, 230, 223) -- the card's own edge before it changes
 local MORPH = 0.5 -- of the flight: by here the card is all blue
 local GHOST = 0.5 -- how see-through the blue card is
 local OWN_REACH = 4 -- studs: a throw starting this near the camera is your own
-local OWN_HAND = CFrame.new(0.45, -0.25, -1.6) -- where your right hand lets go, from the camera
+local OWN_HAND = CFrame.new(0.4, 0.1, -1.6) -- where your right hand lets go, from the camera
 local TRAIL_SECONDS = 0.45
 local TRAIL_FADE = 0.45 -- how see-through the trail starts
 local TRAIL_HALF = 0.7 -- studs from the card's middle to each edge of the trail
@@ -96,7 +96,7 @@ function CardThrowFx.throw(from: Vector3, to: Vector3, hit: boolean, tier: any)
 	connection = RunService.RenderStepped:Connect(function()
 		local age = os.clock() - started
 		local share = math.min(age / flight, 1)
-		card.CFrame = (level + forward * length * share) * CFrame.Angles(0, age * SPIN, TILT)
+		card.CFrame = (level + forward * length * share) * CFrame.Angles(-age * SPIN, 0, 0) * EDGE
 		-- The change: its print fades, and the card goes blue, bright and see-through.
 		local changed = math.min(share / MORPH, 1)
 		card.Color = PAPER:Lerp(BLUE, changed)
