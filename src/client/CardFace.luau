@@ -1,8 +1,11 @@
--- A card in the menus: its baked image with live text, stripes, shine and motion on top.
+-- A card in the menus. The front is baked layers tinted and moved here, with live text for the rarity and serial
+-- (docs/specs/card-face-redesign.md). The back is drawn whole.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local CardArt = require(CardCore:WaitForChild("CardArt"))
+local CardLayout = require(CardCore:WaitForChild("CardLayout"))
 local CardLook = require(CardCore:WaitForChild("CardLook"))
 local Cards = require(CardCore:WaitForChild("Cards"))
 local CardText = require(CardCore:WaitForChild("CardText"))
@@ -12,27 +15,14 @@ local Palette = require(Guns:WaitForChild("Palette"))
 local CardEffects = require(script.Parent.CardEffects)
 local TypeLabel = require(script.Parent.TypeLabel)
 
--- Everything below is in card units: a card is 150 wide and 240 tall.
+-- The back is in its own units: a card is 150 wide and 240 tall.
 local WIDTH = 150
 local HEIGHT = 240
 local CORNER = 10
 local LEFT = 10
 local RIGHT = 140
 local TEXT_SIZE = 11
-local SERIAL_SIZE = 12
 local TRACKING = 0.04 -- of the size
-local SERIAL_LINE = 19
-local NAME_LINE = 218
-local RARITY_LINE = 233
-local BLOCK_LEFT = 12
-local BLOCK_TOP = 160
-local BLOCK_WIDTH = 92
-local BLOCK_HEIGHT = 38
-local BIG_SERIAL_LINE = 198
-local BIG_SERIAL_SIZE = 58
-local MONOGRAM_CENTRE = Vector2.new(58, 85)
-local CROSSHAIR = Vector2.new(130, 42)
-local CROSSHAIR_FILL = 6.4 -- radius, inside the baked ring
 local OUTLINE_THICKNESS = 2
 
 local BLOCK_BOTTOM = 86 -- the back's coloured block
@@ -61,31 +51,31 @@ local BACK_STRIPES_HEIGHT = 12
 local SET_CODES = { set_01 = "S01" }
 local GHOST_TRANSPARENCY = 0.75
 local SHINE_HALF_WIDTH = 0.07 -- of the gradient
-local FOIL_HALF_WIDTH = 0.25
-local FOIL_STRENGTH = 0.55
-local FOIL_BLUE = Color3.fromRGB(10, 34, 245)
+local WHOLE = { x = 0, y = 0, w = CardLayout.WIDTH, h = CardLayout.HEIGHT }
 
+-- `mark` colours the acronym and serial on the front. `rarity` and `outline` are the back's.
 local LOOKS = {
-	Field = { back = Palette.DeepNavy, ink = Palette.Bone, rarity = Palette.Bone, stripes = Palette.Bone, shine = 0.28 },
+	Field = { back = Palette.DeepNavy, ink = Palette.Bone, mark = Palette.Bone, rarity = Palette.Bone, shine = 0.28 },
 	Redline = {
 		back = Palette.Bone,
 		ink = Palette.DeepNavy,
+		mark = Palette.HazardRed,
 		rarity = Palette.HazardRed,
-		stripes = Palette.HazardRed,
 		outline = Palette.HazardRed,
 		shine = 0.7,
 	},
 	Prototype = {
 		back = Palette.SignalAcid,
 		ink = Palette.DeepNavy,
+		mark = Palette.DeepNavy,
 		rarity = Palette.DeepNavy,
-		stripes = Palette.DeepNavy,
 		outline = Palette.DeepNavy,
 		shine = 0.5,
 	},
 	ZeroDay = {
 		back = Palette.ZeroDayBack,
 		ink = Palette.Bone,
+		mark = Palette.DataCyan,
 		rarity = Palette.DataCyan,
 		outline = Palette.DataCyan,
 		shine = 0.6,
@@ -99,7 +89,7 @@ export type Options = {
 	width: number, -- pixels
 	position: UDim2?,
 	serial: number?,
-	corner: string?, -- shown where the small serial goes
+	corner: string?, -- shown in place of the serial
 	ghost: boolean?, -- an unowned card: faded and still
 	shineAt: (() -> number?)?, -- where to hold the shine, or nil for its timed sweep
 }
@@ -132,91 +122,92 @@ local function outline(root: GuiObject, unit: number, color: Color3)
 	stroke.Parent = frame
 end
 
-local function crosshairFill(root: GuiObject, unit: number)
-	local fill = Instance.new("Frame")
-	fill.BackgroundColor3 = Palette.DataCyan
-	fill.BorderSizePixel = 0
-	fill.AnchorPoint = Vector2.new(0.5, 0.5)
-	fill.Position = UDim2.fromOffset(CROSSHAIR.X * unit, CROSSHAIR.Y * unit)
-	fill.Size = UDim2.fromOffset(CROSSHAIR_FILL * 2 * unit, CROSSHAIR_FILL * 2 * unit)
-	fill.Parent = root
-	CardEffects.rounded(fill, UDim.new(0.5, 0))
+-- The front is drawn in the units of River's drawing (CardLayout), `face` pixels to each. The back keeps its own.
+local function placed(root: GuiObject, face: number, image: string?, rect: any, color: Color3): ImageLabel
+	local label = Instance.new("ImageLabel")
+	label.BackgroundTransparency = 1
+	label.Image = image or "" -- a card with no art yet still draws
+	label.ImageColor3 = color
+	label.Position = UDim2.fromOffset(rect.x * face, rect.y * face)
+	label.Size = UDim2.fromOffset(rect.w * face, rect.h * face)
+	label.Parent = root
+	return label
 end
 
--- The monogram's outline swelling out of it and fading. Prototype only.
-local function pulse(root: GuiObject, unit: number, cardId: string, color: Color3): (number) -> ()
-	local outline = Instance.new("ImageLabel")
-	outline.BackgroundTransparency = 1
-	outline.Image = CardArt.outline(cardId) or ""
-	outline.ImageColor3 = color
-	outline.AnchorPoint = Vector2.new(MONOGRAM_CENTRE.X / WIDTH, MONOGRAM_CENTRE.Y / HEIGHT)
-	outline.Position = UDim2.fromOffset(MONOGRAM_CENTRE.X * unit, MONOGRAM_CENTRE.Y * unit)
-	outline.Parent = root
-	return function(elapsed: number)
-		local scale, transparency = CardMotion.pulse(elapsed)
-		outline.Size = UDim2.fromOffset(WIDTH * unit * scale, HEIGHT * unit * scale)
-		outline.ImageTransparency = transparency
-	end
+-- Held by its middle, so it can grow and shrink in place.
+local function centred(root: GuiObject, face: number, image: string?, rect: any, color: Color3): ImageLabel
+	local label = placed(root, face, image, rect, color)
+	label.AnchorPoint = Vector2.new(0.5, 0.5)
+	label.Position = UDim2.fromOffset((rect.x + rect.w / 2) * face, (rect.y + rect.h / 2) * face)
+	return label
 end
 
-local function scrambling(label: any, serial: string): (number) -> ()
-	local shown = serial
-	return function(elapsed: number)
-		local value = CardMotion.scramble(serial, elapsed)
-		if value ~= shown then
-			shown = value
-			label:set(value)
-		end
-	end
+local function faceText(root: GuiObject, face: number, style: string, size: number, tracking: number, color: Color3, x: number, line: number, right: boolean?): any
+	return TypeLabel.new(root, {
+		style = style,
+		size = size * face,
+		tracking = size * tracking * face,
+		color = color,
+		right = right,
+		shadow = false,
+		position = UDim2.fromOffset(x * face, line * face),
+	})
 end
 
 local CardFace = {}
 
 function CardFace.new(parent: Instance, options: Options): GuiObject
-	local card = Cards.byId[options.cardId]
 	local look = CardLook.look(options.tier, options.variant)
 	local style = LOOKS[look]
-	local unit = options.width / WIDTH
-	local serial = CardLook.serialText(options.serial)
+	local face = options.width / CardLayout.WIDTH
+	-- Real serials aren't built yet, so Studio shows stand-ins (see CardLook.studioSerial).
+	local serial = options.serial or if RunService:IsStudio() then CardLook.studioSerial(options.cardId) else nil
+	-- The index shows a copy count where the serial goes, and that is never a low serial.
+	local low = options.corner == nil and CardLook.isLowSerial(serial)
 
 	-- A CanvasGroup fades the image and text together.
 	local root: any = Instance.new(if options.ghost then "CanvasGroup" else "Frame")
 	root.Name = "CardFace"
 	root.BackgroundColor3 = style.back
 	root.BorderSizePixel = 0
-	root.Size = UDim2.fromOffset(options.width, HEIGHT * unit)
+	root.Size = UDim2.fromOffset(options.width, CardLayout.HEIGHT * face)
 	root.Position = options.position or UDim2.new()
-	CardEffects.rounded(root, UDim.new(0, CORNER * unit))
+	CardEffects.rounded(root, UDim.new(0, CardLayout.CORNER * face))
 
-	local art = Instance.new("ImageLabel")
-	art.BackgroundTransparency = 1
-	art.Size = UDim2.fromScale(1, 1)
-	art.Image = CardArt.base(options.cardId, look) or ""
-	art.Parent = root
-	if style.outline then
-		outline(root, unit, style.outline)
-	end
+	placed(root, face, CardArt.layer("still"), WHOLE, style.ink)
+	placed(root, face, CardArt.layer("rays"), CardLayout.RAYS, style.ink)
+	local dot = Instance.new("Frame")
+	dot.BackgroundColor3 = style.ink
+	dot.BorderSizePixel = 0
+	dot.AnchorPoint = Vector2.new(0.5, 0.5)
+	dot.Position = UDim2.fromOffset(CardLayout.BURST_DOT.x * face, CardLayout.BURST_DOT.y * face)
+	dot.Size = UDim2.fromOffset(CardLayout.BURST_DOT.r * 2 * face, CardLayout.BURST_DOT.r * 2 * face)
+	dot.Parent = root
+	CardEffects.rounded(dot, UDim.new(0.5, 0))
+	centred(root, face, CardArt.layer("star_big"), CardLayout.STAR_BIG, style.ink)
+	centred(root, face, CardArt.layer("star_small"), CardLayout.STAR_SMALL, style.ink)
+	placed(root, face, CardArt.monogram(options.cardId), CardLayout.MONOGRAM, style.mark)
 
-	local stripesImage: ImageLabel? = nil
-	local bigSerial: any = nil
-	if look == "ZeroDay" then
-		crosshairFill(root, unit)
-		local size = BIG_SERIAL_SIZE * CardLook.bigSerialSize(serial)
-		bigSerial = text(root, unit, "LabelLarge", size, style.ink, BLOCK_LEFT, BIG_SERIAL_LINE)
-		bigSerial:set(serial)
+	local name = CardArt.name(options.cardId)
+	if name then
+		placed(root, face, name, CardLayout.NAME, style.ink)
 	else
-		local area = Rect.new(BLOCK_LEFT, BLOCK_TOP, BLOCK_LEFT + BLOCK_WIDTH, BLOCK_TOP + BLOCK_HEIGHT)
-		stripesImage = CardEffects.stripes(root, unit, style.stripes, area)
+		-- A card whose name hasn't been baked yet: the bold sheet stands in for the medium weight.
+		local card = Cards.byId[options.cardId]
+		faceText(root, face, "LabelBold", CardLayout.SERIAL.size, 0, style.ink, CardLayout.NAME.x, CardLayout.SERIAL.line)
+			:set(CardLook.faceName(if card then card.name else options.cardId))
 	end
+	local rarity = CardLayout.RARITY
+	faceText(root, face, "Label", rarity.size, rarity.tracking, style.ink, rarity.x, rarity.line)
+		:set(CardLook.faceRarity(options.tier, options.variant))
 
-	local corner = options.corner or if look == "ZeroDay" then nil else serial
-	if corner then
-		text(root, unit, "Label", SERIAL_SIZE, style.ink, RIGHT, SERIAL_LINE, true):set(corner)
-	end
-	text(root, unit, "LabelBold", TEXT_SIZE, style.ink, LEFT, NAME_LINE):set(string.upper(card.name))
-	text(root, unit, "Label", TEXT_SIZE, style.rarity, LEFT, RARITY_LINE):set(CardLook.rarityText(options.tier, options.variant))
-	if CardLook.showsSetCode(options.tier, options.variant) then
-		text(root, unit, "Label", TEXT_SIZE, style.ink, RIGHT, RARITY_LINE, true):set(SET_CODES[card.set] or "")
+	if low then
+		placed(root, face, CardArt.lowSerial(serial :: number), CardLayout.LOW_SERIAL, style.mark)
+	else
+		placed(root, face, CardArt.layer("barcode"), CardLayout.BARCODE, style.ink)
+		local place = CardLayout.SERIAL
+		faceText(root, face, "LabelLarge", place.size, 0, style.mark, place.right, place.line, true)
+			:set(options.corner or CardLook.faceSerial(serial))
 	end
 
 	root.Parent = parent
@@ -225,38 +216,10 @@ function CardFace.new(parent: Instance, options: Options): GuiObject
 		return root
 	end
 
-	local shine = CardEffects.band(root, CORNER * unit, SHINE_HALF_WIDTH, ColorSequence.new(Color3.new(1, 1, 1)), style.shine)
-	local foil: UIGradient? = nil
-	local parts: { (number) -> () } = {}
-	if look == "Prototype" then
-		table.insert(parts, pulse(root, unit, options.cardId, style.ink))
-		table.insert(parts, CardEffects.scrolling(stripesImage :: ImageLabel, unit))
-	elseif look == "ZeroDay" then
-		foil = CardEffects.band(
-			root,
-			CORNER * unit,
-			FOIL_HALF_WIDTH,
-			ColorSequence.new({
-				ColorSequenceKeypoint.new(0, Palette.DataCyan),
-				ColorSequenceKeypoint.new(0.5, FOIL_BLUE),
-				ColorSequenceKeypoint.new(1, Palette.DataCyan),
-			}),
-			FOIL_STRENGTH
-		)
-		table.insert(parts, CardEffects.ping(root, unit, CROSSHAIR))
-		table.insert(parts, scrambling(bigSerial, serial))
-	end
-
+	local shine = CardEffects.band(root, CardLayout.CORNER * face, SHINE_HALF_WIDTH, ColorSequence.new(Color3.new(1, 1, 1)), style.shine)
 	CardEffects.animate(root, function(elapsed: number)
 		local held = options.shineAt and options.shineAt()
-		local offset = Vector2.new(held or CardMotion.shineOffset(elapsed), 0)
-		shine.Offset = offset
-		if foil then
-			foil.Offset = offset
-		end
-		for _, part in parts do
-			part(elapsed)
-		end
+		shine.Offset = Vector2.new(held or CardMotion.shineOffset(elapsed), 0)
 	end)
 	return root
 end

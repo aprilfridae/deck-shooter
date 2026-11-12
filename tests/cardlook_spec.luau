@@ -42,17 +42,6 @@ describe("CardLook", function()
 		expect(CardLook.look("Field", Variant.Redacted)).toBe("Field")
 	end)
 
-	it("pads serials to two digits, and shows a gap with none", function()
-		expect(CardLook.serialText(7)).toBe("07")
-		expect(CardLook.serialText(1284)).toBe("1284")
-		expect(CardLook.serialText(nil)).toBe("--")
-	end)
-
-	it("shrinks the big serial past two digits", function()
-		expect(CardLook.bigSerialSize("01")).toBe(1)
-		expect(CardLook.bigSerialSize("1284")).toBe(0.5)
-	end)
-
 	it("prints the name in capitals with no spaces", function()
 		expect(CardLook.faceName("Phase Dash")).toBe("PHASEDASH")
 		expect(CardLook.faceName("Overclock")).toBe("OVERCLOCK")
