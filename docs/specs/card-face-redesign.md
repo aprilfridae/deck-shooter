@@ -104,7 +104,8 @@ The glow is weaker on Redline and Prototype, because their backgrounds are light
 
 - **Foil and glow in Roblox** won't match a browser exactly. Roblox can't blend colours into what is beneath, so the foil and glow sit on top at partial transparency. River judges them in Play.
 - **The mockups are not the game.** They were drawn in a browser. Timings above are the mockup's and are a starting point.
-- **Rotated parts lose clipping in Roblox.** The slanted bands are wider than the card and rely on the card clipping them, which the HUD's tilted cards can't do. Where a card is tilted, bands are skipped, as the shine is today.
+- **Rotated parts lose clipping in Roblox**, and the HUD tilts its cards. So nothing may rely on the card cutting it off: bands are card-sized frames whose gradient moves (as the shine is today), and embers, marks and twinkles stay inside the card's edges.
+- **The card in your hand** (`CardView.luau`) shows one flat image per card and look, not `CardFace`. It gets a new flat image of the still face with the name, and no rarity text, serial or motion, as today.
 
 ## Order of work
 
