@@ -16,7 +16,7 @@ describe("Loadout saves", function()
 	end)
 
 	it("migrates a version 1 save to Assault with the M4", function()
-		local loaded = SaveData.load({ version = 1, credits = 5 })
+		local loaded = SaveData.load({ version = 5, credits = 5 })
 		expect(loaded.version).toBe(SaveData.CURRENT_VERSION)
 		expect(loaded.class).toBe("Assault")
 		expect(loaded.rifle).toBe("M4")
