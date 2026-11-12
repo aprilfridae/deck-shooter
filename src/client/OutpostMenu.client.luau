@@ -226,8 +226,7 @@ RunService.RenderStepped:Connect(function(dt: number)
 	local visible = Zones.of(player) == Zones.Outpost and not MenuState.isOpen(MenuState.shared)
 	if nav and income then
 		nav.Visible = not CardInspect.isOpen() -- it would sit on top of the card
-		-- The market page shows your Credits itself, and its cards reach up to where this line sits.
-		income.Visible = nav.Visible and openPage ~= "MARKET"
+		income.Visible = nav.Visible
 	end
 	if visible == gui.Enabled then
 		return

@@ -39,9 +39,6 @@ local function show(text: string)
 	strip.BorderSizePixel = 0
 	strip.AnchorPoint = Vector2.new(0.5, 0)
 	strip.Parent = gui
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 0.0056 * unit)
-	corner.Parent = strip
 	local label = PanelKit.label(strip, "LabelBold", PanelKit.LABEL_SIZE, PAD, HEIGHT * 0.64)
 	label:set(text)
 	strip.Size = UDim2.fromOffset(label:width() + PAD * 2 * unit, HEIGHT * unit)

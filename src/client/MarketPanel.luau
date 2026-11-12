@@ -20,8 +20,8 @@ local MARGIN, RIGHT = PanelKit.MARGIN, PanelKit.RIGHT
 local INK, PAPER = PanelKit.INK, PanelKit.PAPER
 
 local TABS = { "BROWSE", "SELL", "MINE" }
--- Each sort: its name, its button and that button's width, which has to fit its words.
-local SORTS: { { any } } = { { "soon", "ENDING SOON", 0.1 }, { "serial", "SERIAL", 0.06 }, { "rarity", "RARITY", 0.06 } }
+-- Each sort: its name and its button.
+local SORTS: { { any } } = { { "soon", "SOONEST" }, { "serial", "SERIAL" }, { "rarity", "RARITY" } }
 local LENGTHS = { 1, 6, 24 }
 local REFRESH = 10 -- seconds between fetches of the list
 local MAX_SHOWN = 40 -- cards drawn at once: each is a live card face, and hundreds would crawl
@@ -30,13 +30,16 @@ local GAP = 0.006
 local CELL = (RIGHT - MARGIN - GAP * (COLUMNS - 1)) / COLUMNS
 local CARD_HEIGHT = CELL * 1.6
 local ROW = CARD_HEIGHT + 0.036
-local TAB_TOP = 0.006
-local BAR_TOP = 0.04
+-- The page follows PACKS: the big title and its rule, then rows of square buttons on three equal columns.
+local BUTTON_GAP = 0.005
+local COLUMN = (RIGHT - MARGIN - BUTTON_GAP * 2) / 3
+local TAB_TOP = 0.12
+local TAB_HEIGHT = 0.03
+local BAR_TOP = 0.156
 local BAR_HEIGHT = 0.022
-local GRID_TOP = 0.072
+local GRID_TOP = 0.186
 local BOX_WIDTH, BOX_HEIGHT = 0.36, 0.2
 local BOX_CARD = 0.1
-local CORNER = 0.0056
 local FONT = Enum.Font.Gotham -- typed text: the game's fonts are image sheets and can't be typed into
 local TEXT_SIZE = 0.0125
 local SELLER_SHOWN = 16 -- letters of a seller's name that fit in the bid box
@@ -52,7 +55,6 @@ local state = {
 	at = os.clock(),
 	redrawGrid = nil :: ((boolean?) -> ())?, -- redraws only BROWSE's cards, leaving the search box alone
 	failed = false, -- the last fetch didn't get through
-	creditsLabel = nil :: any?,
 	selling = nil :: any?, -- the card chosen on SELL
 	hours = 6,
 }
@@ -81,17 +83,7 @@ local function sync(reply: any)
 	end
 end
 
-local function round(gui: GuiObject)
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, CORNER * unit())
-	corner.Parent = gui
-end
-
-local function button(parent: Instance, text: string, x: number, top: number, width: number, height: number, options: any?): TextButton
-	local choice = options or {}
-	choice.rounded = true
-	return PanelKit.button(parent, text, x, top, width, height, choice)
-end
+local button = PanelKit.button
 
 local function textBox(parent: Instance, x: number, top: number, width: number, placeholder: string, text: string): TextBox
 	local u = unit()
@@ -109,7 +101,6 @@ local function textBox(parent: Instance, x: number, top: number, width: number, 
 	box.TextSize = TEXT_SIZE * u
 	box.TextXAlignment = Enum.TextXAlignment.Left
 	box.Parent = parent
-	round(box)
 	local pad = Instance.new("UIPadding")
 	pad.PaddingLeft = UDim.new(0, 0.005 * u)
 	pad.Parent = box
@@ -255,7 +246,6 @@ local function bidBox(listing: any)
 	box.Size = UDim2.fromOffset(BOX_WIDTH * u, BOX_HEIGHT * u)
 	box.ZIndex = 21
 	box.Parent = scrim
-	round(box)
 
 	local timer: any = nil
 	local function dropTimer()
@@ -406,18 +396,16 @@ end
 
 local function drawBrowse(body: Frame)
 	local u = unit()
-	local search = textBox(body, MARGIN, BAR_TOP, 0.2, "SEARCH", state.search)
-	local total = (#SORTS - 1) * 0.004
-	for _, sort in SORTS do
-		total += sort[3]
-	end
-	local x = RIGHT - total
-	for _, sort in SORTS do
-		button(body, sort[2], x, BAR_TOP, sort[3], BAR_HEIGHT, { active = state.sort == sort[1], size = PanelKit.SMALL_SIZE }).Activated:Connect(function()
+	-- The search box sits under the first tab. The sorts share the width under the other two.
+	local search = textBox(body, MARGIN, BAR_TOP, COLUMN, "SEARCH", state.search)
+	local sortLeft = MARGIN + COLUMN + BUTTON_GAP
+	local width = (RIGHT - sortLeft - BUTTON_GAP * (#SORTS - 1)) / #SORTS
+	for index, sort in SORTS do
+		local x = sortLeft + (index - 1) * (width + BUTTON_GAP)
+		button(body, sort[2], x, BAR_TOP, width, BAR_HEIGHT, { active = state.sort == sort[1], size = PanelKit.SMALL_SIZE }).Activated:Connect(function()
 			state.sort = sort[1]
 			draw()
 		end)
-		x += sort[3] + 0.004
 	end
 
 	local holder = frame(body, GRID_TOP)
@@ -715,7 +703,7 @@ draw = function()
 	page:ClearAllChildren()
 	table.clear(timers)
 	state.redrawGrid = nil
-	state.creditsLabel = nil
+	PanelKit.title(page, "MARKET")
 	local snapshot = CardData.get()
 	local mine = 0
 	if snapshot then
@@ -726,22 +714,14 @@ draw = function()
 			mine += 1
 		end
 	end
-	local x = MARGIN
-	for _, tab in TABS do
+	for index, tab in TABS do
 		local text = if tab == "MINE" and mine > 0 then `MINE {mine}` else tab
-		local width = if tab == "MINE" then 0.07 else 0.06
-		button(page, text, x, TAB_TOP, width, BAR_HEIGHT, { active = state.tab == tab }).Activated:Connect(function()
+		local x = MARGIN + (index - 1) * (COLUMN + BUTTON_GAP)
+		button(page, text, x, TAB_TOP, COLUMN, TAB_HEIGHT, { active = state.tab == tab }).Activated:Connect(function()
 			state.tab = tab
 			draw()
 		end)
-		x += width + 0.004
 	end
-	if snapshot then
-		local credits = PanelKit.label(page, "LabelBold", PanelKit.LABEL_SIZE, RIGHT, TAB_TOP + 0.016, true)
-		credits:set(`CREDITS {Market.credits(math.floor(snapshot.credits))}`)
-		state.creditsLabel = credits
-	end
-	PanelKit.rule(page, MARGIN, 0.034, RIGHT - MARGIN)
 
 	local body = frame(page, 0)
 	if state.tab == "BROWSE" then
@@ -789,10 +769,7 @@ function MarketPanel.fill(page: Frame)
 		if not snapshot or state.page ~= page then
 			return
 		end
-		-- Credits tick up every second from income: only the number changes for that, never the page.
-		if state.creditsLabel then
-			state.creditsLabel:set(`CREDITS {Market.credits(math.floor(snapshot.credits))}`)
-		end
+		-- Credits tick up every second from income. The page is only redrawn for what follows.
 		-- What you have in the market changed. SELL is left alone, since it may be half filled in, and so is a page
 		-- under an open bid box, which is drawn afresh when the box closes.
 		local now = entries()

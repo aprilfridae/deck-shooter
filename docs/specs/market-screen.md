@@ -15,7 +15,7 @@ Success is River opening the market in Play, finding a card by searching and sor
 - A new `MARKET` row in the Outpost menu, third, between `PACKS` and `LOADOUT`. The rows below it renumber.
 - The Market stall's prompt opens `MARKET`. Today it opens `PACKS`.
 - The panel is the same Bone panel with Deep Navy text as the other pages.
-- The market's own buttons have rounded corners (River asked). The menu's rows keep their square corners, like every other page.
+- The page is laid out like `PACKS` and `PLAY` (River, 2026-11-11): the big `MARKET` title and its rule, then square buttons on three equal columns.
 
 ## The three tabs
 
@@ -88,8 +88,8 @@ Browsing was built as one list per card, because the first plan was to pick a ca
 
 - **Under a card** there is room for about nine letters, so the price is short past 99,999 (`120K`, `1.2M`) and the time is one word (`2H`, `38M`, `45S`). The bid box shows both in full. The small line reads `BUY 5,000` or `WINNING`.
 - **At most 40 cards are drawn at once.** Each is a live card face. Past 40 the page says how many there are and to search.
-- **The tabs are rounded buttons,** not underlined words.
-- **The income line** at the top right of the menu hides while the market is open: the page shows your Credits itself.
+- **The tabs are three square buttons** across the page's full width, under the big `MARKET` title. The search box sits under the first tab and the three sorts share the width under the other two. The first sort reads `SOONEST`, which fits its button.
+- **Your Credits** show in the menu's income line at the top right, as on every page. The page has no Credits line of its own.
 - **The label font sheets gained** `, ' ( ) ?`, for prices and plain sentences.
 - **To fill the market when testing alone:** during Play in Studio, Server view, run `game.ServerStorage.MarketFill:Fire()`. It lists up to five of your numbered cards. Nobody can bid on their own listing, so bidding needs a second player.
 
