@@ -2,6 +2,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Palette = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Palette"))
+local HudShapes = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Hud"):WaitForChild("HudShapes"))
 local MenuPanel = require(script.Parent.MenuPanel)
 local TypeLabel = require(script.Parent.TypeLabel)
 
@@ -10,7 +11,9 @@ local TITLE_SIZE = 0.085
 local TITLE_LINE = 0.095
 local RULE_FADE = 0.5
 local PRESSED_SHRINK = 0.97
-local QUIET_HOVER = 3 -- pixels
+local QUIET_THICK = 3 -- pixels: a quiet button's border under the mouse
+local CUT_SHARE = 1 / 3 -- of a button's height: how much of each cut corner is taken off
+local CUT_MOST = 0.006 -- and never more than this share of the unit
 
 local PanelKit = {
 	MARGIN = 0.025,
@@ -102,9 +105,25 @@ function PanelKit.hitBox(parent: Instance, x: number, top: number, width: number
 	return button
 end
 
--- A labelled button that inverts under the mouse and dips when pressed.
+-- One of a button's two images: a square with cut corners, stretched from its middle so the cut keeps its angle.
+local function cutImage(parent: Instance, image: string, color: Color3, cut: number): ImageLabel
+	local label = Instance.new("ImageLabel")
+	label.BackgroundTransparency = 1
+	label.Image = image
+	label.ImageColor3 = color
+	label.ScaleType = Enum.ScaleType.Slice
+	label.SliceCenter = HudShapes.CUT_SLICE
+	label.SliceScale = cut / HudShapes.CUT
+	label.Size = UDim2.fromScale(1, 1)
+	label.Parent = parent
+	return label
+end
+
+-- A labelled button with its top right and bottom left corners cut (docs/specs/hud-redesign.md). It inverts under
+-- the mouse and dips when pressed.
 -- active leaves it inverted, and disabled greys it out and stops clicks. quiet thickens the border
--- instead of inverting, for buttons with their own contents, and active leaves it thick.
+-- instead of inverting, for buttons with their own contents, and active leaves it thick. A quiet button keeps
+-- plain corners, which its owner can round to fit what it holds: a cut corner would slice a card.
 function PanelKit.button(
 	parent: Instance,
 	text: string,
@@ -120,15 +139,25 @@ function PanelKit.button(
 	local button = PanelKit.hitBox(parent, x, top, width, height)
 	local filled = choice.active and not choice.quiet
 	local ink = if filled then PAPER else INK
-	local border = if choice.active and choice.quiet then QUIET_HOVER else 1
-	button.BackgroundTransparency = if choice.disabled then 0.9 else 0
-	button.BackgroundColor3 = if choice.disabled or filled then INK else PAPER
-	local stroke = Instance.new("UIStroke")
-	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Color = INK
-	stroke.Thickness = border
-	stroke.Transparency = if choice.disabled then 0.7 else 0
-	stroke.Parent = button
+	local thick = choice.active == true and choice.quiet == true
+	local cut = math.min(height * CUT_SHARE, CUT_MOST) * unit
+	local rest = if choice.disabled or filled then INK else PAPER
+	local stroke: UIStroke? = nil
+	local fill: ImageLabel? = nil
+	if choice.quiet then
+		local made = Instance.new("UIStroke")
+		made.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		made.Color = INK
+		made.Thickness = if thick then QUIET_THICK else 1
+		made.Transparency = if choice.disabled then 0.7 else 0
+		made.Parent = button
+		stroke = made
+	else
+		local made = cutImage(button, HudShapes.CutFill, rest, cut)
+		made.ImageTransparency = if choice.disabled then 0.9 else 0
+		fill = made
+		cutImage(button, HudShapes.CutOutline, INK, cut).ImageTransparency = if choice.disabled then 0.7 else 0
+	end
 	local scale = Instance.new("UIScale")
 	scale.Parent = button
 	local word = PanelKit.label(button, "LabelBold", size, 0, 0, nil, ink)
@@ -140,18 +169,20 @@ function PanelKit.button(
 		button.Interactable = false
 		return button
 	end
-	local rest = button.BackgroundColor3
 	button.MouseEnter:Connect(function()
-		if choice.quiet then
-			stroke.Thickness = QUIET_HOVER
-		else
-			button.BackgroundColor3 = INK
+		if stroke then
+			stroke.Thickness = QUIET_THICK
+		elseif fill then
+			fill.ImageColor3 = INK
 			word:setColor(PAPER)
 		end
 	end)
 	button.MouseLeave:Connect(function()
-		stroke.Thickness = border
-		button.BackgroundColor3 = rest
+		if stroke then
+			stroke.Thickness = if thick then QUIET_THICK else 1
+		elseif fill then
+			fill.ImageColor3 = rest
+		end
 		word:setColor(ink)
 		scale.Scale = 1
 	end)

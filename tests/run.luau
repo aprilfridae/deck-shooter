@@ -16,6 +16,7 @@ local listed = {
 	savedata_spec = true,
 	serialbatch_spec = true,
 	requests_spec = true,
+	market_spec = true,
 	movestate_spec = true,
 	speedlimit_spec = true,
 	parry_spec = true,
@@ -63,6 +64,8 @@ local listed = {
 	shotkick_spec = true,
 	codelines_spec = true,
 	killrewards_spec = true,
+	killfeed_spec = true,
+	cardaim_spec = true,
 	akreload_spec = true,
 	skipburst_spec = true,
 	cardtext_spec = true,
@@ -92,6 +95,8 @@ require("./legcycle_spec")
 require("./shotkick_spec")
 require("./codelines_spec")
 require("./killrewards_spec")
+require("./killfeed_spec")
+require("./cardaim_spec")
 require("./akreload_spec")
 require("./skipburst_spec")
 require("./cardtext_spec")
@@ -112,6 +117,7 @@ require("./income_spec")
 require("./savedata_spec")
 require("./serialbatch_spec")
 require("./requests_spec")
+require("./market_spec")
 require("./movestate_spec")
 require("./speedlimit_spec")
 require("./parry_spec")

@@ -1,36 +1,31 @@
--- One row of the Outpost nav. Navy wipes across it in stepped frames with fading copies behind
--- and a glow ahead, the same way the panels move, and the name kicks right. Rows slide in one after
--- another.
+-- One button of the Outpost nav: a solid slanted plate (docs/specs/hud-redesign.md). Bone with navy text at rest;
+-- under the mouse or open it flips to navy with a Bone outline, and the name kicks right. Buttons slide in one
+-- after another.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local Palette = require(Guns:WaitForChild("Palette"))
+local HudShapes = require(Guns:WaitForChild("Hud"):WaitForChild("HudShapes"))
 local PanelMotion = require(Guns:WaitForChild("Hud"):WaitForChild("PanelMotion"))
 local TypeLabel = require(script.Parent.TypeLabel)
 
-local WIPE_TIME = 0.28 -- seconds
+local KICK_TIME = 0.28 -- seconds
 local ENTER_TIME = 0.3 -- seconds
-local ENTER_STAGGER = 0.06 -- seconds between rows
-local KICK = 0.008 -- how far the name moves, as a share of the unit
-local TEXT_SWAP = 0.5 -- of the wipe, when the text changes colour
-local GLOW_WIDTH = 0.05 -- how far the glow reaches ahead of the wipe, as a share of the unit
-local HALO_WIDTH = 0.045 -- how far the glow spills past the row, as a share of the unit
-local HALO_FROM = 0.75 -- of the wipe, when the glow reaches the end of the row
-local GLOW_STRENGTH = 0.85 -- 1 is solid at its brightest
-local RULE_FADE = 0.8
+local ENTER_STAGGER = 0.06 -- seconds between buttons
+local KICK = 0.006 -- how far the name moves, as a share of the unit
 local NUMBER_SIZE = 0.8 -- of the name's size
 
 export type Options = {
-	parent: Instance,
-	glowParent: Instance, -- isn't clipped, so the glow can spill out of the row
+	parent: Instance, -- clips, so buttons slide in from its left edge
 	name: string,
 	index: number,
 	unit: number,
 	width: number,
 	height: number,
-	left: number, -- from the row's left edge to its name
-	padding: number, -- from the row's right edge to its number
+	gap: number, -- between one button and the next
+	left: number, -- from the button's left edge to its name: past the plate's slanted end
+	padding: number, -- from the button's right edge to its number
 	textSize: number,
 	tracking: number,
 	onClick: () -> (),
@@ -40,78 +35,47 @@ export type Options = {
 local NavButton = {}
 NavButton.__index = NavButton
 
-local function wipeFrame(parent: Instance, color: Color3): Frame
-	local frame = Instance.new("Frame")
-	frame.BorderSizePixel = 0
-	frame.BackgroundColor3 = color
-	frame.Size = UDim2.fromScale(0, 1)
-	frame.Parent = parent
-	return frame
+local function shape(parent: Instance, image: string, color: Color3): ImageLabel
+	local label = Instance.new("ImageLabel")
+	label.BackgroundTransparency = 1
+	label.Image = image
+	label.ImageColor3 = color
+	label.Size = UDim2.fromScale(1, 1)
+	label.Parent = parent
+	return label
 end
 
-local function glowFrame(parent: Instance, fade: NumberSequence): Frame
-	local frame = Instance.new("Frame")
-	frame.BackgroundColor3 = Palette.DeepNavy
-	frame.BorderSizePixel = 0
-	frame.Visible = false
-	frame.Parent = parent
-	local gradient = Instance.new("UIGradient")
-	gradient.Transparency = fade
-	gradient.Parent = frame
-	return frame
-end
-
-local function stepped(elapsed: number, duration: number): number
-	local frame = math.floor(elapsed * PanelMotion.FPS + 1e-6)
-	return math.min(frame / PanelMotion.FPS / duration, 1)
+-- How far through a move, 0 to 1. Every frame: River had the stepped, low-frame-rate motion taken off these
+-- buttons (2026-11-11). The panels still move in steps.
+local function progress(elapsed: number, duration: number): number
+	return math.clamp(elapsed / duration, 0, 1)
 end
 
 function NavButton.new(options: Options): any
 	local self = setmetatable({}, NavButton)
 	self.active = false
 	self.hovering = false
-	self.share = 0
+	self.share = 0 -- how far the name has kicked, 0 to 1
 	self.from = 0
 	self.elapsed = 0
 	self.width = options.width
 	self.index = options.index
-	self.top = (options.index - 1) * options.height
+	self.top = (options.index - 1) * (options.height + options.gap)
 	self.left = options.left
 	self.baseline = (options.height + options.textSize) / 2
 	self.kick = KICK * options.unit
 
-	self.ghosts = {} -- blur behind the row while it slides in
-	for _ = 1, PanelMotion.COPIES do
-		local ghost = Instance.new("Frame")
-		ghost.BackgroundColor3 = Palette.DeepNavy
-		ghost.BorderSizePixel = 0
-		ghost.Size = UDim2.fromOffset(options.width, options.height)
-		ghost.Visible = false
-		ghost.Parent = options.parent
-		table.insert(self.ghosts, ghost)
-	end
-
 	self.button = Instance.new("TextButton")
 	self.button.Text = ""
 	self.button.AutoButtonColor = false
-	self.button.BackgroundColor3 = Palette.Bone
+	self.button.BackgroundTransparency = 1
 	self.button.BorderSizePixel = 0
-	self.button.ClipsDescendants = true
 	self.button.Position = UDim2.fromOffset(0, self.top)
 	self.button.Size = UDim2.fromOffset(options.width, options.height)
 	self.button.Parent = options.parent
 
-	self.copies = {}
-	for _ = 1, PanelMotion.COPIES do
-		table.insert(self.copies, wipeFrame(self.button, Palette.DeepNavy))
-	end
-	self.wipe = wipeFrame(self.button, Palette.DeepNavy)
-	local fadeOut = NumberSequence.new(0, 1)
-	self.glow = glowFrame(self.button, fadeOut)
-	self.glow.Size = UDim2.new(0, GLOW_WIDTH * options.unit, 1, 0)
-	self.halo = glowFrame(options.glowParent, fadeOut)
-	self.halo.Position = UDim2.fromOffset(options.width, self.top)
-	self.halo.Size = UDim2.fromOffset(HALO_WIDTH * options.unit, options.height)
+	self.plate = shape(self.button, HudShapes.Plate, Palette.Bone)
+	self.outline = shape(self.button, HudShapes.PlateOutline, Palette.Bone)
 
 	self.text = TypeLabel.new(self.button, {
 		style = "LabelBold",
@@ -134,15 +98,6 @@ function NavButton.new(options: Options): any
 	self.number = string.format("%02d", options.index)
 	self.mark:set(self.number)
 
-	if options.index > 1 then
-		local rule = Instance.new("Frame")
-		rule.BorderSizePixel = 0
-		rule.BackgroundColor3 = Palette.DeepNavy
-		rule.BackgroundTransparency = RULE_FADE
-		rule.Size = UDim2.new(1, 0, 0, 1)
-		rule.Parent = self.button
-	end
-
 	self.button.MouseEnter:Connect(function()
 		self.hovering = true
 		options.onHover()
@@ -161,52 +116,32 @@ function NavButton:target(): number
 	return if self.active or self.hovering then 1 else 0
 end
 
+-- The colours flip at once. Only the name's kick takes time.
 function NavButton:paint()
-	local ink = if self.share > TEXT_SWAP then Palette.Bone else Palette.DeepNavy
+	local lit = self:target() == 1
+	local ink = if lit then Palette.Bone else Palette.DeepNavy
+	self.plate.ImageColor3 = if lit then Palette.DeepNavy else Palette.Bone
+	self.outline.Visible = lit
 	self.text:setColor(ink)
 	self.mark:setColor(ink)
-	self.mark:set(if self:target() == 1 then ">" else self.number)
-	self.wipe.Size = UDim2.fromScale(math.min(self.share, 1), 1)
+	self.mark:set(if lit then ">" else self.number)
 	self.text:setPosition(UDim2.fromOffset(self.left + self.kick * self.share, self.baseline))
-end
-
--- The blur and glow for one frame of the wipe. A move of nothing clears them.
-function NavButton:smear(from: number, to: number)
-	local trail = PanelMotion.trail(from, to)
-	for index, copy in self.copies do
-		local step = trail[index]
-		copy.Visible = step ~= nil
-		if step then
-			copy.Size = UDim2.fromScale(math.clamp(step.share, 0, 1), 1)
-			copy.BackgroundTransparency = step.transparency
-		end
-	end
-	local bright = PanelMotion.glow(to - from)
-	local fade = 1 - GLOW_STRENGTH * bright
-	self.glow.Visible = bright > 0
-	self.glow.Position = UDim2.fromScale(math.min(to, 1), 0)
-	self.glow.BackgroundTransparency = fade
-	self.halo.Visible = bright > 0 and to >= HALO_FROM
-	self.halo.BackgroundTransparency = fade
 end
 
 function NavButton:step(dt: number)
 	self.elapsed += dt
-	local target = self:target()
-	local share = PanelMotion.share(self.from, target, stepped(self.elapsed, WIPE_TIME))
+	local share = PanelMotion.share(self.from, self:target(), progress(self.elapsed, KICK_TIME))
 	if share ~= self.share then
-		self:smear(self.share, share)
 		self.share = share
 		self:paint()
 	end
-	if self.elapsed >= WIPE_TIME + 1 / PanelMotion.FPS then
-		self:smear(share, share)
+	if self.elapsed >= KICK_TIME then
 		self.connection:Disconnect()
 		self.connection = nil
 	end
 end
 
--- Starts the wipe from wherever it is, so a quick pass of the mouse doesn't jump.
+-- Starts the kick from wherever it is, so a quick pass of the mouse doesn't jump.
 function NavButton:retarget()
 	self.from = self.share
 	self.elapsed = 0
@@ -225,37 +160,18 @@ function NavButton:setActive(active: boolean)
 	end
 end
 
-function NavButton:showGhosts(from: number, to: number)
-	local trail = PanelMotion.trail(from, to)
-	for index, ghost in self.ghosts do
-		local step = trail[index]
-		ghost.Visible = step ~= nil
-		if step then
-			ghost.Position = UDim2.fromOffset(self.width * (step.share - 1), self.top)
-			ghost.BackgroundTransparency = step.transparency
-		end
-	end
-end
-
--- Slides the row in from the left.
+-- Slides the button in from the left.
 function NavButton:enter()
 	if self.entering then
 		self.entering:Disconnect()
 	end
 	local elapsed = -ENTER_STAGGER * (self.index - 1)
-	local last = 0
 	self.button.Position = UDim2.fromOffset(-self.width, self.top)
 	self.entering = RunService.RenderStepped:Connect(function(dt)
 		elapsed += dt
-		local progress = stepped(math.max(elapsed, 0), ENTER_TIME)
-		local share = PanelMotion.share(0, 1, progress)
-		self.button.Position = UDim2.fromOffset(self.width * (share - 1), self.top)
-		if share ~= last then
-			self:showGhosts(last, share)
-			last = share
-		end
-		if progress >= 1 then
-			self:showGhosts(share, share)
+		local done = progress(math.max(elapsed, 0), ENTER_TIME)
+		self.button.Position = UDim2.fromOffset(self.width * (PanelMotion.share(0, 1, done) - 1), self.top)
+		if done >= 1 then
 			self.entering:Disconnect()
 			self.entering = nil
 		end
@@ -270,7 +186,6 @@ function NavButton:destroy()
 		self.entering:Disconnect()
 	end
 	self.button:Destroy()
-	self.halo:Destroy()
 end
 
 return NavButton

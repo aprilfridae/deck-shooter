@@ -7,21 +7,28 @@ local describe, it, expect = harness.describe, harness.it, harness.expect
 describe("Cards", function()
 	it("pins spec values", function()
 		expect(Cards.stat("phase_dash", "Prototype", "distance")).toBe(16)
-		expect(Cards.stat("phase_dash", "BlackSite", "cooldown")).toBe(11)
-		expect(Cards.stat("overclock", "BlackSite", "fireRateBonus")).toBe(0.17)
-		expect(Cards.stat("recon_pulse", "Field", "revealTime")).toBe(2)
-		expect(Cards.stat("aegis_shell", "Prototype", "shieldHp")).toBe(64)
-		expect(#Cards.sets.set_01).toBe(4)
-		expect(#Cards.ids).toBe(4)
+		expect(Cards.stat("phase_dash", "Field", "distance")).toBe(8)
+		expect(Cards.stat("phase_dash", "BlackSite", "cooldown")).toBe(13)
+		expect(Cards.stat("overclock", "BlackSite", "fireRateBonus")).toBe(0.22)
+		expect(Cards.stat("aegis_shell", "Prototype", "shieldHp")).toBe(104)
+		expect(Cards.stat("switchback", "Prototype", "range")).toBe(80)
+		expect(Cards.stat("kickplate", "Field", "height")).toBe(24)
+		expect(Cards.stat("siphon", "BlackSite", "speedSteal")).toBe(0.22)
+		expect(#Cards.sets.set_01).toBe(6)
+		expect(#Cards.ids).toBe(6)
 	end)
 
-	it("stays inside the 20-25% ceiling on every stat", function()
+	it("no longer has Recon Pulse", function()
+		expect(Cards.isValid("recon_pulse")).toBe(false)
+	end)
+
+	it("makes Prototype about twice Field on every stat", function()
 		for _, id in Cards.ids do
 			local card = Cards.byId[id]
 			for stat, values in card.stats do
 				local low = card.lowerIsBetter and card.lowerIsBetter[stat]
 				local ratio = if low then values[1] / values[3] else values[3] / values[1]
-				expect(ratio >= 1.20 - 1e-9 and ratio <= 1.25 + 1e-9).toBe(true)
+				expect(ratio >= 1.4 - 1e-9 and ratio <= 2 + 1e-9).toBe(true)
 			end
 		end
 	end)
@@ -43,7 +50,7 @@ describe("Cards", function()
 	end)
 
 	it("applies the Prototype data changes", function()
-		expect(Cards.stat("aegis_shell", "Prototype", "duration")).toBe(3.75)
+		expect(Cards.stat("aegis_shell", "Prototype", "duration")).toBe(5)
 	end)
 
 	it("pushes enemies whenever an Aegis Shell ends", function()
@@ -57,26 +64,29 @@ describe("Cards", function()
 	end)
 
 	it("gives each card its spec cooldown", function()
-		expect(Cards.cooldown("phase_dash", "Field")).toBe(12)
+		expect(Cards.cooldown("phase_dash", "Field")).toBe(16)
 		expect(Cards.cooldown("phase_dash", "Prototype")).toBe(10)
 		expect(Cards.cooldown("overclock", "BlackSite")).toBe(25)
-		expect(Cards.cooldown("recon_pulse", "Field")).toBe(20)
+		expect(Cards.cooldown("siphon", "Field")).toBe(18)
+		expect(Cards.cooldown("switchback", "Prototype")).toBe(12)
 		expect(Cards.cooldown("aegis_shell", "Prototype")).toBe(25)
 	end)
 
 	it("scales perks by tier", function()
-		expect(Cards.perkScale("Field")).toBe(0.8)
-		expect(Cards.perkScale("BlackSite")).toBe(0.9)
+		expect(Cards.perkScale("Field")).toBe(0.5)
+		expect(Cards.perkScale("BlackSite")).toBe(0.75)
 		expect(Cards.perkScale("Prototype")).toBe(1)
 	end)
 
-	it("gives every card a perk except Overclock", function()
+	it("gives Phase Dash and Aegis Shell a perk, and nothing else", function()
 		for _, id in Cards.ids do
-			if id ~= "overclock" then
-				expect(type(Cards.byId[id].perk)).toBe("string")
+			local perk = Cards.byId[id].perk
+			if id == "phase_dash" or id == "aegis_shell" then
+				expect(type(perk)).toBe("string")
+			else
+				expect(perk).toBeNil()
 			end
 		end
-		expect(Cards.byId.overclock.perk).toBeNil()
 	end)
 
 	it("recognises only real card ids", function()

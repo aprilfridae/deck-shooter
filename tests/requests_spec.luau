@@ -7,7 +7,7 @@ local function slots()
 	return {
 		{ cardId = "phase_dash", tier = "Field" },
 		{ cardId = "overclock", tier = "BlackSite" },
-		{ cardId = "recon_pulse", tier = "Prototype" },
+		{ cardId = "siphon", tier = "Prototype" },
 	}
 end
 
@@ -22,12 +22,12 @@ end)
 describe("Requests.parseFuse", function()
 	it("accepts a valid request", function()
 		local r = Requests.parseFuse({
-			cardId = "recon_pulse",
+			cardId = "siphon",
 			tier = "Field",
 			useCatalyst = true,
 			includeVariants = true,
 		})
-		expect(r).toEqual({ cardId = "recon_pulse", tier = "Field", useCatalyst = true, includeVariants = true })
+		expect(r).toEqual({ cardId = "siphon", tier = "Field", useCatalyst = true, includeVariants = true })
 	end)
 
 	-- Review Focus 4
@@ -38,8 +38,8 @@ describe("Requests.parseFuse", function()
 			true,
 			{},
 			{ cardId = {} },
-			{ cardId = "recon_pulse", tier = 0 / 0 },
-			{ cardId = "recon_pulse", tier = {} },
+			{ cardId = "siphon", tier = 0 / 0 },
+			{ cardId = "siphon", tier = {} },
 			{ cardId = 0 / 0, tier = "Field" },
 			{ cardId = string.rep("a", 100000), tier = "Field" },
 		}
@@ -50,14 +50,14 @@ describe("Requests.parseFuse", function()
 	end)
 
 	it("treats non-boolean flags as false", function()
-		local r = Requests.parseFuse({ cardId = "recon_pulse", tier = "Field", useCatalyst = "yes", includeVariants = 1 })
+		local r = Requests.parseFuse({ cardId = "siphon", tier = "Field", useCatalyst = "yes", includeVariants = 1 })
 		expect(r.useCatalyst).toBe(false)
 		expect(r.includeVariants).toBe(false)
 	end)
 
 	it("drops extra fields", function()
-		local r = Requests.parseFuse({ cardId = "recon_pulse", tier = "Field", credits = 999999 })
-		expect(r).toEqual({ cardId = "recon_pulse", tier = "Field", useCatalyst = false, includeVariants = false })
+		local r = Requests.parseFuse({ cardId = "siphon", tier = "Field", credits = 999999 })
+		expect(r).toEqual({ cardId = "siphon", tier = "Field", useCatalyst = false, includeVariants = false })
 	end)
 end)
 
@@ -181,6 +181,19 @@ describe("Requests for the auction house", function()
 			expect(Requests.parseBid({ id = "abc", amount = value })).toBe(nil)
 		end
 		expect(Requests.parseBid(nil)).toBe(nil)
+	end)
+
+	it("parses a stack and refuses a card, tier or variant that doesn't exist", function()
+		local good = { cardId = "aegis_shell", tier = "Prototype", variant = "ZeroDay" }
+		expect(Requests.parseStack(good)).toEqual(good)
+		for _, change in { { cardId = "no_such_card" }, { tier = "Mythic" }, { variant = "Shiny" }, { cardId = 5 } } :: { any } do
+			local bad = table.clone(good)
+			for field, value in change do
+				(bad :: any)[field] = value
+			end
+			expect(Requests.parseStack(bad)).toBe(nil)
+		end
+		expect(Requests.parseStack("junk")).toBe(nil)
 	end)
 
 	it("parses an auction id", function()

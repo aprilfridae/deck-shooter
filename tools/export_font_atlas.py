@@ -17,13 +17,13 @@ DATA_PATH = os.path.join(ROOT, "src", "shared", "Guns", "Hud", "GlyphData.luau")
 
 SHEET = 1024
 PADDING = 4
-LABEL_CHARACTERS = string.ascii_uppercase + string.digits + "/:.->+_"
+LABEL_CHARACTERS = string.ascii_uppercase + string.digits + "/:.->+_,'()?"  # , ' ( ) ? for prices and plain sentences in the market
 
 # Style: font file pattern, characters, size the glyphs are drawn at.
 STYLES = {
     "Number": ("KHInterference*-Bold.otf", string.digits + "/+", 138),
     "NumberThin": ("KHInterference*-Light.otf", string.digits + "+", 138),
-    "Title": ("KHInterference*-Bold.otf", string.ascii_uppercase + string.digits + "/_", 180),
+    "Title": ("KHInterference*-Bold.otf", string.ascii_uppercase + string.digits + "/_.", 180),  # . for the Outpost's Credits
     # Lowercase too: the card face prints its rarity in lowercase.
     "Label": ("PPFraktionMono-Regular.otf", LABEL_CHARACTERS + string.ascii_lowercase, 36),
     "LabelBold": ("PPFraktionMono-Bold.otf", LABEL_CHARACTERS, 36),

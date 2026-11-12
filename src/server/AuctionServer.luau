@@ -13,7 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local Auction = require(CardCore.Auction)
-local Cards = require(CardCore.Cards)
+local Market = require(CardCore.Market)
 local Inventory = require(CardCore.Inventory)
 local Requests = require(CardCore.Requests)
 local AuctionStore = require(script.Parent.AuctionStore)
@@ -23,7 +23,11 @@ local LOAD_SPACING = 0.5 -- seconds between a loading save's checks
 local ENDED_STEP = 5 -- seconds between looks for auctions whose time is up
 local ENDED_RETRY = 30 -- seconds before an ended auction is checked again
 local BACKSTOP = 300 -- seconds between checks of everything, in case an announcement was missed
-local BROWSE_FRESH = 10 -- seconds a card's window is reused for
+local BROWSE_FRESH = 10 -- seconds the browsing list is reused for
+local INFO_GAP = 1 -- seconds between one player's looks at an auction
+local NEWS_KEPT = 20
+local SERIALS_SHOWN = 50 -- the most serials of one stack offered when selling
+local NEWS = { Refunded = "Outbid", Collected = "Won", Paid = "Sold", Returned = "Unsold" }
 local BID_GAP = 1 -- seconds between one player's bids, so a client can't spend the server's data store budget
 local CHECKS_PER_STEP = 10 -- the most ended auctions looked at in one step, for the same reason
 local SWEEP_SPACING = 0.5 -- seconds between a sweep's checks
@@ -37,7 +41,13 @@ local tried: { [Player]: { [string]: number } } = {}
 -- Counts each request on an auction. A check that read the record before a request began must not act on it after.
 local turns: { [Player]: { [string]: number } } = {}
 local lastBid: { [Player]: number } = {}
-local windows: { [string]: { at: number, auctions: { any } } } = {}
+local window: { at: number, auctions: { any }, read: boolean? }? = nil
+local lastInfo: { [Player]: number } = {}
+-- News of what settled, kept for a player whose client hasn't asked for it yet.
+local waitingNews: { [Player]: { any } } = {}
+local newsEvent = Instance.new("RemoteEvent")
+newsEvent.Name = "MarketNews"
+newsEvent.Parent = PlayerCards.remotes
 
 local AuctionServer = {}
 
@@ -67,6 +77,36 @@ local function whileBusy(player: Player, id: string, request: () -> any): any
 		return { ok = false, code = "Failed" }
 	end
 	return answer
+end
+
+-- Changes to the browsing list also drop this server's copy of it, so its own players see them at once.
+local function show(record: any)
+	AuctionStore.show(record)
+	window = nil
+end
+
+local function hide(record: any)
+	AuctionStore.hide(record)
+	window = nil
+end
+
+-- Tells a player what just settled for them, so the screen can say so.
+local function tell(player: Player, did: string, card: any, record: any?)
+	local kind = NEWS[did]
+	-- A card coming home because its owner cancelled is no news to them.
+	if not kind or not card or (did == "Returned" and record and record.cancelled) then
+		return
+	end
+	local item = { kind = kind, cardId = card.cardId, tier = card.tier, variant = card.variant, serial = card.serial, price = record and record.bid }
+	local kept = waitingNews[player]
+	if kept then
+		table.insert(kept, item)
+		if #kept > NEWS_KEPT then
+			table.remove(kept, 1)
+		end
+	else
+		newsEvent:FireClient(player, item)
+	end
 end
 
 -- Marks one side done on the record, once that side's save is written, and deletes the record when both are.
@@ -110,6 +150,8 @@ function AuctionServer.check(player: Player, id: string)
 			return
 		end
 
+		-- What card this is, read before settling removes the save's entry.
+		local card = record or market.listed[id]
 		local did = Auction.settle(data, player.UserId, id, record, now())
 		if did == "Close" then
 			-- Time is up. Close the record to bids through the store, then settle from what the store holds: a
@@ -122,26 +164,28 @@ function AuctionServer.check(player: Player, id: string)
 				return
 			end
 			record = stored
+			card = record or card
 			did = Auction.settle(data, player.UserId, id, record, now())
 			if did == "Close" then
 				return
 			end
 			market = data.market
 		end
+		tell(player, did, card, record)
 		if did == "Publish" then
 			-- TAKES: the listing is already in the save from the request that made it, or this is a fresh load.
 			local listed = market.listed[id]
 			local made = Auction.record(id, player.UserId, player.Name, listed)
 			if PlayerCards.saveAndWait(player) and AuctionStore.create(made) then
 				listed.live = true
-				AuctionStore.show(made)
+				show(made)
 				AuctionStore.announce(id)
 			end
 		elseif did == "Paid" or did == "Returned" then
 			-- GIVES: save first, then mark.
 			PlayerCards.changed(player)
 			if record then
-				AuctionStore.hide(record)
+				hide(record)
 				if PlayerCards.saveAndWait(player) then
 					markDone(id, "seller")
 				end
@@ -204,7 +248,7 @@ function AuctionServer.list(player: Player, data: any, raw: any): any
 		-- If this fails the listing stays in the save, not yet live, and a later check publishes it.
 		if AuctionStore.create(record) then
 			listed.live = true
-			AuctionStore.show(record)
+			show(record)
 			AuctionStore.announce(id)
 		end
 		return { ok = true, id = id }
@@ -262,7 +306,7 @@ function AuctionServer.bid(player: Player, data: any, raw: any): any
 			return { ok = false, code = "TooLow", min = if stored then Auction.minBid(stored) else nil }
 		end
 		data.market.bids[id].endsAt = stored.endsAt
-		AuctionStore.show(stored)
+		show(stored)
 		AuctionStore.announce(id)
 		return { ok = true, price = price, ended = Auction.ended(stored, now()) }
 	end)
@@ -285,26 +329,74 @@ function AuctionServer.cancel(player: Player, data: any, raw: any): any
 	elseif not stored or stored.seller ~= player.UserId or not stored.cancelled then
 		return { ok = false, code = "CantCancel" }
 	end
-	AuctionStore.hide(stored)
+	hide(stored)
 	AuctionStore.announce(id)
 	AuctionServer.check(player, id)
 	return { ok = true }
 end
 
-local function browse(_player: Player, _data: any, raw: any): any
-	if not Cards.isValid(raw) then
-		return { ok = false, code = "BadRequest" }
-	end
-	local window = windows[raw]
-	if not window or os.clock() - window.at >= BROWSE_FRESH then
-		local found = AuctionStore.browse(raw)
-		if not found then
+-- Everyone on this server shares one copy of the list, read at most every BROWSE_FRESH seconds.
+local function browse(): any
+	local held = window
+	if not held or os.clock() - held.at >= BROWSE_FRESH then
+		-- Stamped before the read, so requests that arrive while it is out share it instead of each reading.
+		local reading = { at = os.clock(), auctions = if held then held.auctions else {}, read = held ~= nil }
+		window = reading
+		local found = AuctionStore.browse() -- yields
+		if found then
+			reading.auctions, reading.read = found, true
+		elseif not reading.read then
+			window = nil
 			return { ok = false, code = "Unavailable" }
 		end
-		window = { at = os.clock(), auctions = found }
-		windows[raw] = window
+		held = reading
 	end
-	return { ok = true, auctions = window.auctions, now = now() }
+	return { ok = true, auctions = held.auctions, now = now() }
+end
+
+-- One auction as it really stands, for the bid box: the list can be a few seconds old.
+local function info(player: Player, _data: any, raw: any): any
+	local id = Requests.parseAuctionId(raw)
+	if not id then
+		return { ok = false, code = "BadRequest" }
+	elseif os.clock() - (lastInfo[player] or -math.huge) < INFO_GAP then
+		return { ok = false, code = "Busy" }
+	end
+	lastInfo[player] = os.clock()
+	local ready, record = AuctionStore.read(id)
+	if not ready then
+		return { ok = false, code = "Unavailable" }
+	elseif not record then
+		return { ok = false, code = "Gone" }
+	end
+	return {
+		ok = true,
+		auction = Market.pack(record),
+		seller = record.seller,
+		sellerName = record.sellerName,
+		min = Auction.minBid(record),
+		closed = Auction.ended(record, now()),
+		now = now(),
+	}
+end
+
+-- The serials a player holds of one card, lowest first, to choose which copy to sell.
+local function serials(_player: Player, data: any, raw: any): any
+	local req = Requests.parseStack(raw)
+	if not req then
+		return { ok = false, code = "BadRequest" }
+	end
+	local held = data.serials[Inventory.key(req.cardId, req.tier, req.variant)]
+	local found = {}
+	for index = 1, if held then #held.runs else 0, 2 do
+		for serial = held.runs[index], held.runs[index + 1] do
+			if #found >= SERIALS_SHOWN then
+				return { ok = true, serials = found }
+			end
+			table.insert(found, serial)
+		end
+	end
+	return { ok = true, serials = found }
 end
 
 local function checkAll(player: Player, spacing: number)
@@ -361,6 +453,14 @@ function AuctionServer.start(remote: (string, (Player, any, any) -> any) -> ())
 	remote("PlaceBid", AuctionServer.bid)
 	remote("CancelListing", AuctionServer.cancel)
 	remote("BrowseAuctions", browse)
+	remote("AuctionInfo", info)
+	remote("MySerials", serials)
+	-- The client asks for this once it is listening; from then on news is sent as it happens.
+	remote("MarketNewsWaiting", function(player)
+		local kept = waitingNews[player] or {}
+		waitingNews[player] = nil
+		return { ok = true, news = kept }
+	end)
 	remote("MyAuctions", function(_, data)
 		return { ok = true, listed = data.market.listed, bids = data.market.bids, now = now() }
 	end)
@@ -375,10 +475,12 @@ function AuctionServer.start(remote: (string, (Player, any, any) -> any) -> ())
 		end
 	end)
 	PlayerCards.profileLoaded:Connect(function(player: Player)
+		waitingNews[player] = {}
 		task.spawn(checkAll, player, LOAD_SPACING)
 	end)
 	Players.PlayerRemoving:Connect(function(player: Player)
 		busy[player], checking[player], tried[player], turns[player], lastBid[player] = nil, nil, nil, nil, nil
+		lastInfo[player], waitingNews[player] = nil, nil
 	end)
 	task.spawn(watch)
 end

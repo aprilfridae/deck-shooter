@@ -57,7 +57,7 @@ describe("Income.ratePerSecond", function()
 		for _, id in Cards.sets.set_01 do
 			Inventory.add(data, id, "Field", "Base", 1)
 		end
-		expect(Income.ratePerSecond(data)).toBeCloseTo(0.44)
+		expect(Income.ratePerSecond(data)).toBeCloseTo(0.66) -- 6 cards at .1, plus 10%
 	end)
 
 	it("gives no set bonus for a partial set", function()

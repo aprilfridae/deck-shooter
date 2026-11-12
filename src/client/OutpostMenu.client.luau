@@ -10,6 +10,7 @@ local Packs = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("P
 local PullMotion = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("PullMotion"))
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local GunSounds = require(Guns:WaitForChild("GunSounds"))
+local HudShapes = require(Guns:WaitForChild("Hud"):WaitForChild("HudShapes"))
 local MenuState = require(Guns:WaitForChild("MenuState"))
 local Palette = require(Guns:WaitForChild("Palette"))
 local Zones = require(Guns:WaitForChild("Zones"))
@@ -20,6 +21,7 @@ local MenuCamera = require(script.Parent.MenuCamera)
 local LoadoutPanel = require(script.Parent.LoadoutPanel)
 local MenuPanel = require(script.Parent.MenuPanel)
 local NavButton = require(script.Parent.NavButton)
+local MarketPanel = require(script.Parent.MarketPanel)
 local PacksPanel = require(script.Parent.PacksPanel)
 local PlayerClick = require(script.Parent.PlayerClick)
 local PlayPanel = require(script.Parent.PlayPanel)
@@ -27,22 +29,27 @@ local ProfilePanel = require(script.Parent.ProfilePanel)
 local PullReveal = require(script.Parent.PullReveal)
 local SettingsPanel = require(script.Parent.SettingsPanel)
 local SoundGroups = require(script.Parent.SoundGroups)
+local TypeLabel = require(script.Parent.TypeLabel)
 
 -- Shares of the unit.
 -- Real pixels from the screen's left and bottom edges: the same margin as the health number and the radio strip
 -- (MARGIN in Hud.client.luau), so the corners line up between the Outpost and a fight.
 local HUD_MARGIN = 32
-local NAV_WIDTH = 0.124
-local NAV_ROW = 0.032
-local NAV_LEFT_PADDING = 0.006
-local NAV_PADDING = 0.0105
-local NAV_TEXT = 0.014
-local NAV_TRACKING = 0.0022
-local NAV_OUTLINE = 2 -- pixels
+-- The nav is a stack of small slanted plates under a striped header (docs/specs/hud-redesign.md).
+local NAV_WIDTH = 0.126 -- River had the stack scaled up a bit from 0.109 (2026-11-11); the rest grew with it
+local NAV_ROW = 0.0255
+local NAV_GAP = 0.003
+local NAV_LEFT_PADDING = 0.0195 -- past the plate's slanted end
+local NAV_PADDING = 0.0195
+local NAV_TEXT = 0.011
+local NAV_TRACKING = 0.002
+local NAV_HEAD = NAV_WIDTH / HudShapes.STRIPE_RATIO -- the header's height
+local NAV_HEAD_TEXT = 0.008
+local NAV_HEAD_LEFT = 0.34 -- of the header's width: where its word starts, past the slashes
 local HOVER_PITCH = 1.6
 local HOVER_VOLUME = 0.25
 
-local BUTTONS = { "PLAY", "PACKS", "LOADOUT", "PROFILE", "SETTINGS" }
+local BUTTONS = { "PLAY", "PACKS", "MARKET", "LOADOUT", "PROFILE", "SETTINGS" }
 
 local player = Players.LocalPlayer
 
@@ -94,6 +101,7 @@ end
 
 local function fillPage(name: string)
 	panel:clear()
+	MarketPanel.stop()
 	-- Each page gets its own frame, so a reply that arrives after a swap can tell it's out of date.
 	local page = Instance.new("Frame")
 	page.BackgroundTransparency = 1
@@ -105,6 +113,8 @@ local function fillPage(name: string)
 		PlayPanel.fill(page)
 	elseif name == "PACKS" then
 		PacksPanel.fill(page)
+	elseif name == "MARKET" then
+		MarketPanel.fill(page)
 	elseif name == "LOADOUT" then
 		LoadoutPanel.fill(page)
 	else
@@ -122,6 +132,7 @@ end
 local function choose(name: string)
 	clickSound:Play()
 	SettingsPanel.stop()
+	MarketPanel.stop()
 	-- The PROFILE button leads back to the player's own page from someone else's.
 	if name == "PROFILE" and openPage == name and profileUser ~= player.UserId then
 		profileUser = player.UserId
@@ -145,32 +156,43 @@ local function buildNav()
 	end
 	rows = {}
 	local unit = MenuPanel.unit()
+	local stack = (NAV_ROW + NAV_GAP) * #BUTTONS - NAV_GAP
 	local block = Instance.new("Frame")
-	block.BorderSizePixel = 0
-	block.BackgroundColor3 = Palette.Bone
+	block.BackgroundTransparency = 1
 	block.AnchorPoint = Vector2.new(0, 1)
 	block.Position = UDim2.new(0, HUD_MARGIN, 1, -HUD_MARGIN)
-	block.Size = UDim2.fromOffset(NAV_WIDTH * unit, NAV_ROW * unit * #BUTTONS)
+	block.Size = UDim2.fromOffset(NAV_WIDTH * unit, (NAV_HEAD + NAV_GAP + stack) * unit)
 	block.Parent = if faded > 0 then fader else gui
-	local outline = Instance.new("UIStroke")
-	outline.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	outline.Color = Palette.Bone
-	outline.Thickness = NAV_OUTLINE
-	outline.Parent = block
+	local head = Instance.new("ImageLabel")
+	head.BackgroundTransparency = 1
+	head.Image = HudShapes.Stripe
+	head.ImageColor3 = Palette.Bone
+	head.Size = UDim2.fromOffset(NAV_WIDTH * unit, NAV_HEAD * unit)
+	head.Parent = block
+	TypeLabel.new(head, {
+		style = "LabelBold",
+		size = NAV_HEAD_TEXT * unit,
+		tracking = NAV_TRACKING * unit,
+		color = Palette.DeepNavy,
+		shadow = false,
+		position = UDim2.fromOffset(NAV_WIDTH * NAV_HEAD_LEFT * unit, (NAV_HEAD + NAV_HEAD_TEXT) / 2 * unit),
+	}):set("OUTPOST")
+	-- The buttons slide in from this frame's left edge.
 	local clip = Instance.new("Frame")
 	clip.BackgroundTransparency = 1
 	clip.ClipsDescendants = true
-	clip.Size = UDim2.fromScale(1, 1)
+	clip.Position = UDim2.fromOffset(0, (NAV_HEAD + NAV_GAP) * unit)
+	clip.Size = UDim2.fromOffset(NAV_WIDTH * unit, stack * unit)
 	clip.Parent = block
 	for index, name in BUTTONS do
 		rows[name] = NavButton.new({
 			parent = clip,
-			glowParent = block,
 			name = name,
 			index = index,
 			unit = unit,
 			width = NAV_WIDTH * unit,
 			height = NAV_ROW * unit,
+			gap = NAV_GAP * unit,
 			left = NAV_LEFT_PADDING * unit,
 			padding = NAV_PADDING * unit,
 			textSize = NAV_TEXT * unit,
@@ -233,6 +255,7 @@ RunService.RenderStepped:Connect(function(dt: number)
 		end
 	else
 		SettingsPanel.stop()
+		MarketPanel.stop()
 		CardInspect.close()
 		PullReveal.close()
 		openPage = nil
@@ -261,13 +284,14 @@ CardData.packEvent:Connect(function(event: any)
 	end
 end)
 
--- The Market stall opens the packs until the player market exists.
+-- The Market stall opens the market.
 ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt)
 	if prompt.Name == "MarketPrompt" and gui.Enabled then
 		clickSound:Play()
 		SettingsPanel.stop()
+		MarketPanel.stop()
 		profileUser = player.UserId
-		show("PACKS")
+		show("MARKET")
 	end
 end)
 
@@ -276,6 +300,7 @@ PlayerClick.listen(function()
 end, function(clicked: Player)
 	clickSound:Play()
 	SettingsPanel.stop()
+	MarketPanel.stop()
 	profileUser = clicked.UserId
 	show("PROFILE")
 end)

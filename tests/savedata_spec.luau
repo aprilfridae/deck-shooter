@@ -205,7 +205,7 @@ describe("SaveData.load", function()
 			{
 				{ cardId = "phase_dash", tier = "Field" },
 				{ cardId = "overclock", tier = "Field" },
-				{ cardId = "recon_pulse", tier = "Field" },
+				{ cardId = "siphon", tier = "Field" },
 				{ cardId = "aegis_shell", tier = "Field" },
 			},
 		}

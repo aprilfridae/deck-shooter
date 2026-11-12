@@ -5,6 +5,7 @@ local Config = require("./Config")
 local Deck = require("./Deck")
 local Packs = require("./Packs")
 local Tier = require("./Tier")
+local Variant = require("./Variant")
 
 local Requests = {}
 
@@ -42,6 +43,14 @@ function Requests.parseBid(raw: any): any
 		return nil
 	end
 	return { id = raw.id, amount = raw.amount }
+end
+
+-- One stack: a card at a tier and variant.
+function Requests.parseStack(raw: any): any
+	if type(raw) ~= "table" or not Cards.isValid(raw.cardId) or not Tier.isValid(raw.tier) or not Variant.isValid(raw.variant) then
+		return nil
+	end
+	return { cardId = raw.cardId, tier = raw.tier, variant = raw.variant }
 end
 
 function Requests.parseAuctionId(raw: any): string?

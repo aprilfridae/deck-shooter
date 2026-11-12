@@ -35,7 +35,14 @@ local Config = {
 	PackVariantOdds = { Prototype = 0.05 }, -- the Zero-Day variant, or else VariantOdds.ZeroDay
 
 	-- Perks reach full strength at Prototype.
-	PerkPower = { Field = 0.8, BlackSite = 0.9, Prototype = 1 },
+	PerkPower = { Field = 0.5, BlackSite = 0.75, Prototype = 1 },
+	-- Aimed cards (Switchback, Siphon, Kickplate).
+	AimWidth = 3, -- studs off the line that still count as a hit
+	AimMissCooldown = 4, -- seconds a card that hit nobody takes to come back
+	SiphonRange = 120,
+	KickplateReach = 14, -- how far away the ground you aim at can be
+	KickplateGraceSeconds = 3, -- the movement guard looks away for a launch
+	SwitchbackGraceSeconds = 1, -- and for a swap
 	DashSeconds = 0.14, -- a dash launches at its distance over this, in studs a second
 	DashCamoSeconds = 1.5,
 	CamoTransparency = 0.9,
@@ -45,7 +52,7 @@ local Config = {
 	PushSpeed = 60, -- under the guard's 63 speed limit
 	PushRise = 35,
 
-	StarterDeck = { "phase_dash", "overclock", "recon_pulse" },
+	StarterDeck = { "phase_dash", "overclock", "siphon" },
 
 	-- Anything above these in a save is corrupt.
 	MaxStackCount = 1000000,

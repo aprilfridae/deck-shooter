@@ -32,12 +32,13 @@ function Ability.spend(slot: Slot, now: number)
 	slot.readyAt = now + Cards.cooldown(slot.cardId, slot.tier)
 end
 
-function Ability.camoSeconds(tier: string): number
-	return Config.DashCamoSeconds * Cards.perkScale(tier)
+-- A card that hit nobody comes back sooner than one that worked.
+function Ability.spendMiss(slot: Slot, now: number)
+	slot.readyAt = now + math.min(Config.AimMissCooldown, Cards.cooldown(slot.cardId, slot.tier))
 end
 
-function Ability.teamRevealSeconds(tier: string): number
-	return Cards.stat("recon_pulse", tier, "revealTime") * Cards.perkScale(tier)
+function Ability.camoSeconds(tier: string): number
+	return Config.DashCamoSeconds * Cards.perkScale(tier)
 end
 
 function Ability.pushSpeed(tier: string): number

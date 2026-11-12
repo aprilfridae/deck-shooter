@@ -30,6 +30,24 @@ local BASE = {
 		Prototype = asset("100296531126730"),
 		ZeroDay = asset("134403433136594"),
 	},
+	switchback = {
+		Field = asset("109465617456919"),
+		Redline = asset("70879687126652"),
+		Prototype = asset("105168071182882"),
+		ZeroDay = asset("82832317490839"),
+	},
+	kickplate = {
+		Field = asset("74728717931862"),
+		Redline = asset("88099656418822"),
+		Prototype = asset("81819377730387"),
+		ZeroDay = asset("108210190219408"),
+	},
+	siphon = {
+		Field = asset("129309485662686"),
+		Redline = asset("78275152786620"),
+		Prototype = asset("127327035533667"),
+		ZeroDay = asset("132424218329350"),
+	},
 }
 
 -- The acronym, turned to read up the card.
@@ -38,6 +56,9 @@ local MONOGRAM = {
 	overclock = asset("135426323179588"),
 	recon_pulse = asset("102960075522698"),
 	aegis_shell = asset("109767241534070"),
+	switchback = asset("106456967351723"),
+	kickplate = asset("91932903945243"),
+	siphon = asset("110001473432004"),
 }
 
 -- The name as printed: capitals, run together, medium weight.
@@ -46,6 +67,9 @@ local NAME = {
 	overclock = asset("87728281454403"),
 	recon_pulse = asset("73592612928824"),
 	aegis_shell = asset("89813362094565"),
+	switchback = asset("92848347395955"),
+	kickplate = asset("91657764191287"),
+	siphon = asset("83911214140721"),
 }
 
 -- The parts every card shares.

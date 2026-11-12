@@ -1,6 +1,6 @@
 -- The parts of the auction house every server shares (docs/specs/auction-house.md):
 --   records        one per auction in a data store, changed only through UpdateAsync so two bids can't both win
---   the window     a sorted map per card of short summaries, for browsing. It is not the truth: an auction that
+--   the window     one sorted map of small entries, for browsing. It is not the truth: an auction that
 --                  drops out of it still ends and settles correctly
 --   announcements  a message to every server when an auction changes, so the players in it are checked at once
 -- Every call yields, and answers false or nil on failure after a warning. None of them throws.
@@ -8,11 +8,13 @@ local DataStoreService = game:GetService("DataStoreService")
 local MemoryStoreService = game:GetService("MemoryStoreService")
 local MessagingService = game:GetService("MessagingService")
 
+local Market = require(game:GetService("ReplicatedStorage"):WaitForChild("CardCore").Market)
 local ProfileStore = require(script.Parent.vendor.ProfileStore)
 
 local STORE = "Auctions_v1"
 local TOPIC = "Auctions"
-local WINDOW_PREFIX = "Auctions_"
+local WINDOW = "Auctions_all" -- one list for every card: the market shows them all together (River, 2026-11-11)
+local WINDOW_CEILING = 600 -- the most auctions browsing shows
 local WINDOW_LINGER = 300 -- seconds a summary outlives its auction's end
 local WINDOW_LEAST = 60 -- the shortest a summary may be kept
 local WINDOW_PAGE = 200 -- the most one read returns
@@ -26,7 +28,7 @@ local AuctionStore = {
 -- Without data store access (Studio with API access off) saves live in memory, so auctions do too. With access,
 -- saves are real and so is everything here.
 local memoryRecords: { [string]: any } = {}
-local memoryWindows: { [string]: { [string]: any } } = {}
+local memoryWindow: { [string]: any } = {}
 local function inMemory(): boolean
 	local state = ProfileStore.DataStoreState
 	return state == "NoAccess" or state == "NoInternet"
@@ -97,62 +99,58 @@ function AuctionStore.remove(id: string): boolean
 	end)
 end
 
-local function summary(record: any): any
-	return {
-		id = record.id,
-		cardId = record.cardId,
-		tier = record.tier,
-		variant = record.variant,
-		serial = record.serial,
-		price = record.bid or record.startBid,
-		bids = record.bid ~= nil,
-		buyNow = record.buyNow,
-		endsAt = record.endsAt,
-		sellerName = record.sellerName,
-	}
+local function window(): MemoryStoreSortedMap
+	return MemoryStoreService:GetSortedMap(WINDOW)
 end
 
--- Puts an auction in its card's window, or refreshes it after a bid.
+-- Puts an auction in the window, or refreshes it after a bid.
 function AuctionStore.show(record: any)
 	if inMemory() then
-		memoryWindows[record.cardId] = memoryWindows[record.cardId] or {}
-		memoryWindows[record.cardId][record.id] = summary(record)
+		memoryWindow[record.id] = Market.pack(record)
 		return
 	end
 	local keep = math.max(WINDOW_LEAST, record.endsAt - DateTime.now().UnixTimestamp + WINDOW_LINGER)
 	attempt("show", function()
-		MemoryStoreService:GetSortedMap(WINDOW_PREFIX .. record.cardId):SetAsync(record.id, summary(record), keep, record.endsAt)
+		window():SetAsync(record.id, Market.pack(record), keep, record.endsAt)
 	end)
 end
 
 function AuctionStore.hide(record: any)
 	if inMemory() then
-		if memoryWindows[record.cardId] then
-			memoryWindows[record.cardId][record.id] = nil
-		end
+		memoryWindow[record.id] = nil
 		return
 	end
 	attempt("hide", function()
-		MemoryStoreService:GetSortedMap(WINDOW_PREFIX .. record.cardId):RemoveAsync(record.id)
+		window():RemoveAsync(record.id)
 	end)
 end
 
--- A card's auctions, soonest to end first, or nil if the window couldn't be read.
-function AuctionStore.browse(cardId: string): { any }?
+-- Every auction's entry, soonest to end first, up to the ceiling. Nil if the window couldn't be read.
+function AuctionStore.browse(): { any }?
 	local found = {}
 	if inMemory() then
-		for _, entry in memoryWindows[cardId] or {} do
+		for _, entry in memoryWindow do
 			table.insert(found, entry)
 		end
 		table.sort(found, function(a, b)
-			return a.endsAt < b.endsAt
+			return a.e < b.e
 		end)
 		return found
 	end
 	local ok = attempt("browse", function()
-		local page = MemoryStoreService:GetSortedMap(WINDOW_PREFIX .. cardId):GetRangeAsync(Enum.SortDirection.Ascending, WINDOW_PAGE)
-		for _, item in page do
-			table.insert(found, item.value)
+		local map = window()
+		local after = nil
+		while #found < WINDOW_CEILING do
+			local page = map:GetRangeAsync(Enum.SortDirection.Ascending, WINDOW_PAGE, after)
+			for _, item in page do
+				table.insert(found, item.value)
+			end
+			if #page < WINDOW_PAGE then
+				break
+			end
+			-- The next page starts after this one's last entry.
+			local last = page[#page]
+			after = { key = last.key, sortKey = last.sortKey }
 		end
 	end)
 	return if ok then found else nil

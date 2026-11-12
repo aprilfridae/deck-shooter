@@ -219,7 +219,7 @@ describe("The pile", function()
 		for _ in Packs.openAll(data, math.random).cards do
 			keys += 1
 		end
-		expect(keys <= 48).toBe(true) -- 4 cards, 3 tiers, 4 variants
+		expect(keys <= 72).toBe(true) -- 6 cards, 3 tiers, 4 variants
 	end)
 end)
 

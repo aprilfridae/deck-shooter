@@ -1,5 +1,6 @@
 -- The ability card in the player's hand. The cards key pulls one out, right click turns to the next, and clicking
--- uses it.
+-- uses it. So does pressing the held card's key again. Only a weapon key or another card's key takes a card out of
+-- the hand unused.
 local CardHand = {}
 
 function CardHand.new(): { [string]: any }
@@ -7,30 +8,44 @@ function CardHand.new(): { [string]: any }
 	return { slot = nil, waitForRelease = false, used = 0, turns = 0 }
 end
 
--- A key press: pulls out a ready card, swaps to it, or puts away the one already held.
-function CardHand.press(hand: any, slot: number, ready: boolean)
-	if hand.slot == slot then
+-- A click: uses the held card, skipping whatever is left of the animation. Returns the slot used.
+function CardHand.click(hand: any): number?
+	local slot = hand.slot
+	if slot then
 		hand.slot = nil
+		hand.waitForRelease = true
+		hand.used += 1
+	end
+	return slot
+end
+
+-- A key press: pulls out a ready card or swaps to it. The key of the card already held uses it, the same as a
+-- click (River, 2026-11-12: "if i press a number twice it uses the card"). Returns the slot used, if one was.
+function CardHand.press(hand: any, slot: number, ready: boolean): number?
+	if hand.slot == slot then
+		return CardHand.click(hand)
 	elseif ready then
 		if hand.slot then
 			hand.turns += 1
 		end
 		hand.slot = slot
 	end
+	return nil
 end
 
--- The cards key: pulls out the first ready card, or puts away the one held. ready is whether each slot's card is.
-function CardHand.open(hand: any, ready: { boolean })
+-- The cards key: pulls out the first ready card. With a card already out it uses that card. ready is whether each
+-- slot's card is. Returns the slot used, if one was.
+function CardHand.open(hand: any, ready: { boolean }): number?
 	if hand.slot then
-		hand.slot = nil
-		return
+		return CardHand.click(hand)
 	end
 	for slot, isReady in ready do
 		if isReady then
 			hand.slot = slot
-			return
+			break
 		end
 	end
+	return nil
 end
 
 -- Turns to the next ready card after the held one, round and round.
@@ -47,17 +62,6 @@ function CardHand.cycle(hand: any, ready: { boolean })
 			return
 		end
 	end
-end
-
--- A click: uses the held card, skipping whatever is left of the animation. Returns the slot used.
-function CardHand.click(hand: any): number?
-	local slot = hand.slot
-	if slot then
-		hand.slot = nil
-		hand.waitForRelease = true
-		hand.used += 1
-	end
-	return slot
 end
 
 function CardHand.putAway(hand: any)

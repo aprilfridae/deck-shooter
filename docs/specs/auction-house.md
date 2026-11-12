@@ -67,7 +67,7 @@ A check compares one save entry with its shared record and does whichever of tho
 ## The shared parts
 
 - **Records:** DataStore `Auctions_v1`, one key per auction. A record is deleted once both sides have settled.
-- **Browsing:** a MemoryStore sorted map per card, holding a short summary of each live auction (card, tier, variant, serial, current price, Buy Now, end time, seller's name), sorted by end time. It is only a window for browsing. If it loses an entry the auction still ends and settles correctly; it just can't be seen.
+- **Browsing:** (changed by `market-screen.md`: now one map for every card, `Auctions_all`, with a smaller entry and no seller name) a MemoryStore sorted map per card, holding a short summary of each live auction (card, tier, variant, serial, current price, Buy Now, end time, seller's name), sorted by end time. It is only a window for browsing. If it loses an entry the auction still ends and settles correctly; it just can't be seen.
 - **Announcements:** a MessagingService topic tells every server when an auction gets a bid, ends or is cancelled, so the players involved are checked at once instead of at the 5-minute backstop.
 - **Time** is the server's UTC clock.
 - **In Studio without API access** all three are kept in memory, so the rules can be tried with one player.

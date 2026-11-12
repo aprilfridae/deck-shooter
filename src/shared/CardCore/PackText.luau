@@ -25,8 +25,8 @@ local function threeDigits(value: number): string
 	return string.format("%g", math.floor(value * shift + 1e-9) / shift)
 end
 
-local function short(amount: number): string
-	if amount < PLAIN_BELOW then
+local function short(amount: number, plainBelow: number?): string
+	if amount < (plainBelow or PLAIN_BELOW) then
 		return string.format("%g", amount)
 	end
 	for _, unit in UNITS do
@@ -39,6 +39,11 @@ end
 
 function PackText.income(rate: number): string
 	return `+{short(math.round(rate * 10) / 10)} CR/S`
+end
+
+-- The balance in the Outpost's corner: 1K, 1M, 1B, 1T from a thousand up (River, 2026-11-11), rounded down.
+function PackText.balance(amount: number): string
+	return short(math.floor(amount), 1000)
 end
 
 function PackText.credits(amount: number): string

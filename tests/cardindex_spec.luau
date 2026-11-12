@@ -8,9 +8,9 @@ local describe, it, expect = harness.describe, harness.it, harness.expect
 describe("CardIndex", function()
 	it("lists every card at every tier", function()
 		local index = CardIndex.build({})
-		expect(#index.cards).toBe(4)
+		expect(#index.cards).toBe(6)
 		expect(#index.cards[1].tiers).toBe(3)
-		expect(index.total).toBe(12)
+		expect(index.total).toBe(18)
 		expect(index.owned).toBe(0)
 	end)
 
@@ -51,7 +51,7 @@ describe("CardIndex", function()
 		local deck = {
 			{ cardId = "phase_dash", tier = "Field" },
 			{ cardId = "overclock", tier = "Field" },
-			{ cardId = "recon_pulse", tier = "Field" },
+			{ cardId = "siphon", tier = "Field" },
 		}
 		expect(CardIndex.choice(deck, 1, "aegis_shell", "Field", 0)).toBe("Unowned")
 		expect(CardIndex.choice(deck, 1, "aegis_shell", "Field", 1)).toBe("Open")

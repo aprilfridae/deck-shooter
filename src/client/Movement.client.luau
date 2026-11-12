@@ -242,6 +242,12 @@ end
 -- It used to carry the body along a set path by placing it every frame, which looked steppy (River, 2026-11-11:
 -- "not smooth", "it should launch"): Roblox stops smoothing a body on a frame a script moves it. Now the velocity
 -- is set once and physics carries it, walls and all.
+-- Siphon makes the player it hits slower and the one who fired it faster. The server sets the scale.
+local function speedScale(): number
+	local scale = player:GetAttribute("SpeedScale")
+	return if type(scale) == "number" then math.clamp(scale, 0.25, 2) else 1
+end
+
 local function startDash(distance: number)
 	if not humanoid or not root or humanoid.Health <= 0 then
 		return
@@ -267,7 +273,7 @@ local function startDash(distance: number)
 	local entrySpeed = MoveState.speed(state, now)
 	MoveState.finishDash(state, entrySpeed, peak * math.max(flat.Magnitude, DASH_FLAT_LEAST), now)
 	dashCarryUntil = now + MoveConfig.DashFadeTime
-	humanoid.WalkSpeed = MoveState.speed(state, now) -- now, not next frame: on the ground the Humanoid drags to its WalkSpeed at once
+	humanoid.WalkSpeed = MoveState.speed(state, now) * speedScale() -- now, not next frame: on the ground the Humanoid drags to its WalkSpeed at once
 	humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
 	slideDirection = way
 	root.AssemblyLinearVelocity = flat * peak + Vector3.yAxis * rise
@@ -332,7 +338,7 @@ local function onFrame(dt: number)
 		cards = CardInHand.slot ~= nil,
 	}, now)
 
-	humanoid.WalkSpeed = MoveState.speed(state, now)
+	humanoid.WalkSpeed = MoveState.speed(state, now) * speedScale()
 	humanoid.JumpHeight = MoveState.jumpHeight(state)
 	player:SetAttribute("MoveMode", state.mode)
 
@@ -545,7 +551,9 @@ pushRemote.OnClientEvent:Connect(function(velocity: Vector3)
 		MoveState.launch(state, flat.Magnitude, os.clock())
 		humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
 		root.AssemblyLinearVelocity = velocity
-		slideDirection = flat.Unit
+		if flat.Magnitude > 0.1 then -- a launch straight up has no flat direction
+			slideDirection = flat.Unit
+		end
 		airFromSlide = true
 		jumped = false
 		airStartedAt = os.clock()

@@ -4,7 +4,9 @@ local Cards = require("./Cards")
 local BLURBS = {
 	phase_dash = "DASH FORWARD AND TURN NEARLY INVISIBLE",
 	overclock = "RAISES FIRE RATE ON BOTH GUNS",
-	recon_pulse = "MARKS NEARBY ENEMIES THROUGH WALLS",
+	switchback = "SWAP PLACES WITH THE ENEMY YOU AIM AT",
+	kickplate = "BLAST THE GROUND NEAR YOU AND GET THROWN AWAY FROM IT",
+	siphon = "A BOLT THAT STEALS SPEED FROM THE ENEMY IT HITS",
 	aegis_shell = "A BUBBLE THAT TAKES EVERY HIT THEN PUSHES ENEMIES AWAY",
 }
 
@@ -15,9 +17,11 @@ local STATS = {
 		{ "fireRateBonus", "FIRE RATE", "+%g PCT", 100 },
 		{ "duration", "DURATION", "%g S" },
 	},
-	recon_pulse = {
-		{ "radius", "RADIUS", "%g STUDS" },
-		{ "revealTime", "REVEAL", "%g S" },
+	switchback = { { "range", "RANGE", "%g STUDS" } },
+	kickplate = { { "height", "HEIGHT", "%g STUDS" } },
+	siphon = {
+		{ "speedSteal", "SPEED", "%g PCT", 100 },
+		{ "duration", "DURATION", "%g S" },
 	},
 	aegis_shell = {
 		{ "shieldHp", "SHIELD", "%g HP" },
