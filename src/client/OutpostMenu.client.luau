@@ -10,6 +10,7 @@ local Packs = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("P
 local PullMotion = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("PullMotion"))
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local GunSounds = require(Guns:WaitForChild("GunSounds"))
+local HudShapes = require(Guns:WaitForChild("Hud"):WaitForChild("HudShapes"))
 local MenuState = require(Guns:WaitForChild("MenuState"))
 local Palette = require(Guns:WaitForChild("Palette"))
 local Zones = require(Guns:WaitForChild("Zones"))
@@ -28,18 +29,23 @@ local ProfilePanel = require(script.Parent.ProfilePanel)
 local PullReveal = require(script.Parent.PullReveal)
 local SettingsPanel = require(script.Parent.SettingsPanel)
 local SoundGroups = require(script.Parent.SoundGroups)
+local TypeLabel = require(script.Parent.TypeLabel)
 
 -- Shares of the unit.
 -- Real pixels from the screen's left and bottom edges: the same margin as the health number and the radio strip
 -- (MARGIN in Hud.client.luau), so the corners line up between the Outpost and a fight.
 local HUD_MARGIN = 32
-local NAV_WIDTH = 0.124
-local NAV_ROW = 0.032
-local NAV_LEFT_PADDING = 0.006
-local NAV_PADDING = 0.0105
-local NAV_TEXT = 0.014
-local NAV_TRACKING = 0.0022
-local NAV_OUTLINE = 2 -- pixels
+-- The nav is a stack of small slanted plates under a striped header (docs/specs/hud-redesign.md).
+local NAV_WIDTH = 0.109
+local NAV_ROW = 0.022
+local NAV_GAP = 0.0025
+local NAV_LEFT_PADDING = 0.017 -- past the plate's slanted end
+local NAV_PADDING = 0.017
+local NAV_TEXT = 0.0095
+local NAV_TRACKING = 0.0018
+local NAV_HEAD = NAV_WIDTH / HudShapes.STRIPE_RATIO -- the header's height
+local NAV_HEAD_TEXT = 0.007
+local NAV_HEAD_LEFT = 0.34 -- of the header's width: where its word starts, past the slashes
 local HOVER_PITCH = 1.6
 local HOVER_VOLUME = 0.25
 
@@ -150,32 +156,43 @@ local function buildNav()
 	end
 	rows = {}
 	local unit = MenuPanel.unit()
+	local stack = (NAV_ROW + NAV_GAP) * #BUTTONS - NAV_GAP
 	local block = Instance.new("Frame")
-	block.BorderSizePixel = 0
-	block.BackgroundColor3 = Palette.Bone
+	block.BackgroundTransparency = 1
 	block.AnchorPoint = Vector2.new(0, 1)
 	block.Position = UDim2.new(0, HUD_MARGIN, 1, -HUD_MARGIN)
-	block.Size = UDim2.fromOffset(NAV_WIDTH * unit, NAV_ROW * unit * #BUTTONS)
+	block.Size = UDim2.fromOffset(NAV_WIDTH * unit, (NAV_HEAD + NAV_GAP + stack) * unit)
 	block.Parent = if faded > 0 then fader else gui
-	local outline = Instance.new("UIStroke")
-	outline.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	outline.Color = Palette.Bone
-	outline.Thickness = NAV_OUTLINE
-	outline.Parent = block
+	local head = Instance.new("ImageLabel")
+	head.BackgroundTransparency = 1
+	head.Image = HudShapes.Stripe
+	head.ImageColor3 = Palette.Bone
+	head.Size = UDim2.fromOffset(NAV_WIDTH * unit, NAV_HEAD * unit)
+	head.Parent = block
+	TypeLabel.new(head, {
+		style = "LabelBold",
+		size = NAV_HEAD_TEXT * unit,
+		tracking = NAV_TRACKING * unit,
+		color = Palette.DeepNavy,
+		shadow = false,
+		position = UDim2.fromOffset(NAV_WIDTH * NAV_HEAD_LEFT * unit, (NAV_HEAD + NAV_HEAD_TEXT) / 2 * unit),
+	}):set("OUTPOST")
+	-- The buttons slide in from this frame's left edge.
 	local clip = Instance.new("Frame")
 	clip.BackgroundTransparency = 1
 	clip.ClipsDescendants = true
-	clip.Size = UDim2.fromScale(1, 1)
+	clip.Position = UDim2.fromOffset(0, (NAV_HEAD + NAV_GAP) * unit)
+	clip.Size = UDim2.fromOffset(NAV_WIDTH * unit, stack * unit)
 	clip.Parent = block
 	for index, name in BUTTONS do
 		rows[name] = NavButton.new({
 			parent = clip,
-			glowParent = block,
 			name = name,
 			index = index,
 			unit = unit,
 			width = NAV_WIDTH * unit,
 			height = NAV_ROW * unit,
+			gap = NAV_GAP * unit,
 			left = NAV_LEFT_PADDING * unit,
 			padding = NAV_PADDING * unit,
 			textSize = NAV_TEXT * unit,

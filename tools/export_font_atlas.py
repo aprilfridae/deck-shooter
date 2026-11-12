@@ -23,7 +23,7 @@ LABEL_CHARACTERS = string.ascii_uppercase + string.digits + "/:.->+_,'()?"  # , 
 STYLES = {
     "Number": ("KHInterference*-Bold.otf", string.digits + "/+", 138),
     "NumberThin": ("KHInterference*-Light.otf", string.digits + "+", 138),
-    "Title": ("KHInterference*-Bold.otf", string.ascii_uppercase + string.digits + "/_", 180),
+    "Title": ("KHInterference*-Bold.otf", string.ascii_uppercase + string.digits + "/_.", 180),  # . for the Outpost's Credits
     # Lowercase too: the card face prints its rarity in lowercase.
     "Label": ("PPFraktionMono-Regular.otf", LABEL_CHARACTERS + string.ascii_lowercase, 36),
     "LabelBold": ("PPFraktionMono-Bold.otf", LABEL_CHARACTERS, 36),
