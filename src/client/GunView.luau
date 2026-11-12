@@ -1416,8 +1416,7 @@ function GunView.update(
 			drawAt = nil
 		else
 			local pose = GunDraw.at(kind, since)
-			local about = GunDraw.pivot(kind)
-			local pivot = if about then Vector3.new(about.x, about.y, about.z) else HIP.Position
+			local pivot = HIP.Position
 			base *= CFrame.new(pivot)
 				* CFrame.new(pose.x, pose.y, pose.z)
 				* CFrame.Angles(math.rad(pose.pitch), math.rad(pose.yaw), math.rad(pose.roll))

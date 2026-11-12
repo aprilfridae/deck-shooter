@@ -18,46 +18,42 @@ end
 local REST: Pose = { x = 0, y = 0, z = 0, pitch = 0, yaw = 0, roll = 0 }
 local FIELDS = { "x", "y", "z", "pitch", "yaw", "roll" }
 
+-- The pistol and rifle follow a clip River sent of draws that feel good (2026-11-12, "try to get the take out
+-- animation from the other video"). Every draw turns about the gun's own place at the hip.
 local DRAWS: { [string]: { Key } } = {
-	-- A quick draw off the right hip: the arms swing up from hanging, a touch past level, and settle. It turns
-	-- about the shoulder (see PIVOTS), and barely slides: turned about the gun itself, the shoulders swung round
-	-- and it looked like the whole torso was rotating (River, 2026-11-12).
-	-- With swagger (River, 2026-11-12): it comes up canted over on its side, punches out a touch past level, and
-	-- the wrist rolls it upright last.
+	-- Straight up from under the screen with the muzzle to the sky, the forearm upright beneath it. It hangs
+	-- there a moment, still drifting up, then drops level and settles.
 	pistol = {
-		key(0, 0.1, -0.25, 0.15, -62, -10, 22),
-		key(0.14, 0.04, -0.08, 0.05, -24, -6, 28),
-		key(0.25, 0, 0.02, -0.04, 7, 3, 14),
-		key(0.34, 0, 0, 0.01, -2, -1, -4),
-		key(0.44, 0, 0, 0, 0, 0, 0),
+		key(0, -0.1, -1.3, 0.2, 35, 0, 6),
+		key(0.1, -0.08, -0.55, 0.2, 62, 0, 8),
+		key(0.2, -0.06, 0.05, 0.2, 76, 0, 9),
+		key(0.4, -0.05, 0.22, 0.2, 84, 0, 9),
+		key(0.52, -0.04, 0.2, 0.18, 78, 0, 8),
+		key(0.64, -0.01, 0.04, 0.05, 28, 0, 3),
+		key(0.72, 0, -0.03, -0.02, -4, 0, 0),
+		key(0.82, 0, 0, 0, 0, 0, 0),
 	},
-	-- Up from low on the left, across the body as if off a sling, canted over. With swagger: it swings past, muzzle
-	-- high and tipped the other way, then drops back into the shoulder.
+	-- Up from under the screen, muzzle high and off to the left, the gun laid over. It is held there while the
+	-- bolt is racked (a tug back and a snap forward), then swung down onto the target.
 	rifle = {
-		key(0, -0.7, -1.25, 0.45, -35, 40, 35),
-		key(0.2, -0.14, -0.3, 0.14, -8, 16, 22),
-		key(0.34, 0.04, 0.09, -0.1, 9, -5, -9),
-		key(0.45, 0, -0.03, 0.05, -2, 1, 3),
-		key(0.56, 0, 0, 0, 0, 0, 0),
+		key(0, -0.5, -1.3, 0.3, 20, 30, 20),
+		key(0.14, -0.46, -0.25, 0.2, 34, 38, 26),
+		key(0.3, -0.45, 0.05, 0.15, 38, 40, 28),
+		key(0.44, -0.42, 0.02, 0.34, 35, 38, 31),
+		key(0.52, -0.45, 0.06, 0.1, 39, 40, 28),
+		key(0.62, -0.42, 0.04, 0.1, 36, 38, 26),
+		key(0.74, -0.08, -0.02, 0, 6, 7, 5),
+		key(0.82, 0.02, -0.03, -0.04, -3, -2, -2),
+		key(0.92, 0, 0, 0, 0, 0, 0),
 	},
 	-- Heavy, and from over the right shoulder: muzzle to the sky, swung down past level, and brought back up.
 	sniper = {
 		key(0, 0.9, 0.1, 1.2, 75, -15, -30),
-		key(0.28, 0.32, 0.12, 0.38, 34, -7, -15),
-		key(0.52, 0, -0.07, -0.06, -6, 2, 5),
-		key(0.75, 0, 0, 0, 0, 0, 0),
+		key(0.38, 0.32, 0.12, 0.38, 34, -7, -15),
+		key(0.7, 0, -0.07, -0.06, -6, 2, 5),
+		key(1, 0, 0, 0, 0, 0, 0),
 	},
 }
-
--- The point a draw turns about, from the camera: x right, y up, z toward you. A kind not listed turns about the
--- gun's own place at the hip.
-local PIVOTS: { [string]: { x: number, y: number, z: number } } = {
-	pistol = { x = 0.35, y = -0.45, z = 0.4 }, -- the right shoulder
-}
-
-function GunDraw.pivot(kind: string): { x: number, y: number, z: number }?
-	return PIVOTS[kind]
-end
 
 -- Which draw a gun uses: a sidearm is a pistol, a scoped gun is a sniper, and anything else is a rifle.
 function GunDraw.kind(sidearm: boolean, scoped: boolean): string

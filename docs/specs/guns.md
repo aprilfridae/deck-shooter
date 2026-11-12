@@ -143,9 +143,10 @@ Shots are instant. The server alone decides damage, health and ammo (`src/server
 Added 2026-11-12, not seen in Play. River: "pull out animations for everything. for the pistol, for the cards, for the ar, for the sniper". The cards' pull-out is the deck flourish they already had.
 
 - A gun plays its draw whenever it comes into the hands: on spawning, on swapping to it, and after a card has been used.
-- **Pistol** (any sidearm), 0.44 seconds: a quick draw off the right hip. The arms swing up about the right shoulder with the gun canted over on its side, punch out a touch past level, and the wrist rolls it upright last. Turned about the gun itself, as the others are, it looked like the whole torso was rotating.
-- **Rifle** (any primary without a scope), 0.56 seconds: up from low on the left across the body, canted over. It swings past, muzzle high and tipped the other way, then drops back into the shoulder.
-- **Sniper** (any scoped gun), 0.75 seconds: from over the right shoulder, muzzle to the sky, swung down past level and brought back.
+- The pistol and rifle follow a clip River sent of draws that "FEEL good" (2026-11-12). The earlier ones, a hip draw and a sling draw, were "a little Wack".
+- **Pistol** (any sidearm), 0.82 seconds: straight up from under the screen with the muzzle to the sky and the forearm upright beneath it. It hangs there a moment, then drops level and settles.
+- **Rifle** (any primary without a scope), 0.92 seconds: up from under the screen, muzzle high and off to the left, the gun laid over. It is held there while the bolt is racked, a tug back and a snap forward, then swung down onto the target. The left hand doesn't work the bolt yet: the arms still move as one piece with the gun.
+- **Sniper** (any scoped gun), 1 second: from over the right shoulder, muzzle to the sky, swung down past level and brought back. Slowed from 0.75 seconds so it stays the slowest.
 - The draws are keys in `src/shared/Guns/GunDraw.luau`, joined by a smooth curve, and tested in `tests/gundraw_spec.luau`. `GunView.luau` moves the whole gun and both arms together by the pose.
 - The gun can fire during its draw. Nothing about damage or timing changed.
 

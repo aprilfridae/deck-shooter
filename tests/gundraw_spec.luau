@@ -36,11 +36,21 @@ describe("GunDraw", function()
 		end
 	end)
 
-	it("swings a pistol up from the shoulder, and the others about the gun", function()
-		local shoulder = GunDraw.pivot("pistol") :: any
-		expect(shoulder.z > 0).toBe(true) -- behind the camera, where a shoulder is
-		expect(GunDraw.pivot("rifle")).toBeNil()
-		expect(GunDraw.pivot("sniper")).toBeNil()
+	it("brings the pistol and the rifle up from under the screen, muzzle high", function()
+		for _, kind in { "pistol", "rifle" } do
+			local start = GunDraw.at(kind, 0)
+			expect(start.y < -1).toBe(true)
+			expect(GunDraw.at(kind, 0.3).pitch > 30).toBe(true)
+		end
+	end)
+
+	it("holds the pistol's muzzle to the sky before it drops level", function()
+		expect(GunDraw.at("pistol", 0.4).pitch > 70).toBe(true)
+	end)
+
+	it("tugs the rifle back and lets it snap forward, as the bolt is racked", function()
+		expect(GunDraw.at("rifle", 0.44).z > GunDraw.at("rifle", 0.3).z + 0.1).toBe(true)
+		expect(GunDraw.at("rifle", 0.52).z < GunDraw.at("rifle", 0.44).z - 0.1).toBe(true)
 	end)
 
 	it("ends every gun exactly at rest, and keeps it there", function()
