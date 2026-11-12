@@ -56,8 +56,7 @@ function IncomeLine.new(parent: Instance): Frame
 	local function draw()
 		local snapshot = CardData.get()
 		if snapshot then
-			-- PackText ends the amount with " CR". The label above already says what it is.
-			credits:set((string.gsub(PackText.credits(snapshot.credits), " CR$", "")))
+			credits:set(PackText.balance(snapshot.credits))
 			income:set(PackText.income(snapshot.ratePerSecond))
 			income:setPosition(UDim2.fromOffset(credits:width() + INCOME_GAP * unit, CREDITS_LINE * unit))
 			rebirths:set(string.format("REBIRTH %02d", snapshot.rebirths))
