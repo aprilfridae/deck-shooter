@@ -36,15 +36,15 @@ local TypeLabel = require(script.Parent.TypeLabel)
 -- (MARGIN in Hud.client.luau), so the corners line up between the Outpost and a fight.
 local HUD_MARGIN = 32
 -- The nav is a stack of small slanted plates under a striped header (docs/specs/hud-redesign.md).
-local NAV_WIDTH = 0.109
-local NAV_ROW = 0.022
-local NAV_GAP = 0.0025
-local NAV_LEFT_PADDING = 0.017 -- past the plate's slanted end
-local NAV_PADDING = 0.017
-local NAV_TEXT = 0.0095
-local NAV_TRACKING = 0.0018
+local NAV_WIDTH = 0.126 -- River had the stack scaled up a bit from 0.109 (2026-11-11); the rest grew with it
+local NAV_ROW = 0.0255
+local NAV_GAP = 0.003
+local NAV_LEFT_PADDING = 0.0195 -- past the plate's slanted end
+local NAV_PADDING = 0.0195
+local NAV_TEXT = 0.011
+local NAV_TRACKING = 0.002
 local NAV_HEAD = NAV_WIDTH / HudShapes.STRIPE_RATIO -- the header's height
-local NAV_HEAD_TEXT = 0.007
+local NAV_HEAD_TEXT = 0.008
 local NAV_HEAD_LEFT = 0.34 -- of the header's width: where its word starts, past the slashes
 local HOVER_PITCH = 1.6
 local HOVER_VOLUME = 0.25
