@@ -51,12 +51,20 @@ local DRAWS: { [string]: { Key } } = {
 		key(0.82, 0.02, -0.03, -0.04, -3, -2, -2),
 		key(0.92, 0, 0, 0, 0, 0, 0),
 	},
-	-- Heavy, and from over the right shoulder: muzzle to the sky, swung down past level, and brought back up.
+	-- Heavy, and from right up out of view above (River, 2026-11-12: "bringing it down from much higer, out of
+	-- view, and then hit the lever thing"): it drops in muzzle high, slams down past level and bounces, is canted
+	-- over while the lever is thrown open and shut (see LEVERS), each throw shoving the gun, and settles.
 	sniper = {
-		key(0, 0.9, 0.1, 1.2, 75, -15, -30),
-		key(0.38, 0.32, 0.12, 0.38, 34, -7, -15),
-		key(0.7, 0, -0.07, -0.06, -6, 2, 5),
-		key(1, 0, 0, 0, 0, 0, 0),
+		key(0, 0.15, 3.2, 0.5, 35, -8, -18),
+		key(0.2, 0.1, 1.1, 0.35, 28, -6, -14),
+		key(0.38, 0, -0.1, 0.05, -7, 0, 2),
+		-- It bounces up off the slam into the hands, lifted and laid over so the lever shows: at its place the
+		-- lever swung below the bottom of the screen (seen in Play by Claude, held still with PinDraw).
+		key(0.5, -0.14, 0.46, 0.1, 17, 4, -15),
+		key(0.6, -0.12, 0.36, 0, 11, 5, -19), -- the lever is thrown open: the gun is shoved down and forward
+		key(0.72, -0.14, 0.52, 0.14, 19, 4, -13), -- and slammed shut: it jolts back up
+		key(0.86, 0, -0.03, 0, -2, 0, 1),
+		key(1.05, 0, 0, 0, 0, 0, 0),
 	},
 }
 
@@ -95,6 +103,27 @@ function GunDraw.hand(kind: string, elapsed: number): { on: number, back: number
 		-- The slide's own spring throws it home: no easing out of the start.
 		slide = from.slide + (to.slide - from.slide) * (if to.slide < from.slide then share * share else share),
 	}
+end
+
+-- A gun whose lever is cocked in its draw: when it starts open, is fully open, starts shut and is shut.
+local LEVERS: { [string]: { number } } = {
+	sniper = { 0.5, 0.6, 0.65, 0.72 },
+}
+
+-- How far open a gun's lever is, 0 to 1. It is thrown open fast and slammed shut faster.
+function GunDraw.lever(kind: string, elapsed: number): number
+	local times = LEVERS[kind]
+	if not times or elapsed <= times[1] or elapsed >= times[4] then
+		return 0
+	end
+	if elapsed < times[2] then
+		local share = (elapsed - times[1]) / (times[2] - times[1])
+		return 1 - (1 - share) * (1 - share)
+	elseif elapsed <= times[3] then
+		return 1
+	end
+	local share = (elapsed - times[3]) / (times[4] - times[3])
+	return 1 - share * share
 end
 
 -- A gun whose bolt is racked in its draw (River, 2026-11-12: "make the hands actually like. pull the tab"): when

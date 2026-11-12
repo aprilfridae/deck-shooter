@@ -131,6 +131,18 @@ describe("GunDraw", function()
 		end
 	end)
 
+	it("drops the sniper in from out of view above, then throws its lever open and shut", function()
+		expect(GunDraw.at("sniper", 0).y > 3).toBe(true)
+		expect(GunDraw.lever("sniper", 0.3)).toBe(0)
+		expect(GunDraw.lever("sniper", 0.62)).toBe(1)
+		expect(GunDraw.lever("sniper", 0.55) > 0.5).toBe(true)
+		expect(GunDraw.lever("sniper", 0.8)).toBe(0)
+		expect(GunDraw.lever("rifle", 0.62)).toBe(0)
+		-- The gun has come down into view before the lever is thrown, and is held up while it is.
+		expect(GunDraw.at("sniper", 0.38).y < 0).toBe(true)
+		expect(GunDraw.at("sniper", 0.6).y > 0.1).toBe(true)
+	end)
+
 	it("leaves a gun it doesn't know at rest", function()
 		expect(size(GunDraw.at("banana", 0))).toBe(0)
 		expect(GunDraw.length("banana")).toBe(0)

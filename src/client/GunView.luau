@@ -1701,6 +1701,9 @@ function GunView.update(
 		else
 			reloadShown, handShown = CFrame.identity, Vector3.zero
 		end
+		if drawKind and leverOpen == 0 then
+			leverOpen = GunDraw.lever(drawKind, drawSince) -- the pull-out cocks the lever
+		end
 		local right, left = grips()
 		-- The hands go by the gun before its spin: the right stays put with its finger in the trigger guard while the
 		-- gun spins round it, and the left lets go and catches it.
