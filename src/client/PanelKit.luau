@@ -11,7 +11,7 @@ local TITLE_SIZE = 0.085
 local TITLE_LINE = 0.095
 local RULE_FADE = 0.5
 local PRESSED_SHRINK = 0.97
-local QUIET_INSET = 1.5 -- pixels: how far inside the border a thick button's second outline sits
+local QUIET_THICK = 3 -- pixels: a quiet button's border under the mouse
 local CUT_SHARE = 1 / 3 -- of a button's height: how much of each cut corner is taken off
 local CUT_MOST = 0.006 -- and never more than this share of the unit
 
@@ -106,7 +106,7 @@ function PanelKit.hitBox(parent: Instance, x: number, top: number, width: number
 end
 
 -- One of a button's two images: a square with cut corners, stretched from its middle so the cut keeps its angle.
-local function cutImage(parent: Instance, image: string, color: Color3, cut: number, inset: number): ImageLabel
+local function cutImage(parent: Instance, image: string, color: Color3, cut: number): ImageLabel
 	local label = Instance.new("ImageLabel")
 	label.BackgroundTransparency = 1
 	label.Image = image
@@ -114,8 +114,7 @@ local function cutImage(parent: Instance, image: string, color: Color3, cut: num
 	label.ScaleType = Enum.ScaleType.Slice
 	label.SliceCenter = HudShapes.CUT_SLICE
 	label.SliceScale = cut / HudShapes.CUT
-	label.Position = UDim2.fromOffset(inset, inset)
-	label.Size = UDim2.new(1, -inset * 2, 1, -inset * 2)
+	label.Size = UDim2.fromScale(1, 1)
 	label.Parent = parent
 	return label
 end
@@ -123,7 +122,8 @@ end
 -- A labelled button with its top right and bottom left corners cut (docs/specs/hud-redesign.md). It inverts under
 -- the mouse and dips when pressed.
 -- active leaves it inverted, and disabled greys it out and stops clicks. quiet thickens the border
--- instead of inverting, for buttons with their own contents, and active leaves it thick.
+-- instead of inverting, for buttons with their own contents, and active leaves it thick. A quiet button keeps
+-- plain corners, which its owner can round to fit what it holds: a cut corner would slice a card.
 function PanelKit.button(
 	parent: Instance,
 	text: string,
@@ -142,13 +142,22 @@ function PanelKit.button(
 	local thick = choice.active == true and choice.quiet == true
 	local cut = math.min(height * CUT_SHARE, CUT_MOST) * unit
 	local rest = if choice.disabled or filled then INK else PAPER
-	local fill = cutImage(button, HudShapes.CutFill, rest, cut, 0)
-	fill.ImageTransparency = if choice.disabled then 0.9 else 0
-	local border = cutImage(button, HudShapes.CutOutline, INK, cut, 0)
-	border.ImageTransparency = if choice.disabled then 0.7 else 0
-	-- A second outline just inside the first makes the border thick.
-	local inner = cutImage(button, HudShapes.CutOutline, INK, cut, QUIET_INSET)
-	inner.Visible = thick
+	local stroke: UIStroke? = nil
+	local fill: ImageLabel? = nil
+	if choice.quiet then
+		local made = Instance.new("UIStroke")
+		made.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		made.Color = INK
+		made.Thickness = if thick then QUIET_THICK else 1
+		made.Transparency = if choice.disabled then 0.7 else 0
+		made.Parent = button
+		stroke = made
+	else
+		local made = cutImage(button, HudShapes.CutFill, rest, cut)
+		made.ImageTransparency = if choice.disabled then 0.9 else 0
+		fill = made
+		cutImage(button, HudShapes.CutOutline, INK, cut).ImageTransparency = if choice.disabled then 0.7 else 0
+	end
 	local scale = Instance.new("UIScale")
 	scale.Parent = button
 	local word = PanelKit.label(button, "LabelBold", size, 0, 0, nil, ink)
@@ -161,16 +170,19 @@ function PanelKit.button(
 		return button
 	end
 	button.MouseEnter:Connect(function()
-		if choice.quiet then
-			inner.Visible = true
-		else
+		if stroke then
+			stroke.Thickness = QUIET_THICK
+		elseif fill then
 			fill.ImageColor3 = INK
 			word:setColor(PAPER)
 		end
 	end)
 	button.MouseLeave:Connect(function()
-		inner.Visible = thick
-		fill.ImageColor3 = rest
+		if stroke then
+			stroke.Thickness = if thick then QUIET_THICK else 1
+		elseif fill then
+			fill.ImageColor3 = rest
+		end
 		word:setColor(ink)
 		scale.Scale = 1
 	end)

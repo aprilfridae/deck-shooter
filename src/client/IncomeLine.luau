@@ -1,6 +1,8 @@
 -- The player's Credits, income and rebirths, top left in the Outpost under the radio's strip
 -- (docs/specs/hud-redesign.md). Plain type, on the same left margin as the radio and the nav.
+local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local PackText = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("PackText"))
 local Palette = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Palette"))
@@ -9,10 +11,15 @@ local MenuPanel = require(script.Parent.MenuPanel)
 local TypeLabel = require(script.Parent.TypeLabel)
 
 local HUD_MARGIN = 32 -- real pixels from the screen's left edge, as in OutpostMenu and RadioHud
--- Shares of the unit. Each line is the baseline its text sits on.
-local LABEL_LINE = 0.05
-local CREDITS_LINE = 0.079
-local REBIRTH_LINE = 0.097
+-- The radio's strip is laid out for a screen 1080 high and scaled by the screen's height (RadioHud.luau), while
+-- this is sized by the unit, which follows the width on a narrow window. So it hangs from where the strip really
+-- ends, or the two overlap.
+local RADIO_BOTTOM = 62 / 1080 -- of the screen's height: the strip's top (14) and height (48)
+local RADIO_GAP = 0.012 -- of the unit, from the strip down to this readout
+-- Shares of the unit, down from there. Each line is the baseline its text sits on.
+local LABEL_LINE = 0.0095
+local CREDITS_LINE = 0.0385
+local REBIRTH_LINE = 0.0565
 local LABEL_SIZE = 0.0095
 local CREDITS_SIZE = 0.03
 local LABEL_TRACKING = 0.0022
@@ -25,8 +32,11 @@ function IncomeLine.new(parent: Instance): Frame
 	local unit = MenuPanel.unit()
 	local frame = Instance.new("Frame")
 	frame.BackgroundTransparency = 1
-	frame.Position = UDim2.fromOffset(HUD_MARGIN, 0)
-	frame.Size = UDim2.new(1, -HUD_MARGIN, 1, 0)
+	-- The radio's screen starts under Roblox's top bar, and this one starts at the very top.
+	local inset = GuiService:GetGuiInset().Y
+	local top = inset + Workspace.CurrentCamera.ViewportSize.Y * RADIO_BOTTOM + RADIO_GAP * unit
+	frame.Position = UDim2.fromOffset(HUD_MARGIN, top)
+	frame.Size = UDim2.new(1, -HUD_MARGIN, 1, -top)
 	frame.Parent = parent
 
 	local function line(style: string, size: number, y: number, tracking: number, color: Color3): any
