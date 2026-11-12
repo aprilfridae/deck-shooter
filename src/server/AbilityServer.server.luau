@@ -26,6 +26,7 @@ local TEST_DECKS = {
 	{ "aegis_shell", "phase_dash", "overclock" },
 }
 local EYE = Vector3.new(0, 1.5, 0) -- from a body's middle up to its eyes
+local USE_GAP = 0.1 -- seconds: the least time between one player's card uses
 local MISS = "miss" -- what a handler returns when an aimed card hit nobody
 
 local remotes = Instance.new("Folder")
@@ -165,6 +166,7 @@ local function without(model: Model): RaycastParams
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = { model }
+	params.RespectCanCollide = true -- triggers and decoration don't block a card or count as ground
 	return params
 end
 
@@ -173,7 +175,9 @@ local function aimedEnemy(player: Player, target: GunTargets.Target, aim: CardAi
 	local enemies: { GunTargets.Target } = {}
 	local points: { CardAim.Point } = {}
 	for _, other in GunTargets.all() do
-		if isEnemy(player, other) and GunTargets.isAlive(other) then
+		-- Someone standing where fighting isn't allowed can't be swapped out of it or slowed.
+		local fighting = other.player == nil or Zones.allowsCombat(Zones.of(other.player))
+		if fighting and isEnemy(player, other) and GunTargets.isAlive(other) then
 			table.insert(enemies, other)
 			table.insert(points, asPoint(other.root.Position))
 		end
@@ -241,6 +245,26 @@ end
 -- which their Movement script reads.
 local boosts: { [Player]: number } = {}
 local slows: { [Player]: { [Player]: number } } = {}
+-- A bot or the dummy has no Movement script, so its Humanoid is slowed directly: its own speed is kept here with
+-- every slow on it, or two players' Siphons ending out of order would leave it slow for good.
+local botSlows: { [Humanoid]: { base: number, by: { [Player]: number } } } = {}
+
+local function publishBotSpeed(humanoid: Humanoid)
+	local held = botSlows[humanoid]
+	if not held then
+		return
+	end
+	local worst = 0
+	for _, slow in held.by do
+		worst = math.max(worst, slow)
+	end
+	if humanoid.Parent then
+		humanoid.WalkSpeed = held.base * (1 - worst)
+	end
+	if worst == 0 or not humanoid.Parent then
+		botSlows[humanoid] = nil
+	end
+end
 
 local function publishSpeed(player: Player)
 	local scale = 1 + (boosts[player] or 0)
@@ -266,19 +290,21 @@ handlers.siphon = function(player, target, slot, aim)
 	local steal = Cards.stat(slot.cardId, slot.tier, "speedSteal")
 	local seconds = Cards.stat(slot.cardId, slot.tier, "duration")
 	fxRemote:FireAllClients("bolt", from, enemy.root.Position)
+	-- No grace from the movement guard: the fastest ordinary move with the biggest boost is still under its
+	-- limit, and grace would switch the guard off for seconds at a time.
 	boosts[player] = steal
-	MoveGrace.give(player, seconds + Config.MoveGraceSeconds) -- faster than the guard expects
 	publishSpeed(player)
 	local victim = enemy.player
-	local walked: number? = nil
+	local bot = enemy.humanoid
 	if victim then
 		slows[victim] = slows[victim] or {}
 		slows[victim][player] = steal
 		publishSpeed(victim)
 	else
-		-- A bot or the dummy has no Movement script: slow its Humanoid directly.
-		walked = enemy.humanoid.WalkSpeed
-		enemy.humanoid.WalkSpeed = walked * (1 - steal)
+		local held = botSlows[bot] or { base = bot.WalkSpeed, by = {} }
+		botSlows[bot] = held
+		held.by[player] = steal
+		publishBotSpeed(bot)
 	end
 	timed(player, seconds, function()
 		boosts[player] = nil
@@ -288,8 +314,9 @@ handlers.siphon = function(player, target, slot, aim)
 				slows[victim][player] = nil
 				publishSpeed(victim)
 			end
-		elseif walked and enemy.humanoid.Parent then
-			enemy.humanoid.WalkSpeed = walked
+		elseif botSlows[bot] then
+			botSlows[bot].by[player] = nil
+			publishBotSpeed(bot)
 		end
 	end)
 	return true
@@ -356,7 +383,15 @@ handlers.aegis_shell = function(player, target, slot)
 	return true
 end
 
+local lastUse: { [Player]: number } = {}
+
 local function onUse(player: Player, raw: any, rawAim: any)
+	-- A card that can't be used isn't spent, so nothing else stops a client sending this in a flood.
+	local clock = os.clock()
+	if clock - (lastUse[player] or 0) < USE_GAP then
+		return
+	end
+	lastUse[player] = clock
 	local index = Ability.parseSlot(raw)
 	local target = GunTargets.forPlayer(player)
 	local slots = slotsOf[player]
@@ -399,6 +434,9 @@ end
 -- Effects end at death, not at the next spawn, so they can't outlive the player.
 local function onCharacter(player: Player, character: Model)
 	resetCards(player)
+	-- A new life starts at full speed, whoever had slowed the last one.
+	slows[player] = nil
+	publishSpeed(player)
 	local humanoid = character:WaitForChild("Humanoid", 10) :: Humanoid?
 	if humanoid then
 		humanoid.Died:Once(function()
@@ -428,6 +466,7 @@ end
 Players.PlayerRemoving:Connect(function(player)
 	endEffects(player)
 	effectsOf[player] = nil
+	lastUse[player] = nil
 	boosts[player] = nil
 	slows[player] = nil
 	slotsOf[player] = nil
