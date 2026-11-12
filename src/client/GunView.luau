@@ -492,6 +492,13 @@ local length = PRIMARY_LENGTH
 local barrelRise = 0
 local isSidearm = false
 local drawAt: number? = nil -- when the gun in hand started being pulled out
+-- Where the left hand goes to rack a gun's slide in its pull-out: the frame of its own clip that has the hand on the
+-- gun (the Energy Pistol's reload slaps it there). And for sidearms without clips, how far from the grip that is.
+local DRAW_SLAPS: { [string]: { clip: string, frame: number } } = {
+	["Energy Pistol"] = { clip = "reload", frame = 16 },
+}
+local SIDEARM_SLIDE = Vector3.new(0.09, 0.32, 0)
+local drawSlap: CFrame? = nil -- the left palm on the slide, in the gun's space, for the gun shown
 local viewScale = 1
 local held = HIP
 
@@ -1079,6 +1086,12 @@ function GunView.setGun(gunId: string, slot: string)
 		scopeAim = CFrame.new(-back.X, -back.Y, -scope.eye - back.Z) * forward:Inverse()
 	end
 	clips = ArmClips[GunConfig.guns[gunId].name]
+	drawSlap = nil
+	local slap = DRAW_SLAPS[GunConfig.guns[gunId].name]
+	if clips and slap then
+		local frame = clips[slap.clip].frames[slap.frame]
+		drawSlap = frame.gun:ToObjectSpace(SoldierPose.clipPalms(clips.meshOffset, frame.bones).Left)
+	end
 	firedAt = nil
 	keyedReloadAt = nil
 	reloadAt = nil
@@ -1490,9 +1503,11 @@ function GunView.update(
 			placed.Left = layerShown:Inverse() * recoil:Inverse() * layerShown * (placed.Left or palms.Left)
 			moved = placed
 		end
-		if reach and palms then
+		if reach and palms and drawSlap then
+			-- From wherever the hold has it, across onto the slide, and back along the gun as it racks.
 			local placed = moved or {}
-			placed.Left = whole.gun * CFrame.new(reach.x, reach.y, reach.z) * whole.gun:Inverse() * (placed.Left or palms.Left)
+			local onSlide = whole.gun * CFrame.new(0, 0, reach.back) * drawSlap
+			placed.Left = (placed.Left or palms.Left):Lerp(onSlide, reach.on)
 			moved = placed
 		end
 		-- A reload keyed in code takes the left hand off wherever the clip has it.
@@ -1637,7 +1652,7 @@ function GunView.update(
 		if reach then
 			-- The left hand's own part in the pull-out: it comes off the gun to rack the slide.
 			left = table.clone(left)
-			left.wrist += Vector3.new(reach.x, reach.y, reach.z)
+			left.wrist += SIDEARM_SLIDE * reach.on + Vector3.new(0, 0, reach.back)
 		end
 		if lever and leverOpen > 0 then
 			-- The right hand is in the lever's loop and rides it round.

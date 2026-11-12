@@ -57,21 +57,23 @@ local DRAWS: { [string]: { Key } } = {
 	},
 }
 
--- The left hand's own part in a draw: where it is from its place on the gun, in the gun's space (x right, y up,
--- z toward you), at each time. River, 2026-11-12: "for the pistol like actually cock the gun".
-local HANDS: { [string]: { { at: number, x: number, y: number, z: number } } } = {
-	-- Off the grip, over the back of the slide, pulled back with it, let go, and back to the grip.
+-- The left hand's own part in a draw (River, 2026-11-12: "for the pistol like actually cock the gun"): at each
+-- time, how much of the hand is on the slide (0 is wherever the hold has it, 1 is on the slide) and how far back
+-- along the gun it has dragged the slide, in studs. The Energy Pistol is held in one hand with the other far off to
+-- the side, so the hand has to come right across to the gun: a nudge from where it rests never reached it.
+local HANDS: { [string]: { { at: number, on: number, back: number } } } = {
+	-- Whipped across onto the slide, dragged back with it, let go, and away again.
 	pistol = {
-		{ at = 0.2, x = 0, y = 0, z = 0 },
-		{ at = 0.36, x = 0.09, y = 0.32, z = 0 },
-		{ at = 0.44, x = 0.09, y = 0.32, z = 0.26 },
-		{ at = 0.5, x = 0.04, y = 0.3, z = 0.3 },
-		{ at = 0.7, x = 0, y = 0, z = 0 },
+		{ at = 0.16, on = 0, back = 0 },
+		{ at = 0.36, on = 1, back = 0 },
+		{ at = 0.44, on = 1, back = 0.28 },
+		{ at = 0.5, on = 0.8, back = 0.34 },
+		{ at = 0.76, on = 0, back = 0 },
 	},
 }
 
--- Where the left hand has got to, from its place on the gun. Nil when it is simply on the gun.
-function GunDraw.hand(kind: string, elapsed: number): { x: number, y: number, z: number }?
+-- Where the left hand has got to. Nil when it is simply where the hold has it.
+function GunDraw.hand(kind: string, elapsed: number): { on: number, back: number }?
 	local keys = HANDS[kind]
 	if not keys or elapsed <= keys[1].at or elapsed >= keys[#keys].at then
 		return nil
@@ -83,11 +85,7 @@ function GunDraw.hand(kind: string, elapsed: number): { x: number, y: number, z:
 	local from, to = keys[index], keys[index + 1]
 	local share = (elapsed - from.at) / (to.at - from.at)
 	share = share * share * (3 - 2 * share)
-	return {
-		x = from.x + (to.x - from.x) * share,
-		y = from.y + (to.y - from.y) * share,
-		z = from.z + (to.z - from.z) * share,
-	}
+	return { on = from.on + (to.on - from.on) * share, back = from.back + (to.back - from.back) * share }
 end
 
 -- A gun whose bolt is racked in its draw (River, 2026-11-12: "make the hands actually like. pull the tab"): when

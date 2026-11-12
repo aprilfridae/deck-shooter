@@ -81,14 +81,18 @@ describe("GunDraw", function()
 		expect(AkReload.rack(AkReload.RACK).bolt).toBe(0)
 	end)
 
-	it("takes the left hand over the pistol's slide and pulls it back", function()
+	it("brings the left hand right onto the pistol's slide and drags it back", function()
 		expect(GunDraw.hand("pistol", 0.1)).toBeNil()
-		expect(GunDraw.hand("pistol", 0.75)).toBeNil()
+		expect(GunDraw.hand("pistol", 0.8)).toBeNil()
 		expect(GunDraw.hand("rifle", 0.4)).toBeNil()
 		local on = GunDraw.hand("pistol", 0.36) :: any
 		local back = GunDraw.hand("pistol", 0.44) :: any
-		expect(on.y > 0.2).toBe(true)
-		expect(back.z > on.z + 0.2).toBe(true)
+		expect(on.on).toBe(1) -- all the way on the gun, not a nudge from where it rests
+		expect(on.back).toBe(0)
+		expect(back.on).toBe(1)
+		expect(back.back > 0.2).toBe(true)
+		-- And it is away again before the draw is over.
+		expect((GunDraw.hand("pistol", 0.7) :: any).on < 0.2).toBe(true)
 		-- The gun is tugged back with it.
 		expect(GunDraw.at("pistol", 0.44).z > GunDraw.at("pistol", 0.36).z + 0.05).toBe(true)
 	end)
