@@ -64,6 +64,7 @@ local listed = {
 	shotkick_spec = true,
 	codelines_spec = true,
 	killrewards_spec = true,
+	killfeed_spec = true,
 	akreload_spec = true,
 	skipburst_spec = true,
 	cardtext_spec = true,
@@ -93,6 +94,7 @@ require("./legcycle_spec")
 require("./shotkick_spec")
 require("./codelines_spec")
 require("./killrewards_spec")
+require("./killfeed_spec")
 require("./akreload_spec")
 require("./skipburst_spec")
 require("./cardtext_spec")

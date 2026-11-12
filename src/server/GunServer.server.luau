@@ -42,6 +42,7 @@ local swapRemote = remote("Swap")
 local hitRemote = remote("HitConfirm")
 local impactRemote = remote("Impacts")
 local shotsRemote = remote("Shots")
+local feedRemote = remote("KillFeed") -- to everyone: who killed whom, for the feed at the top right. Clients send nothing on it.
 local rewardRemote = remote("KillReward") -- to the killer: the lines a shot's kills earned and the Credits they add up to
 -- What each player's kills have earned lately: their streak, and when each victim last paid them. Not saved.
 local records: { [Player]: KillRewards.Record } = {}
@@ -265,6 +266,13 @@ local function onFire(player: Player, raw: any)
 					distance = (target.root.Position - shooter.root.Position).Magnitude,
 				})
 				local victim = target.player
+				-- A bot or the test dummy goes by its model's name, with 0 for its id.
+				feedRemote:FireAllClients(
+					player.UserId,
+					player.DisplayName,
+					if victim then victim.UserId else 0,
+					if victim then victim.DisplayName else target.model.Name
+				)
 				if victim and records[victim] then
 					KillRewards.died(records[victim])
 				end
