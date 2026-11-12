@@ -1,7 +1,6 @@
 -- A card in the menus. The front is baked layers tinted and moved here, with live text for the rarity and serial
 -- (docs/specs/card-face-redesign.md). The back is drawn whole.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local CardArt = require(CardCore:WaitForChild("CardArt"))
@@ -176,11 +175,6 @@ function CardFace.new(parent: Instance, options: Options): GuiObject
 	local look = CardLook.look(options.tier, options.variant)
 	local style = LOOKS[look]
 	local face = options.width / CardLayout.WIDTH
-	-- Real serials aren't built yet, so Studio shows stand-ins (see CardLook.studioSerial).
-	local serial = options.serial or if RunService:IsStudio() then CardLook.studioSerial(options.cardId) else nil
-	-- The index shows a copy count where the serial goes, and that is never a low serial.
-	local low = options.corner == nil and CardLook.isLowSerial(serial)
-
 	-- A CanvasGroup fades the image and text together.
 	local root: any = Instance.new(if options.ghost then "CanvasGroup" else "Frame")
 	root.Name = "CardFace"
@@ -224,37 +218,61 @@ function CardFace.new(parent: Instance, options: Options): GuiObject
 	faceText(root, face, "Label", rarity.size, rarity.tracking, style.ink, rarity.x, rarity.line)
 		:set(CardLook.faceRarity(options.tier, options.variant))
 
+	-- The serial and what goes with it, in a layer of its own so it can be drawn again: a pulled card's number
+	-- arrives a few seconds after the card does (docs/specs/serials.md).
+	local serialArea = Instance.new("Frame")
+	serialArea.Name = "Serial"
+	serialArea.BackgroundTransparency = 1
+	serialArea.Size = UDim2.fromScale(1, 1)
+	serialArea.Parent = root
 	local rainbows: { UIGradient } = {}
 	local glow: ImageLabel? = nil
-	if low and options.ghost then
-		placed(root, face, CardArt.lowSerial(serial :: number), CardLayout.LOW_SERIAL, style.mark)
-	elseif low then
-		-- Roblox can't blur text, so the glow is a blurred picture of the same number behind it.
-		local white = Color3.new(1, 1, 1)
-		glow = placed(root, face, CardArt.lowGlow(serial :: number), CardLayout.LOW_GLOW, white)
-		for _, label in { glow :: ImageLabel, placed(root, face, CardArt.lowSerial(serial :: number), CardLayout.LOW_SERIAL, white) } do
-			local rainbow = Instance.new("UIGradient")
-			rainbow.Rotation = 20
-			rainbow.Color = CardEffects.looped(RAINBOW, 0)
-			rainbow.Parent = label
-			table.insert(rainbows, rainbow)
-		end
-	else
-		placed(root, face, CardArt.layer("barcode"), CardLayout.BARCODE, style.ink)
-		local place = CardLayout.SERIAL
-		if options.corner then
-			faceText(root, face, "LabelBold", CORNER_SIZE, 0, style.mark, place.right, place.line, true):set(string.upper(options.corner))
+	local function drawSerial(serial: number?)
+		serialArea:ClearAllChildren()
+		rainbows, glow = {}, nil
+		-- The index shows a copy count where the serial goes, and that is never a low serial.
+		local low = options.corner == nil and CardLook.isLowSerial(serial)
+		if low and options.ghost then
+			placed(serialArea, face, CardArt.lowSerial(serial :: number), CardLayout.LOW_SERIAL, style.mark)
+		elseif low then
+			-- Roblox can't blur text, so the glow is a blurred picture of the same number behind it.
+			local white = Color3.new(1, 1, 1)
+			local behind = placed(serialArea, face, CardArt.lowGlow(serial :: number), CardLayout.LOW_GLOW, white)
+			glow = behind
+			for _, label in { behind, placed(serialArea, face, CardArt.lowSerial(serial :: number), CardLayout.LOW_SERIAL, white) } do
+				local rainbow = Instance.new("UIGradient")
+				rainbow.Rotation = 20
+				rainbow.Color = CardEffects.looped(RAINBOW, 0)
+				rainbow.Parent = label
+				table.insert(rainbows, rainbow)
+			end
 		else
-			faceText(root, face, "LabelLarge", place.size, 0, style.mark, place.right, place.line, true)
-				:set(CardLook.faceSerial(serial))
+			placed(serialArea, face, CardArt.layer("barcode"), CardLayout.BARCODE, style.ink)
+			local place = CardLayout.SERIAL
+			if options.corner then
+				faceText(serialArea, face, "LabelBold", CORNER_SIZE, 0, style.mark, place.right, place.line, true)
+					:set(string.upper(options.corner))
+			else
+				local text = CardLook.faceSerial(serial)
+				faceText(serialArea, face, "LabelLarge", place.size * CardLook.serialScale(text), 0, style.mark, place.right, place.line, true)
+					:set(text)
+			end
 		end
 	end
+	drawSerial(options.serial)
 
 	root.Parent = parent
 	if options.ghost then
 		root.GroupTransparency = GHOST_TRANSPARENCY
 		return root
 	end
+	-- Setting the card's Serial attribute fills in a number that arrived late.
+	root:GetAttributeChangedSignal("Serial"):Connect(function()
+		local late = root:GetAttribute("Serial")
+		if type(late) == "number" then
+			drawSerial(late)
+		end
+	end)
 
 	local globe = CardLayout.GLOBE
 	local dots = {}

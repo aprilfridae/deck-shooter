@@ -246,9 +246,13 @@ CardData.packEvent:Connect(function(event: any)
 		PullReveal.summary(event.result)
 	elseif event.kind == "Banked" then
 		PullReveal.notice("YOUR OPEN ALL IS SAVED FOR YOUR NEXT PILE")
+	elseif event.kind == "Serials" then
+		PullReveal.serials(event.openId, event.serials)
 	elseif event.kind == "Opened" and not event.auto then
+		PullReveal.track(event.openId, event.cards)
 		PullReveal.pack(event.pack, event.cards)
 	elseif event.kind == "Opened" then
+		PullReveal.track(event.openId, event.cards)
 		for _, card in event.cards do
 			if Packs.isRare(card) then
 				PullReveal.rare(event.pack, card)

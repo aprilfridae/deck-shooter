@@ -18,7 +18,7 @@ local VARIANT_NAMES = {
 local TIER_LOOKS = { Field = "Field", BlackSite = "Redline", Prototype = "Prototype" }
 local LONGEST_BESIDE_SET_CODE = 14 -- characters of rarity text that still clear the set code
 local LOW_SERIALS = 10
-local STUDIO_SERIALS = { phase_dash = 1, overclock = 7, recon_pulse = 42, aegis_shell = 117 }
+local SERIAL_ROOM = 7 -- digits at full size
 
 function CardLook.monogram(cardId: string): string
 	return MONOGRAMS[cardId]
@@ -66,10 +66,9 @@ function CardLook.lowSerialText(serial: number): string
 	return string.format("%02d", serial)
 end
 
--- Serials aren't built yet (card-art.md, step 3), so Studio shows these stand-ins to let River judge both the
--- normal and the low look. Delete this when real serials land.
-function CardLook.studioSerial(cardId: string): number?
-	return STUDIO_SERIALS[cardId]
+-- How big to draw this serial, as a share of full size. Seven digits fit beside the longest card name.
+function CardLook.serialScale(text: string): number
+	return math.min(1, SERIAL_ROOM / #text)
 end
 
 return CardLook

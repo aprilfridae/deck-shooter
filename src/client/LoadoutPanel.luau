@@ -54,11 +54,13 @@ local function slotCell(content: Frame, snapshot: any, index: number)
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, SLOT_CORNER * unit)
 	corner.Parent = cell
+	local variant = CardIndex.variant(snapshot.stacks, entry.cardId, entry.tier)
 	CardFace.new(cell, {
 		cardId = entry.cardId,
 		tier = entry.tier,
-		variant = CardIndex.variant(snapshot.stacks, entry.cardId, entry.tier),
+		variant = variant,
 		width = width * unit,
+		serial = CardData.serial(entry.cardId, entry.tier, variant),
 	})
 	PanelKit.label(content, "Label", PanelKit.SMALL_SIZE, x, SLOT_NUMBER_LINE):set(tostring(index))
 	cell.Activated:Connect(function()
