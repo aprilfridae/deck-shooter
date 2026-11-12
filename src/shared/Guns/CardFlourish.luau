@@ -36,15 +36,18 @@ local BURST_AT = 0.16 -- into the crush, the card is gone
 -- River then had it made "smoother and more swaggy": it takes its time, every part eases in and out and runs
 -- into the next, the card twirls in the fingers on the way up, the hand sweeps out in a curve and flicks across as
 -- it lets go, and it hangs out there a beat with a little bounce before coming home.
-local THROW = 0.7 -- seconds the whole throw takes
+-- Then "more swaggy and effortless": the arm does less and the wrist does more. A small lift, a lazy flick from
+-- the wrist, and the hand left hanging out there, drooping a little, before it wanders home.
+local THROW = 0.95 -- seconds the whole throw takes
 local THROW_BACK = 0.17 -- the hand is up and cocked by now
 local THROW_RELEASE = 0.22 -- and the card leaves it now: CardAim.THROW_WINDUP is the same moment
-local THROW_HANG = 0.16 -- how long the hand stays out after letting go
-local THROW_SWEEP = Vector3.new(0.09, 0.03, 0) -- how far out the chop curves on its way through
-local THROW_FLICK = math.rad(-22) -- the wrist's turn across as it lets go
+local THROW_HANG = 0.3 -- how long the hand stays out after letting go
+local THROW_SWEEP = Vector3.new(0.13, 0.02, 0) -- how far out the chop curves on its way through
+local THROW_FLICK = math.rad(-38) -- the wrist's turn across as it lets go
 local THROW_TWIRL = math.rad(360) -- the card's spin in the fingers on the way up
-local THROW_BOUNCE = 0.035 -- how far the hand gives as the card leaves it
-local THROW_DRAW = Vector3.new(0.1, 0.34, 0.16) -- where the hand lifts to, from where it was: right, up, toward you
+local THROW_BOUNCE = 0.02 -- how far the hand gives as the card leaves it
+local THROW_DROOP = Vector3.new(0.03, -0.07, 0.04) -- where the loose hand sags to while it hangs out there
+local THROW_DRAW = Vector3.new(0.07, 0.15, 0.08) -- where the hand lifts to, from where it was: right, up, toward you
 -- Where the card is as it leaves the hand, from the camera: just right of and under the crosshair, an arm's length
 -- out. And how it is turned there: on its edge, long side pointing the way you look. The world's card starts from
 -- exactly this, so the throw is one motion.
@@ -53,8 +56,8 @@ local THROW_AIMED = CFrame.Angles(0, 0, math.rad(90))
 -- The left hand takes the deck down and out to the left while the right throws, so it isn't in the way (River,
 -- 2026-11-12), and brings it back as the right hand comes home.
 local THROW_CLEAR = Vector3.new(-0.3, -0.22, 0.1) -- left, down, toward you
-local THROW_COCK = math.rad(50) -- how far the hand tips back at the top
-local THROW_SNAP = math.rad(-75) -- and how far it chops through
+local THROW_COCK = math.rad(26) -- how far the hand tips back at the top
+local THROW_SNAP = math.rad(-48) -- and how far it chops through
 
 local FAN_PIVOT = Vector3.new(0.05, 0, 0.13) -- on the card, under the right thumb
 local FAN_TOP = -60 -- degrees the top card leans
@@ -716,6 +719,7 @@ function CardFlourish.throw(elapsed: number, since: number, turns: number?): Cru
 	local aimed = smoother(math.clamp((since - whipFrom) / (THROW_RELEASE - whipFrom), 0, 1))
 	local homeFrom = THROW_RELEASE + THROW_HANG
 	local home = smoother(math.clamp((since - homeFrom) / (THROW - homeFrom), 0, 1))
+	local droop = smoother(math.clamp((since - THROW_RELEASE) / THROW_HANG, 0, 1))
 	local settled = pose.right:Lerp(final.right, grab)
 
 	-- The card as it would sit in the still hand, before the throw moves it.
@@ -726,6 +730,7 @@ function CardFlourish.throw(elapsed: number, since: number, turns: number?): Cru
 		+ reach * (whip - home)
 		+ THROW_SWEEP * math.sin(math.pi * whip) -- out and round, not straight down the middle
 		+ SINK * (THROW_BOUNCE * knock(since - THROW_RELEASE)) -- the hand gives as the card goes
+		+ THROW_DROOP * (droop - home) -- then hangs loose
 	-- Turned about the camera's own axes, at the hand: tipped back then chopped forward. The wrist isn't rolled:
 	-- that twisted the hand inward (River, 2026-11-12). The card turns onto its edge in the fingers instead.
 	local tip = THROW_COCK * (grab - whip) + THROW_SNAP * (whip - home)
