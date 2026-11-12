@@ -11,6 +11,7 @@ local Rebirth = require(CardCore.Rebirth)
 local Requests = require(CardCore.Requests)
 local Zones = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Zones"))
 local PlayerCards = require(script.Parent.PlayerCards)
+local SerialServer = require(script.Parent.SerialServer)
 
 local AUTO_STEP = 0.25 -- seconds
 
@@ -25,7 +26,7 @@ local PackServer = {}
 local function session(player: Player): any
 	local state = sessions[player]
 	if not state then
-		state = { lastRollAt = nil, lastOpenAt = nil, favorite = false, inGroup = false }
+		state = { lastRollAt = nil, lastOpenAt = nil, favorite = false, inGroup = false, opens = 0 }
 		sessions[player] = state
 	end
 	return state
@@ -33,6 +34,16 @@ end
 
 function PackServer.announce(player: Player, event: any)
 	packEvent:FireClient(player, event)
+end
+
+-- Tells the player what they pulled. Each open carries a number, so the serials that arrive a few seconds later
+-- (a "Serials" event from SerialServer) can be matched to the cards on screen.
+local function opened(player: Player, pack: string, cards: { any }, auto: boolean)
+	local state = session(player)
+	state.opens += 1
+	SerialServer.pulled(player, state.opens, cards)
+	PlayerCards.changed(player)
+	PackServer.announce(player, { kind = "Opened", pack = pack, cards = cards, auto = auto, openId = state.opens })
 end
 
 local function refreshUnlock(player: Player)
@@ -85,8 +96,7 @@ local function autoOpen(player: Player, data: any, rng: () -> number)
 	end
 	state.lastOpenAt = now
 	local _, cards = Packs.open(data, pack, rng)
-	PlayerCards.changed(player)
-	PackServer.announce(player, { kind = "Opened", pack = pack, cards = cards, auto = true })
+	opened(player, pack, cards, true)
 end
 
 -- Both only run in the Outpost, so nothing rolls or opens during a match.
@@ -123,8 +133,7 @@ function PackServer.start(remote: (string, (Player, any, any) -> any) -> (), rng
 		if not ok then
 			return { ok = false, code = cards }
 		end
-		PlayerCards.changed(player)
-		PackServer.announce(player, { kind = "Opened", pack = pack, cards = cards, auto = false })
+		opened(player, pack, cards, false)
 		return { ok = true }
 	end)
 

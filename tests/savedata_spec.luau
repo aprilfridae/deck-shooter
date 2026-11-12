@@ -41,14 +41,14 @@ describe("SaveData.load", function()
 	end)
 
 	it("fills fields missing from an older save", function()
-		local loaded = SaveData.load({ version = 1, credits = 5 })
+		local loaded = SaveData.load({ version = 5, credits = 5 })
 		expect(loaded.credits).toBe(5)
 		expect(loaded.catalysts).toBe(0)
 		expect(#loaded.deck).toBe(3)
 	end)
 
 	it("gives a version 3 save empty packs and no rebirths", function()
-		local old = SaveData.load({ version = 3, credits = 5 })
+		local old = SaveData.load({ version = 5, credits = 5 })
 		expect(old.credits).toBe(5)
 		expect(old.packs.Field).toBe(0)
 		expect(old.rebirths).toBe(0)
@@ -58,7 +58,7 @@ describe("SaveData.load", function()
 
 	it("keeps good pack data and drops bad values", function()
 		local loaded = SaveData.load({
-			version = 4,
+			version = 5,
 			rebirths = 2,
 			openAllCredits = 1,
 			receipts = { "a", 5 },
@@ -72,21 +72,21 @@ describe("SaveData.load", function()
 		expect(loaded.rebirths).toBe(2)
 		expect(loaded.openAllCredits).toBe(1)
 		expect(#loaded.receipts).toBe(1)
-		expect(SaveData.load({ version = 4, rebirths = 1.5 }).rebirths).toBe(0)
+		expect(SaveData.load({ version = 5, rebirths = 1.5 }).rebirths).toBe(0)
 	end)
 
-	it("is on version 4", function()
-		expect(SaveData.CURRENT_VERSION).toBe(4)
+	it("is on version 5", function()
+		expect(SaveData.CURRENT_VERSION).toBe(5)
 	end)
 
 	it("gives a version 2 save default settings", function()
-		local old = SaveData.load({ version = 2, credits = 5 })
+		local old = SaveData.load({ version = 5, credits = 5 })
 		expect(old.credits).toBe(5)
 		expect(old.settings.fieldOfView).toBe(80)
 	end)
 
 	it("survives a corrupt settings field", function()
-		local odd = SaveData.load({ version = 3, settings = "broken", credits = 7 })
+		local odd = SaveData.load({ version = 5, settings = "broken", credits = 7 })
 		expect(odd.credits).toBe(7)
 		expect(odd.settings.music).toBe(1)
 	end)
@@ -221,5 +221,134 @@ describe("SaveData.load", function()
 		local raw = SaveData.new()
 		local loaded = SaveData.load(raw)
 		expect(Inventory.count(loaded, "overclock", "Field")).toBe(1)
+	end)
+end)
+
+describe("SaveData serials and the fresh start", function()
+	local Inventory = require("../src/shared/CardCore/Inventory")
+	local Config = require("../src/shared/CardCore/Config")
+	local KEY = Inventory.key("aegis_shell", "Prototype", "Base")
+
+	local function withRuns(serials: any): any
+		return SaveData.load({ version = 5, stacks = { [KEY] = 5 }, serials = serials })
+	end
+
+	it("starts a new save with unnumbered starter cards", function()
+		local data = SaveData.new()
+		for _, cardId in Config.StarterDeck do
+			local key = Inventory.key(cardId, "Field", "Base")
+			expect(data.stacks[key]).toBe(1)
+			expect(data.serials[key].plain).toBe(1)
+			expect(Inventory.waiting(data, key)).toBe(0)
+		end
+	end)
+
+	it("resets a save from before serials, keeping only what isn't earned", function()
+		local settings = SaveData.new().settings
+		local name, value
+		for key, current in settings :: any do
+			if type(current) == "boolean" then
+				name, value = key, not current
+				break
+			end
+		end
+		local oldSettings = table.clone(settings :: any)
+		if name then
+			oldSettings[name] = value
+		end
+		local otherClass, otherRifle
+		for class in Config.Classes do
+			if class ~= Config.DefaultClass then
+				otherClass = class
+			end
+		end
+		for rifle in Config.Rifles do
+			if rifle ~= Config.DefaultRifle then
+				otherRifle = rifle
+			end
+		end
+		local old = {
+			version = 4,
+			credits = 5000,
+			rebirths = 3,
+			catalysts = 2,
+			gunLevels = { 3, 1 },
+			stacks = { [KEY] = 40 },
+			packs = {},
+			class = otherClass,
+			rifle = otherRifle,
+			commentsOff = true,
+			settings = oldSettings,
+			receipts = { "a", "b" },
+			openAllCredits = 2,
+		}
+		for pack in SaveData.new().packs do
+			old.packs[pack] = 7
+		end
+		local data = SaveData.load(old)
+		expect(data.version).toBe(5)
+		expect(data.credits).toBe(0)
+		expect(data.rebirths).toBe(0)
+		expect(data.catalysts).toBe(0)
+		expect(data.gunLevels).toEqual({ 0, 0 })
+		expect(data.stacks[KEY]).toBe(nil)
+		for _, count in data.packs do
+			expect(count).toBe(0)
+		end
+		expect(data.stacks).toEqual(SaveData.new().stacks)
+		expect(data.deck).toEqual(SaveData.new().deck)
+		expect(data.class).toBe(otherClass or Config.DefaultClass)
+		expect(data.rifle).toBe(otherRifle or Config.DefaultRifle)
+		expect(data.commentsOff).toBe(true)
+		if name then
+			expect((data.settings :: any)[name]).toBe(value)
+		end
+		expect(data.receipts).toEqual({ "a", "b" })
+		expect(data.openAllCredits).toBe(2)
+		-- Once reset it is a version 5 save, and loading it again changes nothing.
+		data.credits = 12
+		expect(SaveData.load(data).credits).toBe(12)
+	end)
+
+	it("resets a save with no version at all", function()
+		expect(SaveData.load({ credits = 900 }).credits).toBe(0)
+	end)
+
+	it("keeps a version 5 save's cards and serials", function()
+		local data = withRuns({ [KEY] = { runs = { 3, 4, 9, 9 }, plain = 1 } })
+		expect(data.stacks[KEY]).toBe(5)
+		expect(data.serials[KEY].runs).toEqual({ 3, 4, 9, 9 })
+		expect(data.serials[KEY].plain).toBe(1)
+		expect(Inventory.waiting(data, KEY)).toBe(1)
+	end)
+
+	it("drops damaged runs and leaves the copies waiting", function()
+		local damaged: { any } = {
+			{ runs = { 3, 1 }, plain = 0 },
+			{ runs = { 1, 3, 2, 4 }, plain = 0 },
+			{ runs = { 1, 9 }, plain = 0 },
+			{ runs = { 1, "x" }, plain = 0 },
+			{ runs = { 1 }, plain = 0 },
+			{ runs = { 0, 2 }, plain = 0 },
+			{ runs = { 1.5, 2 }, plain = 0 },
+			{ runs = "no", plain = 0 },
+			{ runs = {}, plain = -1 },
+			{ runs = {}, plain = 9 },
+			{ runs = { 1, 4 }, plain = 2 },
+			"nonsense",
+		}
+		for _, entry in damaged do
+			local data = withRuns({ [KEY] = entry })
+			expect(data.stacks[KEY]).toBe(5)
+			expect(data.serials[KEY]).toBe(nil)
+			expect(Inventory.waiting(data, KEY)).toBe(5)
+		end
+		expect(withRuns("nonsense").stacks[KEY]).toBe(5)
+	end)
+
+	it("drops serials for a stack the save doesn't hold", function()
+		local other = Inventory.key("overclock", "Prototype", "Base")
+		local data = withRuns({ [other] = { runs = { 1, 2 }, plain = 0 } })
+		expect(data.serials[other]).toBe(nil)
 	end)
 end)

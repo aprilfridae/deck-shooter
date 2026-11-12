@@ -37,9 +37,15 @@ function PlayerCards.snapshot(player: Player): any?
 	if not data then
 		return nil
 	end
+	-- The lowest serial in each stack: the one a card shows.
+	local lowest = {}
+	for key, held in data.serials do
+		lowest[key] = held.runs[1]
+	end
 	return {
 		credits = data.credits,
 		stacks = data.stacks,
+		lowest = lowest,
 		deck = data.deck,
 		catalysts = data.catalysts,
 		dpr = Dpr.compute(data.deck, data.gunLevels),

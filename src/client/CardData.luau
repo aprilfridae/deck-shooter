@@ -2,6 +2,8 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Inventory = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Inventory"))
+
 local RETRY = 1 -- seconds
 local GIVE_UP = 15 -- seconds to wait for the server before a request fails
 
@@ -57,6 +59,13 @@ Players.LocalPlayer.CharacterAdded:Connect(function()
 		changedEvent:Fire()
 	end
 end)
+
+-- The serial one of your cards shows: the lowest you hold of that card, tier and variant, or nil if none of your
+-- copies has a number.
+function CardData.serial(cardId: string, tier: string, variant: string): number?
+	local lowest = current and current.lowest
+	return lowest and lowest[Inventory.key(cardId, tier, variant)]
+end
 
 task.spawn(function()
 	remotes():WaitForChild("PackEvent").OnClientEvent:Connect(function(event: any)

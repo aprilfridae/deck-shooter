@@ -282,15 +282,18 @@ local function showCard(index: number, now: number, step: number)
 		return
 	end
 	local tier = tostring(player:GetAttribute(`Ability{index}Tier`))
-	if card.shows ~= id .. tier then
-		card.shows = id .. tier
-		local snapshot = CardData.get()
-		local variant = if snapshot then CardIndex.variant(snapshot.stacks, id, tier) else ""
+	local snapshot = CardData.get()
+	local variant = if snapshot then CardIndex.variant(snapshot.stacks, id, tier) else ""
+	-- The serial is part of what the card shows, so the face is redrawn when its number arrives.
+	local serial = CardData.serial(id, tier, variant)
+	local shows = `{id}{tier}{serial or ""}`
+	if card.shows ~= shows then
+		card.shows = shows
 		if card.face then
 			card.face:Destroy()
 		end
 		-- The same face as in the menus, with its name and rarity printed on it.
-		card.face = CardFace.new(card.image, { cardId = id, tier = tier, variant = variant, width = CARD_WIDTH })
+		card.face = CardFace.new(card.image, { cardId = id, tier = tier, variant = variant, width = CARD_WIDTH, serial = serial })
 	end
 	local left = (player:GetAttribute(`Ability{index}ReadyAt`) or 0) - now
 	local colour = HudText.colour(left, player:GetAttribute(`Ability{index}Cooldown`) or 0)

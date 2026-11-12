@@ -16,6 +16,7 @@ export type SaveData = {
 	credits: number,
 	creditRemainder: number,
 	stacks: { [string]: number },
+	serials: { [string]: { runs: { number }, plain: number } }, -- see Inventory
 	deck: { DeckSlot },
 	gunLevels: { number },
 	catalysts: number,
@@ -30,7 +31,8 @@ export type SaveData = {
 }
 
 local SaveData = {
-	CURRENT_VERSION = 4,
+	CURRENT_VERSION = 5,
+	SERIALS_VERSION = 5, -- the first version with serials. Older saves are reset.
 }
 
 function SaveData.new(): SaveData
@@ -39,6 +41,7 @@ function SaveData.new(): SaveData
 		credits = 0,
 		creditRemainder = 0,
 		stacks = {},
+		serials = {},
 		deck = {},
 		gunLevels = { 0, 0 },
 		catalysts = 0,
@@ -55,7 +58,7 @@ function SaveData.new(): SaveData
 		data.packs[pack] = 0
 	end
 	for _, cardId in Config.StarterDeck do
-		Inventory.add(data, cardId, "Field", "Base", 1)
+		Inventory.addPlain(data, cardId, "Field", "Base", 1)
 		table.insert(data.deck, { cardId = cardId, tier = "Field" })
 	end
 	return data
@@ -80,6 +83,43 @@ local function cleanStacks(raw: any): { [string]: number }
 		end
 	end
 	return stacks
+end
+
+-- A stack's runs, or nil if anything about them is wrong: a serial must never be held twice, so damaged runs
+-- are dropped whole and their copies go back to waiting for a number.
+local function cleanRuns(raw: any): ({ number }?, number)
+	if type(raw) ~= "table" or #raw % 2 ~= 0 then
+		return nil, 0
+	end
+	local runs, total, last = {}, 0, 0
+	for index = 1, #raw, 2 do
+		local from, to = raw[index], raw[index + 1]
+		local whole = type(from) == "number" and type(to) == "number" and from == math.floor(from) and to == math.floor(to)
+		if not whole or from <= last or to < from then
+			return nil, 0
+		end
+		table.insert(runs, from)
+		table.insert(runs, to)
+		total += to - from + 1
+		last = to
+	end
+	return runs, total
+end
+
+local function cleanSerials(data: SaveData, raw: any)
+	if type(raw) ~= "table" then
+		return
+	end
+	for key, entry in raw do
+		local have = data.stacks[key]
+		if have and type(entry) == "table" then
+			local runs, total = cleanRuns(entry.runs)
+			local plain = entry.plain
+			if runs and isCount(plain, have) and total + plain <= have and total + plain > 0 then
+				data.serials[key] = { runs = runs, plain = plain }
+			end
+		end
+	end
 end
 
 local function cleanPacks(data: SaveData, raw: any)
@@ -151,7 +191,7 @@ local function cleanDeck(data: SaveData, raw: any): { DeckSlot }
 		if not deck[i] then
 			for _, cardId in Config.StarterDeck do
 				if not used[cardId] then
-					Inventory.add(data, cardId, Tier.Field, Variant.Base, 1)
+					Inventory.addPlain(data, cardId, Tier.Field, Variant.Base, 1)
 					deck[i] = { cardId = cardId, tier = Tier.Field }
 					used[cardId] = true
 					break
@@ -174,7 +214,29 @@ function SaveData.load(raw: any): (SaveData?, string?)
 	end
 
 	local data = SaveData.new()
+	-- The fresh start (River, 2026-11-11): a save from before serials keeps nothing that was earned, so every
+	-- serial comes from a pull. It happens once, because the save is then written back as the current version,
+	-- and it can't be undone.
+	local reset = type(raw.version) ~= "number" or raw.version < SaveData.SERIALS_VERSION
+	if type(raw.class) == "string" and Config.Classes[raw.class] then
+		data.class = raw.class
+	end
+	if type(raw.rifle) == "string" and Config.Rifles[raw.rifle] then
+		data.rifle = raw.rifle
+	end
+	data.settings = Settings.clean(raw.settings)
+	data.commentsOff = raw.commentsOff == true
+	if isCount(raw.openAllCredits, Config.MaxStackCount) then
+		data.openAllCredits = raw.openAllCredits
+	end
+	data.receipts = cleanReceipts(raw.receipts)
+	if reset then
+		return data, nil
+	end
+
 	data.stacks = cleanStacks(raw.stacks)
+	data.serials = {}
+	cleanSerials(data, raw.serials)
 	if isCount(raw.credits, Config.MaxCredits) then
 		data.credits = raw.credits
 	end
@@ -191,22 +253,10 @@ function SaveData.load(raw: any): (SaveData?, string?)
 			end
 		end
 	end
-	if type(raw.class) == "string" and Config.Classes[raw.class] then
-		data.class = raw.class
-	end
-	if type(raw.rifle) == "string" and Config.Rifles[raw.rifle] then
-		data.rifle = raw.rifle
-	end
-	data.settings = Settings.clean(raw.settings)
-	data.commentsOff = raw.commentsOff == true
 	cleanPacks(data, raw.packs)
 	if isCount(raw.rebirths, Config.MaxStackCount) then
 		data.rebirths = raw.rebirths
 	end
-	if isCount(raw.openAllCredits, Config.MaxStackCount) then
-		data.openAllCredits = raw.openAllCredits
-	end
-	data.receipts = cleanReceipts(raw.receipts)
 	data.deck = cleanDeck(data, raw.deck)
 	return data, nil
 end

@@ -82,7 +82,7 @@ The glow is weaker on Redline and Prototype, because their backgrounds are light
 ## Things the mockups showed that are not in this design
 
 - **"/1000":** every mockup had `/1000` after the serial. Cards have no limit on copies, so there is no total to print. It is left off until River sets one.
-- **Serials are not in the game yet.** `card-art.md` lists them as step 3, and cards show `--` today. Until then Studio shows stand-in serials so both looks can be judged (`CardLook.studioSerial`: Phase Dash 1, Overclock 7, Recon Pulse 42, Aegis Shell 117), and the live game shows `----`.
+- **Real serials** are built separately: see `serials.md`. A card with no numbered copy shows `----`.
 - **Light that follows the mouse or the card's tilt** on Zero-Day was an idea, not a decision. The band runs on a timer. Inspecting a card already ties the shine to its angle, and the light band follows the shine there.
 
 ## How it's built

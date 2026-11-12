@@ -25,6 +25,7 @@ local SoundGroups = require(script.Parent.SoundGroups)
 
 -- Shares of the unit.
 local CARD_WIDTH = 0.135
+local TRACKED_OPENS = 20 -- recent opens whose serials may still arrive
 local RARE_WIDTH = 0.1
 local RARE_LEFT = 0.12 -- from the screen's middle, so it's clear of the menu
 local BUTTON_WIDTH = 0.1
@@ -186,7 +187,7 @@ local function inspect(card: any)
 	local snapshot = CardData.get()
 	local key = Inventory.key(card.cardId, card.tier, card.variant)
 	local count = snapshot and snapshot.stacks[key] or 1
-	CardInspect.open({ cardId = card.cardId, tier = card.tier, variant = card.variant, count = count })
+	CardInspect.open({ cardId = card.cardId, tier = card.tier, variant = card.variant, count = count, serial = card.serial })
 end
 
 -- One face-down card for Auto Open. flip() builds and turns it, and clicking it afterwards inspects it.
@@ -236,7 +237,14 @@ local function cardSlot(parent: Frame, pack: string, card: any, width: number, x
 				return
 			end
 			back:Destroy()
-			local face = CardFace.new(holder, { cardId = card.cardId, tier = card.tier, variant = card.variant, width = width })
+			local face = CardFace.new(holder, {
+				cardId = card.cardId,
+				tier = card.tier,
+				variant = card.variant,
+				width = width,
+				serial = card.serial,
+			})
+			card.face = face -- so a serial that arrives after this can be filled in
 			centred(face)
 			tween(holder, half, { Size = UDim2.fromOffset(width, height) }).Completed:Wait()
 			if not holder.Parent then
@@ -257,6 +265,39 @@ end
 
 -- Plays by itself in the 3D world beside the menu, so the menu stays usable. Opening another
 -- pack once this one has finished moves straight on to it.
+-- Each pulled card's own serial arrives a few seconds after the pull (docs/specs/serials.md). `track` remembers an
+-- open's cards, and `serials` writes the numbers onto them: on the card's face if it's already drawn, and on the
+-- card itself for a face that is drawn later.
+local tracked: { [number]: { any } } = {}
+local trackedOrder: { number } = {}
+
+function PullReveal.track(openId: number?, cards: { any })
+	if not openId then
+		return
+	end
+	tracked[openId] = cards
+	table.insert(trackedOrder, openId)
+	if #trackedOrder > TRACKED_OPENS then
+		tracked[table.remove(trackedOrder, 1) :: number] = nil
+	end
+end
+
+function PullReveal.serials(openId: number, serials: { any })
+	local cards = tracked[openId]
+	if not cards then
+		return
+	end
+	for _, given in serials do
+		local card = cards[given.slot]
+		if card then
+			card.serial = given.serial
+			if card.face and card.face.Parent then
+				card.face:SetAttribute("Serial", given.serial)
+			end
+		end
+	end
+end
+
 function PullReveal.pack(pack: string, cards: { any })
 	enqueue(function(frame: Frame, done: () -> (), menuGone: boolean)
 		sheet.Visible = false
