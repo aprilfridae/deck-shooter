@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make the Outpost menu, its Credits readout, the page buttons and the match HUD look like the fourth-pass mockup, and call kill streaks out to the whole server.
+**Goal:** Make the Outpost menu, its Credits readout, the page buttons and the match HUD look like the fourth-pass mockup, and show every kill on the server in a feed at the top right.
 
-**Architecture:** A Python tool bakes three shapes from River's pack plus two cut-corner button images to white PNGs, which are uploaded and tinted in game. `NavButton`, `IncomeLine`, `PanelKit.button` and `Hud.client` are restyled in place. Streak calls add one pure function, one server event and one client script.
+**Architecture:** A Python tool bakes three shapes from River's pack plus two cut-corner button images to white PNGs, which are uploaded and tinted in game. `NavButton`, `IncomeLine`, `PanelKit.button` and `Hud.client` are restyled in place. The kill feed adds one pure module, one server event and one client script.
 
 **Tech Stack:** Luau, Rojo, Lune tests, Python with Pillow for the bake, `tools/upload-group-assets.py` for uploads.
 
@@ -21,9 +21,9 @@
 
 ## Review Focus
 
-- A streak reached by a shot that earns two streak lines at once (cannot happen with 3/5/10, but `streakOf` must return the highest if it did). Tested in Task 6.
-- A kill that pays nothing (kill trading) must never call a streak. Tested in Task 6.
-- A player who leaves mid-call: the client must show a name it was sent, never look the player up. Covered by sending the display name as text.
+- A burst of kills (a collateral, or many players at once): the feed must cap at five and never grow. Tested in Task 6.
+- A very long or odd display name must not push the feed off the screen. `clean` cuts it; tested in Task 6.
+- A player who leaves right after a kill: the client shows the names it was sent and never looks the player up.
 - Menu rebuilt on a window resize: plates, header and readout must rebuild at the new size without leaving old ones behind. River checks by resizing in Task 2 and 3.
 - Disabled page buttons must still look greyed and not react. River checks `SOON` on `PACKS` in Task 4.
 
@@ -101,28 +101,31 @@
 - [ ] **Step 1:** Add two `ImageLabel`s in Bone, 150 wide in the HUD's units: one with its left edge on `MARGIN` under the health number, one mirrored (`Size` X negative is not allowed, so flip with `ImageRectOffset` and `ImageRectSize`) with its right edge on the right margin under the ammo number. Raise `BASELINE` and everything hung from it by the bar's height plus a 6 unit gap so nothing overlaps.
 - [ ] **Step 2:** Run the checks. Commit. River checks in a match: bars under both numbers, cards and labels not crowded.
 
-### Task 6: Streak calls
+### Task 6: Kill feed
 
 **Files:**
-- Modify: `src/shared/Guns/KillRewards.luau`
-- Modify: `tests/killrewards_spec.luau`
+- Create: `src/shared/Guns/Hud/KillFeed.luau`
+- Create: `tests/killfeed_spec.luau` (add to both lists in `tests/run.luau`)
 - Modify: `src/server/GunServer.server.luau`
-- Create: `src/client/StreakCalls.client.luau`
+- Modify: `tools/make-hud-shapes.py` and `HudShapes.luau` (one more image, `Gun`)
+- Create: `src/client/KillFeed.client.luau`
 
 **Interfaces:**
-- Produces: `KillRewards.streakOf(lines: { Line }): string?` returning the streak's `name` (`"KILLING SPREE"`, `"RAMPAGE"`, `"UNSTOPPABLE"`) or nil; RemoteEvent `StreakCall` fired to all clients as `(userId: number, displayName: string, streak: string)`.
+- Produces: `KillFeed.MAX = 5`, `KillFeed.SECONDS = 6`, `KillFeed.FADE = 0.4`; `KillFeed.push(list, entry, now)` appends `{ killer, victim, mine, at }` and drops the oldest past `MAX`; `KillFeed.prune(list, now)` removes entries older than `SECONDS + FADE` and returns whether any went; `KillFeed.fade(entry, now): number` is 0 while shown, rising to 1 over `FADE`; `KillFeed.clean(name: any): string?` returns an upper-case name cut to 20 characters, or nil if it isn't a non-empty string. RemoteEvent `KillFeed` fired to all clients as `(killerUserId: number, killerName: string, victimUserId: number, victimName: string)`, with 0 for a victim that isn't a player.
 
-- [ ] **Step 1: Write the failing tests** in `tests/killrewards_spec.luau`:
-  - `streakOf` of lines with no streak id is nil.
-  - Three paying kills in a row: the third shot's lines give `"KILLING SPREE"`.
-  - A streak line whose `amount` is nil gives nil.
-  - Lines holding both `spree` and `rampage` give `"RAMPAGE"`.
-- [ ] **Step 2:** Run `lune run tests/run.luau | grep -E "^FAIL|expected|passed"`. Expected: the new tests fail because `streakOf` is nil.
-- [ ] **Step 3:** Implement `KillRewards.streakOf` from the `STREAKS` table, highest `kills` first, counting only lines with an amount.
+- [ ] **Step 1: Write the failing tests** in `tests/killfeed_spec.luau`:
+  - `push` on an empty list gives one entry with the names it was given.
+  - Six pushes leave five, and the first one pushed is gone.
+  - `prune` at `SECONDS + FADE + 0.1` after a push empties the list and returns true; at `SECONDS - 1` it leaves it and returns false.
+  - `fade` is 0 at `SECONDS - 1`, 0.5 at `SECONDS + FADE / 2`, 1 at `SECONDS + FADE`.
+  - `clean("marrow")` is `"MARROW"`; a 30-letter name comes back 20 long; `clean("")`, `clean(5)` and `clean(nil)` are nil.
+- [ ] **Step 2:** Run the tests. Expected: the new file fails because the module doesn't exist.
+- [ ] **Step 3:** Implement `KillFeed.luau`.
 - [ ] **Step 4:** Run the tests. Expected: all pass.
-- [ ] **Step 5:** In `GunServer.server.luau`, create the `StreakCall` remote beside `KillReward`. After `forShot`, if `streakOf(lines)` is not nil, `FireAllClients(player.UserId, player.DisplayName, streak)`. Clients send nothing on it.
-- [ ] **Step 6:** Write `StreakCalls.client.luau`: its own `ScreenGui` above the HUD and below the menu page. Lines right-aligned on a 32 pixel margin from the top right, newest on top, `Label` size 12 in the HUD's units: the name (or `YOU` when `userId` is the local player's) in Bone, two spaces, the streak in SignalAcid. Each stays 5 seconds then fades over 0.4; at most 4, the oldest dropped first. Ignore arguments of the wrong type and names longer than 40 characters are cut.
-- [ ] **Step 7:** Run the checks. Commit. River checks in a match by getting 3 kills on bots; another player's call needs a second player.
+- [ ] **Step 5:** In `GunServer.server.luau`, create the `KillFeed` remote beside `KillReward`. Where a target is killed, `FireAllClients(player.UserId, player.DisplayName, victimUserId, victimName)`: a player victim's `UserId` and `DisplayName`, otherwise 0 and the model's `Name`. Clients send nothing on it.
+- [ ] **Step 6:** Add a drawn pistol silhouette, `Gun.png` at 96 by 64, to the bake tool; upload it; add `HudShapes.Gun`.
+- [ ] **Step 7:** Write `KillFeed.client.luau`: its own `ScreenGui` above the HUD and below the menu page. Each line is right-aligned on a 32 pixel margin from the top right, in `Label` size 12 of the HUD's units: killer, the gun icon, victim. `mine` is true when either id is the local player's: those lines draw Bone on a Deep Navy strip at 0.5 transparency; others draw grey `Color3.fromRGB(170, 176, 182)` with no strip. Newest at the bottom. Names go through `KillFeed.clean`; a call with a bad name is ignored. Redraw on a new line and when `prune` reports a change; fade with `KillFeed.fade`.
+- [ ] **Step 8:** Run the checks. Commit. River checks in a match by killing the dummy; another player's kills need a second player.
 
 ### Task 7: Docs, review, PR
 
