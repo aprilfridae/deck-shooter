@@ -615,13 +615,6 @@ local THROWN = { switchback = true } -- cards whose use is a throw
 local THROWN_THICK = Vector3.new(0, 0.006, 0) -- a card in the hand is too thin to see edge on
 local crushAt: number? = nil -- when the card in hand was used
 local throwing = false -- that card is thrown, not crushed
-local awayAt: number? = nil -- when the cards were put away unused
-local lowerFrom = 0 -- when the hands started to sink out of view, on the way back to the gun
-local CARD_LOWER = 0.22 -- seconds the hands and deck take to sink out of view
-local CARD_DROP = Vector3.new(0, -1.15, 0.3) -- how far they go, from the camera: down, and a little toward you
-local THROW_LOWER_EARLY = 0.14 -- seconds before a throw's end that its hands start to sink
--- Where the gun comes up from, from its place at the hip: below the screen, muzzle tipped down, rolled a little.
-local GUN_LOWERED = CFrame.new(0, -1.2, 0.5) * CFrame.Angles(math.rad(-38), 0, math.rad(14))
 local released = false -- and has left the hand
 local cardTurns = 0 -- CardInHand.turns as of the last look
 local turns = 0 -- how many times the card held has been changed since the cards came out
@@ -1223,18 +1216,12 @@ local function snapFrame(): (any, number)
 end
 
 -- With a card out, the gun is gone at once and the hands play the deck flourish and hold the deck. Using the card
--- crushes it in the right hand, or throws it.
--- Going back to the gun is a lower and a raise, as swapping weapons is in most shooters (River, 2026-11-12: the
--- hands used to "teleport to holding a gun"). The hands and the deck sink out of the bottom of the screen, and the
--- gun then comes up from below into place. The same happens when the cards are put away unused.
+-- crushes it in the right hand, and then the gun is back at once.
 -- Returns true while the card has the screen.
 local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boolean
 	local now = os.clock()
 	if cardOut and crushAt then
 		cardAt, crushAt = nil, nil -- another card came out mid-crush
-	end
-	if cardOut then
-		awayAt = nil -- a card came back out while the hands were going down
 	end
 	if not cardOut then
 		if not cardAt then
@@ -1251,23 +1238,13 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 				GunAudio.playCardCrush()
 			end
 		end
-		if not crushAt and not awayAt then
-			awayAt = now -- put away unused: the hands start down now
-			GunAudio.stopCards()
-		end
-		-- When the hands start to sink. A throw's hand is already on its way home, so it sinks as it goes.
-		lowerFrom = if not crushAt
-			then awayAt :: number
-			elseif throwing then crushAt + CardFlourish.THROW - THROW_LOWER_EARLY
-			else crushAt + CardFlourish.CRUSH
-		if now - lowerFrom >= CARD_LOWER then
-			cardAt, crushAt, awayAt = nil, nil, nil
+		if not crushAt or now - crushAt >= (if throwing then CardFlourish.THROW else CardFlourish.CRUSH) then
+			cardAt, crushAt = nil, nil
 			GunAudio.stopCards()
 			shownFrame, shownBase, shownSnap = nil, nil, nil
 			smearFrame = nil
 			CardView.hide()
 			ViewArms.clearBlur()
-			held = HIP * GUN_LOWERED -- the gun starts below the screen and eases up into the hands' place
 			return false
 		end
 	end
@@ -1278,7 +1255,7 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 		cardTurns, turns = CardInHand.turns, 0
 		cardLife = math.random() * 100
 	end
-	local elapsed = (crushAt or awayAt or now) - (cardAt :: number)
+	local elapsed = (crushAt or now) - (cardAt :: number)
 	if CardInHand.turns ~= cardTurns then
 		cardTurns = CardInHand.turns
 		-- Turning to another card skips what's left of the flourish and flips the next one over.
@@ -1313,21 +1290,6 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 			-- The card leaves the hand: the world carries on with it from exactly where and how it was held.
 			released = true
 			CardThrowFx.release(held * pose.cards[crush.card], CardFlourish.CARD_SIZE + THROWN_THICK, camera.CFrame)
-		end
-	end
-	if not cardOut then
-		-- Sinking: both hands and every card go down together, slowly at first.
-		local share = math.clamp((now - lowerFrom) / CARD_LOWER, 0, 1)
-		local sink = CARD_DROP * (share * share * (3 - 2 * share))
-		if sink.Magnitude > 0 then
-			pose.right += sink
-			pose.left += sink
-			for index, frame in pose.cards do
-				pose.cards[index] = frame + sink
-			end
-			if crush then
-				crush.palm += sink
-			end
 		end
 	end
 	ViewArms.holdCards(pose.right, pose.left, pose.fingers)

@@ -51,7 +51,6 @@ All 6 are in set `set_01`. Stats are listed Field / Redline / Prototype.
 - **Aimed cards are forgiving:** Switchback and Siphon hit the nearest enemy within 3 studs of your line of sight, with nothing solid in between. A miss brings the card back in 4 seconds, not its full cooldown.
 - **The starter deck** is Phase Dash, Overclock and Siphon.
 - **Recon Pulse was removed** on 2026-11-11, the same way as Arc Mine below: saves keep the copies, it leaves the deck, and it does nothing.
-- **Back to the gun:** when a card has been crushed or thrown, or the cards are put away unused, the hands and deck sink out of the bottom of the screen over 0.22 seconds and the gun then comes up from below into place (`showCard` in `GunView.luau`). Before, the hands jumped straight to holding the gun. Not seen in Play.
 - **Effects are placeholders:** a red bolt for Siphon, a pale ring for the blast. No sounds or arm animations yet.
 - Arc Mine was removed. Old saves keep their Arc Mine copies in case it returns, but it leaves the deck, the deck refills, and the copies earn nothing.
 - Cards with one cooldown for every tier use a top-level `cooldown` field, because the ceiling test needs every `stats` entry to rise by tier.
