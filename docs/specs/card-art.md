@@ -44,17 +44,7 @@ Clicking a card in the Profile index or the pull reveal holds it up in the 3D wo
 
 ## Serial numbers
 
-- Every copy of a card has a serial, given when it's created. The first copy made is `01`, the second `02`.
-- Serials count separately for each card, tier and variant, so a Zero-Day Aegis Shell `01` and a Field Aegis Shell `01` can both exist.
-- Serials are padded to four digits, and longer numbers show in full. Serials 1 to 10 show as a big two-digit rainbow number.
-- Serials never change and are never reused, even when a copy is spent.
-
-**What this changes in `cards.md`:**
-
-- **Saves:** copies are stored as counts today, like `phase_dash:Field:Base`. Each copy becomes its own record, with its serial. Saves move to a new version, and existing copies get serials the first time they load.
-- **Counters:** the next serial lives in a shared counter that every server updates with `UpdateAsync`, so two servers can't hand out the same number. If the counter can't be reached, the request fails and changes nothing in the save, like any other failed request.
-- **Fusion:** spends the highest serials first, so your lowest numbers are the last to go. Variants still need confirming.
-- **Income, Deck Power Rating and decks:** don't change. They still go by card, tier and variant.
+How serials are given out and stored is in `serials.md` (agreed 2026-11-11, not built). How a serial looks on a card is in `card-face-redesign.md`.
 
 ## How it's built
 
