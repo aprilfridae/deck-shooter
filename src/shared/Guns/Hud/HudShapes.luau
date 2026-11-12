@@ -5,7 +5,7 @@ return {
 	PlateOutline = "rbxassetid://135702852559546", -- the same plate as an outline
 	Stripe = "rbxassetid://80655224744358", -- a bar with three slashes at its left end
 	CutFill = "rbxassetid://137499416427828", -- a square with two cut corners, for stretching into a button
-	CutOutline = "rbxassetid://73036917067314", -- the same as an outline
+	CutOutline = "rbxassetid://121046904820909", -- the same as an outline
 	Gun = "rbxassetid://140627369227456", -- the kill feed's pistol, pointing left
 
 	PLATE_RATIO = 512 / 167, -- width over height

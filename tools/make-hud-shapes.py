@@ -16,7 +16,7 @@ PACK = {"Plate": 94, "Stripe": 91}
 OUTLINE = 15  # an odd number: the plate outline's thickness is half of it, in pixels at full width
 CUT_SIZE = 64
 CUT = 24  # how much of each cut corner is taken off, in pixels
-CUT_LINE = 2
+CUT_LINE = 3  # about a pixel and a half once a button shrinks it
 SCALE = 4  # drawn this much bigger, then shrunk, for smooth edges
 
 
