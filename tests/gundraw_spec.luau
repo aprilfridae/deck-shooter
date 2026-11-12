@@ -1,5 +1,11 @@
 local harness = require("./harness")
+local fs = require("@lune/fs")
+local luau = require("@lune/luau")
+local roblox = require("@lune/roblox")
 local GunDraw = require("../src/shared/Guns/GunDraw")
+local AkReload = luau.load(fs.readFile("src/shared/Guns/AkReload.luau"), {
+	environment = { CFrame = roblox.CFrame, Vector3 = roblox.Vector3 },
+})()
 
 local describe, it, expect = harness.describe, harness.it, harness.expect
 
@@ -49,8 +55,42 @@ describe("GunDraw", function()
 	end)
 
 	it("tugs the rifle back and lets it snap forward, as the bolt is racked", function()
-		expect(GunDraw.at("rifle", 0.44).z > GunDraw.at("rifle", 0.3).z + 0.1).toBe(true)
-		expect(GunDraw.at("rifle", 0.52).z < GunDraw.at("rifle", 0.44).z - 0.1).toBe(true)
+		expect(GunDraw.at("rifle", 0.5).z > GunDraw.at("rifle", 0.3).z + 0.1).toBe(true)
+		expect(GunDraw.at("rifle", 0.56).z < GunDraw.at("rifle", 0.5).z - 0.1).toBe(true)
+	end)
+
+	it("racks the rifle's bolt just as the gun is tugged back", function()
+		expect(GunDraw.rack("rifle", 0.1)).toBeNil()
+		expect(GunDraw.rack("pistol", 0.4)).toBeNil()
+		-- The handle starts back before the tug's peak and the bolt is home soon after it.
+		local pull = GunDraw.rack("rifle", 0.42) :: number
+		local home = GunDraw.rack("rifle", 0.58) :: number
+		expect(pull >= AkReload.RACK_PULL and pull < AkReload.RACK_HOME).toBe(true)
+		expect(home >= AkReload.RACK_HOME).toBe(true)
+		-- And the hand is back on the grip before the draw is over.
+		expect((GunDraw.rack("rifle", GunDraw.length("rifle")) :: number) >= AkReload.RACK).toBe(true)
+	end)
+
+	it("pulls the bolt back and takes the right hand off the grip to do it", function()
+		local pulled = AkReload.rack((AkReload.RACK_PULL + AkReload.RACK_HOME) / 2)
+		expect(pulled.bolt > 0).toBe(true)
+		expect(pulled.rightWeight > 0.9).toBe(true)
+		expect(pulled.weight).toBe(0)
+		expect(AkReload.rack(0).rightWeight).toBe(0)
+		expect(AkReload.rack(AkReload.RACK).rightWeight).toBe(0)
+		expect(AkReload.rack(AkReload.RACK).bolt).toBe(0)
+	end)
+
+	it("takes the left hand over the pistol's slide and pulls it back", function()
+		expect(GunDraw.hand("pistol", 0.1)).toBeNil()
+		expect(GunDraw.hand("pistol", 0.75)).toBeNil()
+		expect(GunDraw.hand("rifle", 0.4)).toBeNil()
+		local on = GunDraw.hand("pistol", 0.36) :: any
+		local back = GunDraw.hand("pistol", 0.44) :: any
+		expect(on.y > 0.2).toBe(true)
+		expect(back.z > on.z + 0.2).toBe(true)
+		-- The gun is tugged back with it.
+		expect(GunDraw.at("pistol", 0.44).z > GunDraw.at("pistol", 0.36).z + 0.05).toBe(true)
 	end)
 
 	it("ends every gun exactly at rest, and keeps it there", function()

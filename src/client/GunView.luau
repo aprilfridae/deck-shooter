@@ -1409,12 +1409,15 @@ function GunView.update(
 		return
 	end
 	-- The pull-out: the gun and both arms come into place together, by the gun's own draw.
+	local drawKind: string? = nil
+	local drawSince = 0
 	if drawAt and config then
 		local kind = GunDraw.kind(isSidearm, config.aimFov ~= nil)
 		local since = os.clock() - drawAt
 		if since >= GunDraw.length(kind) then
 			drawAt = nil
 		else
+			drawKind, drawSince = kind, since
 			local pose = GunDraw.at(kind, since)
 			local pivot = HIP.Position
 			base *= CFrame.new(pivot)
@@ -1457,7 +1460,9 @@ function GunView.update(
 		local moved: { [string]: CFrame }? = nil
 		local viewKick = config and VIEW_KICKS[config.name]
 		local stillLeft = viewKick ~= nil and viewKick.stillLeft == true
-		local palms = if nudged or codeReload or stillLeft or (viewKick ~= nil and viewKick.wrist ~= nil)
+		-- The left hand's own part in the pull-out: it comes off the gun to rack the slide.
+		local reach = if drawKind then GunDraw.hand(drawKind, drawSince) else nil
+		local palms = if nudged or codeReload or stillLeft or reach or (viewKick ~= nil and viewKick.wrist ~= nil)
 			then SoldierPose.clipPalms(clips.meshOffset, whole.bones)
 			else nil
 		if nudged and palms then
@@ -1485,6 +1490,11 @@ function GunView.update(
 			placed.Left = layerShown:Inverse() * recoil:Inverse() * layerShown * (placed.Left or palms.Left)
 			moved = placed
 		end
+		if reach and palms then
+			local placed = moved or {}
+			placed.Left = whole.gun * CFrame.new(reach.x, reach.y, reach.z) * whole.gun:Inverse() * (placed.Left or palms.Left)
+			moved = placed
+		end
 		-- A reload keyed in code takes the left hand off wherever the clip has it.
 		codePose, codeTurn = nil, CFrame.identity
 		if codeReload and config and palms then
@@ -1494,10 +1504,18 @@ function GunView.update(
 			codeReloading = reloading
 			local reload = codeReload.reload
 			local at = if codeReloadAt then (os.clock() - codeReloadAt) * reload.SOUND / config.reload else math.huge
+			local pose: any = nil
 			if at >= reload.LENGTH or (not reloading and at < reload.SOUND * 0.95) then
 				codeReloadAt = nil -- done, or cut short
 			else
-				local pose = reload.at(at)
+				pose = reload.at(at)
+			end
+			if not pose and drawKind and reload.rack then
+				-- The pull-out: the bolt is racked, by the same hands and bolt as at the end of a reload.
+				local racking = GunDraw.rack(drawKind, drawSince)
+				pose = if racking and racking < reload.RACK then reload.rack(racking) else nil
+			end
+			if pose then
 				local per, origin = codeReload.perMetre, codeReload.origin
 				codePose = pose
 				-- The gun turns in the right hand, which goes round with it, and so does the left hand's rest.
@@ -1614,6 +1632,12 @@ function GunView.update(
 		if reloadHand ~= Vector3.zero then
 			left = table.clone(left)
 			left.wrist += reloadHand
+		end
+		local reach = if drawKind then GunDraw.hand(drawKind, drawSince) else nil
+		if reach then
+			-- The left hand's own part in the pull-out: it comes off the gun to rack the slide.
+			left = table.clone(left)
+			left.wrist += Vector3.new(reach.x, reach.y, reach.z)
 		end
 		if lever and leverOpen > 0 then
 			-- The right hand is in the lever's loop and rides it round.

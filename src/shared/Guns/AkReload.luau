@@ -284,6 +284,26 @@ function AkReload.at(t: number): Pose
 	}
 end
 
+-- Just the end of the reload, for the pull-out: the right hand goes from the grip to the knob, racks the bolt and
+-- goes back, `t` seconds in. Nothing else moves.
+function AkReload.rack(t: number): Pose
+	local _, _, _, _, bolt, _, right, rightWeight, rightSwing = keyed(REACH_FROM + math.clamp(t, 0, GRIP_TO - REACH_FROM))
+	return {
+		gun = CFrame.identity,
+		mag = CFrame.identity,
+		spare = nil,
+		bolt = bolt,
+		palm = CFrame.identity,
+		weight = 0,
+		right = right,
+		rightWeight = rightWeight,
+		rightSwing = rightSwing,
+	}
+end
+
+AkReload.RACK = GRIP_TO - REACH_FROM -- how long that takes
+AkReload.RACK_PULL = PULL_AT - REACH_FROM -- when in it the handle starts back
+AkReload.RACK_HOME = HOME_AT - REACH_FROM -- and when the bolt is home
 AkReload.LENGTH = LENGTH
 AkReload.SOUND = 1.26 -- one reload: all of it fits in the gun's reload time
 AkReload.TRAVEL = TRAVEL

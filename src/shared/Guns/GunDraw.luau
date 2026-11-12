@@ -27,8 +27,10 @@ local DRAWS: { [string]: { Key } } = {
 		key(0, -0.1, -1.3, 0.2, 35, 0, 6),
 		key(0.1, -0.08, -0.55, 0.2, 62, 0, 8),
 		key(0.2, -0.06, 0.05, 0.2, 76, 0, 9),
-		key(0.4, -0.05, 0.22, 0.2, 84, 0, 9),
-		key(0.52, -0.04, 0.2, 0.18, 78, 0, 8),
+		key(0.36, -0.05, 0.21, 0.2, 83, 0, 9),
+		key(0.44, -0.05, 0.2, 0.32, 80, 0, 9), -- the slide is racked: the gun is tugged back
+		key(0.5, -0.04, 0.21, 0.16, 82, 0, 8), -- and let go: it snaps forward
+		key(0.56, -0.04, 0.2, 0.18, 78, 0, 8),
 		key(0.64, -0.01, 0.04, 0.05, 28, 0, 3),
 		key(0.72, 0, -0.03, -0.02, -4, 0, 0),
 		key(0.82, 0, 0, 0, 0, 0, 0),
@@ -39,9 +41,9 @@ local DRAWS: { [string]: { Key } } = {
 		key(0, -0.5, -1.3, 0.3, 20, 30, 20),
 		key(0.14, -0.46, -0.25, 0.2, 34, 38, 26),
 		key(0.3, -0.45, 0.05, 0.15, 38, 40, 28),
-		key(0.44, -0.42, 0.02, 0.34, 35, 38, 31),
-		key(0.52, -0.45, 0.06, 0.1, 39, 40, 28),
-		key(0.62, -0.42, 0.04, 0.1, 36, 38, 26),
+		key(0.5, -0.42, 0.02, 0.34, 35, 38, 31),
+		key(0.56, -0.45, 0.06, 0.1, 39, 40, 28),
+		key(0.64, -0.42, 0.04, 0.1, 36, 38, 26),
 		key(0.74, -0.08, -0.02, 0, 6, 7, 5),
 		key(0.82, 0.02, -0.03, -0.04, -3, -2, -2),
 		key(0.92, 0, 0, 0, 0, 0, 0),
@@ -54,6 +56,54 @@ local DRAWS: { [string]: { Key } } = {
 		key(1, 0, 0, 0, 0, 0, 0),
 	},
 }
+
+-- The left hand's own part in a draw: where it is from its place on the gun, in the gun's space (x right, y up,
+-- z toward you), at each time. River, 2026-11-12: "for the pistol like actually cock the gun".
+local HANDS: { [string]: { { at: number, x: number, y: number, z: number } } } = {
+	-- Off the grip, over the back of the slide, pulled back with it, let go, and back to the grip.
+	pistol = {
+		{ at = 0.2, x = 0, y = 0, z = 0 },
+		{ at = 0.36, x = 0.09, y = 0.32, z = 0 },
+		{ at = 0.44, x = 0.09, y = 0.32, z = 0.26 },
+		{ at = 0.5, x = 0.04, y = 0.3, z = 0.3 },
+		{ at = 0.7, x = 0, y = 0, z = 0 },
+	},
+}
+
+-- Where the left hand has got to, from its place on the gun. Nil when it is simply on the gun.
+function GunDraw.hand(kind: string, elapsed: number): { x: number, y: number, z: number }?
+	local keys = HANDS[kind]
+	if not keys or elapsed <= keys[1].at or elapsed >= keys[#keys].at then
+		return nil
+	end
+	local index = 1
+	while keys[index + 1].at < elapsed do
+		index += 1
+	end
+	local from, to = keys[index], keys[index + 1]
+	local share = (elapsed - from.at) / (to.at - from.at)
+	share = share * share * (3 - 2 * share)
+	return {
+		x = from.x + (to.x - from.x) * share,
+		y = from.y + (to.y - from.y) * share,
+		z = from.z + (to.z - from.z) * share,
+	}
+end
+
+-- A gun whose bolt is racked in its draw (River, 2026-11-12: "make the hands actually like. pull the tab"): when
+-- the rack starts, and how fast the gun's own rack is played.
+local RACKS: { [string]: { from: number, rate: number } } = {
+	rifle = { from = 0.2, rate = 0.6 },
+}
+
+-- How far into its rack a gun is, in the rack's own seconds. Nil before it starts or for a kind that has none.
+function GunDraw.rack(kind: string, elapsed: number): number?
+	local rack = RACKS[kind]
+	if not rack or elapsed < rack.from then
+		return nil
+	end
+	return (elapsed - rack.from) * rack.rate
+end
 
 -- Which draw a gun uses: a sidearm is a pistol, a scoped gun is a sniper, and anything else is a rifle.
 function GunDraw.kind(sidearm: boolean, scoped: boolean): string
