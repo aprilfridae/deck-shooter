@@ -74,7 +74,8 @@ function CardEffects.rounded(gui: GuiObject, radius: UDim)
 end
 
 -- A root-sized frame showing only a slanted band. Moving the gradient's offset moves the band.
-function CardEffects.band(root: GuiObject, corner: number, halfWidth: number, color: ColorSequence, strength: number): UIGradient
+-- `rotation` is the band's lean in degrees: the shine's 20 unless given.
+function CardEffects.band(root: GuiObject, corner: number, halfWidth: number, color: ColorSequence, strength: number, rotation: number?): UIGradient
 	local frame = Instance.new("Frame")
 	frame.BackgroundColor3 = Color3.new(1, 1, 1)
 	frame.BorderSizePixel = 0
@@ -83,7 +84,7 @@ function CardEffects.band(root: GuiObject, corner: number, halfWidth: number, co
 	frame.Parent = root
 	CardEffects.rounded(frame, UDim.new(0, corner))
 	local gradient = Instance.new("UIGradient")
-	gradient.Rotation = SHINE_ROTATION
+	gradient.Rotation = rotation or SHINE_ROTATION
 	gradient.Color = color
 	gradient.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 1),

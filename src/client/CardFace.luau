@@ -13,6 +13,7 @@ local Guns = ReplicatedStorage:WaitForChild("Guns")
 local CardMotion = require(Guns:WaitForChild("Hud"):WaitForChild("CardMotion"))
 local Palette = require(Guns:WaitForChild("Palette"))
 local CardEffects = require(script.Parent.CardEffects)
+local CardFaceFx = require(script.Parent.CardFaceFx)
 local TypeLabel = require(script.Parent.TypeLabel)
 
 -- The back is in its own units: a card is 150 wide and 240 tall.
@@ -51,6 +52,20 @@ local BACK_STRIPES_HEIGHT = 12
 local SET_CODES = { set_01 = "S01" }
 local GHOST_TRANSPARENCY = 0.75
 local SHINE_HALF_WIDTH = 0.07 -- of the gradient
+-- The dots that orbit the globe, outer ring first: radius, seconds a lap, direction, seconds of head start.
+local DOTS = { { 20, 6, 1, 0 }, { 15, 4.4, -1, 1.5 }, { 12, 3, 1, 0.8 } }
+local SPARKLE_TIME = 3
+local BURST_TIME = 1.2
+-- A full rainbow for serials 1 to 10 (River, 2026-11-11: "rainbow and glowing"). It ends where it starts.
+local RAINBOW = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 45, 85)),
+	ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 159, 10)),
+	ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 230, 0)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(48, 224, 96)),
+	ColorSequenceKeypoint.new(0.67, Color3.fromRGB(1, 213, 255)),
+	ColorSequenceKeypoint.new(0.83, Color3.fromRGB(138, 92, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 45, 85)),
+})
 local WHOLE = { x = 0, y = 0, w = CardLayout.WIDTH, h = CardLayout.HEIGHT }
 
 -- `mark` colours the acronym and serial on the front. `rarity` and `outline` are the back's.
@@ -174,8 +189,15 @@ function CardFace.new(parent: Instance, options: Options): GuiObject
 	root.Position = options.position or UDim2.new()
 	CardEffects.rounded(root, UDim.new(0, CardLayout.CORNER * face))
 
+	-- An empty layer under everything, for effects that sit behind the card's art.
+	local under = Instance.new("Frame")
+	under.Name = "Under"
+	under.BackgroundTransparency = 1
+	under.Size = UDim2.fromScale(1, 1)
+	under.Parent = root
+
 	placed(root, face, CardArt.layer("still"), WHOLE, style.ink)
-	placed(root, face, CardArt.layer("rays"), CardLayout.RAYS, style.ink)
+	local rays = placed(root, face, CardArt.layer("rays"), CardLayout.RAYS, style.ink)
 	local dot = Instance.new("Frame")
 	dot.BackgroundColor3 = style.ink
 	dot.BorderSizePixel = 0
@@ -184,9 +206,9 @@ function CardFace.new(parent: Instance, options: Options): GuiObject
 	dot.Size = UDim2.fromOffset(CardLayout.BURST_DOT.r * 2 * face, CardLayout.BURST_DOT.r * 2 * face)
 	dot.Parent = root
 	CardEffects.rounded(dot, UDim.new(0.5, 0))
-	centred(root, face, CardArt.layer("star_big"), CardLayout.STAR_BIG, style.ink)
-	centred(root, face, CardArt.layer("star_small"), CardLayout.STAR_SMALL, style.ink)
-	placed(root, face, CardArt.monogram(options.cardId), CardLayout.MONOGRAM, style.mark)
+	local starBig = centred(root, face, CardArt.layer("star_big"), CardLayout.STAR_BIG, style.ink)
+	local starSmall = centred(root, face, CardArt.layer("star_small"), CardLayout.STAR_SMALL, style.ink)
+	local monogram = placed(root, face, CardArt.monogram(options.cardId), CardLayout.MONOGRAM, style.mark)
 
 	local name = CardArt.name(options.cardId)
 	if name then
@@ -201,8 +223,21 @@ function CardFace.new(parent: Instance, options: Options): GuiObject
 	faceText(root, face, "Label", rarity.size, rarity.tracking, style.ink, rarity.x, rarity.line)
 		:set(CardLook.faceRarity(options.tier, options.variant))
 
-	if low then
+	local rainbows: { UIGradient } = {}
+	local glow: ImageLabel? = nil
+	if low and options.ghost then
 		placed(root, face, CardArt.lowSerial(serial :: number), CardLayout.LOW_SERIAL, style.mark)
+	elseif low then
+		-- Roblox can't blur text, so the glow is a blurred picture of the same number behind it.
+		local white = Color3.new(1, 1, 1)
+		glow = placed(root, face, CardArt.lowGlow(serial :: number), CardLayout.LOW_GLOW, white)
+		for _, label in { glow :: ImageLabel, placed(root, face, CardArt.lowSerial(serial :: number), CardLayout.LOW_SERIAL, white) } do
+			local rainbow = Instance.new("UIGradient")
+			rainbow.Rotation = 20
+			rainbow.Color = RAINBOW
+			rainbow.Parent = label
+			table.insert(rainbows, rainbow)
+		end
 	else
 		placed(root, face, CardArt.layer("barcode"), CardLayout.BARCODE, style.ink)
 		local place = CardLayout.SERIAL
@@ -216,10 +251,69 @@ function CardFace.new(parent: Instance, options: Options): GuiObject
 		return root
 	end
 
+	local globe = CardLayout.GLOBE
+	local dots = {}
+	for index, dot in DOTS do
+		local ball = Instance.new("Frame")
+		ball.BackgroundColor3 = if index == 2 then style.ink else style.mark
+		ball.BorderSizePixel = 0
+		ball.AnchorPoint = Vector2.new(0.5, 0.5)
+		ball.Size = UDim2.fromOffset(dot[1] * 2 * face, dot[1] * 2 * face)
+		ball.Parent = root
+		CardEffects.rounded(ball, UDim.new(0.5, 0))
+		dots[index] = ball
+	end
+
+	local effects = CardFaceFx.build(look, root, face, options.width, {
+		under = under,
+		monogram = monogram,
+		starBig = starBig,
+		starSmall = starSmall,
+		ink = style.ink,
+		mark = style.mark,
+	})
 	local shine = CardEffects.band(root, CardLayout.CORNER * face, SHINE_HALF_WIDTH, ColorSequence.new(Color3.new(1, 1, 1)), style.shine)
+
+	local function breathe(label: GuiObject, rect: any, scale: number)
+		label.Size = UDim2.fromOffset(rect.w * face * scale, rect.h * face * scale)
+	end
+	local dotRect = { w = CardLayout.BURST_DOT.r * 2, h = CardLayout.BURST_DOT.r * 2 }
+
 	CardEffects.animate(root, function(elapsed: number)
 		local held = options.shineAt and options.shineAt()
-		shine.Offset = Vector2.new(held or CardMotion.shineOffset(elapsed), 0)
+		local shineAt = held or CardMotion.shineOffset(elapsed)
+		shine.Offset = Vector2.new(shineAt, 0)
+
+		-- The two sparkles take turns, half a cycle apart.
+		local scale, clear = CardMotion.breathe(elapsed, SPARKLE_TIME, 0)
+		breathe(starBig, CardLayout.STAR_BIG, scale)
+		starBig.ImageTransparency = clear
+		scale, clear = CardMotion.breathe(elapsed, SPARKLE_TIME, SPARKLE_TIME / 2)
+		breathe(starSmall, CardLayout.STAR_SMALL, scale)
+		starSmall.ImageTransparency = clear
+		scale, clear = CardMotion.breathe(elapsed, BURST_TIME, 0)
+		breathe(dot, dotRect, scale)
+		dot.BackgroundTransparency = clear
+		local _, raysClear = CardMotion.breathe(elapsed, BURST_TIME * 2, 0)
+		rays.ImageTransparency = raysClear
+
+		for index, ball in dots do
+			local ring = DOTS[index]
+			local across, down = CardMotion.orbit(elapsed + ring[4], ring[2], ring[3])
+			ball.Position = UDim2.fromOffset((globe.x + globe.rings[index] * across) * face, (globe.y + globe.ry * down) * face)
+		end
+
+		for _, effect in effects do
+			effect(elapsed, shineAt)
+		end
+
+		if glow then
+			local slide = CardMotion.rainbowShift(elapsed) * 2 - 1
+			for _, rainbow in rainbows do
+				rainbow.Offset = Vector2.new(slide, 0)
+			end
+			glow.ImageTransparency = CardMotion.glow(elapsed)
+		end
 	end)
 	return root
 end
