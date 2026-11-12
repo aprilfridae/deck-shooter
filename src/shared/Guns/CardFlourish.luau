@@ -50,6 +50,9 @@ local THROW_DRAW = Vector3.new(0.1, 0.34, 0.16) -- where the hand lifts to, from
 -- exactly this, so the throw is one motion.
 local THROW_LEAVES = Vector3.new(0.1, -0.1, -1.15)
 local THROW_AIMED = CFrame.Angles(0, 0, math.rad(90))
+-- The left hand takes the deck down and out to the left while the right throws, so it isn't in the way (River,
+-- 2026-11-12), and brings it back as the right hand comes home.
+local THROW_CLEAR = Vector3.new(-0.3, -0.22, 0.1) -- left, down, toward you
 local THROW_COCK = math.rad(50) -- how far the hand tips back at the top
 local THROW_SNAP = math.rad(-75) -- and how far it chops through
 
@@ -730,8 +733,9 @@ function CardFlourish.throw(elapsed: number, since: number, turns: number?): Cru
 	local flick = THROW_FLICK * (whip - home)
 	local right = CFrame.new(at) * CFrame.Angles(tip, flick, 0) * settled.Rotation
 	local carried = right * settled:Inverse() -- how the hand moved: the card in it goes the same way
+	local clear = THROW_CLEAR * (grab - home)
 	pose.right = right
-	pose.left = pose.left:Lerp(final.left, grab)
+	pose.left = pose.left:Lerp(final.left, grab) + clear
 	local holding: Shape = {}
 	for bone, aims in pose.fingers.Left do
 		local held = {}
@@ -755,7 +759,7 @@ function CardFlourish.throw(elapsed: number, since: number, turns: number?): Cru
 			local to = if index == CHOSEN then TOP_FRAME else final.cards[index]
 			-- A card that was under the thrown one in the right hand is put straight back on the deck. Eased
 			-- there, it could be seen sliding across to the left hand under the throw (River's clip, 2026-11-12).
-			pose.cards[index] = if pose.sides[index] > 0.5 then to else frame:Lerp(to, grab)
+			pose.cards[index] = (if pose.sides[index] > 0.5 then to else frame:Lerp(to, grab)) + clear -- the deck goes with its hand
 			pose.sides[index] *= if pose.sides[index] > 0.5 then 0 else 1 - grab
 		end
 	end
