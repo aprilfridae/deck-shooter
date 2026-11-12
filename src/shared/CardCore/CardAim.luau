@@ -44,7 +44,7 @@ end
 -- It is thrown hard: close to a hitscan, with just enough time in the air to be seen turning blue.
 CardAim.THROW_SPEED = 500 -- studs a second
 CardAim.THROW_LEAST = 0.14 -- seconds: the shortest a throw takes, however close the target
-CardAim.THROW_WINDUP = 0.12 -- seconds from using the card to it leaving the hand
+CardAim.THROW_WINDUP = 0.22 -- seconds from using the card to it leaving the hand
 
 function CardAim.flight(length: number): number
 	return math.max(length / CardAim.THROW_SPEED, CardAim.THROW_LEAST)

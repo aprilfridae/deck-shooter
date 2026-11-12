@@ -33,9 +33,17 @@ local BURST_AT = 0.16 -- into the crush, the card is gone
 -- A card that is thrown, not crushed (Switchback). It is an overhand throw with the card on edge, from River's
 -- own video (2026-11-12): the right hand turns the card upright, lifts it up beside the head, then chops down
 -- and forward and lets go.
-local THROW = 0.4 -- seconds the whole throw takes
-local THROW_BACK = 0.08 -- the hand is up and cocked by now
-local THROW_RELEASE = 0.12 -- and the card leaves it now: CardAim.THROW_WINDUP is the same moment
+-- River then had it made "smoother and more swaggy": it takes its time, every part eases in and out and runs
+-- into the next, the card twirls in the fingers on the way up, the hand sweeps out in a curve and flicks across as
+-- it lets go, and it hangs out there a beat with a little bounce before coming home.
+local THROW = 0.7 -- seconds the whole throw takes
+local THROW_BACK = 0.17 -- the hand is up and cocked by now
+local THROW_RELEASE = 0.22 -- and the card leaves it now: CardAim.THROW_WINDUP is the same moment
+local THROW_HANG = 0.16 -- how long the hand stays out after letting go
+local THROW_SWEEP = Vector3.new(0.09, 0.03, 0) -- how far out the chop curves on its way through
+local THROW_FLICK = math.rad(-22) -- the wrist's turn across as it lets go
+local THROW_TWIRL = math.rad(360) -- the card's spin in the fingers on the way up
+local THROW_BOUNCE = 0.035 -- how far the hand gives as the card leaves it
 local THROW_DRAW = Vector3.new(0.1, 0.34, 0.16) -- where the hand lifts to, from where it was: right, up, toward you
 local THROW_REACH = Vector3.new(-0.06, -0.14, -0.5) -- and where the chop ends: across, down, away from you
 local THROW_COCK = math.rad(50) -- how far the hand tips back at the top
@@ -53,6 +61,11 @@ local FLIP_LEAD = 0.1 -- the flip's rounded corner starts this long before FLIP_
 -- Weight. Whatever lands in a hand knocks it down and it rings back, and the cards in it go with it.
 local SINK = Vector3.new(0, -1, 0.3) -- the way a hand gives, relative to the camera
 local CATCH = Vector3.new(0.7, -0.6, 0.2) -- and the way the right hand gives when the flipped card slaps into it
+
+-- A gentler ease than smooth: it starts and stops with no jolt at all.
+local function smoother(share: number): number
+	return share * share * share * (share * (share * 6 - 15) + 10)
+end
 
 local function smooth(share: number): number
 	return share * share * (3 - 2 * share)
@@ -689,17 +702,24 @@ function CardFlourish.throw(elapsed: number, since: number, turns: number?): Cru
 	local chosen = CardFlourish.top(turned)
 	local pose = if turned > 0 then CardFlourish.turn(turned, 10) else CardFlourish.at(elapsed)
 	local final = final()
-	local grab = smooth(math.clamp(since / THROW_BACK, 0, 1))
-	local whip = smooth(math.clamp((since - THROW_BACK) / (THROW_RELEASE + 0.05 - THROW_BACK), 0, 1))
-	local home = smooth(math.clamp((since - THROW_RELEASE - 0.08) / (THROW - THROW_RELEASE - 0.08), 0, 1))
+	local grab = smoother(math.clamp(since / THROW_BACK, 0, 1))
+	-- The chop starts just before the lift has finished, so the hand never stops at the top.
+	local whipFrom = THROW_BACK * 0.8
+	local whip = smoother(math.clamp((since - whipFrom) / (THROW_RELEASE + 0.07 - whipFrom), 0, 1))
+	local homeFrom = THROW_RELEASE + THROW_HANG
+	local home = smoother(math.clamp((since - homeFrom) / (THROW - homeFrom), 0, 1))
 	local settled = pose.right:Lerp(final.right, grab)
-	local offset = THROW_DRAW * (grab - whip) + THROW_REACH * (whip - home)
+	local offset = THROW_DRAW * (grab - whip)
+		+ THROW_REACH * (whip - home)
+		+ THROW_SWEEP * math.sin(math.pi * whip) -- out and round, not straight down the middle
+		+ SINK * (THROW_BOUNCE * knock(since - THROW_RELEASE)) -- the hand gives as the card goes
 	-- Turned about the camera's own axes, at the hand: tipped back then chopped forward. The wrist isn't rolled:
 	-- that twisted the hand inward (River, 2026-11-12). The card turns onto its edge in the fingers instead.
 	local tip = THROW_COCK * (grab - whip) + THROW_SNAP * (whip - home)
 	local edge = THROW_EDGE * grab
 	local at = settled.Position + offset
-	local right = CFrame.new(at) * CFrame.Angles(tip, 0, 0) * settled.Rotation
+	local flick = THROW_FLICK * (whip - home)
+	local right = CFrame.new(at) * CFrame.Angles(tip, flick, 0) * settled.Rotation
 	local carried = right * settled:Inverse() -- how the hand moved: the card in it goes the same way
 	pose.right = right
 	pose.left = pose.left:Lerp(final.left, grab)
@@ -731,7 +751,8 @@ function CardFlourish.throw(elapsed: number, since: number, turns: number?): Cru
 		pose.cards[index] = frame:Lerp(to, grab)
 		pose.sides[index] += ((if index == chosen then 1 else 0) - pose.sides[index]) * grab
 	end
-	local card = carried * pose.cards[chosen]
+	-- The card spins once on its own face as it comes up, then stands on its edge.
+	local card = carried * pose.cards[chosen] * CFrame.Angles(0, THROW_TWIRL * grab, 0)
 	pose.cards[chosen] = CFrame.new(card.Position) * CFrame.Angles(0, 0, edge) * card.Rotation
 	local palm = (pose.right * CFrame.new(0.06, 0.32, 0)).Position
 	return { pose = pose, crushed = if since >= THROW_RELEASE then 1 else 0, palm = palm, card = chosen, thrown = true }
