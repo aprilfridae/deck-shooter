@@ -356,31 +356,37 @@ local RELOADS: { [string]: any } = {
 
 -- Pull-outs keyed like the reloads above, for guns that are thrown about in the hands, not just brought up
 -- (GunDraw has the plain ones). Seconds into the draw; `length` is how long it runs, and nothing stretches.
+-- Until `catch`, a key's hand is where the left hand is from its place in the hold, whatever the gun is doing: it
+-- is off the gun, waiting. It closes onto the gun over the last CATCH_CLOSE seconds before the catch, and after
+-- that it is on the gun as in a reload.
 --
--- The Longscope's follows its reload (River, 2026-11-12: "it should feel like the reload ... a spin downwards
--- sort of and it should be quicker and not tilt the camera as much ... the left arm is connected to the sniper the
--- whole time and the way it should work it should like catch it"). The gun drops in from above the top of the
--- screen in the right hand alone, muzzle high and swinging down level as it falls. It turned right over once at
--- first, like the reload's flip; River: "rather than making it do a full flip just make it come down from the top
--- and land". The left hand waits below, off the gun (its place takes away the gun's own, so it stays where it is while the gun falls), and
--- catches it by the fore-end as it lands. Both sink with the weight, it is lifted and canted, and the lever is
--- thrown open and slammed shut. Only the gun and hands move: the view isn't turned.
+-- The Longscope's (River, 2026-11-12): "right arm needs to reach back and then pull the sniper with it and come
+-- down and the left arm needs to catch it". The gun starts up behind the right shoulder, out of view, muzzle to
+-- the sky, with only the right hand on it. That hand hauls it over the shoulder and down in front, muzzle swinging
+-- down level, and the left hand, waiting just under its place, catches it by the fore-end. Both sink with the
+-- weight, it is lifted and canted, and the lever is thrown open and slammed shut. Only the gun and hands move: the
+-- view isn't turned. Earlier versions: down from above with the whole view turning ("tilt the camera"), a full
+-- flip ("just make it come down from the top and land"), and a drop from straight above whose waiting left hand
+-- was placed in the falling gun's own turned space, which threw both arms far out in front.
+local CATCH_CLOSE = 0.1
 local KEYED_DRAWS: { [string]: any } = {
 	Longscope = {
-		length = 1,
-		lever = { { 0.56, 0 }, { 0.64, 1 }, { 0.7, 1 }, { 0.78, 0 } },
+		length = 1.02,
+		catch = 0.42,
+		lever = { { 0.58, 0 }, { 0.66, 1 }, { 0.72, 1 }, { 0.8, 0 } },
 		keys = {
-			key(0, tilt(-6, 0, 55, 0.1, 2.6, 0.2), Vector3.new(-0.1, -2.75, -0.1)),
-			key(0.16, tilt(-5, 0, 40, 0.06, 1.2, 0.12), Vector3.new(-0.06, -1.38, -0.05), "flow"),
-			key(0.3, tilt(-2, 0, 16, 0.02, 0.4, 0.05), Vector3.new(-0.02, -0.5, 0), "flow"),
-			key(0.4, tilt(3, -1, 2, 0, 0.14, 0.02), Vector3.zero, "flow"), -- it lands in the left hand
-			key(0.47, tilt(8, -3, -5, -0.01, -0.06, 0.03), Vector3.new(0, -0.03, 0), "flow"), -- both drop with the weight
-			key(0.56, tilt(11, -4, 6, -0.04, 0.46, 0.05), Vector3.zero, "flow"), -- lifted and canted, so the lever shows
-			key(0.64, tilt(9.5, -3, 9, -0.03, 0.38, -0.04), Vector3.zero, "flow"), -- the lever hits its stop, open
-			key(0.7, tilt(10.5, -4, 7, -0.04, 0.41, -0.02), Vector3.zero, "flow"),
-			key(0.78, tilt(6, -2, 2, -0.02, 0.46, 0.07), Vector3.zero, "flow"), -- slammed shut
-			key(0.88, tilt(-1, 0.3, -0.5, 0.002, -0.01, 0.015), Vector3.zero, "flow"),
-			key(1, CFrame.identity, Vector3.zero, "flow"),
+			key(0, tilt(-10, 0, 95, 0.8, 2.9, 2.2), Vector3.new(-0.05, -0.2, 0.1)),
+			key(0.12, tilt(-10, 0, 78, 0.75, 2.3, 1.2), Vector3.new(-0.05, -0.2, 0.1), "flow"),
+			key(0.24, tilt(-6, 0, 45, 0.35, 1.1, 0.5), Vector3.new(-0.04, -0.15, 0.05), "flow"),
+			key(0.34, tilt(-2, 0, 14, 0.04, 0.35, 0.1), Vector3.new(-0.02, -0.08, 0), "flow"),
+			key(0.42, tilt(3, -1, 2, 0, 0.1, 0.02), Vector3.zero, "flow"), -- it lands in the left hand
+			key(0.49, tilt(8, -3, -5, -0.01, -0.06, 0.03), Vector3.new(0, -0.03, 0), "flow"), -- both drop with the weight
+			key(0.58, tilt(11, -4, 6, -0.04, 0.46, 0.05), Vector3.zero, "flow"), -- lifted and canted, so the lever shows
+			key(0.66, tilt(9.5, -3, 9, -0.03, 0.38, -0.04), Vector3.zero, "flow"), -- the lever hits its stop, open
+			key(0.72, tilt(10.5, -4, 7, -0.04, 0.41, -0.02), Vector3.zero, "flow"),
+			key(0.8, tilt(6, -2, 2, -0.02, 0.46, 0.07), Vector3.zero, "flow"), -- slammed shut
+			key(0.9, tilt(-1, 0.3, -0.5, 0.002, -0.01, 0.015), Vector3.zero, "flow"),
+			key(1.02, CFrame.identity, Vector3.zero, "flow"),
 		},
 	},
 }
@@ -1741,6 +1747,15 @@ function GunView.update(
 		end
 		if keyedDraw and keyedDrawAt and not keyedReloadAt then
 			reloadGun, reloadHand, spin, leverOpen = reloadPose(keyedDraw, keyedDrawAt, keyedDraw.length)
+			local catch = keyedDraw.catch
+			if catch then
+				-- Before the catch the left hand is placed in the hold, not on the gun: worked back into the gun's
+				-- space, which is where a hand's place is counted from.
+				local _, rest = grips()
+				local free = reloadGun.Rotation:Inverse() * (rest.wrist + reloadHand - reloadGun.Position) - rest.wrist
+				local on = math.clamp((keyedDrawAt - (catch - CATCH_CLOSE)) / CATCH_CLOSE, 0, 1)
+				reloadHand = free:Lerp(reloadHand, on * on * (3 - 2 * on))
+			end
 		end
 		local right, left = grips()
 		-- The hands go by the gun before its spin: the right stays put with its finger in the trigger guard while the
