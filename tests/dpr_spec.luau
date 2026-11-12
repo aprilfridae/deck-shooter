@@ -8,7 +8,7 @@ local function deckOf(a: string, b: string, c: string)
 	return {
 		{ cardId = "phase_dash", tier = a },
 		{ cardId = "overclock", tier = b },
-		{ cardId = "recon_pulse", tier = c },
+		{ cardId = "siphon", tier = c },
 	}
 end
 

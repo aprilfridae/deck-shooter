@@ -1,4 +1,7 @@
--- Card definitions. Stats are listed Field, Black-Site, Prototype.
+-- Card definitions. Stats are listed Field, Redline, Prototype.
+-- A Prototype card is about twice a Field one (River, 2026-11-11: "higher rarity = better"); tests/cards_spec
+-- holds every stat to between 1.4 and 2 times. Phase Dash was already strong at Prototype, so its lower tiers
+-- were made worse instead. Recon Pulse was removed the same day: saves keep its copies, which do nothing.
 local Config = require("./Config")
 local Tier = require("./Tier")
 
@@ -9,7 +12,7 @@ local Cards = {
 			name = "Phase Dash",
 			category = "mobility",
 			set = "set_01",
-			stats = { distance = { 13, 14.5, 16 }, cooldown = { 12, 11, 10 } },
+			stats = { distance = { 8, 12, 16 }, cooldown = { 16, 13, 10 } },
 			perk = "camo_after_dash",
 			lowerIsBetter = { cooldown = true },
 		},
@@ -19,16 +22,7 @@ local Cards = {
 			category = "weapon_buff",
 			set = "set_01",
 			cooldown = 25,
-			stats = { fireRateBonus = { 0.15, 0.17, 0.18 }, duration = { 5, 5.5, 6 } },
-		},
-		recon_pulse = {
-			id = "recon_pulse",
-			name = "Recon Pulse",
-			category = "intel",
-			set = "set_01",
-			cooldown = 20,
-			stats = { radius = { 40, 45, 50 }, revealTime = { 2, 2.3, 2.5 } },
-			perk = "team_sees_marks",
+			stats = { fireRateBonus = { 0.15, 0.22, 0.3 }, duration = { 5, 7, 9 } },
 		},
 		aegis_shell = {
 			id = "aegis_shell",
@@ -36,8 +30,36 @@ local Cards = {
 			category = "defense",
 			set = "set_01",
 			cooldown = 25,
-			stats = { shieldHp = { 52, 58, 64 }, duration = { 3, 3.5, 3.75 } },
+			stats = { shieldHp = { 52, 78, 104 }, duration = { 3, 4, 5 } },
 			perk = "end_knockback",
+		},
+		-- A tether that swaps your place with the enemy you aim at.
+		switchback = {
+			id = "switchback",
+			name = "Switchback",
+			category = "mobility",
+			set = "set_01",
+			stats = { range = { 40, 60, 80 }, cooldown = { 20, 16, 12 } },
+			lowerIsBetter = { cooldown = true },
+		},
+		-- A blast on the ground you aim at, which throws you away from it. height is how far up it carries you
+		-- when it goes off under your feet.
+		kickplate = {
+			id = "kickplate",
+			name = "Kickplate",
+			category = "mobility",
+			set = "set_01",
+			stats = { height = { 24, 36, 48 }, cooldown = { 14, 12, 10 } },
+			lowerIsBetter = { cooldown = true },
+		},
+		-- A bolt that takes speed from the enemy it hits and gives it to you.
+		siphon = {
+			id = "siphon",
+			name = "Siphon",
+			category = "debuff",
+			set = "set_01",
+			cooldown = 18,
+			stats = { speedSteal = { 0.15, 0.22, 0.3 }, duration = { 3, 4.5, 6 } },
 		},
 	} :: { [string]: any },
 	ids = {} :: { string },

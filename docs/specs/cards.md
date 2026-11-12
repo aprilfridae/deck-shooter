@@ -1,6 +1,6 @@
 # Cards and the card economy
 
-**Status:** the 4 ability cards and the card rules (tiers, fusion, income, Deck Power Rating, saves) are built. The Outpost menu shows Credits, DPR and the collection and edits the deck, and packs give new cards (`packs.md`). Nothing shows fusion or Catalysts yet. Checked against the code on 2026-11-07.
+**Status:** changed on 2026-11-11: Switchback, Kickplate and Siphon were added, Recon Pulse was removed, and tiers were made to matter far more. None of that has been seen in Play. Before that: the 4 ability cards and the card rules (tiers, fusion, income, Deck Power Rating, saves) are built. The Outpost menu shows Credits, DPR and the collection and edits the deck, and packs give new cards (`packs.md`). Nothing shows fusion or Catalysts yet. Checked against the code on 2026-11-07.
 
 **Values live in:** `src/shared/CardCore/Cards.luau` (cards and their stats) and `src/shared/CardCore/Config.luau` (everything else). The rules are pure modules in `src/shared/CardCore/`, tested in Lune. The server side is `src/server/CardCore.server.luau`, `PlayerCards.luau` and `AbilityServer.server.luau`.
 
@@ -8,7 +8,7 @@
 
 - The server owns every card, Credit and roll result. The client only displays them.
 - A loadout is 2 guns plus 3 different cards. A deck can't hold the same card twice.
-- Tiers run Field, Redline, Prototype. Redline's id stays `BlackSite`, so saves don't change. Each core stat rises 20 to 25% in total from Field to Prototype (`tests/cards_spec.luau` checks this). Perks are utility and never add damage.
+- Tiers run Field, Redline, Prototype. Redline's id stays `BlackSite`, so saves don't change. A Prototype card is about twice a Field one: every stat is between 1.4 and 2 times better (`tests/cards_spec.luau` checks this). River, 2026-11-11: "higher rarity = better". It was 20 to 25% before. Perks are utility and never add damage.
 - Fusion turns copies into one card of the next tier. The resulting tier is never random, and duplicates can never be turned into currency.
 - Income pays only while the player is in the game.
 - Variants add income, never combat power.
@@ -20,21 +20,31 @@
 
 | Tier | Id | Colour | DPR points | Perk strength | Income per copy per second |
 | --- | --- | --- | --- | --- | --- |
-| Field | `Field` | Deep Navy | 100 | 80% | 0.1 Credits |
-| Redline | `BlackSite` | Hazard Red | 112 | 90% | 0.6 |
+| Field | `Field` | Deep Navy | 100 | 50% | 0.1 Credits |
+| Redline | `BlackSite` | Hazard Red | 112 | 75% | 0.6 |
 | Prototype | `Prototype` | Signal Acid | 125 | 100% | 3.5 |
 
 ## The cards
 
-All 4 are in set `set_01`. Stats are listed Field / Redline / Prototype.
+All 6 are in set `set_01`. Stats are listed Field / Redline / Prototype.
 
 | Card | Id | Stats | Cooldown | Perk |
 | --- | --- | --- | --- | --- |
-| Phase Dash | `phase_dash` | Distance 13 / 14.5 / 16 studs | 12 / 11 / 10s | Nearly invisible for 1.2 / 1.35 / 1.5s |
-| Overclock | `overclock` | Fire rate +15 / 17 / 18% for 5 / 5.5 / 6s | 25s | None |
-| Recon Pulse | `recon_pulse` | Radius 40 / 45 / 50, reveal 2 / 2.3 / 2.5s | 20s | Teammates see the marks for 80 / 90 / 100% of the reveal time |
-| Aegis Shell | `aegis_shell` | Shield 52 / 58 / 64 HP for 3 / 3.5 / 3.75s | 25s | Pushes nearby enemies away when it ends |
+| Phase Dash | `phase_dash` | Distance 8 / 12 / 16 studs | 16 / 13 / 10s | Nearly invisible for 0.75 / 1.1 / 1.5s |
+| Overclock | `overclock` | Fire rate +15 / 22 / 30% for 5 / 7 / 9s | 25s | None |
+| Aegis Shell | `aegis_shell` | Shield 52 / 78 / 104 HP for 3 / 4 / 5s | 25s | Pushes nearby enemies away when it ends, at 50 / 75 / 100% strength |
+| Switchback | `switchback` | Range 40 / 60 / 80 studs | 20 / 16 / 12s | None |
+| Kickplate | `kickplate` | Launch height 24 / 36 / 48 studs | 14 / 12 / 10s | None |
+| Siphon | `siphon` | Speed stolen 15 / 22 / 30% for 3 / 4.5 / 6s | 18s | None |
 
+- **Phase Dash** was already strong at Prototype, so River had its lower tiers made worse instead of its top tier better.
+- **Switchback** fires a tether the way you look. If it reaches an enemy, the two of you swap places and each keeps facing the way they were.
+- **Kickplate** blasts the surface you aim at, if it is within 14 studs, and throws you straight away from that point. Aimed at your feet it sends you up by its height. With nothing in reach it does nothing and isn't spent.
+- **Siphon** shoots a bolt the way you look. The enemy it hits is slowed and you are sped up by the same share. It does no damage.
+- **Aimed cards are forgiving:** Switchback and Siphon hit the nearest enemy within 3 studs of your line of sight, with nothing solid in between. A miss brings the card back in 4 seconds, not its full cooldown.
+- **The starter deck** is Phase Dash, Overclock and Siphon.
+- **Recon Pulse was removed** on 2026-11-11, the same way as Arc Mine below: saves keep the copies, it leaves the deck, and it does nothing.
+- **Effects are placeholders:** a cyan line for the tether, a red bolt for Siphon, a pale ring for the blast. No sounds or arm animations yet.
 - Arc Mine was removed. Old saves keep their Arc Mine copies in case it returns, but it leaves the deck, the deck refills, and the copies earn nothing.
 - Cards with one cooldown for every tier use a top-level `cooldown` field, because the ceiling test needs every `stats` entry to rise by tier.
 

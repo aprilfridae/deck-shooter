@@ -28,11 +28,11 @@ describe("SaveData.new", function()
 		expect(data.deck).toEqual({
 			{ cardId = "phase_dash", tier = "Field" },
 			{ cardId = "overclock", tier = "Field" },
-			{ cardId = "recon_pulse", tier = "Field" },
+			{ cardId = "siphon", tier = "Field" },
 		})
 		expect(Inventory.count(data, "phase_dash", "Field")).toBe(1)
 		expect(Inventory.count(data, "overclock", "Field", "Base")).toBe(1)
-		expect(Inventory.count(data, "recon_pulse", "Field")).toBe(1)
+		expect(Inventory.count(data, "siphon", "Field")).toBe(1)
 	end)
 
 	it("gives each player separate tables", function()

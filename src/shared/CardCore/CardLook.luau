@@ -6,7 +6,10 @@ local CardLook = {}
 local MONOGRAMS = {
 	phase_dash = "PD",
 	overclock = "OC",
-	recon_pulse = "RP",
+	recon_pulse = "RP", -- removed from the game, but a save can still hold one
+	switchback = "SB",
+	kickplate = "KP",
+	siphon = "SP",
 	aegis_shell = "AS",
 }
 local TIER_NAMES = { Field = "FIELD", BlackSite = "REDLINE", Prototype = "PROTOTYPE" }
