@@ -493,10 +493,18 @@ local barrelRise = 0
 local isSidearm = false
 local drawAt: number? = nil -- when the gun in hand started being pulled out
 local IN_STUDIO = game:GetService("RunService"):IsStudio()
--- Where the left hand goes to rack a gun's slide in its pull-out: the frame of its own clip that has the hand on the
--- gun (the Energy Pistol's reload slaps it there). And for sidearms without clips, how far from the grip that is.
-local DRAW_SLAPS: { [string]: { clip: string, frame: number } } = {
-	["Energy Pistol"] = { clip = "reload", frame = 16 },
+-- Where the left palm goes to rack a gun's slide in its pull-out, in the gun's space (x to its right side, y out of
+-- its top, z back toward the grip): over the back of the slide, palm down on its top, fingers across it. Placed by
+-- eye in Play. The place the reload clip slaps the gun was used first, and that is its underside (River, 2026-11-12:
+-- "your grabbing the underside of the gun, not the sliding back of the gun"). And for sidearms without clips, how
+-- far from the grip the slide is.
+local DRAW_SLAPS: { [string]: CFrame } = {
+	["Energy Pistol"] = CFrame.fromMatrix(
+		Vector3.new(-0.15, 0.46, 0.25),
+		Vector3.new(0, 1, 0),
+		Vector3.new(1, 0, 0),
+		Vector3.new(0, 0, -1)
+	),
 }
 local SIDEARM_SLIDE = Vector3.new(0.09, 0.32, 0)
 -- A model's parts named Slide_... are its slide, and go back when it is racked in the pull-out.
@@ -1101,12 +1109,7 @@ function GunView.setGun(gunId: string, slot: string)
 			end
 		end
 	end
-	drawSlap = nil
-	local slap = DRAW_SLAPS[GunConfig.guns[gunId].name]
-	if clips and slap then
-		local frame = clips[slap.clip].frames[slap.frame]
-		drawSlap = frame.gun:ToObjectSpace(SoldierPose.clipPalms(clips.meshOffset, frame.bones).Left)
-	end
+	drawSlap = if clips then DRAW_SLAPS[GunConfig.guns[gunId].name] else nil
 	firedAt = nil
 	keyedReloadAt = nil
 	reloadAt = nil
