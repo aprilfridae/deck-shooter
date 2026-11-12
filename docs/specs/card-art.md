@@ -2,6 +2,8 @@
 
 **Status:** step 1 is built: the art in the menus and the pull reveal, and inspecting a card in 3D. The card in hand and serials aren't built, so serials show `--`. Chromatic and Redacted are proposals River hasn't seen drawn yet, and show only their rarity text. Checked against the code on 2026-11-07.
 
+**Redesign pending:** `card-face-redesign.md` (agreed 2026-11-11, not built) replaces the Layout and Rarities sections below once it's built.
+
 **Covers:** how cards look, and the serial numbers printed on them. How cards work is in `cards.md`. The pull reveal is in `packs.md`, and fusion effects get their own spec.
 
 ## The idea
