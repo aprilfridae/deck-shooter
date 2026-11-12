@@ -151,7 +151,16 @@ function PackServer.start(remote: (string, (Player, any, any) -> any) -> (), rng
 		if not player:GetAttribute("AutoRollUnlocked") then
 			return { ok = false, code = "Locked" }
 		end
-		player:SetAttribute("AutoRollOn", raw == true)
+		local on = raw == true
+		-- Turning it on starts the wait afresh, so the first pack comes when the bar fills, not at once
+		-- (River, 2026-11-11). A wait already running is left alone.
+		local state = session(player)
+		local now = os.clock()
+		if on and not player:GetAttribute("AutoRollOn") and Packs.canRoll(state.lastRollAt, now) then
+			state.lastRollAt = now
+			PackServer.announce(player, { kind = "RollWait" })
+		end
+		player:SetAttribute("AutoRollOn", on)
 		return { ok = true }
 	end)
 

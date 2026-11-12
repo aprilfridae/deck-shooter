@@ -63,7 +63,8 @@ local player = Players.LocalPlayer
 local lastRolledAt: number? = nil
 
 CardData.packEvent:Connect(function(event: any)
-	if event.kind == "Rolled" then
+	-- RollWait: auto roll was just turned on and its first wait has begun.
+	if event.kind == "Rolled" or event.kind == "RollWait" then
 		lastRolledAt = os.clock()
 	end
 end)
