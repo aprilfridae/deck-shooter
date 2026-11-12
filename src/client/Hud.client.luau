@@ -19,6 +19,7 @@ local KillPopups = require(script.Parent.KillPopups)
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local Cards = require(CardCore:WaitForChild("Cards"))
 local CardIndex = require(CardCore:WaitForChild("CardIndex"))
+local HudShapes = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Hud"):WaitForChild("HudShapes"))
 local HudText = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Hud"):WaitForChild("HudText"))
 
 local remotes = ReplicatedStorage:WaitForChild("GunRemotes")
@@ -40,7 +41,12 @@ local MARKER_KILL = 1.5 -- how much bigger a kill's marker is
 local SLOTS = 3
 -- HUD layout, in pixels on a 720-tall screen. The whole HUD scales from there.
 local MARGIN = 32
-local BASELINE = -32 -- the big numbers, from the bottom
+-- A short striped bar sits under the health and the ammo (docs/specs/hud-redesign.md).
+local BAR_WIDTH = 120
+local BAR_HEIGHT = BAR_WIDTH / HudShapes.STRIPE_RATIO
+local BAR_GAP = 6 -- from a bar up to the number on it
+local BAR_IMAGE = Vector2.new(512, 56) -- the stripe image's size in pixels, for mirroring it
+local BASELINE = -32 - BAR_HEIGHT - BAR_GAP -- the big numbers, from the bottom
 local LABEL_LINE = BASELINE - 44
 local LABEL_INSET = 2 -- lines the thin labels up with the numbers' edge
 local SHIELD_GAP = 8
@@ -162,6 +168,25 @@ local gunText = small("LabelBold", true, UDim2.new(1, -MARGIN - LABEL_INSET, 1, 
 local reloadText = small("LabelBold", true, UDim2.new(1, -MARGIN - LABEL_INSET, 1, LABEL_LINE))
 reloadText:setColor(BONE)
 healthLabel:set("HEALTH")
+
+local function bar(mirrored: boolean): ImageLabel
+	local image = Instance.new("ImageLabel")
+	image.BackgroundTransparency = 1
+	image.Image = HudShapes.Stripe
+	image.ImageColor3 = BONE
+	image.AnchorPoint = Vector2.new(if mirrored then 1 else 0, 1)
+	image.Position = UDim2.new(if mirrored then 1 else 0, if mirrored then -MARGIN else MARGIN, 1, -MARGIN)
+	image.Size = UDim2.fromOffset(BAR_WIDTH, BAR_HEIGHT)
+	if mirrored then
+		-- Drawn right to left, so its slashes are on the outside edge like the other's.
+		image.ImageRectOffset = Vector2.new(BAR_IMAGE.X, 0)
+		image.ImageRectSize = Vector2.new(-BAR_IMAGE.X, BAR_IMAGE.Y)
+	end
+	image.Parent = hud
+	return image
+end
+bar(false)
+local ammoBar = bar(true)
 
 local markerAt = 0
 local markerSize = 1
@@ -371,6 +396,7 @@ RunService.RenderStepped:Connect(function(step)
 	local gun = GunConfig.guns[player:GetAttribute("GunId")]
 	local reloading = gun ~= nil and player:GetAttribute("Reloading") == true
 	ammoText:setVisible(gun ~= nil)
+	ammoBar.Visible = gun ~= nil
 	gunText:setVisible(gun ~= nil and not reloading)
 	reloadText:setVisible(reloading)
 	if gun then
