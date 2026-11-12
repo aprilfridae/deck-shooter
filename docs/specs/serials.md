@@ -1,6 +1,6 @@
 # Serials
 
-**Status:** built on 2026-11-11 on `feature/serials`, and passing its tests. Not yet seen in Play, and the two-server case has not been tried. This is the first of three pieces of the player market: serials, then the auction house, then the market screen. It replaces the "Serial numbers" section of `card-art.md`.
+**Status:** built on 2026-11-11 on `feature/serials`, and passing its tests. River tried it in Play the same day ("looks great"). The two-server case has not been tried. This is the first of three pieces of the player market: serials, then the auction house, then the market screen. It replaces the "Serial numbers" section of `card-art.md`.
 
 **Covers:** giving every pulled card a real serial, how serials are stored and handed out, and the fresh start that comes with them. How a serial looks on a card is in `card-face-redesign.md`.
 
