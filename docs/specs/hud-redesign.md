@@ -2,7 +2,7 @@
 
 **Status:** designed with River on 2026-11-11, not built. The agreed look is the fourth-pass mockup, `assets/preview/hud-redesign.html` (built by a throwaway script, not kept in the repo).
 
-**Covers:** the look of the Outpost's menu buttons, its Credits and rebirth readout, the buttons on the menu pages, and one addition to the match HUD. No rules, saves or server code change.
+**Covers:** the look of the Outpost's menu buttons, its Credits and rebirth readout, the buttons on the menu pages, a striped bar under health and ammo, and kill streaks called out to the whole server. No rules or saves change. The only server change is sending the streak calls.
 
 ## The idea
 
@@ -55,7 +55,18 @@ Three shapes from the pack, each baked to white so the game can tint it:
 
 - Health, shield, ammo, the gun's name, the card fan, the crosshair and the hit marker stay where and how they are. The mockup's match screen is today's HUD.
 - **One addition:** a short striped bar under the health number and a mirrored one under the ammo number, in Bone.
-- **Not included:** the mockup showed other players' kills as text at the top right. The game has no such feed today; it shows your own kills beside the crosshair, which stays. A feed of everyone's kills needs the server to send them, so it is its own piece of work if River wants it.
+
+### Streak calls
+
+River, 2026-11-11: "make the server wide kill streaks in the top right".
+
+- When any player reaches a kill streak, everyone on the server sees a line at the top right: the player's name in Bone, then the streak in Signal Acid, like `MARROW  KILLING SPREE`.
+- The streaks are the three the game already pays for: `KILLING SPREE` at 3 kills without dying, `RAMPAGE` at 5, `UNSTOPPABLE` at 10. Ordinary kills are not listed.
+- Your own streak shows too, with `YOU` for the name.
+- Lines are right-aligned on the HUD's margin, newest on top, in the small label font. Each stays 5 seconds and fades. At most 4 show; a fifth pushes the oldest off.
+- They show in a match and in the Outpost. An open menu page covers them.
+- A kill that pays nothing because of the kill-trading rule doesn't count toward a streak, so it can't call one either. That rule is unchanged.
+- Your own kills still pop up beside the crosshair as they do now.
 
 ## How it's built
 
@@ -64,6 +75,7 @@ Three shapes from the pack, each baked to white so the game can tint it:
 - **`NavButton.luau`** is rewritten around a plate image: colour flip for hover and open, the kick, and the slide-in. `OutpostMenu.client.luau` lays out the stack and header at the new sizes.
 - **`IncomeLine.luau`** becomes the top-left readout, and gains the rebirth line. It already listens for the player's Credits; rebirths arrive in the same snapshot.
 - **`Hud.client.luau`** gains the two bars.
+- **Streak calls:** `GunServer.server.luau` already gets the lines a shot earned from `KillRewards.forShot`. A small pure function picks the streak out of them, and the server sends the killer's name and the streak to every client on a new `StreakCall` event. A new client script draws the lines. Nothing is taken from a client.
 
 ## Order of work
 
@@ -72,6 +84,7 @@ Three shapes from the pack, each baked to white so the game can tint it:
 3. Credits and rebirths. River checks in Play.
 4. Cut-corner page buttons. River checks every page in Play.
 5. The two HUD bars. River checks in a match.
+6. Streak calls. River checks in a match; seeing someone else's needs a second player.
 
 ## What could go wrong
 
@@ -82,4 +95,4 @@ Three shapes from the pack, each baked to white so the game can tint it:
 
 ## Tests
 
-Nothing here changes rules, so there are no new Lune tests; the existing suite must still pass. The look is River's to judge in Play at each step above.
+One new Lune test: picking the streak out of a shot's lines (none, one, and the highest when a shot earns two). The rest changes no rules, and the existing suite must still pass. The look is River's to judge in Play at each step above.
