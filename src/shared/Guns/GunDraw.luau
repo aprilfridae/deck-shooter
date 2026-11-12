@@ -21,18 +21,19 @@ local FIELDS = { "x", "y", "z", "pitch", "yaw", "roll" }
 -- The pistol and rifle follow a clip River sent of draws that feel good (2026-11-12, "try to get the take out
 -- animation from the other video"). Every draw turns about the gun's own place at the hip.
 local DRAWS: { [string]: { Key } } = {
-	-- Straight up from under the screen with the muzzle to the sky, the forearm upright beneath it. It hangs
-	-- there a moment, still drifting up, then drops level and settles.
+	-- Up from under the screen to the middle, muzzle high and a little left, turned at the wrist (see `wrist`). It
+	-- is held there while the left hand racks the slide, then punched out to its place. Seen in Play by Claude,
+	-- held still at each moment (workspace's PinDraw attribute): with the muzzle straight up, or turned with the
+	-- whole view, the hands were a mass at the bottom of the screen and the gun could hardly be seen.
 	pistol = {
-		key(0, -0.1, -1.3, 0.2, 35, 0, 6),
-		key(0.1, -0.08, -0.55, 0.2, 62, 0, 8),
-		key(0.2, -0.06, 0.05, 0.2, 76, 0, 9),
-		key(0.36, -0.05, 0.21, 0.2, 83, 0, 9),
-		key(0.44, -0.05, 0.2, 0.32, 80, 0, 9), -- the slide is racked: the gun is tugged back
-		key(0.5, -0.04, 0.21, 0.16, 82, 0, 8), -- and let go: it snaps forward
-		key(0.56, -0.04, 0.2, 0.18, 78, 0, 8),
-		key(0.64, -0.01, 0.04, 0.05, 28, 0, 3),
-		key(0.72, 0, -0.03, -0.02, -4, 0, 0),
+		key(0, -0.1, -1.1, 0.1, 20, 5, 0),
+		key(0.16, -0.18, -0.1, 0.05, 40, 15, 0),
+		key(0.3, -0.2, 0.15, 0, 46, 20, 0),
+		key(0.36, -0.2, 0.15, 0, 45, 20, 0),
+		key(0.46, -0.2, 0.12, 0.12, 40, 20, 0), -- the slide is racked: the gun is tugged back
+		key(0.51, -0.2, 0.16, -0.04, 48, 20, 0), -- and let go: it snaps forward
+		key(0.6, -0.18, 0.13, 0, 42, 18, 0),
+		key(0.72, 0, -0.02, -0.05, -4, -2, 0),
 		key(0.82, 0, 0, 0, 0, 0, 0),
 	},
 	-- Up from under the screen, muzzle high and off to the left, the gun laid over. It is held there while the
@@ -58,22 +59,23 @@ local DRAWS: { [string]: { Key } } = {
 }
 
 -- The left hand's own part in a draw (River, 2026-11-12: "for the pistol like actually cock the gun"): at each
--- time, how much of the hand is on the slide (0 is wherever the hold has it, 1 is on the slide) and how far back
--- along the gun it has dragged the slide, in studs. The Energy Pistol is held in one hand with the other far off to
+-- time, how much of the hand is on the slide (0 is wherever the hold has it, 1 is on the slide), how far back
+-- along the gun the hand has gone and how far back the slide is, both in slide travels (1 is all the way back).
+-- The slide goes back with the hand and flies home the moment it is let go ("it needs to slide the thing back"). The Energy Pistol is held in one hand with the other far off to
 -- the side, so the hand has to come right across to the gun: a nudge from where it rests never reached it.
-local HANDS: { [string]: { { at: number, on: number, back: number } } } = {
+local HANDS: { [string]: { { at: number, on: number, back: number, slide: number } } } = {
 	-- Whipped across onto the slide, dragged back with it, let go, and away again.
 	pistol = {
-		{ at = 0.16, on = 0, back = 0 },
-		{ at = 0.36, on = 1, back = 0 },
-		{ at = 0.44, on = 1, back = 0.28 },
-		{ at = 0.5, on = 0.8, back = 0.34 },
-		{ at = 0.76, on = 0, back = 0 },
+		{ at = 0.16, on = 0, back = 0, slide = 0 },
+		{ at = 0.36, on = 1, back = 0, slide = 0 },
+		{ at = 0.46, on = 1, back = 1, slide = 1 },
+		{ at = 0.5, on = 0.85, back = 1.3, slide = 0 },
+		{ at = 0.76, on = 0, back = 0, slide = 0 },
 	},
 }
 
 -- Where the left hand has got to. Nil when it is simply where the hold has it.
-function GunDraw.hand(kind: string, elapsed: number): { on: number, back: number }?
+function GunDraw.hand(kind: string, elapsed: number): { on: number, back: number, slide: number }?
 	local keys = HANDS[kind]
 	if not keys or elapsed <= keys[1].at or elapsed >= keys[#keys].at then
 		return nil
@@ -85,7 +87,12 @@ function GunDraw.hand(kind: string, elapsed: number): { on: number, back: number
 	local from, to = keys[index], keys[index + 1]
 	local share = (elapsed - from.at) / (to.at - from.at)
 	share = share * share * (3 - 2 * share)
-	return { on = from.on + (to.on - from.on) * share, back = from.back + (to.back - from.back) * share }
+	return {
+		on = from.on + (to.on - from.on) * share,
+		back = from.back + (to.back - from.back) * share,
+		-- The slide's own spring throws it home: no easing out of the start.
+		slide = from.slide + (to.slide - from.slide) * (if to.slide < from.slide then share * share else share),
+	}
 end
 
 -- A gun whose bolt is racked in its draw (River, 2026-11-12: "make the hands actually like. pull the tab"): when
@@ -101,6 +108,12 @@ function GunDraw.rack(kind: string, elapsed: number): number?
 		return nil
 	end
 	return (elapsed - rack.from) * rack.rate
+end
+
+-- Whether a draw's turn is made at the wrist of the hand on the grip (a gun held in one hand), not by the whole
+-- view, arms and all.
+function GunDraw.wrist(kind: string): boolean
+	return kind == "pistol"
 end
 
 -- Which draw a gun uses: a sidearm is a pistol, a scoped gun is a sniper, and anything else is a rifle.

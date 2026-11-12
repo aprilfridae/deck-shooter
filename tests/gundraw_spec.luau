@@ -50,8 +50,10 @@ describe("GunDraw", function()
 		end
 	end)
 
-	it("holds the pistol's muzzle to the sky before it drops level", function()
-		expect(GunDraw.at("pistol", 0.4).pitch > 70).toBe(true)
+	it("holds the pistol up, muzzle high, while it is racked, and turns it at the wrist", function()
+		expect(GunDraw.at("pistol", 0.4).pitch > 35).toBe(true)
+		expect(GunDraw.wrist("pistol")).toBe(true)
+		expect(GunDraw.wrist("rifle")).toBe(false)
 	end)
 
 	it("tugs the rifle back and lets it snap forward, as the bolt is racked", function()
@@ -90,11 +92,16 @@ describe("GunDraw", function()
 		expect(on.on).toBe(1) -- all the way on the gun, not a nudge from where it rests
 		expect(on.back).toBe(0)
 		expect(back.on).toBe(1)
-		expect(back.back > 0.2).toBe(true)
+		expect(back.back > 0.5).toBe(true)
+		-- The slide goes back with the hand, all the way, and is home again as soon as it is let go.
+		expect(on.slide).toBe(0)
+		expect(back.slide > 0.5).toBe(true)
+		expect((GunDraw.hand("pistol", 0.46) :: any).slide).toBe(1)
+		expect((GunDraw.hand("pistol", 0.52) :: any).slide).toBe(0)
 		-- And it is away again before the draw is over.
 		expect((GunDraw.hand("pistol", 0.7) :: any).on < 0.2).toBe(true)
 		-- The gun is tugged back with it.
-		expect(GunDraw.at("pistol", 0.44).z > GunDraw.at("pistol", 0.36).z + 0.05).toBe(true)
+		expect(GunDraw.at("pistol", 0.46).z > GunDraw.at("pistol", 0.36).z + 0.05).toBe(true)
 	end)
 
 	it("ends every gun exactly at rest, and keeps it there", function()

@@ -492,12 +492,17 @@ local length = PRIMARY_LENGTH
 local barrelRise = 0
 local isSidearm = false
 local drawAt: number? = nil -- when the gun in hand started being pulled out
+local IN_STUDIO = game:GetService("RunService"):IsStudio()
 -- Where the left hand goes to rack a gun's slide in its pull-out: the frame of its own clip that has the hand on the
 -- gun (the Energy Pistol's reload slaps it there). And for sidearms without clips, how far from the grip that is.
 local DRAW_SLAPS: { [string]: { clip: string, frame: number } } = {
 	["Energy Pistol"] = { clip = "reload", frame = 16 },
 }
 local SIDEARM_SLIDE = Vector3.new(0.09, 0.32, 0)
+-- A model's parts named Slide_... are its slide, and go back when it is racked in the pull-out.
+local SLIDE_TRAVEL = 5 -- how far, in the stored model's studs (the Energy Pistol's slide is about 22 long)
+local slideParts: { { part: BasePart, rest: CFrame } } = {}
+local slideTravel = 0 -- in view studs, for the gun shown
 local drawSlap: CFrame? = nil -- the left palm on the slide, in the gun's space, for the gun shown
 local viewScale = 1
 local held = HIP
@@ -1086,6 +1091,16 @@ function GunView.setGun(gunId: string, slot: string)
 		scopeAim = CFrame.new(-back.X, -back.Y, -scope.eye - back.Z) * forward:Inverse()
 	end
 	clips = ArmClips[GunConfig.guns[gunId].name]
+	table.clear(slideParts)
+	slideTravel = SLIDE_TRAVEL * MODEL_SCALE * viewScale
+	if view:IsA("Model") then
+		local middle = view:GetPivot()
+		for _, part in view:GetDescendants() do
+			if part:IsA("BasePart") and part.Name:find("^Slide_") then
+				table.insert(slideParts, { part = part, rest = middle:ToObjectSpace(part.CFrame) })
+			end
+		end
+	end
 	drawSlap = nil
 	local slap = DRAW_SLAPS[GunConfig.guns[gunId].name]
 	if clips and slap then
@@ -1424,6 +1439,12 @@ function GunView.update(
 	-- The pull-out: the gun and both arms come into place together, by the gun's own draw.
 	local drawKind: string? = nil
 	local drawSince = 0
+	local drawTurn: CFrame? = nil -- the pull-out's turn of the gun, when it is made at the wrist
+	-- For looking at a pull-out in Studio: workspace's PinDraw attribute holds it at that many seconds in.
+	local pinned = if IN_STUDIO then workspace:GetAttribute("PinDraw") else nil
+	if typeof(pinned) == "number" then
+		drawAt = os.clock() - pinned
+	end
 	if drawAt and config then
 		local kind = GunDraw.kind(isSidearm, config.aimFov ~= nil)
 		local since = os.clock() - drawAt
@@ -1432,13 +1453,20 @@ function GunView.update(
 		else
 			drawKind, drawSince = kind, since
 			local pose = GunDraw.at(kind, since)
-			local pivot = HIP.Position
-			base *= CFrame.new(pivot)
-				* CFrame.new(pose.x, pose.y, pose.z)
-				* CFrame.Angles(math.rad(pose.pitch), math.rad(pose.yaw), math.rad(pose.roll))
-				* CFrame.new(-pivot)
+			local turn = CFrame.Angles(math.rad(pose.pitch), math.rad(pose.yaw), math.rad(pose.roll))
+			if clips and GunDraw.wrist(kind) then
+				-- A gun held in one hand turns at the wrist: the arm follows the hand, and the shoulders stay put.
+				-- Turned with the whole view, the arms swung round into a mass in front of the camera.
+				base *= CFrame.new(pose.x, pose.y, pose.z)
+				drawTurn = turn
+			else
+				local pivot = HIP.Position
+				base *= CFrame.new(pivot) * CFrame.new(pose.x, pose.y, pose.z) * turn * CFrame.new(-pivot)
+			end
 		end
 	end
+	-- The left hand's own part in the pull-out: it racks the slide.
+	local reach = if drawKind then GunDraw.hand(drawKind, drawSince) else nil
 	if clips then
 		local frame, kind = clipFrame(reloading, sprinting)
 		if kind ~= shownKind then
@@ -1473,9 +1501,7 @@ function GunView.update(
 		local moved: { [string]: CFrame }? = nil
 		local viewKick = config and VIEW_KICKS[config.name]
 		local stillLeft = viewKick ~= nil and viewKick.stillLeft == true
-		-- The left hand's own part in the pull-out: it comes off the gun to rack the slide.
-		local reach = if drawKind then GunDraw.hand(drawKind, drawSince) else nil
-		local palms = if nudged or codeReload or stillLeft or reach or (viewKick ~= nil and viewKick.wrist ~= nil)
+		local palms = if nudged or codeReload or stillLeft or reach or drawTurn or (viewKick ~= nil and viewKick.wrist ~= nil)
 			then SoldierPose.clipPalms(clips.meshOffset, whole.bones)
 			else nil
 		if nudged and palms then
@@ -1503,10 +1529,18 @@ function GunView.update(
 			placed.Left = layerShown:Inverse() * recoil:Inverse() * layerShown * (placed.Left or palms.Left)
 			moved = placed
 		end
+		if drawTurn and palms then
+			local placed = moved or {}
+			local hand = placed.Right or palms.Right
+			local turn = CFrame.new(hand.Position) * drawTurn * CFrame.new(-hand.Position)
+			wristFlip = turn * wristFlip
+			placed.Right = turn * hand
+			moved = placed
+		end
 		if reach and palms and drawSlap then
 			-- From wherever the hold has it, across onto the slide, and back along the gun as it racks.
 			local placed = moved or {}
-			local onSlide = whole.gun * CFrame.new(0, 0, reach.back) * drawSlap
+			local onSlide = wristFlip * whole.gun * CFrame.new(0, 0, reach.back * slideTravel) * drawSlap
 			placed.Left = (placed.Left or palms.Left):Lerp(onSlide, reach.on)
 			moved = placed
 		end
@@ -1648,11 +1682,10 @@ function GunView.update(
 			left = table.clone(left)
 			left.wrist += reloadHand
 		end
-		local reach = if drawKind then GunDraw.hand(drawKind, drawSince) else nil
 		if reach then
 			-- The left hand's own part in the pull-out: it comes off the gun to rack the slide.
 			left = table.clone(left)
-			left.wrist += SIDEARM_SLIDE * reach.on + Vector3.new(0, 0, reach.back)
+			left.wrist += SIDEARM_SLIDE * reach.on + Vector3.new(0, 0, reach.back * slideTravel)
 		end
 		if lever and leverOpen > 0 then
 			-- The right hand is in the lever's loop and rides it round.
@@ -1666,6 +1699,13 @@ function GunView.update(
 		ViewArms.pose(shown, right, left, config and SHOULDERS[config.name], config and THUMB_WRAPS[config.name], hand, hand)
 	end
 	view:PivotTo(base * shown)
+	if reach and reach.slide > 0 then
+		-- The slide goes back with the hand that racks it.
+		local slid = base * shown * CFrame.new(0, 0, reach.slide * slideTravel)
+		for _, moving in slideParts do
+			moving.part.CFrame = slid * moving.rest
+		end
+	end
 	if lever and leverOpen > 0 then
 		local middle = base * shown
 		local swung = middle * CFrame.new(lever.pivot) * CFrame.Angles(lever.swing * leverOpen, 0, 0) * CFrame.new(-lever.pivot)
