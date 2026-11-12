@@ -176,6 +176,38 @@ if game:GetService("RunService"):IsStudio() then
 	walk.Name = "AuctionWalk"
 	walk.Parent = game:GetService("ServerStorage")
 	walk.Event:Connect(require(script.Parent.AuctionWalk))
+
+	-- Fills the market for one tester: lists up to five of the first player's numbered cards. Bidding on them
+	-- needs a second player, since nobody can bid on their own listing.
+	local fill = Instance.new("BindableEvent")
+	fill.Name = "MarketFill"
+	fill.Parent = game:GetService("ServerStorage")
+	fill.Event:Connect(function()
+		local player = PlayerCards.loaded()[1]
+		local data = player and PlayerCards.get(player)
+		if not data then
+			warn("[MarketFill] No loaded player. Press Play first.")
+			return
+		end
+		local listed = 0
+		for key, held in table.clone(data.serials) do
+			local cardId, tier, variant = string.match(key, "^([^:]+):([^:]+):([^:]+)$")
+			if listed < 5 and held.runs[1] and cardId then
+				local answer = AuctionServer.list(player, data, {
+					cardId = cardId,
+					tier = tier,
+					variant = variant,
+					serial = held.runs[1],
+					startBid = 100,
+					hours = 1,
+					buyNow = 500,
+				})
+				print(`[MarketFill] {key} #{held.runs[1]}: ok={answer.ok} code={answer.code}`)
+				listed += if answer.ok then 1 else 0
+			end
+		end
+		print(`[MarketFill] Listed {listed}. Open a pack and wait for serials if that is 0.`)
+	end)
 end
 Purchases.start(remote, rng)
 PlayerCards.start()

@@ -16,6 +16,7 @@ local listed = {
 	savedata_spec = true,
 	serialbatch_spec = true,
 	requests_spec = true,
+	market_spec = true,
 	movestate_spec = true,
 	speedlimit_spec = true,
 	parry_spec = true,
@@ -112,6 +113,7 @@ require("./income_spec")
 require("./savedata_spec")
 require("./serialbatch_spec")
 require("./requests_spec")
+require("./market_spec")
 require("./movestate_spec")
 require("./speedlimit_spec")
 require("./parry_spec")

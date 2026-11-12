@@ -183,6 +183,19 @@ describe("Requests for the auction house", function()
 		expect(Requests.parseBid(nil)).toBe(nil)
 	end)
 
+	it("parses a stack and refuses a card, tier or variant that doesn't exist", function()
+		local good = { cardId = "aegis_shell", tier = "Prototype", variant = "ZeroDay" }
+		expect(Requests.parseStack(good)).toEqual(good)
+		for _, change in { { cardId = "no_such_card" }, { tier = "Mythic" }, { variant = "Shiny" }, { cardId = 5 } } :: { any } do
+			local bad = table.clone(good)
+			for field, value in change do
+				(bad :: any)[field] = value
+			end
+			expect(Requests.parseStack(bad)).toBe(nil)
+		end
+		expect(Requests.parseStack("junk")).toBe(nil)
+	end)
+
 	it("parses an auction id", function()
 		expect(Requests.parseAuctionId("abc")).toBe("abc")
 		expect(Requests.parseAuctionId("")).toBe(nil)
