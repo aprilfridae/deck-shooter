@@ -168,7 +168,14 @@ local function buildCards(run: any)
 		local holder = part(run, "PullCard")
 		local front = worldSurface(run, holder, Enum.NormalId.Back, canvas)
 		local back = worldSurface(run, holder, Enum.NormalId.Front, canvas)
-		CardFace.new(front, { cardId = card.cardId, tier = card.tier, variant = card.variant, width = CANVAS_CARD_WIDTH })
+		-- Kept on the card so its serial can be filled in when it arrives a few seconds later (PullReveal.serials).
+		card.face = CardFace.new(front, {
+			cardId = card.cardId,
+			tier = card.tier,
+			variant = card.variant,
+			width = CANVAS_CARD_WIDTH,
+			serial = card.serial,
+		})
 		PackCardBack.new(back, run.pack, CANVAS_CARD_WIDTH)
 		table.insert(run.slots, { card = card, index = index, part = holder, front = front, back = back })
 	end

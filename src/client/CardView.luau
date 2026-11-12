@@ -292,7 +292,13 @@ local function printFace(index: number)
 	turned.Parent = gui
 	gui.LightInfluence = 1
 	gui.Parent = parts[index]
-	CardFace.new(turned, { cardId = entry.cardId, tier = entry.tier, variant = entry.variant, width = PRINT_WIDTH })
+	CardFace.new(turned, {
+		cardId = entry.cardId,
+		tier = entry.tier,
+		variant = entry.variant,
+		width = PRINT_WIDTH,
+		serial = CardData.serial(entry.cardId, entry.tier, entry.variant),
+	})
 	prints[index] = gui
 	faces[index].Transparency = 1 -- the print has the image too
 end

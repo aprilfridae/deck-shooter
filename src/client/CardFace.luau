@@ -28,6 +28,7 @@ local OUTLINE_THICKNESS = 2
 local BLOCK_BOTTOM = 86 -- the back's coloured block
 local BACK_ICON = Vector2.new(24, 24)
 local BACK_ICON_ARM = 10
+local BACK_ICON_RING = 6.4 -- radius
 local BACK_LINE_THICKNESS = 1.2
 local BACK_COPIES_LINE = 19
 local BACK_NAME_LINE = 64
@@ -373,7 +374,7 @@ local function backIcon(root: GuiObject, unit: number, color: Color3)
 	end
 	centred(Vector2.new(thickness, BACK_ICON_ARM * 2 * unit))
 	centred(Vector2.new(BACK_ICON_ARM * 2 * unit, thickness))
-	local ring = centred(Vector2.new(CROSSHAIR_FILL * 2 * unit, CROSSHAIR_FILL * 2 * unit))
+	local ring = centred(Vector2.new(BACK_ICON_RING * 2 * unit, BACK_ICON_RING * 2 * unit))
 	ring.BackgroundTransparency = 1
 	CardEffects.rounded(ring, UDim.new(0.5, 0))
 	local stroke = Instance.new("UIStroke")

@@ -56,7 +56,13 @@ end
 
 local function cell(grid: ScrollingFrame, column: number, row: number, options: any)
 	CardGrid.add(grid, column, row, options, function()
-		CardInspect.open(options)
+		-- Held up, a card shows its lowest serial where the index showed how many you have.
+		local held = table.clone(options)
+		if held.lowest then
+			held.corner = nil
+			held.serial = held.lowest
+		end
+		CardInspect.open(held)
 	end)
 end
 
@@ -85,6 +91,7 @@ local function cardGrid(page: Frame, profile: any)
 				variant = entry.variant,
 				count = entry.count,
 				corner = if owned then `X{entry.count}` else nil,
+				lowest = profile.lowest and profile.lowest[`{card.cardId}:{entry.tier}:{entry.variant}`],
 				ghost = not owned,
 			})
 		end
