@@ -1,5 +1,6 @@
 -- The ability card in the player's hand. The cards key pulls one out, right click turns to the next, and clicking
--- uses it.
+-- uses it. Pressing a card's key again leaves it out (River, 2026-11-12): only a weapon key or another card's key
+-- takes it out of the hand.
 local CardHand = {}
 
 function CardHand.new(): { [string]: any }
@@ -7,10 +8,10 @@ function CardHand.new(): { [string]: any }
 	return { slot = nil, waitForRelease = false, used = 0, turns = 0 }
 end
 
--- A key press: pulls out a ready card, swaps to it, or puts away the one already held.
+-- A key press: pulls out a ready card or swaps to it. The key of the card already held does nothing.
 function CardHand.press(hand: any, slot: number, ready: boolean)
 	if hand.slot == slot then
-		hand.slot = nil
+		return
 	elseif ready then
 		if hand.slot then
 			hand.turns += 1
@@ -19,10 +20,10 @@ function CardHand.press(hand: any, slot: number, ready: boolean)
 	end
 end
 
--- The cards key: pulls out the first ready card, or puts away the one held. ready is whether each slot's card is.
+-- The cards key: pulls out the first ready card. With a card already out it does nothing. ready is whether each
+-- slot's card is.
 function CardHand.open(hand: any, ready: { boolean })
 	if hand.slot then
-		hand.slot = nil
 		return
 	end
 	for slot, isReady in ready do
