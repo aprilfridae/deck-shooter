@@ -14,6 +14,7 @@ local listed = {
 	dpr_spec = true,
 	income_spec = true,
 	savedata_spec = true,
+	serialbatch_spec = true,
 	requests_spec = true,
 	movestate_spec = true,
 	speedlimit_spec = true,
@@ -107,6 +108,7 @@ require("./fusion_spec")
 require("./dpr_spec")
 require("./income_spec")
 require("./savedata_spec")
+require("./serialbatch_spec")
 require("./requests_spec")
 require("./movestate_spec")
 require("./speedlimit_spec")
