@@ -1,5 +1,5 @@
 -- Client side of ability cards: the first card key pulls the cards out, the aim key turns to the next one, a click
--- uses it, and this draws the tether, bolt and blast the server reports.
+-- uses it, and this draws the chain, bolt and blast the server reports.
 local Palette = require(game:GetService("ReplicatedStorage"):WaitForChild("Guns"):WaitForChild("Palette"))
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,6 +10,7 @@ local Debris = game:GetService("Debris")
 local CardHand = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("CardHand"))
 local Zones = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Zones"))
 local CardInHand = require(script.Parent.CardInHand)
+local ChainFx = require(script.Parent.ChainFx)
 local Input = require(script.Parent.Input)
 
 local remotes = ReplicatedStorage:WaitForChild("AbilityRemotes")
@@ -22,7 +23,7 @@ local FX_SECONDS = 0.35
 local LINE_WIDTH = 0.25
 local BOLT_SIZE = 1.2
 local BLAST_START, BLAST_END = 2, 16 -- studs across
-local FX_COLORS = { tether = Palette.DataCyan, bolt = Palette.HazardRed, blast = Palette.Bone }
+local FX_COLORS = { bolt = Palette.HazardRed, blast = Palette.Bone }
 
 local player = Players.LocalPlayer
 local previous: { [string]: boolean } = {}
@@ -52,9 +53,16 @@ local function fade(part: Part, goal: { [string]: any })
 	Debris:AddItem(part, FX_SECONDS + 0.1)
 end
 
-fxRemote.OnClientEvent:Connect(function(kind: any, from: any, to: any)
+fxRemote.OnClientEvent:Connect(function(kind: any, from: any, to: any, hit: any)
+	if typeof(from) ~= "Vector3" or typeof(to) ~= "Vector3" then
+		return
+	end
+	if kind == "chain" then
+		ChainFx.throw(from, to, hit == true)
+		return
+	end
 	local color = FX_COLORS[kind]
-	if not color or typeof(from) ~= "Vector3" or typeof(to) ~= "Vector3" then
+	if not color then
 		return
 	end
 	local length = (to - from).Magnitude

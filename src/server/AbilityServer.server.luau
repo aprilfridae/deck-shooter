@@ -8,6 +8,7 @@ local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local Ability = require(CardCore:WaitForChild("Ability"))
 local CardAim = require(CardCore:WaitForChild("CardAim"))
 local Cards = require(CardCore:WaitForChild("Cards"))
+local ChainShape = require(CardCore:WaitForChild("ChainShape"))
 local Config = require(CardCore:WaitForChild("Config"))
 local Deck = require(CardCore:WaitForChild("Deck"))
 local Tier = require(CardCore:WaitForChild("Tier"))
@@ -39,7 +40,7 @@ local function remote(name: string): RemoteEvent
 end
 local useRemote = remote("Use")
 local testDeckRemote = remote("TestDeck")
-local fxRemote = remote("Fx") -- to everyone: a tether, bolt or blast to draw, with where it starts and ends
+local fxRemote = remote("Fx") -- to everyone: a chain, bolt or blast to draw, with where it starts and ends (a chain also says if it hit)
 local dashRemote = remote("Dash")
 local pushRemote = remote("Push")
 remotes.Parent = ReplicatedStorage
@@ -195,27 +196,40 @@ local function aimedEnemy(player: Player, target: GunTargets.Target, aim: CardAi
 	return enemy
 end
 
--- Tether: you and the enemy you aim at swap places.
+-- A chain: you and the enemy it catches swap places when it lands.
 handlers.switchback = function(player, target, slot, aim)
 	if not aim then
 		return false
 	end
 	local reach = Cards.stat(slot.cardId, slot.tier, "range")
 	local from = eye(target)
+	local hand = target.root.Position -- the chain is drawn from the chest, not out of the eyes
 	local enemy = aimedEnemy(player, target, aim, reach)
 	if not enemy then
-		fxRemote:FireAllClients("tether", from, from + asVector(aim) * reach)
+		-- The chain flies until it meets a wall or runs out, then winds back in.
+		local wall = workspace:Raycast(from, asVector(aim) * reach, without(target.model))
+		fxRemote:FireAllClients("chain", hand, if wall then wall.Position else from + asVector(aim) * reach, false)
 		return MISS
 	end
-	local mine, theirs = target.root.CFrame, enemy.root.CFrame
-	MoveGrace.give(player, Config.SwitchbackGraceSeconds)
-	if enemy.player then
-		MoveGrace.give(enemy.player, Config.SwitchbackGraceSeconds)
-	end
-	-- Each keeps the way they were facing.
-	target.root.CFrame = mine.Rotation + theirs.Position
-	enemy.root.CFrame = theirs.Rotation + mine.Position
-	fxRemote:FireAllClients("tether", mine.Position, theirs.Position)
+	local landing = enemy.root.Position
+	fxRemote:FireAllClients("chain", hand, landing, true)
+	-- The swap happens when the chain lands, not when it is thrown. Either of them may have died by then.
+	task.delay(ChainShape.flight((landing - hand).Magnitude), function()
+		if not (GunTargets.isAlive(target) and GunTargets.isAlive(enemy)) then
+			return
+		end
+		if not (target.root.Parent and enemy.root.Parent) then
+			return
+		end
+		local mine, theirs = target.root.CFrame, enemy.root.CFrame
+		MoveGrace.give(player, Config.SwitchbackGraceSeconds)
+		if enemy.player then
+			MoveGrace.give(enemy.player, Config.SwitchbackGraceSeconds)
+		end
+		-- Each keeps the way they were facing.
+		target.root.CFrame = mine.Rotation + theirs.Position
+		enemy.root.CFrame = theirs.Rotation + mine.Position
+	end)
 	return true
 end
 
