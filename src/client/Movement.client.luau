@@ -10,7 +10,6 @@ local Input = require(script.Parent.Input)
 local Ledge = require(script.Parent.Ledge)
 local PlayerSettings = require(script.Parent.PlayerSettings)
 local WallKick = require(script.Parent.WallKick)
-local KillConfirm = require(script.Parent.KillConfirm)
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local Zones = require(Guns:WaitForChild("Zones"))
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
@@ -473,8 +472,7 @@ local function onFrame(dt: number)
 		scopeEasing = false
 	end
 	fieldOfView += (targetFov - fieldOfView) * (1 - math.exp(-dt * (if scopeEasing then (if scoped then SCOPE_IN_EASE else SCOPE_FOV_EASE) else FOV_EASE)))
-	-- A kill snaps the view in for a moment, by the same share of a scoped view as of a normal one.
-	workspace.CurrentCamera.FieldOfView = fieldOfView - KillConfirm.fovKick() * fieldOfView / FIELD_OF_VIEW
+	workspace.CurrentCamera.FieldOfView = fieldOfView
 
 	-- The camera stays low through a slide's blips. A slide that loses the ground for a moment (a bump, a lip, the
 	-- start of a slope) becomes "Air" for at least MinAirTime before it can be a slide again, and with slides spammed

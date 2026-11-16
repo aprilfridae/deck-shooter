@@ -1,7 +1,8 @@
--- What the killer feels on a kill: a punch. The view snaps in a few degrees and springs back, the picture kicks up
--- in contrast and colour for an instant, and the edges of the screen flash Signal Acid, the colour of the coins on
--- their way in. Each kill in a life makes it bigger, up to a cap, and raises the kill sound a semitone. Dying or
--- respawning starts the count again. Numbers are in KillFx. Hud calls kill(); Movement takes fovKick() off the view.
+-- What the killer feels on a kill: a punch. The picture kicks up in contrast and colour for an instant, and the
+-- edges of the screen flash Signal Acid, the colour of the coins on their way in. Each kill in a life makes it
+-- bigger, up to a cap, and raises the kill sound a semitone. Dying or respawning starts the count again. Numbers
+-- are in KillFx. Hud calls kill(). (It also snapped the view in a few degrees until River had that taken out,
+-- 2026-11-15.)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -98,11 +99,6 @@ end
 -- Kills so far this life.
 function KillConfirm.streak(): number
 	return streak
-end
-
--- Degrees to take off the view right now, at the normal view. Movement scales it to the view it has.
-function KillConfirm.fovKick(): number
-	return KillFx.PUNCH_FOV * punchSize * KillFx.punch(clock - punchAt)
 end
 
 RunService.RenderStepped:Connect(function(dt)

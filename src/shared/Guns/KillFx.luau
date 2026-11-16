@@ -6,15 +6,15 @@ local KillFx = {}
 -- The glitch-away, in seconds from the death. The body freezes where it died. It flashes white for a moment, then
 -- flickers and tears while its parts go one by one, from the top down with some chance in it. Each part blinks for
 -- a moment, then collapses flat and wide like an old screen switching off, and leaves as a puff of glitching
--- pixels and fine dust that drift off away from the shot. River found the first cut slow and blocky (2026-11-15),
--- so it's quick.
-KillFx.SHORT = 0.08 -- the white flash
+-- pixels and fine dust that drift off away from the shot. River found the first cut slow and blocky and then asked
+-- for it faster again (2026-11-15), so it's quick.
+KillFx.SHORT = 0.06 -- the white flash
 KillFx.FLICKER = 0.03 -- one step of the glitch
-KillFx.FIRST_GONE = 0.15 -- the first part goes
-KillFx.DISSOLVE = 0.85 -- and the last
-KillFx.HEAD_GONE = 0.06 -- a headshot's head goes at once
-KillFx.WARN = 0.18 -- a part blinks for this long before it goes
-KillFx.COLLAPSE = 0.07 -- and spends the last of it collapsing, without blinking
+KillFx.FIRST_GONE = 0.1 -- the first part goes
+KillFx.DISSOLVE = 0.55 -- and the last
+KillFx.HEAD_GONE = 0.04 -- a headshot's head goes at once
+KillFx.WARN = 0.12 -- a part blinks for this long before it goes
+KillFx.COLLAPSE = 0.05 -- and spends the last of it collapsing, without blinking
 KillFx.BLINK_MOST = 0.6 -- the chance it's blinked out on a step, just before it collapses
 KillFx.TEAR_CHANCE = 0.35 -- the chance on each step that the body tears sideways at some height
 KillFx.TEAR_MOST = 0.45 -- studs a tear shifts the body above it, at most
@@ -32,7 +32,6 @@ KillFx.TEXTURES = {
 -- The killer's screen punch.
 KillFx.PUNCH_ATTACK = 0.035 -- seconds to hit its peak
 KillFx.PUNCH_DECAY = 14 -- how fast it falls away after that, a second
-KillFx.PUNCH_FOV = 4 -- degrees the view narrows at the peak of a first kill
 KillFx.STREAK_STEP = 0.2 -- each kill in a streak makes the punch this much bigger
 KillFx.STREAK_TOP = 6 -- and it stops growing at this kill
 KillFx.PITCH_TOP = 7 -- the kill sound climbs a semitone a kill, up to this many

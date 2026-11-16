@@ -20,12 +20,12 @@ local Perf = require(script.Parent.Perf)
 local PIXELS = 90 -- glitching squares a whole body leaves as, on a fast machine
 local MOTES = 2 -- specks of dust for each square
 local HEAD_PIXELS = 2 -- a headshot's head leaves as this many times its share
-local WIND = 16 -- studs a second gained each second away from the shot
-local MOTE_WIND = 24 -- the dust is lighter and goes faster
+local WIND = 20 -- studs a second gained each second away from the shot
+local MOTE_WIND = 30 -- the dust is lighter and goes faster
 local LIFT = 5 -- and up
 local SCANLINES = 2 -- flashed across the body on each tear
 local SCANLINE_WIDTH = 1.4 -- studs wider than the body
-local LINGER = 1.1 -- seconds the last particles take to clear after the body has gone
+local LINGER = 0.8 -- seconds the last particles take to clear after the body has gone
 local LIGHT_BRIGHTNESS = 2
 local LIGHT_RANGE = 10
 local HOT = Color3.new(1, 1, 1)
@@ -120,7 +120,7 @@ local function makeEmitters(wind: Vector3): Emitters
 	local pixels = emitter(holder, KillFx.TEXTURES.pixel)
 	pixels.FlipbookLayout = Enum.ParticleFlipbookLayout.Grid4x4
 	pixels.FlipbookMode = Enum.ParticleFlipbookMode.OneShot
-	pixels.Lifetime = NumberRange.new(0.3, 0.55)
+	pixels.Lifetime = NumberRange.new(0.22, 0.4)
 	pixels.Size = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0.34, 0.12),
 		NumberSequenceKeypoint.new(1, 0.26, 0.1),
@@ -141,7 +141,7 @@ local function makeEmitters(wind: Vector3): Emitters
 	})
 
 	local motes = emitter(holder, KillFx.TEXTURES.mote)
-	motes.Lifetime = NumberRange.new(0.45, 0.9)
+	motes.Lifetime = NumberRange.new(0.35, 0.7)
 	motes.Size = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0.14, 0.06),
 		NumberSequenceKeypoint.new(0.7, 0.1, 0.04),
@@ -163,7 +163,7 @@ local function makeEmitters(wind: Vector3): Emitters
 	})
 
 	local scanlines = emitter(holder, KillFx.TEXTURES.scanline)
-	scanlines.Lifetime = NumberRange.new(0.05, 0.1)
+	scanlines.Lifetime = NumberRange.new(0.04, 0.08)
 	scanlines.Speed = NumberRange.new(0)
 	scanlines.Brightness = 3
 	scanlines.Color = ColorSequence.new(COOL, HOT)
