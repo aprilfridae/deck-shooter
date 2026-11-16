@@ -16,6 +16,7 @@ local CardFace = require(script.Parent.CardFace)
 local CardInHand = require(script.Parent.CardInHand)
 local TypeLabel = require(script.Parent.TypeLabel)
 local KillPopups = require(script.Parent.KillPopups)
+local KillConfirm = require(script.Parent.KillConfirm)
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local Cards = require(CardCore:WaitForChild("Cards"))
 local CardIndex = require(CardCore:WaitForChild("CardIndex"))
@@ -361,7 +362,9 @@ hitRemote.OnClientEvent:Connect(function(info)
 	markerAt = os.clock()
 	markerSize = if info.killed then MARKER_KILL else 1
 	marker.Visible = true
-	GunAudio.playHit(info.headshot, info.killed)
+	-- A kill punches the screen, harder and with a higher kill sound each kill in a life.
+	local killPitch = if info.killed then KillConfirm.kill(info.headshot) else nil
+	GunAudio.playHit(info.headshot, info.killed, killPitch)
 	if info.collateral then
 		GunAudio.playCollateral()
 	end

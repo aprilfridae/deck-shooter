@@ -78,6 +78,7 @@ local listed = {
 	packart_spec = true,
 	pullmotion_spec = true,
 	pullparticles_spec = true,
+	killfx_spec = true,
 }
 
 require("./tier_spec")
@@ -110,6 +111,7 @@ require("./packtext_spec")
 require("./packart_spec")
 require("./pullmotion_spec")
 require("./pullparticles_spec")
+require("./killfx_spec")
 require("./inventory_spec")
 require("./variant_spec")
 require("./deck_spec")

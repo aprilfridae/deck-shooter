@@ -149,9 +149,12 @@ local SWAP_FADE = 0.15
 local gunSounds: { [Sound]: string } = {}
 
 -- Each play gets its own copy, so every sound rings out under the ones after it. gunId tags a gun's own sounds.
-local function playCopy(template: Sound, startAt: number, gunId: string?)
+local function playCopy(template: Sound, startAt: number, gunId: string?, speed: number?)
 	local copy = template:Clone()
 	copy.Parent = SoundService
+	if speed then
+		copy.PlaybackSpeed *= speed
+	end
 	if gunId then
 		gunSounds[copy] = gunId
 	end
@@ -220,9 +223,11 @@ function GunAudio.playCollateral()
 	task.delay(GunSounds.hitDelaySeconds, playCopy, others[GunSounds.collateral], 0)
 end
 
-function GunAudio.playHit(headshot: boolean, killed: boolean)
+-- killPitch speeds the kill sound up, so a streak climbs (KillConfirm).
+function GunAudio.playHit(headshot: boolean, killed: boolean, killPitch: number?)
 	for _, soundId in GunSounds.hitSounds(headshot, killed) do
-		task.delay(GunSounds.hitDelaySeconds, playCopy, others[soundId], 0)
+		local speed = if soundId == GunSounds.hits.kill then killPitch else nil
+		task.delay(GunSounds.hitDelaySeconds, playCopy, others[soundId], 0, nil, speed)
 	end
 end
 

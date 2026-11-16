@@ -253,8 +253,10 @@ local function onFire(player: Player, raw: any)
 			local fullHealth = target.shield == nil and target.health >= target.humanoid.MaxHealth
 			local killed = if collaterals[target] then GunTargets.kill(target) else GunTargets.damage(target, amount)
 			if killed then
-				deathRemote:FireAllClients(target.root.Position, player) -- the killer, who the coins fly to
 				local hit = struck[target]
+				-- The killer, who the coins fly to; the body, which clients scan away; and whether it was a headshot,
+				-- which pops the head first (KillDerez).
+				deathRemote:FireAllClients(target.root.Position, player, target.model, hit ~= nil and hit.head)
 				table.insert(kills, {
 					victim = target.player or target.model,
 					-- Players pay, and so will anything else given the PaysKill attribute (River's bots, later).

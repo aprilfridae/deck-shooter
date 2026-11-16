@@ -1293,6 +1293,10 @@ RunService.PreRender:Connect(function()
 						and (head == nil or (camera.CFrame.Position - head.Position).Magnitude > FIRST_PERSON)
 					)
 			end
+			-- A body being scanned away on death (KillDerez) takes its gun and hands with it.
+			if character:GetAttribute("Derezzed") then
+				visible = false
+			end
 			-- A coded reload's gun is placed from the torso, since neither hand need be holding it.
 			local moves = nil
 			local torso = character:FindFirstChild("UpperTorso")
