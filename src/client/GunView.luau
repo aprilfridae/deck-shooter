@@ -375,8 +375,10 @@ local KEYED_DRAWS: { [string]: any } = {
 		catch = 0.42,
 		lever = { { 0.58, 0 }, { 0.66, 1 }, { 0.72, 1 }, { 0.8, 0 } },
 		keys = {
-			key(0, tilt(-10, 0, 95, 0.8, 2.9, 2.2), Vector3.new(-0.05, -0.2, 0.1)),
-			key(0.12, tilt(-10, 0, 78, 0.75, 2.3, 1.2), Vector3.new(-0.05, -0.2, 0.1), "flow"),
+			-- The left hand comes up from under the screen to wait under its place. It used to start there, so it
+			-- popped across from wherever the gun before had it (found frame by frame in Play, 2026-11-16).
+			key(0, tilt(-10, 0, 95, 0.8, 2.9, 2.2), Vector3.new(-0.05, -1.7, 0.35)),
+			key(0.12, tilt(-10, 0, 78, 0.75, 2.3, 1.2), Vector3.new(-0.05, -0.75, 0.2), "flow"),
 			key(0.24, tilt(-6, 0, 45, 0.35, 1.1, 0.5), Vector3.new(-0.04, -0.15, 0.05), "flow"),
 			key(0.34, tilt(-2, 0, 14, 0.04, 0.35, 0.1), Vector3.new(-0.02, -0.08, 0), "flow"),
 			key(0.42, tilt(3, -1, 2, 0, 0.1, 0.02), Vector3.zero, "flow"), -- it lands in the left hand
@@ -1054,10 +1056,12 @@ local function showFlash(camera: Camera, muzzle: CFrame)
 	flashModel.Parent = camera
 end
 
--- Holds that sat too close to the eye: the whole gun and arms move out by this much, so they look as far off as the
--- Longscope's.
+-- Every gun sits the same distance from the eye: the whole gun and arms move by this much so the right hand, on the
+-- grip, is 1.32 studs out at rest, as on the Longscope (River, 2026-11-16). Measured in Play: the M57's hand was at
+-- 1.19 and the Energy Pistol's at 1.58 (it had been pushed out 0.3 for its old model).
 local VIEW_REACH: { [string]: CFrame } = {
-	["Energy Pistol"] = CFrame.new(0.04, -0.02, -0.3),
+	M57 = CFrame.new(0, 0, -0.13),
+	["Energy Pistol"] = CFrame.new(0.04, -0.02, -0.04),
 }
 
 local GunView = {}
