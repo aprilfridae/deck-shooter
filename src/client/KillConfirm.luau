@@ -14,8 +14,8 @@ local KillFx = require(Guns:WaitForChild("KillFx"))
 local EDGE_COLOR = Palette.SignalAcid
 local EDGE_DEPTH = 0.16 -- of the screen, how far in from each edge the flash reaches
 local EDGE_PEAK = 0.45 -- how solid the flash is at the edge on a first kill
-local EDGE_TOP = 0.8 -- and at most, however long the streak
-local HEADSHOT_EDGE = 1.3 -- a headshot's flash is this much stronger
+local EDGE_TOP = 0.9 -- and at most, however long the streak
+local HEADSHOT_EDGE = 1.7 -- a headshot's flash is this much stronger
 local CONTRAST = 0.3 -- the picture's kick at the peak of a first kill
 local SATURATION = 0.35
 local BRIGHTNESS = 0.05
@@ -27,6 +27,7 @@ local streak = 0
 local punchAt = -math.huge
 local punchSize = 0
 local edgeSize = 0
+local headshotAt = -math.huge
 local clock = 0 -- runs slow with workspace's KillFxSpeed attribute, as KillDerez's does
 
 local gui = Instance.new("ScreenGui")
@@ -84,6 +85,9 @@ function KillConfirm.kill(headshot: boolean): number
 	streak += 1
 	local scale = KillFx.streakScale(streak)
 	punchAt = clock
+	if headshot then
+		headshotAt = clock
+	end
 	punchSize = scale
 	edgeSize = math.min(EDGE_PEAK * scale * (if headshot then HEADSHOT_EDGE else 1), EDGE_TOP)
 	if not tint or not tint.Parent then
@@ -116,8 +120,10 @@ RunService.RenderStepped:Connect(function(dt)
 	setEdges(edgeSize * math.sqrt(punch))
 	local effect = tint
 	if effect then
-		effect.Contrast = CONTRAST * punchSize * punch
-		effect.Saturation = SATURATION * punchSize * punch
+		-- A headshot opens on a moment of hard contrast, nearly black and white.
+		local contrast, saturation = KillFx.impact(clock - headshotAt)
+		effect.Contrast = contrast or CONTRAST * punchSize * punch
+		effect.Saturation = saturation or SATURATION * punchSize * punch
 		effect.Brightness = BRIGHTNESS * punchSize * punch
 	end
 end)

@@ -21,12 +21,23 @@ KillFx.TEAR_MOST = 0.45 -- studs a tear shifts the body above it, at most
 KillFx.OWN_DELAY = 0.8 -- your own body waits this long, so you see it drop before it goes
 KillFx.TRICKLE = 0.35 -- share of a part's pixels that leak out while it blinks; the rest go when it does
 
+-- A headshot hits harder and looks nothing like a body kill (River, 2026-11-15: "way cooler", "contrast more"). For
+-- a moment the body is a solid black silhouette with a white edge while the head bursts: a four-point flare, a
+-- shock ring, a spike of light and a fast spray of pixels. The killer's screen snaps to hard contrast, nearly
+-- black and white, before the acid flash.
+KillFx.SILHOUETTE = 0.07 -- seconds the body is a black silhouette
+KillFx.SCREEN_IMPACT = 0.05 -- seconds the killer's screen is at hard contrast
+KillFx.IMPACT_CONTRAST = 1.1
+KillFx.IMPACT_SATURATION = -0.8
+
 -- The textures, drawn in Blender with numpy (white on clear; the emitters colour them) and uploaded to the group
 -- with tools/upload-group-assets.py.
 KillFx.TEXTURES = {
 	pixel = "rbxassetid://107943854572762", -- 4x4 flipbook: a square that tears into bands
 	mote = "rbxassetid://113313050705987", -- a small soft square of light
 	scanline = "rbxassetid://82361336313539", -- a thin broken line, for the tears
+	flare = "rbxassetid://114440250242999", -- a four-point flare, for a headshot's head
+	ring = "rbxassetid://138513298306625", -- a thin ring of light, a headshot's shock ring
 }
 
 -- The killer's screen punch.
@@ -107,6 +118,19 @@ function KillFx.glow(age: number): (number, number)
 		return fill * 0.7, 0
 	end
 	return fill, 1
+end
+
+-- Whether a headshot's body is still a black silhouette.
+function KillFx.silhouette(age: number): boolean
+	return age >= 0 and age < KillFx.SILHOUETTE
+end
+
+-- The killer's screen after a headshot: its contrast and saturation, or nil once the impact is over.
+function KillFx.impact(age: number): (number?, number?)
+	if age < 0 or age >= KillFx.SCREEN_IMPACT then
+		return nil, nil
+	end
+	return KillFx.IMPACT_CONTRAST, KillFx.IMPACT_SATURATION
 end
 
 -- Whether every part has gone.

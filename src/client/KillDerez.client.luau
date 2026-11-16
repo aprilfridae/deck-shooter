@@ -26,9 +26,18 @@ local LIFT = 5 -- and up
 local SCANLINES = 2 -- flashed across the body on each tear
 local SCANLINE_WIDTH = 1.4 -- studs wider than the body
 local LINGER = 0.8 -- seconds the last particles take to clear after the body has gone
+-- A headshot's head burst.
+local BURST_PIXELS = 34 -- glitching squares sprayed out fast
+local BURST_MOTES = 70
+local BURST_SPEED = { 16, 30 }
+local FLARE_SIZE = 7 -- studs across at its biggest
+local RING_SIZE = 9
+local SPIKE_HEIGHT = 9 -- the spike of light up out of the head
+local BURST_LIGHT = 6
 local LIGHT_BRIGHTNESS = 2
 local LIGHT_RANGE = 10
 local HOT = Color3.new(1, 1, 1)
+local BLACK = Color3.new(0, 0, 0)
 local COOL = Palette.DataCyan
 -- What a copied part keeps: how it looks. Joints would tie it to the real body, and the rest has no business on it.
 local KEEP = {
@@ -73,6 +82,8 @@ type Derez = {
 	anchor: BasePart?,
 	light: PointLight?,
 	emitters: Emitters?,
+	burst: BasePart?, -- a headshot's head burst
+	headAt: Vector3?,
 	bounds: CFrame?, -- the body's box when it froze
 	extent: Vector3?,
 	lastStep: number,
@@ -192,6 +203,107 @@ local function flashScanlines(derez: Derez, height: number)
 	emitters.scanlines:Emit(SCANLINES)
 end
 
+-- A headshot's head goes off: a four-point flare, a shock ring, a spike of light straight up and a fast spray of
+-- pixels and dust, with a hard flash of light. Everything here is quick and big, so it reads apart from a body kill.
+local function headBurst(derez: Derez)
+	local holder = Instance.new("Part")
+	holder.Name = "HeadBurst"
+	holder.Anchored = true
+	holder.CanCollide = false
+	holder.CanQuery = false
+	holder.CanTouch = false
+	holder.Transparency = 1
+	holder.Size = Vector3.one * 0.6
+	holder.CFrame = CFrame.new(derez.headAt :: Vector3)
+	holder.Parent = folder
+	derez.burst = holder
+
+	local flare = emitter(holder, KillFx.TEXTURES.flare)
+	flare.Lifetime = NumberRange.new(0.16)
+	flare.Speed = NumberRange.new(0)
+	flare.Brightness = 8
+	flare.ZOffset = 1.5
+	flare.Rotation = NumberRange.new(-12, 12)
+	flare.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, FLARE_SIZE * 0.4),
+		NumberSequenceKeypoint.new(0.15, FLARE_SIZE),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	flare.Color = ColorSequence.new(HOT, COOL)
+	flare:Emit(1)
+
+	local ring = emitter(holder, KillFx.TEXTURES.ring)
+	ring.Lifetime = NumberRange.new(0.22)
+	ring.Speed = NumberRange.new(0)
+	ring.Brightness = 5
+	ring.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.6),
+		NumberSequenceKeypoint.new(0.4, RING_SIZE * 0.8),
+		NumberSequenceKeypoint.new(1, RING_SIZE),
+	})
+	ring.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.5, 0.2),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	ring.Color = ColorSequence.new(HOT, COOL)
+	ring:Emit(1)
+
+	-- The scanline turned on end and stretched tall, so it shoots up out of the head.
+	local spike = emitter(holder, KillFx.TEXTURES.scanline)
+	spike.Lifetime = NumberRange.new(0.1, 0.14)
+	spike.Speed = NumberRange.new(0)
+	spike.Brightness = 6
+	spike.Rotation = NumberRange.new(90)
+	spike.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, SPIKE_HEIGHT * 0.5),
+		NumberSequenceKeypoint.new(0.3, SPIKE_HEIGHT),
+		NumberSequenceKeypoint.new(1, SPIKE_HEIGHT * 1.2),
+	})
+	spike.Transparency = NumberSequence.new(0, 1)
+	spike.Color = ColorSequence.new(HOT, COOL)
+	spike:Emit(2)
+
+	local spray = emitter(holder, KillFx.TEXTURES.pixel)
+	spray.FlipbookLayout = Enum.ParticleFlipbookLayout.Grid4x4
+	spray.FlipbookMode = Enum.ParticleFlipbookMode.OneShot
+	spray.Lifetime = NumberRange.new(0.22, 0.42)
+	spray.Speed = NumberRange.new(BURST_SPEED[1], BURST_SPEED[2])
+	spray.Drag = 7
+	spray.Acceleration = derez.wind * WIND * 0.5 + Vector3.yAxis * LIFT
+	spray.Brightness = 3
+	spray.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.42, 0.14),
+		NumberSequenceKeypoint.new(1, 0.3, 0.1),
+	})
+	spray.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, HOT),
+		ColorSequenceKeypoint.new(0.3, COOL),
+		ColorSequenceKeypoint.new(1, COOL),
+	})
+	spray:Emit(Perf.pick(BURST_PIXELS, math.floor(BURST_PIXELS / 2), math.floor(BURST_PIXELS / 4)))
+
+	local dust = emitter(holder, KillFx.TEXTURES.mote)
+	dust.Lifetime = NumberRange.new(0.3, 0.6)
+	dust.Speed = NumberRange.new(BURST_SPEED[1] * 0.6, BURST_SPEED[2])
+	dust.Drag = 5
+	dust.Acceleration = derez.wind * MOTE_WIND * 0.5 + Vector3.yAxis * LIFT
+	dust.Brightness = 3
+	dust.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.16, 0.06),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	dust.Color = ColorSequence.new(HOT, COOL)
+	dust:Emit(Perf.pick(BURST_MOTES, math.floor(BURST_MOTES / 2), math.floor(BURST_MOTES / 4)))
+
+	local light = Instance.new("PointLight")
+	light.Color = HOT
+	light.Range = 12
+	light.Brightness = BURST_LIGHT
+	light.Shadows = false
+	light.Parent = holder
+end
+
 -- A copy of a part that stays where it is and touches nothing.
 local function ghostOf(part: BasePart): BasePart?
 	local archivable = part.Archivable
@@ -283,6 +395,13 @@ local function freeze(derez: Derez)
 	light.Parent = anchor
 	derez.anchor, derez.light = anchor, light
 	derez.emitters = makeEmitters(derez.wind)
+	local head = derez.model:FindFirstChild("Head")
+	if head and head:IsA("BasePart") then
+		derez.headAt = head.Position -- where it is now; your own body has fallen since it died
+	end
+	if derez.headshot and derez.headAt then
+		headBurst(derez)
+	end
 end
 
 -- Keeps the real body hidden. BodyHands puts the soldier's own hand meshes back when the body dies, after the
@@ -314,6 +433,18 @@ local function stepDerez(derez: Derez): boolean
 	for _, made in { emitters.pixels, emitters.motes, emitters.scanlines } do
 		made.TimeScale = speed
 	end
+	local burst = derez.burst
+	if burst then
+		for _, made in burst:GetChildren() do
+			if made:IsA("ParticleEmitter") then
+				made.TimeScale = speed
+			end
+		end
+		local light = burst:FindFirstChildOfClass("PointLight")
+		if light then
+			light.Brightness = BURST_LIGHT * math.max(1 - age / 0.15, 0)
+		end
+	end
 	if KillFx.done(age) then
 		-- The body has gone; the last particles clear, then everything goes.
 		if derez.copy and derez.copy.Parent then
@@ -322,16 +453,28 @@ local function stepDerez(derez: Derez): boolean
 		end
 		if age >= KillFx.DISSOLVE + LINGER then
 			emitters.holder:Destroy()
+			if burst then
+				burst:Destroy()
+			end
 			return false
 		end
 		return true
 	end
 
 	local glow = derez.glow :: Highlight
-	local fill, cool = KillFx.glow(age)
-	glow.FillTransparency = fill
-	glow.FillColor = HOT:Lerp(COOL, cool)
-	glow.OutlineTransparency = math.max(fill - 0.3, 0)
+	if derez.headshot and KillFx.silhouette(age) then
+		-- A headshot opens on a hard silhouette: the body solid black, edged in white.
+		glow.FillColor = BLACK
+		glow.FillTransparency = 0
+		glow.OutlineColor = HOT
+		glow.OutlineTransparency = 0
+	else
+		local fill, cool = KillFx.glow(age)
+		glow.FillTransparency = fill
+		glow.FillColor = HOT:Lerp(COOL, cool)
+		glow.OutlineColor = COOL
+		glow.OutlineTransparency = math.max(fill - 0.3, 0)
+	end
 	local light = derez.light :: PointLight
 	light.Brightness = LIGHT_BRIGHTNESS * (1 - math.clamp(age / KillFx.DISSOLVE, 0, 1))
 
@@ -456,6 +599,7 @@ local function begin(at: Vector3, killer: Player?, model: Model?, headshot: bool
 		wind = windFrom(at, killer),
 		headshot = headshot == true,
 		pieces = pieces,
+		headAt = if head and head:IsA("BasePart") then head.Position else nil,
 		lastStep = -1,
 	})
 end
