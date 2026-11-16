@@ -72,6 +72,9 @@ type Shard = {
 }
 
 local derezzes: { Derez } = {}
+-- The effect's own clock. To look at it slowly, set the number attribute KillFxSpeed on workspace (0.1 plays it at
+-- a tenth of the speed) and clear it afterwards. KillConfirm reads it too.
+local clock = 0
 local shards: { Shard } = {}
 local started: { [Model]: boolean } = setmetatable({}, { __mode = "k" }) :: any
 
@@ -241,7 +244,7 @@ local function finish(derez: Derez)
 end
 
 local function stepDerez(derez: Derez): boolean
-	local age = os.clock() - derez.startedAt
+	local age = clock - derez.startedAt
 	if age < 0 then
 		return true -- your own body, waiting
 	end
@@ -346,6 +349,9 @@ local function stepShards(dt: number)
 end
 
 RunService.RenderStepped:Connect(function(dt)
+	local speed = workspace:GetAttribute("KillFxSpeed")
+	dt *= if type(speed) == "number" and speed > 0 then speed else 1
+	clock += dt
 	for index = #derezzes, 1, -1 do
 		if not stepDerez(derezzes[index]) then
 			table.remove(derezzes, index)
@@ -390,7 +396,7 @@ local function begin(at: Vector3, killer: Player?, model: Model?, headshot: bool
 	local head = model:FindFirstChild("Head")
 	table.insert(derezzes, {
 		model = model,
-		startedAt = os.clock() + (if model == player.Character then KillFx.OWN_DELAY else 0),
+		startedAt = clock + (if model == player.Character then KillFx.OWN_DELAY else 0),
 		push = pushFrom(at, killer),
 		headshot = headshot == true,
 		pieces = pieces,

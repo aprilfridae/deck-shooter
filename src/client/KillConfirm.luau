@@ -26,6 +26,7 @@ local streak = 0
 local punchAt = -math.huge
 local punchSize = 0
 local edgeSize = 0
+local clock = 0 -- runs slow with workspace's KillFxSpeed attribute, as KillDerez's does
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "KillConfirm"
@@ -81,7 +82,7 @@ end
 function KillConfirm.kill(headshot: boolean): number
 	streak += 1
 	local scale = KillFx.streakScale(streak)
-	punchAt = os.clock()
+	punchAt = clock
 	punchSize = scale
 	edgeSize = math.min(EDGE_PEAK * scale * (if headshot then HEADSHOT_EDGE else 1), EDGE_TOP)
 	if not tint or not tint.Parent then
@@ -101,15 +102,17 @@ end
 
 -- Degrees to take off the view right now, at the normal view. Movement scales it to the view it has.
 function KillConfirm.fovKick(): number
-	return KillFx.PUNCH_FOV * punchSize * KillFx.punch(os.clock() - punchAt)
+	return KillFx.PUNCH_FOV * punchSize * KillFx.punch(clock - punchAt)
 end
 
-RunService.RenderStepped:Connect(function()
+RunService.RenderStepped:Connect(function(dt)
+	local speed = workspace:GetAttribute("KillFxSpeed")
+	clock += dt * (if type(speed) == "number" and speed > 0 then speed else 1)
 	if not gui.Enabled then
 		return
 	end
-	local punch = KillFx.punch(os.clock() - punchAt)
-	if punch <= 0 and os.clock() - punchAt > KillFx.PUNCH_ATTACK then
+	local punch = KillFx.punch(clock - punchAt)
+	if punch <= 0 and clock - punchAt > KillFx.PUNCH_ATTACK then
 		stop()
 		return
 	end
