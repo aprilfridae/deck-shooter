@@ -1,20 +1,28 @@
--- The numbers behind a kill's effects: the body shorting out and being scanned away into cubes of light (the
--- derez, KillDerez.client.luau), and the killer's screen punch that grows with their streak (KillConfirm.luau).
--- Pure, so it can be tested. See docs/specs/guns.md, "Kill effects".
+-- The numbers behind a kill's effects: the body glitching away into drifting pixels (KillDerez.client.luau), and
+-- the killer's screen punch that grows with their streak (KillConfirm.luau). Pure, so it can be tested. See
+-- docs/specs/guns.md, "Kill effects".
 local KillFx = {}
 
--- The derez, in seconds from the death.
-KillFx.SHORT = 0.2 -- the body shorts out: it flashes white and flickers before the scan starts
-KillFx.FLICKER = 0.035 -- one step of that flicker
-KillFx.SCAN = 0.32 -- the scan runs from the top of the body to the bottom, taking it away as it goes
-KillFx.RING_FADE = 0.2 -- the scan's ring fades out after it reaches the floor
+-- The glitch-away, in seconds from the death. The body freezes where it died. It flashes white for a moment, then
+-- flickers and tears while its parts go one by one, from the top down with some chance in it. Each part blinks for
+-- a moment before it goes and leaves as a puff of pixels that drift off away from the shot.
+KillFx.SHORT = 0.12 -- the white flash
+KillFx.FLICKER = 0.04 -- one step of the glitch
+KillFx.FIRST_GONE = 0.25 -- the first part goes
+KillFx.DISSOLVE = 1.3 -- and the last
+KillFx.HEAD_GONE = 0.1 -- a headshot's head goes at once
+KillFx.WARN = 0.3 -- a part blinks for this long before it goes
+KillFx.BLINK_MOST = 0.7 -- the chance it's blinked out on a step, just before it goes
+KillFx.TEAR_CHANCE = 0.35 -- the chance on each step that the body tears sideways at some height
+KillFx.TEAR_MOST = 0.45 -- studs a tear shifts the body above it, at most
 KillFx.OWN_DELAY = 1 -- your own body waits this long, so you see it drop before it goes
-KillFx.HIDDEN_SHARE = 0.3 -- of the body's parts, how many blink out on each flicker step
 
--- The cubes the body breaks into.
-KillFx.SHARD_LIFE = { 0.45, 0.9 } -- seconds
-KillFx.SHARD_SIZE = { 0.14, 0.32 } -- studs across
-KillFx.SHARD_COOL = 0.35 -- share of its life a cube takes to cool from white to Data Cyan
+-- The pixels.
+KillFx.PIXEL_LIFE = { 0.6, 1.3 } -- seconds
+KillFx.PIXEL_SIZE = { 0.08, 0.2 } -- studs across
+KillFx.PIXEL_STEP = 0.06 -- they're drawn moving in jumps this often, so they stutter
+KillFx.PIXEL_HOLD = 0.65 -- share of a pixel's life before it starts shrinking and flickering
+KillFx.TRICKLE = 0.35 -- share of a part's pixels that leak out while it blinks; the rest go when it does
 
 -- The killer's screen punch.
 KillFx.PUNCH_ATTACK = 0.035 -- seconds to hit its peak
@@ -24,61 +32,93 @@ KillFx.STREAK_STEP = 0.2 -- each kill in a streak makes the punch this much bigg
 KillFx.STREAK_TOP = 6 -- and it stops growing at this kill
 KillFx.PITCH_TOP = 7 -- the kill sound climbs a semitone a kill, up to this many
 
--- A steady random number from 0 to 1 for a whole number and a seed.
-local function noise(step: number, seed: number): number
+-- A steady random number from 0 to 1 for two numbers.
+function KillFx.noise(step: number, seed: number): number
 	local value = math.sin(step * 12.9898 + seed * 78.233) * 43758.5453
 	return value - math.floor(value)
 end
 
--- How far the scan has run down the body after age seconds: 0 until it starts, 1 once it has passed the feet. It
--- starts slowly, runs through the middle and slows into the feet.
-function KillFx.scan(age: number): number
-	local t = math.clamp((age - KillFx.SHORT) / KillFx.SCAN, 0, 1)
-	return t * t * (3 - 2 * t)
+-- When a part goes. height is where it sits in the body, 0 at the bottom and 1 at the top; roll is a random number
+-- from 0 to 1. The top goes first, loosely.
+function KillFx.goneAt(height: number, roll: number): number
+	local order = (1 - math.clamp(height, 0, 1)) * 0.75 + math.clamp(roll, 0, 1) * 0.25
+	return KillFx.FIRST_GONE + order * (KillFx.DISSOLVE - KillFx.FIRST_GONE)
 end
 
--- Whether the derez is over: the scan has passed and its ring has faded.
-function KillFx.done(age: number): boolean
-	return age >= KillFx.SHORT + KillFx.SCAN + KillFx.RING_FADE
+-- Which glitch step the effect is on.
+function KillFx.step(age: number): number
+	return math.floor(math.max(age, 0) / KillFx.FLICKER)
 end
 
--- Which flicker step the short is on, or nil once the scan has started.
-function KillFx.flickerStep(age: number): number?
-	if age < 0 or age >= KillFx.SHORT then
-		return nil
+-- Whether part number index is blinked out on this step, with left seconds until it goes. It's always there until
+-- its warning starts, blinks more and more through it, and is gone after.
+function KillFx.blinkedOut(step: number, index: number, left: number): boolean
+	if left <= 0 then
+		return true
+	elseif left >= KillFx.WARN then
+		return false
 	end
-	return math.floor(age / KillFx.FLICKER)
+	return KillFx.noise(step, index) < (1 - left / KillFx.WARN) * KillFx.BLINK_MOST
 end
 
--- Whether part number index blinks out on this flicker step. The first step shows the whole body, white.
-function KillFx.blinkedOut(step: number, index: number): boolean
-	return step > 0 and noise(step, index) < KillFx.HIDDEN_SHARE
-end
-
--- The glow over the body: its fill's transparency and how far it has gone from white to Data Cyan (0 to 1). It
--- flashes white, flickers between white and cyan through the short, and fades as the scan takes the body.
-function KillFx.glow(age: number): (number, number)
-	local step = KillFx.flickerStep(age)
-	if step then
-		return if step % 2 == 0 then 0.05 else 0.35, if step % 2 == 0 then 0 else 1
-	end
-	return 0.3 + 0.7 * KillFx.scan(age), 1
-end
-
--- The scan ring's transparency: solid as it runs, fading once it has reached the floor.
-function KillFx.ring(age: number): number
-	local past = age - KillFx.SHORT - KillFx.SCAN
-	if past <= 0 then
+-- How far part number index is knocked sideways on this step while it blinks: mostly not at all.
+function KillFx.jitter(step: number, index: number, left: number): number
+	if left <= 0 or left >= KillFx.WARN or KillFx.noise(step, index + 0.5) < 0.75 then
 		return 0
 	end
-	return math.min(past / KillFx.RING_FADE, 1)
+	return (KillFx.noise(step, index + 0.25) - 0.5) * 0.6
 end
 
--- A cube share of the way through its life: its size against its first size, how far it has cooled from white to
--- Data Cyan (0 to 1), and its transparency.
-function KillFx.shard(share: number): (number, number, number)
+-- A tear on this step: the height (0 to 1 of the body) above which the body is shifted, and by how many studs.
+-- nil on a step without one, and through the white flash.
+function KillFx.tear(step: number, age: number): (number?, number?)
+	if age < KillFx.SHORT or age >= KillFx.DISSOLVE or KillFx.noise(step, 0.123) >= KillFx.TEAR_CHANCE then
+		return nil, nil
+	end
+	local height = 0.2 + KillFx.noise(step, 0.456) * 0.7
+	local shift = (KillFx.noise(step, 0.789) * 2 - 1) * KillFx.TEAR_MOST
+	return height, shift
+end
+
+-- The glow over the body: its fill's transparency and how far it has gone from white to Data Cyan (0 to 1). A
+-- solid white flash, then cyan with a white blip every third step, thinning out as the body goes.
+function KillFx.glow(age: number): (number, number)
+	if age < KillFx.SHORT then
+		return 0.05, 0
+	elseif age >= KillFx.DISSOLVE then
+		return 1, 1
+	end
+	local fade = math.clamp((age - KillFx.SHORT) / (KillFx.DISSOLVE - KillFx.SHORT), 0, 1)
+	local fill = 0.45 + 0.55 * fade
+	if KillFx.step(age) % 3 == 0 then
+		return fill * 0.7, 0
+	end
+	return fill, 1
+end
+
+-- Whether every part has gone.
+function KillFx.done(age: number): boolean
+	return age >= KillFx.DISSOLVE
+end
+
+-- How many of a part's count pixels are out, with left seconds until it goes.
+function KillFx.released(count: number, left: number): number
+	if left <= 0 then
+		return count
+	end
+	local warned = math.clamp(1 - left / KillFx.WARN, 0, 1)
+	return math.floor(count * KillFx.TRICKLE * warned)
+end
+
+-- A pixel share of the way through its life: its size against its first size, and its transparency. It holds,
+-- then shrinks and fades.
+function KillFx.pixel(share: number): (number, number)
 	share = math.clamp(share, 0, 1)
-	return 1 - share * share, math.min(share / KillFx.SHARD_COOL, 1), share ^ 3
+	if share <= KillFx.PIXEL_HOLD then
+		return 1, 0
+	end
+	local out = (share - KillFx.PIXEL_HOLD) / (1 - KillFx.PIXEL_HOLD)
+	return 1 - out, out * out
 end
 
 -- How big the punch is at age seconds after the kill, from 0 to 1.
@@ -102,9 +142,9 @@ function KillFx.killPitch(streak: number): number
 	return 2 ^ (math.clamp(streak - 1, 0, KillFx.PITCH_TOP) / 12)
 end
 
--- How many cubes each part breaks into, given each part's volume and how many cubes the whole body may make.
--- Every part makes at least one.
-function KillFx.shardCounts(volumes: { number }, budget: number): { number }
+-- How many pixels each part leaves as, given each part's volume and how many the whole body may make. Every part
+-- makes at least one.
+function KillFx.pixelCounts(volumes: { number }, budget: number): { number }
 	local total = 0
 	for _, volume in volumes do
 		total += volume

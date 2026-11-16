@@ -3,56 +3,91 @@ local KillFx = require("../src/shared/Guns/KillFx")
 
 local describe, it, expect = harness.describe, harness.it, harness.expect
 
-describe("KillFx.scan", function()
-	it("waits for the short", function()
-		expect(KillFx.scan(0)).toBe(0)
-		expect(KillFx.scan(KillFx.SHORT)).toBe(0)
+describe("KillFx.goneAt", function()
+	it("takes the top first and the bottom last", function()
+		expect(KillFx.goneAt(1, 0)).toBeCloseTo(KillFx.FIRST_GONE)
+		expect(KillFx.goneAt(0, 1)).toBeCloseTo(KillFx.DISSOLVE)
 	end)
 
-	it("is halfway down the body halfway through", function()
-		expect(KillFx.scan(KillFx.SHORT + KillFx.SCAN / 2)).toBeCloseTo(0.5)
+	it("lets chance move a part, but not past the ends", function()
+		expect(KillFx.goneAt(0.5, 0) < KillFx.goneAt(0.5, 1)).toBe(true)
+		expect(KillFx.goneAt(-3, 9) <= KillFx.DISSOLVE).toBe(true)
+		expect(KillFx.goneAt(5, -2) >= KillFx.FIRST_GONE).toBe(true)
 	end)
 
-	it("has passed the feet at the end and stays there", function()
-		expect(KillFx.scan(KillFx.SHORT + KillFx.SCAN)).toBeCloseTo(1)
-		expect(KillFx.scan(5)).toBeCloseTo(1)
-	end)
-
-	it("is done once the ring has faded", function()
-		expect(KillFx.done(KillFx.SHORT + KillFx.SCAN)).toBe(false)
-		expect(KillFx.done(KillFx.SHORT + KillFx.SCAN + KillFx.RING_FADE)).toBe(true)
+	it("takes a headshot's head before any other part", function()
+		expect(KillFx.HEAD_GONE < KillFx.FIRST_GONE).toBe(true)
 	end)
 end)
 
-describe("KillFx flicker", function()
-	it("steps through the short and stops when the scan starts", function()
-		expect(KillFx.flickerStep(0)).toBe(0)
-		expect(KillFx.flickerStep(KillFx.FLICKER * 2.5)).toBe(2)
-		expect(KillFx.flickerStep(KillFx.SHORT)).toBe(nil)
-		expect(KillFx.flickerStep(-0.1)).toBe(nil)
-	end)
-
-	it("shows the whole body on the first step", function()
-		for index = 1, 20 do
-			expect(KillFx.blinkedOut(0, index)).toBe(false)
+describe("KillFx.blinkedOut", function()
+	it("shows a part until its warning starts and hides it once it's gone", function()
+		for step = 0, 10 do
+			expect(KillFx.blinkedOut(step, 3, KillFx.WARN + 0.01)).toBe(false)
+			expect(KillFx.blinkedOut(step, 3, 0)).toBe(true)
 		end
 	end)
 
-	it("blinks out some parts, not all, on later steps", function()
-		local out = 0
-		for step = 1, 5 do
-			for index = 1, 20 do
-				if KillFx.blinkedOut(step, index) then
-					out += 1
-				end
+	it("blinks more often as it nears going", function()
+		local early, late = 0, 0
+		for step = 1, 200 do
+			if KillFx.blinkedOut(step, 5, KillFx.WARN * 0.9) then
+				early += 1
+			end
+			if KillFx.blinkedOut(step, 5, KillFx.WARN * 0.1) then
+				late += 1
 			end
 		end
-		expect(out > 5).toBe(true)
-		expect(out < 70).toBe(true)
+		expect(late > early).toBe(true)
+		expect(late > 60).toBe(true)
+		expect(late < 200).toBe(true)
 	end)
 
 	it("gives the same answer every time", function()
-		expect(KillFx.blinkedOut(3, 7)).toBe(KillFx.blinkedOut(3, 7))
+		expect(KillFx.blinkedOut(3, 7, 0.1)).toBe(KillFx.blinkedOut(3, 7, 0.1))
+	end)
+end)
+
+describe("KillFx.jitter", function()
+	it("leaves a part still outside its warning", function()
+		expect(KillFx.jitter(4, 2, KillFx.WARN + 1)).toBe(0)
+		expect(KillFx.jitter(4, 2, 0)).toBe(0)
+	end)
+
+	it("twitches some parts a little through it", function()
+		local moved = 0
+		for step = 1, 100 do
+			local shift = KillFx.jitter(step, 2, KillFx.WARN / 2)
+			expect(math.abs(shift) <= 0.3).toBe(true)
+			if shift ~= 0 then
+				moved += 1
+			end
+		end
+		expect(moved > 5).toBe(true)
+		expect(moved < 60).toBe(true)
+	end)
+end)
+
+describe("KillFx.tear", function()
+	it("never tears through the white flash or after the end", function()
+		for step = 0, 50 do
+			expect(KillFx.tear(step, KillFx.SHORT / 2)).toBe(nil)
+			expect(KillFx.tear(step, KillFx.DISSOLVE)).toBe(nil)
+		end
+	end)
+
+	it("tears on some steps, within the body and the most shift", function()
+		local tears = 0
+		for step = 0, 200 do
+			local height, shift = KillFx.tear(step, 0.5)
+			if height then
+				tears += 1
+				expect(height >= 0.2 and height <= 0.9).toBe(true)
+				expect(math.abs(shift :: number) <= KillFx.TEAR_MOST).toBe(true)
+			end
+		end
+		expect(tears > 30).toBe(true)
+		expect(tears < 120).toBe(true)
 	end)
 end)
 
@@ -63,39 +98,40 @@ describe("KillFx.glow", function()
 		expect(cool).toBe(0)
 	end)
 
-	it("flickers to cyan on the next step", function()
-		local _, cool = KillFx.glow(KillFx.FLICKER * 1.5)
-		expect(cool).toBe(1)
+	it("is cyan on most steps after the flash, white on every third", function()
+		local whites = 0
+		for step = 4, 15 do
+			local _, cool = KillFx.glow((step + 0.5) * KillFx.FLICKER)
+			if cool == 0 then
+				whites += 1
+			end
+		end
+		expect(whites).toBe(4)
 	end)
 
-	it("is gone once the scan has passed", function()
-		local transparency = KillFx.glow(KillFx.SHORT + KillFx.SCAN)
-		expect(transparency).toBeCloseTo(1)
+	it("is clear once the body has gone", function()
+		expect(KillFx.glow(KillFx.DISSOLVE + 0.01 + KillFx.FLICKER)).toBeCloseTo(1)
+		expect(KillFx.done(KillFx.DISSOLVE)).toBe(true)
+		expect(KillFx.done(KillFx.DISSOLVE - 0.01)).toBe(false)
 	end)
 end)
 
-describe("KillFx.ring", function()
-	it("is solid while it runs and gone after its fade", function()
-		expect(KillFx.ring(KillFx.SHORT + 0.1)).toBe(0)
-		expect(KillFx.ring(KillFx.SHORT + KillFx.SCAN + KillFx.RING_FADE / 2)).toBeCloseTo(0.5)
-		expect(KillFx.ring(10)).toBe(1)
+describe("KillFx.released", function()
+	it("lets none go before the warning, a trickle through it and the rest when the part goes", function()
+		expect(KillFx.released(20, KillFx.WARN + 1)).toBe(0)
+		expect(KillFx.released(20, KillFx.WARN / 2)).toBe(math.floor(20 * KillFx.TRICKLE * 0.5))
+		expect(KillFx.released(20, 0)).toBe(20)
 	end)
 end)
 
-describe("KillFx.shard", function()
-	it("starts full size, white and solid", function()
-		local size, cool, transparency = KillFx.shard(0)
+describe("KillFx.pixel", function()
+	it("holds full size and solid, then shrinks and fades to nothing", function()
+		local size, transparency = KillFx.pixel(KillFx.PIXEL_HOLD)
 		expect(size).toBe(1)
-		expect(cool).toBe(0)
 		expect(transparency).toBe(0)
-	end)
-
-	it("has cooled to cyan early and shrinks to nothing", function()
-		local _, cool = KillFx.shard(KillFx.SHARD_COOL)
-		expect(cool).toBeCloseTo(1)
-		local size, _, transparency = KillFx.shard(1)
-		expect(size).toBe(0)
-		expect(transparency).toBe(1)
+		size, transparency = KillFx.pixel(1)
+		expect(size).toBeCloseTo(0)
+		expect(transparency).toBeCloseTo(1)
 	end)
 end)
 
@@ -126,15 +162,15 @@ describe("KillFx streaks", function()
 	end)
 end)
 
-describe("KillFx.shardCounts", function()
+describe("KillFx.pixelCounts", function()
 	it("shares the budget by volume", function()
-		local counts = KillFx.shardCounts({ 3, 1 }, 40)
+		local counts = KillFx.pixelCounts({ 3, 1 }, 40)
 		expect(counts[1]).toBe(30)
 		expect(counts[2]).toBe(10)
 	end)
 
 	it("gives every part at least one", function()
-		local counts = KillFx.shardCounts({ 100, 0.001 }, 10)
+		local counts = KillFx.pixelCounts({ 100, 0.001 }, 10)
 		expect(counts[2]).toBe(1)
 	end)
 end)

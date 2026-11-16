@@ -1,9 +1,12 @@
--- A body killed by a gun doesn't just drop: it shorts out and is scanned away. It flashes white and flickers between
--- white and Data Cyan, parts of it blinking out, for a moment (the short); then a ring of light runs down it from
--- the top, and everything the ring passes breaks into small cubes of light that burst away from the shot, float up,
--- cool from white to cyan and shrink to nothing. A headshot pops the head into cubes at once, harder. Everyone sees
--- it. Your own body waits a moment first, so the soul sees it drop before it goes. Timings are in KillFx.
+-- A body killed by a gun glitches away, like dust blowing off in the wind but digital. The body is hidden and a
+-- frozen copy of it takes its place, posed as it died. The copy flashes white, then flickers between cyan and white
+-- and tears sideways at random heights while its parts go one by one, loosely from the top down. Each part blinks
+-- and twitches for a moment, leaking a few pixels, then leaves as a puff of them. The pixels drift away from the
+-- shot and up, moving in stutters, and shrink and flicker out. A headshot's head goes at once. Everyone sees it.
+-- Your own body waits a moment first, so the soul sees it drop before it goes. Timings are in KillFx.
 -- The server says which body died and who did it with DeathBurst, which also starts the coin burst.
+-- To look at it slowly, set the number attribute KillFxSpeed on workspace (0.1 plays it at a tenth of the speed)
+-- and clear it afterwards. KillConfirm reads it too.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -13,23 +16,29 @@ local Palette = require(Guns:WaitForChild("Palette"))
 local KillFx = require(Guns:WaitForChild("KillFx"))
 local Perf = require(script.Parent.Perf)
 
-local SHARDS = 90 -- cubes a whole body breaks into, on a fast machine
-local SHARD_PUSH = { 5, 15 } -- studs a second away from the shot
-local SHARD_OUT = { 2, 8 } -- and out from the body's middle
-local SHARD_UP = { 3, 11 }
-local SHARD_SPIN = { 6, 16 } -- radians a second
-local SHARD_DRAG = 3.5 -- how fast they slow, a second
-local SHARD_RISE = 14 -- studs a second gained upward each second: they float
-local HEAD_SHARDS = 2 -- a headshot's head breaks into this many times its share
-local HEAD_KICK = 1.8 -- and they fly this much faster
+local PIXELS = 150 -- pixels a whole body leaves as, on a fast machine
+local WIND = { 2.5, 6.5 } -- studs a second away from the shot
+local LIFT = { 0.5, 3 } -- and up
+local SCATTER = 1.2 -- and any way, at most
+local HEAD_PIXELS = 2 -- a headshot's head leaves as this many times its share
+local DRAG = 0.8 -- how fast they slow, a second
+local RISE = 2.5 -- studs a second gained upward each second
+local PIXEL_TWITCH = 0.12 -- studs a pixel can land off its path on each jump
+local BODY_COLOR_SHARE = 0.2 -- of the pixels, how many keep the colour of the part they came off
+local WHITE_SHARE = 0.25 -- and how many are white; the rest are Data Cyan
 local HEAD_NEAR = 2.5 -- hats and hair this close to the head go with it
-local RING_EXTRA = 1.2 -- studs the ring reaches past the body each side
-local RING_WIDTH = 0.16
-local RING_HEIGHT = 0.06
-local LIGHT_BRIGHTNESS = 4
-local LIGHT_RANGE = { 8, 18 } -- grows as it fades
+local LIGHT_BRIGHTNESS = 2
+local LIGHT_RANGE = 10
 local HOT = Color3.new(1, 1, 1)
 local COOL = Palette.DataCyan
+-- What a copied part keeps: how it looks. Joints would tie it to the real body, and the rest has no business on it.
+local KEEP = {
+	Decal = true,
+	Texture = true,
+	SurfaceAppearance = true,
+	SpecialMesh = true,
+	Attachment = true,
+}
 
 local player = Players.LocalPlayer
 local deathRemote = ReplicatedStorage:WaitForChild("GunRemotes"):WaitForChild("DeathBurst") :: RemoteEvent
@@ -39,84 +48,51 @@ local folder = Instance.new("Folder")
 folder.Name = "KillDerez"
 folder.Parent = workspace
 
--- A part of the body, with the faces drawn on it (decals) and how see-through each was.
-type Piece = { part: BasePart, transparency: number, decals: { [Decal]: number }, gone: boolean }
+-- A part of the body: the real one, which is hidden, and its frozen copy.
+type Piece = {
+	part: BasePart,
+	transparency: number,
+	decals: { [Decal]: number },
+	ghost: BasePart?,
+	frame: CFrame?, -- where the copy stands when nothing is shifting it
+	height: number, -- 0 at the bottom of the body, 1 at the top
+	goneAt: number,
+	count: number, -- pixels it leaves as
+	released: number,
+	head: boolean,
+}
 type Derez = {
 	model: Model,
 	startedAt: number,
-	push: Vector3, -- the way the shot was going, flat
+	wind: Vector3, -- the way the shot was going, flat
 	headshot: boolean,
 	pieces: { Piece },
-	head: BasePart?,
-	headGone: boolean,
-	shown: boolean, -- whether the glow is up yet
+	copy: Model?,
 	glow: Highlight?,
-	anchor: BasePart?, -- carries the ring and the light
-	ring: CylinderHandleAdornment?,
+	anchor: BasePart?,
 	light: PointLight?,
-	top: number?, -- the body's top and bottom, taken when the scan starts
-	bottom: number?,
-	middle: Vector3?,
-	reach: number?,
 	lastStep: number,
 }
-type Shard = {
+type Pixel = {
 	part: BasePart,
+	position: Vector3,
 	velocity: Vector3,
-	axis: Vector3,
-	spin: number,
 	turn: CFrame,
 	size: number,
 	age: number,
 	life: number,
+	phase: number, -- so they don't all jump on the same frame
+	lastJump: number,
+	seed: number,
 }
 
 local derezzes: { Derez } = {}
--- The effect's own clock. To look at it slowly, set the number attribute KillFxSpeed on workspace (0.1 plays it at
--- a tenth of the speed) and clear it afterwards. KillConfirm reads it too.
-local clock = 0
-local shards: { Shard } = {}
+local pixels: { Pixel } = {}
 local started: { [Model]: boolean } = setmetatable({}, { __mode = "k" }) :: any
+local clock = 0
 
 local function between(range: { number }): number
 	return random:NextNumber(range[1], range[2])
-end
-
--- Breaks count cubes off a part. kick makes them fly faster.
-local function breakOff(derez: Derez, part: BasePart, count: number, kick: number)
-	local middle = derez.middle or part.Position
-	for _ = 1, count do
-		local size = between(KillFx.SHARD_SIZE)
-		local offset = Vector3.new(random:NextNumber(-0.5, 0.5), random:NextNumber(-0.5, 0.5), random:NextNumber(-0.5, 0.5))
-			* part.Size
-		local at = part.CFrame:PointToWorldSpace(offset)
-		local out = at - middle
-		out = if out.Magnitude > 0.01 then out.Unit else random:NextUnitVector()
-		local shard = Instance.new("Part")
-		shard.Name = "Shard"
-		shard.Anchored = true
-		shard.CanCollide = false
-		shard.CanQuery = false
-		shard.CanTouch = false
-		shard.CastShadow = false
-		shard.Material = Enum.Material.Neon
-		shard.Color = HOT
-		shard.Size = Vector3.one * size
-		local turn = CFrame.fromAxisAngle(random:NextUnitVector(), random:NextNumber(0, math.pi))
-		shard.CFrame = CFrame.new(at) * turn
-		shard.Parent = folder
-		table.insert(shards, {
-			part = shard,
-			velocity = (derez.push * between(SHARD_PUSH) + out * between(SHARD_OUT) + Vector3.yAxis * between(SHARD_UP))
-				* kick,
-			axis = random:NextUnitVector(),
-			spin = between(SHARD_SPIN),
-			turn = turn,
-			size = size,
-			age = 0,
-			life = between(KillFx.SHARD_LIFE),
-		})
-	end
 end
 
 local function setShown(piece: Piece, shown: boolean)
@@ -126,117 +102,154 @@ local function setShown(piece: Piece, shown: boolean)
 	end
 end
 
-local function hide(piece: Piece)
-	piece.gone = true
-	setShown(piece, false)
-end
-
-local function shardBudget(): number
-	return Perf.pick(SHARDS, math.floor(SHARDS / 2), math.floor(SHARDS / 4))
-end
-
--- Breaks a part into its share of the body's cubes and hides it.
-local function take(derez: Derez, piece: Piece, share: number, kick: number)
-	if piece.gone then
-		return
+-- Lets count pixels go from a part, wherever its copy stands now.
+local function release(derez: Derez, piece: Piece, count: number)
+	local source = piece.ghost or piece.part
+	for _ = 1, count do
+		local size = between(KillFx.PIXEL_SIZE)
+		local offset = Vector3.new(random:NextNumber(-0.5, 0.5), random:NextNumber(-0.5, 0.5), random:NextNumber(-0.5, 0.5))
+			* source.Size
+		local at = source.CFrame:PointToWorldSpace(offset)
+		local roll = random:NextNumber()
+		local color = if roll < BODY_COLOR_SHARE
+			then piece.part.Color
+			elseif roll < BODY_COLOR_SHARE + WHITE_SHARE then HOT
+			else COOL
+		local pixel = Instance.new("Part")
+		pixel.Name = "Pixel"
+		pixel.Anchored = true
+		pixel.CanCollide = false
+		pixel.CanQuery = false
+		pixel.CanTouch = false
+		pixel.CastShadow = false
+		pixel.Material = Enum.Material.Neon
+		pixel.Color = color
+		pixel.Size = Vector3.one * size
+		-- Square on to the world, like a pixel, with a little turn.
+		local turn = CFrame.Angles(0, random:NextNumber(0, math.pi / 2), 0)
+		pixel.CFrame = CFrame.new(at) * turn
+		pixel.Parent = folder
+		table.insert(pixels, {
+			part = pixel,
+			position = at,
+			velocity = derez.wind * between(WIND) + Vector3.yAxis * between(LIFT) + random:NextUnitVector() * random:NextNumber(0, SCATTER),
+			turn = turn,
+			size = size,
+			age = 0,
+			life = between(KillFx.PIXEL_LIFE),
+			phase = random:NextNumber(0, KillFx.PIXEL_STEP),
+			lastJump = -1,
+			seed = random:NextNumber(0, 1000),
+		})
 	end
-	breakOff(derez, piece.part, share, kick)
-	hide(piece)
 end
 
--- Each part's share of the body's cubes, by its volume.
-local function shares(derez: Derez): { [Piece]: number }
+-- A copy of a part that stays where it is and touches nothing.
+local function ghostOf(part: BasePart): BasePart?
+	local archivable = part.Archivable
+	part.Archivable = true
+	local ok, copy = pcall(part.Clone, part)
+	part.Archivable = archivable
+	if not ok or not copy then
+		return nil
+	end
+	for _, item in copy:GetDescendants() do
+		if item.Parent and not KEEP[item.ClassName] then
+			item:Destroy()
+		end
+	end
+	copy.Anchored = true
+	copy.CanCollide = false
+	copy.CanQuery = false
+	copy.CanTouch = false
+	copy.Massless = true
+	copy.CollisionGroup = "Default"
+	copy.LocalTransparencyModifier = 0
+	return copy
+end
+
+-- Swaps the body for its frozen copy and works out when each part goes and how many pixels it leaves as.
+local function freeze(derez: Derez)
+	local copy = Instance.new("Model")
+	copy.Name = "Derez"
+	local bottom, top = math.huge, -math.huge
 	local volumes = {}
 	for index, piece in derez.pieces do
+		local ghost = ghostOf(piece.part)
+		if ghost then
+			ghost.Parent = copy
+			piece.ghost = ghost
+			piece.frame = ghost.CFrame
+		end
+		local y = piece.part.Position.Y
+		bottom, top = math.min(bottom, y), math.max(top, y)
 		local size = piece.part.Size
 		volumes[index] = size.X * size.Y * size.Z
+		setShown(piece, false)
 	end
-	local counts = KillFx.shardCounts(volumes, shardBudget())
-	local byPiece = {}
-	for index, piece in derez.pieces do
-		byPiece[piece] = counts[index]
-	end
-	return byPiece
-end
-
-local function isHeadPiece(derez: Derez, part: BasePart): boolean
-	local head = derez.head
-	if not head then
-		return false
-	end
-	return part == head or (part.Parent ~= nil and part.Parent:IsA("Accessory") and (part.Position - head.Position).Magnitude < HEAD_NEAR)
-end
-
--- The glow, the ring and its light, made when the derez starts.
-local function show(derez: Derez)
-	derez.shown = true
+	copy.Parent = folder
+	derez.copy = copy
 	derez.model:SetAttribute("Derezzed", true) -- RemotePoses hides the gun and hands it shows on this body
+
+	local counts = KillFx.pixelCounts(volumes, Perf.pick(PIXELS, math.floor(PIXELS / 2), math.floor(PIXELS / 4)))
+	local span = math.max(top - bottom, 0.01)
+	for index, piece in derez.pieces do
+		piece.height = (piece.part.Position.Y - bottom) / span
+		piece.count = counts[index]
+		if derez.headshot and piece.head then
+			piece.goneAt = KillFx.HEAD_GONE
+			piece.count *= HEAD_PIXELS
+		else
+			piece.goneAt = KillFx.goneAt(piece.height, random:NextNumber())
+		end
+	end
+
 	local glow = Instance.new("Highlight")
-	glow.Adornee = derez.model
+	glow.Adornee = copy
 	glow.DepthMode = Enum.HighlightDepthMode.Occluded
 	glow.FillColor = HOT
 	glow.OutlineColor = COOL
-	glow.OutlineTransparency = 0
 	glow.FillTransparency = 0.05
-	glow.Parent = folder
+	glow.OutlineTransparency = 0
+	glow.Parent = copy
 	derez.glow = glow
 
 	local anchor = Instance.new("Part")
-	anchor.Name = "DerezRing"
+	anchor.Name = "DerezLight"
 	anchor.Anchored = true
 	anchor.CanCollide = false
 	anchor.CanQuery = false
 	anchor.CanTouch = false
 	anchor.Transparency = 1
 	anchor.Size = Vector3.one * 0.2
+	anchor.CFrame = CFrame.new(derez.model:GetPivot().Position)
 	anchor.Parent = folder
-	derez.anchor = anchor
 	local light = Instance.new("PointLight")
 	light.Color = COOL
-	light.Brightness = 0
-	light.Range = LIGHT_RANGE[1]
+	light.Range = LIGHT_RANGE
+	light.Brightness = LIGHT_BRIGHTNESS
 	light.Shadows = false
 	light.Parent = anchor
-	derez.light = light
+	derez.anchor, derez.light = anchor, light
 end
 
--- Takes the body's measure as the scan starts. It has fallen some way by now, so this is where it lies.
-local function measure(derez: Derez)
-	local top, bottom = -math.huge, math.huge
-	local low, high = Vector3.one * math.huge, -Vector3.one * math.huge
-	for _, piece in derez.pieces do
-		local part = piece.part
-		local half = part.Size.Magnitude * 0.3
-		top = math.max(top, part.Position.Y + half)
-		bottom = math.min(bottom, part.Position.Y - half)
-		low = low:Min(part.Position)
-		high = high:Max(part.Position)
+-- Keeps the real body hidden. BodyHands puts the soldier's own hand meshes back when the body dies, after the
+-- copy was taken, so anything that shows up again is hidden again.
+local function hideRest(derez: Derez)
+	for _, item in derez.model:GetDescendants() do
+		if item:IsA("BasePart") then
+			if item.Transparency < 1 and item.Name ~= "HumanoidRootPart" then
+				item.Transparency = 1
+			end
+		elseif item:IsA("Decal") then
+			item.Transparency = 1
+		end
 	end
-	if top < bottom then
-		return
-	end
-	derez.top, derez.bottom = top, bottom
-	derez.middle = (low + high) / 2
-	local flat = Vector3.new(high.X - low.X, 0, high.Z - low.Z)
-	derez.reach = flat.Magnitude / 2 + RING_EXTRA
-
-	local anchor = derez.anchor
-	local ring = Instance.new("CylinderHandleAdornment")
-	ring.Adornee = anchor
-	ring.Radius = derez.reach :: number
-	ring.InnerRadius = (derez.reach :: number) - RING_WIDTH
-	ring.Height = RING_HEIGHT
-	ring.CFrame = CFrame.Angles(math.pi / 2, 0, 0) -- its axis is its Z; stand it up so it lies flat
-	ring.Color3 = COOL
-	ring.AlwaysOnTop = false
-	ring.ZIndex = 1
-	ring.Parent = anchor
-	derez.ring = ring
 end
 
 local function finish(derez: Derez)
-	if derez.glow then
-		derez.glow:Destroy()
+	if derez.copy then
+		derez.copy:Destroy()
 	end
 	if derez.anchor then
 		derez.anchor:Destroy()
@@ -248,73 +261,60 @@ local function stepDerez(derez: Derez): boolean
 	if age < 0 then
 		return true -- your own body, waiting
 	end
-	if not derez.model.Parent then
-		finish(derez)
-		return false
-	end
-	if not derez.shown then
-		show(derez)
-		if derez.headshot and not derez.headGone then
-			derez.headGone = true
-			local counts = shares(derez)
-			for _, piece in derez.pieces do
-				if isHeadPiece(derez, piece.part) then
-					take(derez, piece, counts[piece] * HEAD_SHARDS, HEAD_KICK)
-				end
-			end
+	if not derez.copy then
+		if not derez.model.Parent then
+			return false -- gone before it could start
 		end
+		freeze(derez)
 	end
 
 	local glow = derez.glow :: Highlight
 	local fill, cool = KillFx.glow(age)
 	glow.FillTransparency = fill
 	glow.FillColor = HOT:Lerp(COOL, cool)
-	glow.OutlineTransparency = fill
-
-	local step = KillFx.flickerStep(age)
-	if step then
-		if step ~= derez.lastStep then
-			derez.lastStep = step
-			for index, piece in derez.pieces do
-				if not piece.gone then
-					setShown(piece, not KillFx.blinkedOut(step, index))
-				end
-			end
-		end
-		return true
-	end
-
-	-- The scan.
-	if not derez.top then
-		for _, piece in derez.pieces do
-			if not piece.gone then
-				setShown(piece, true)
-			end
-		end
-		measure(derez)
-		if not derez.top then
-			finish(derez)
-			return false
-		end
-	end
-	local scan = KillFx.scan(age)
-	local line = (derez.top :: number) - ((derez.top :: number) - (derez.bottom :: number)) * scan
-	local counts: { [Piece]: number }? = nil
-	for _, piece in derez.pieces do
-		if not piece.gone and (piece.part.Position.Y >= line or scan >= 1) then
-			counts = counts or shares(derez)
-			take(derez, piece, (counts :: any)[piece], 1)
-		end
-	end
-	local middle = derez.middle :: Vector3
-	local anchor = derez.anchor :: BasePart
-	anchor.CFrame = CFrame.new(middle.X, line, middle.Z)
-	local ring = derez.ring :: CylinderHandleAdornment
-	ring.Transparency = KillFx.ring(age)
+	glow.OutlineTransparency = math.max(fill - 0.3, 0)
 	local light = derez.light :: PointLight
-	local fade = 1 - math.min((age - KillFx.SHORT) / (KillFx.SCAN + KillFx.RING_FADE), 1)
-	light.Brightness = LIGHT_BRIGHTNESS * fade
-	light.Range = LIGHT_RANGE[1] + (LIGHT_RANGE[2] - LIGHT_RANGE[1]) * (1 - fade)
+	light.Brightness = LIGHT_BRIGHTNESS * (1 - math.clamp(age / KillFx.DISSOLVE, 0, 1))
+
+	local step = KillFx.step(age)
+	local newStep = step ~= derez.lastStep
+	derez.lastStep = step
+	if newStep and derez.model.Parent then
+		hideRest(derez)
+	end
+	-- A tear shifts everything above a height sideways across the screen, for one step.
+	local tearHeight, tearShift = KillFx.tear(step, age)
+	local camera = workspace.CurrentCamera
+	local across = Vector3.new(camera.CFrame.RightVector.X, 0, camera.CFrame.RightVector.Z)
+	across = if across.Magnitude > 0.01 then across.Unit else Vector3.xAxis
+
+	for index, piece in derez.pieces do
+		local ghost = piece.ghost
+		local left = piece.goneAt - age
+		local wanted = KillFx.released(piece.count, left)
+		if wanted > piece.released then
+			release(derez, piece, wanted - piece.released)
+			piece.released = wanted
+		end
+		if ghost and ghost.Parent then
+			if left <= 0 then
+				ghost:Destroy()
+			elseif newStep then
+				local out = KillFx.blinkedOut(step, index, left)
+				ghost.Transparency = if out then 1 else piece.transparency
+				for _, child in ghost:GetChildren() do
+					if child:IsA("Decal") then
+						child.Transparency = if out then 1 else 0
+					end
+				end
+				local shift = KillFx.jitter(step, index, left)
+				if tearHeight and piece.height >= tearHeight then
+					shift += tearShift :: number
+				end
+				ghost.CFrame = (piece.frame :: CFrame) + across * shift
+			end
+		end
+	end
 
 	if KillFx.done(age) then
 		finish(derez)
@@ -323,24 +323,30 @@ local function stepDerez(derez: Derez): boolean
 	return true
 end
 
-local function stepShards(dt: number)
+local function stepPixels(dt: number)
 	local parts, frames = {}, {}
-	for index = #shards, 1, -1 do
-		local shard = shards[index]
-		shard.age += dt
-		local share = shard.age / shard.life
+	for index = #pixels, 1, -1 do
+		local pixel = pixels[index]
+		pixel.age += dt
+		local share = pixel.age / pixel.life
 		if share >= 1 then
-			shard.part:Destroy()
-			table.remove(shards, index)
+			pixel.part:Destroy()
+			table.remove(pixels, index)
 		else
-			shard.velocity = shard.velocity * math.exp(-dt * SHARD_DRAG) + Vector3.yAxis * SHARD_RISE * dt
-			shard.turn = CFrame.fromAxisAngle(shard.axis, shard.spin * dt) * shard.turn
-			local size, cool, transparency = KillFx.shard(share)
-			shard.part.Size = Vector3.one * math.max(shard.size * size, 0.02)
-			shard.part.Color = HOT:Lerp(COOL, cool)
-			shard.part.Transparency = transparency
-			table.insert(parts, shard.part)
-			table.insert(frames, CFrame.new(shard.part.Position + shard.velocity * dt) * shard.turn)
+			pixel.velocity = pixel.velocity * math.exp(-dt * DRAG) + Vector3.yAxis * RISE * dt
+			pixel.position += pixel.velocity * dt
+			-- It's only redrawn on its jumps, and lands a little off its path each time.
+			local jump = math.floor((pixel.age + pixel.phase) / KillFx.PIXEL_STEP)
+			if jump ~= pixel.lastJump then
+				pixel.lastJump = jump
+				local size, transparency = KillFx.pixel(share)
+				local flickered = share > KillFx.PIXEL_HOLD and KillFx.noise(jump, pixel.seed) < 0.3
+				pixel.part.Size = Vector3.one * math.max(pixel.size * size, 0.02)
+				pixel.part.Transparency = if flickered then 1 else transparency
+				local twitch = random:NextUnitVector() * random:NextNumber(0, PIXEL_TWITCH)
+				table.insert(parts, pixel.part)
+				table.insert(frames, CFrame.new(pixel.position + twitch) * pixel.turn)
+			end
 		end
 	end
 	if #parts > 0 then
@@ -357,11 +363,11 @@ RunService.RenderStepped:Connect(function(dt)
 			table.remove(derezzes, index)
 		end
 	end
-	stepShards(dt)
+	stepPixels(dt)
 end)
 
--- The way the shot was going: from the killer through the body, flat. Straight up if nobody is known.
-local function pushFrom(body: Vector3, killer: Player?): Vector3
+-- The way the shot was going: from the killer through the body, flat. A random way if nobody is known.
+local function windFrom(body: Vector3, killer: Player?): Vector3
 	local root = killer and killer.Character and killer.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if root then
 		local away = body - root.Position
@@ -370,7 +376,8 @@ local function pushFrom(body: Vector3, killer: Player?): Vector3
 			return flat.Unit
 		end
 	end
-	return Vector3.zero
+	local turn = random:NextNumber(0, 2 * math.pi)
+	return Vector3.new(math.cos(turn), 0, math.sin(turn))
 end
 
 local function begin(at: Vector3, killer: Player?, model: Model?, headshot: boolean?)
@@ -378,6 +385,7 @@ local function begin(at: Vector3, killer: Player?, model: Model?, headshot: bool
 		return
 	end
 	started[model] = true
+	local head = model:FindFirstChild("Head")
 	local pieces: { Piece } = {}
 	for _, item in model:GetDescendants() do
 		if item:IsA("BasePart") and item.Name ~= "HumanoidRootPart" and item.Transparency < 1 then
@@ -387,22 +395,34 @@ local function begin(at: Vector3, killer: Player?, model: Model?, headshot: bool
 					decals[child] = child.Transparency
 				end
 			end
-			table.insert(pieces, { part = item, transparency = item.Transparency, decals = decals, gone = false })
+			local isHead = head ~= nil
+				and head:IsA("BasePart")
+				and (
+					item == head
+					or item:IsDescendantOf(head) -- the soldier's head meshes sit inside its Head
+					or (item.Parent ~= nil and item.Parent:IsA("Accessory") and (item.Position - head.Position).Magnitude < HEAD_NEAR)
+				)
+			table.insert(pieces, {
+				part = item,
+				transparency = item.Transparency,
+				decals = decals,
+				height = 0,
+				goneAt = 0,
+				count = 0,
+				released = 0,
+				head = isHead,
+			})
 		end
 	end
 	if #pieces == 0 then
 		return
 	end
-	local head = model:FindFirstChild("Head")
 	table.insert(derezzes, {
 		model = model,
 		startedAt = clock + (if model == player.Character then KillFx.OWN_DELAY else 0),
-		push = pushFrom(at, killer),
+		wind = windFrom(at, killer),
 		headshot = headshot == true,
 		pieces = pieces,
-		head = if head and head:IsA("BasePart") then head else nil,
-		headGone = false,
-		shown = false,
 		lastStep = -1,
 	})
 end
