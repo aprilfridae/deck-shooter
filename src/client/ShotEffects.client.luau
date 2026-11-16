@@ -54,7 +54,7 @@ local TRACER_COLOR = Palette.DataCyan
 -- jagged bolts that crackle out of it for an instant, and a hard flash of light on everything nearby. White at the
 -- core and Data Cyan as it cools. (The names below still say blood, mist and drops from when it was blood.)
 local BLOOD_COLOR = Color3.new(1, 1, 1) -- the pop
-local BLOOD_GLOW = Palette.DataCyan -- streaks, bolts and the headshot ring
+local BLOOD_GLOW = Palette.DataCyan -- streaks and bolts
 local BLOOD_LIGHT = Color3.fromRGB(170, 240, 255) -- the light it throws
 local MIST_BURST = 6 -- puffs in the pop
 local SPARKS = 40
@@ -76,8 +76,6 @@ local BOLT_KINKS = 4 -- straight pieces in each
 local BOLT_JITTER = 0.5 -- how far each kink strays
 local BOLT_WIDTH = 0.05
 local BOLT_TIME = 0.07 -- seconds a bolt shows, redrawn once on the way so it crackles
-local RING_SIZE = 5 -- a headshot's ring grows to this wide
-local RING_TIME = 0.18
 
 local player = Players.LocalPlayer
 local random = Random.new()
@@ -140,7 +138,6 @@ flash.Brightness = 0
 flash.Shadows = false
 flash.Parent = mistAnchor
 local flashAt = -math.huge
-local rings: { any } = {}
 
 local tracers: { any } = {}
 local drops: { any } = {}
@@ -195,15 +192,6 @@ local function addDrop(position: Vector3, direction: Vector3, speed: number, con
 		width = DROP_SIZE * random:NextNumber(0.6, 1.4),
 		age = 0,
 	})
-end
-
--- A thin shell of light that snaps outward from a headshot.
-local function addRing(position: Vector3, direction: Vector3)
-	local part = makePart(Vector3.new(0.05, 1, 1), BLOOD_GLOW, Enum.Material.Neon)
-	part.Shape = Enum.PartType.Cylinder
-	part.CFrame = CFrame.lookAt(position, position + direction) * CFrame.Angles(0, math.rad(90), 0)
-	part.Parent = folder
-	table.insert(rings, { part = part, age = 0 })
 end
 
 -- Jagged bolts that crackle out of a hit for an instant.
@@ -261,9 +249,6 @@ local function bleed(shot: any)
 	end
 	for _ = 1, BOLTS * scale do
 		addBolt(shot.to, -shot.direction)
-	end
-	if shot.head then
-		addRing(shot.to, shot.direction)
 	end
 end
 
@@ -372,19 +357,6 @@ end
 local function stepFlash(dt: number)
 	local share = 1 - (os.clock() - flashAt) / FLASH_TIME
 	flash.Brightness = FLASH_BRIGHTNESS * math.max(share, 0) ^ 2
-	for index = #rings, 1, -1 do
-		local ring = rings[index]
-		ring.age += dt
-		local t = ring.age / RING_TIME
-		if t < 1 then
-			local wide = RING_SIZE * (1 - (1 - t) ^ 3)
-			ring.part.Size = Vector3.new(0.05, wide, wide)
-			ring.part.Transparency = t * t
-		else
-			ring.part:Destroy()
-			table.remove(rings, index)
-		end
-	end
 end
 
 RunService.RenderStepped:Connect(function(dt)
