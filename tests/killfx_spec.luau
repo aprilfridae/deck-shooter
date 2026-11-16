@@ -28,13 +28,19 @@ describe("KillFx.blinkedOut", function()
 		end
 	end)
 
+	it("doesn't blink while it collapses", function()
+		for step = 0, 50 do
+			expect(KillFx.blinkedOut(step, 3, KillFx.COLLAPSE / 2)).toBe(false)
+		end
+	end)
+
 	it("blinks more often as it nears going", function()
 		local early, late = 0, 0
 		for step = 1, 200 do
-			if KillFx.blinkedOut(step, 5, KillFx.WARN * 0.9) then
+			if KillFx.blinkedOut(step, 5, KillFx.WARN * 0.95) then
 				early += 1
 			end
-			if KillFx.blinkedOut(step, 5, KillFx.WARN * 0.1) then
+			if KillFx.blinkedOut(step, 5, KillFx.COLLAPSE + 0.005) then
 				late += 1
 			end
 		end
@@ -124,14 +130,17 @@ describe("KillFx.released", function()
 	end)
 end)
 
-describe("KillFx.pixel", function()
-	it("holds full size and solid, then shrinks and fades to nothing", function()
-		local size, transparency = KillFx.pixel(KillFx.PIXEL_HOLD)
-		expect(size).toBe(1)
-		expect(transparency).toBe(0)
-		size, transparency = KillFx.pixel(1)
-		expect(size).toBeCloseTo(0)
-		expect(transparency).toBeCloseTo(1)
+describe("KillFx.squash", function()
+	it("leaves a part as it is until its last moment", function()
+		local wide, high = KillFx.squash(KillFx.COLLAPSE)
+		expect(wide).toBeCloseTo(1)
+		expect(high).toBeCloseTo(1)
+	end)
+
+	it("ends flat and wide", function()
+		local wide, high = KillFx.squash(0)
+		expect(wide).toBeCloseTo(1.5)
+		expect(high).toBeCloseTo(0.08)
 	end)
 end)
 

@@ -5,24 +5,29 @@ local KillFx = {}
 
 -- The glitch-away, in seconds from the death. The body freezes where it died. It flashes white for a moment, then
 -- flickers and tears while its parts go one by one, from the top down with some chance in it. Each part blinks for
--- a moment before it goes and leaves as a puff of pixels that drift off away from the shot.
-KillFx.SHORT = 0.12 -- the white flash
-KillFx.FLICKER = 0.04 -- one step of the glitch
-KillFx.FIRST_GONE = 0.25 -- the first part goes
-KillFx.DISSOLVE = 1.3 -- and the last
-KillFx.HEAD_GONE = 0.1 -- a headshot's head goes at once
-KillFx.WARN = 0.3 -- a part blinks for this long before it goes
-KillFx.BLINK_MOST = 0.7 -- the chance it's blinked out on a step, just before it goes
+-- a moment, then collapses flat and wide like an old screen switching off, and leaves as a puff of glitching
+-- pixels and fine dust that drift off away from the shot. River found the first cut slow and blocky (2026-11-15),
+-- so it's quick.
+KillFx.SHORT = 0.08 -- the white flash
+KillFx.FLICKER = 0.03 -- one step of the glitch
+KillFx.FIRST_GONE = 0.15 -- the first part goes
+KillFx.DISSOLVE = 0.85 -- and the last
+KillFx.HEAD_GONE = 0.06 -- a headshot's head goes at once
+KillFx.WARN = 0.18 -- a part blinks for this long before it goes
+KillFx.COLLAPSE = 0.07 -- and spends the last of it collapsing, without blinking
+KillFx.BLINK_MOST = 0.6 -- the chance it's blinked out on a step, just before it collapses
 KillFx.TEAR_CHANCE = 0.35 -- the chance on each step that the body tears sideways at some height
 KillFx.TEAR_MOST = 0.45 -- studs a tear shifts the body above it, at most
-KillFx.OWN_DELAY = 1 -- your own body waits this long, so you see it drop before it goes
-
--- The pixels.
-KillFx.PIXEL_LIFE = { 0.6, 1.3 } -- seconds
-KillFx.PIXEL_SIZE = { 0.08, 0.2 } -- studs across
-KillFx.PIXEL_STEP = 0.06 -- they're drawn moving in jumps this often, so they stutter
-KillFx.PIXEL_HOLD = 0.65 -- share of a pixel's life before it starts shrinking and flickering
+KillFx.OWN_DELAY = 0.8 -- your own body waits this long, so you see it drop before it goes
 KillFx.TRICKLE = 0.35 -- share of a part's pixels that leak out while it blinks; the rest go when it does
+
+-- The textures, drawn in Blender with numpy (white on clear; the emitters colour them) and uploaded to the group
+-- with tools/upload-group-assets.py.
+KillFx.TEXTURES = {
+	pixel = "rbxassetid://107943854572762", -- 4x4 flipbook: a square that tears into bands
+	mote = "rbxassetid://113313050705987", -- a small soft square of light
+	scanline = "rbxassetid://82361336313539", -- a thin broken line, for the tears
+}
 
 -- The killer's screen punch.
 KillFx.PUNCH_ATTACK = 0.035 -- seconds to hit its peak
@@ -55,10 +60,19 @@ end
 function KillFx.blinkedOut(step: number, index: number, left: number): boolean
 	if left <= 0 then
 		return true
-	elseif left >= KillFx.WARN then
+	elseif left >= KillFx.WARN or left <= KillFx.COLLAPSE then
 		return false
 	end
-	return KillFx.noise(step, index) < (1 - left / KillFx.WARN) * KillFx.BLINK_MOST
+	local warned = (KillFx.WARN - left) / (KillFx.WARN - KillFx.COLLAPSE)
+	return KillFx.noise(step, index) < warned * KillFx.BLINK_MOST
+end
+
+-- How a part is squashed as it goes, with left seconds until it does: its width and its height against its own.
+-- It collapses to a flat wide line over its last moment, like an old screen switching off.
+function KillFx.squash(left: number): (number, number)
+	local p = math.clamp(1 - left / KillFx.COLLAPSE, 0, 1)
+	p = p * p
+	return 1 + 0.5 * p, 1 - 0.92 * p
 end
 
 -- How far part number index is knocked sideways on this step while it blinks: mostly not at all.
@@ -108,17 +122,6 @@ function KillFx.released(count: number, left: number): number
 	end
 	local warned = math.clamp(1 - left / KillFx.WARN, 0, 1)
 	return math.floor(count * KillFx.TRICKLE * warned)
-end
-
--- A pixel share of the way through its life: its size against its first size, and its transparency. It holds,
--- then shrinks and fades.
-function KillFx.pixel(share: number): (number, number)
-	share = math.clamp(share, 0, 1)
-	if share <= KillFx.PIXEL_HOLD then
-		return 1, 0
-	end
-	local out = (share - KillFx.PIXEL_HOLD) / (1 - KillFx.PIXEL_HOLD)
-	return 1 - out, out * out
 end
 
 -- How big the punch is at age seconds after the kill, from 0 to 1.

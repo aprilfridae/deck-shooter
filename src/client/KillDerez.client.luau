@@ -1,9 +1,10 @@
 -- A body killed by a gun glitches away, like dust blowing off in the wind but digital. The body is hidden and a
 -- frozen copy of it takes its place, posed as it died. The copy flashes white, then flickers between cyan and white
--- and tears sideways at random heights while its parts go one by one, loosely from the top down. Each part blinks
--- and twitches for a moment, leaking a few pixels, then leaves as a puff of them. The pixels drift away from the
--- shot and up, moving in stutters, and shrink and flicker out. A headshot's head goes at once. Everyone sees it.
--- Your own body waits a moment first, so the soul sees it drop before it goes. Timings are in KillFx.
+-- and tears sideways at random heights, with thin scanlines flashing across it, while its parts go one by one,
+-- loosely from the top down. Each part blinks for a moment, then collapses flat and wide like an old screen
+-- switching off, and leaves as a puff of particles: squares that tear into bands as they go (GlitchPixel) and fine
+-- square dust, both drifting away from the shot and up. A headshot's head goes at once. Everyone sees it. Your own
+-- body waits a moment first, so the soul sees it drop before it goes. Timings and textures are in KillFx.
 -- The server says which body died and who did it with DeathBurst, which also starts the coin burst.
 -- To look at it slowly, set the number attribute KillFxSpeed on workspace (0.1 plays it at a tenth of the speed)
 -- and clear it afterwards. KillConfirm reads it too.
@@ -16,17 +17,15 @@ local Palette = require(Guns:WaitForChild("Palette"))
 local KillFx = require(Guns:WaitForChild("KillFx"))
 local Perf = require(script.Parent.Perf)
 
-local PIXELS = 150 -- pixels a whole body leaves as, on a fast machine
-local WIND = { 2.5, 6.5 } -- studs a second away from the shot
-local LIFT = { 0.5, 3 } -- and up
-local SCATTER = 1.2 -- and any way, at most
+local PIXELS = 90 -- glitching squares a whole body leaves as, on a fast machine
+local MOTES = 2 -- specks of dust for each square
 local HEAD_PIXELS = 2 -- a headshot's head leaves as this many times its share
-local DRAG = 0.8 -- how fast they slow, a second
-local RISE = 2.5 -- studs a second gained upward each second
-local PIXEL_TWITCH = 0.12 -- studs a pixel can land off its path on each jump
-local BODY_COLOR_SHARE = 0.2 -- of the pixels, how many keep the colour of the part they came off
-local WHITE_SHARE = 0.25 -- and how many are white; the rest are Data Cyan
-local HEAD_NEAR = 2.5 -- hats and hair this close to the head go with it
+local WIND = 16 -- studs a second gained each second away from the shot
+local MOTE_WIND = 24 -- the dust is lighter and goes faster
+local LIFT = 5 -- and up
+local SCANLINES = 2 -- flashed across the body on each tear
+local SCANLINE_WIDTH = 1.4 -- studs wider than the body
+local LINGER = 1.1 -- seconds the last particles take to clear after the body has gone
 local LIGHT_BRIGHTNESS = 2
 local LIGHT_RANGE = 10
 local HOT = Color3.new(1, 1, 1)
@@ -55,12 +54,14 @@ type Piece = {
 	decals: { [Decal]: number },
 	ghost: BasePart?,
 	frame: CFrame?, -- where the copy stands when nothing is shifting it
+	size: Vector3, -- the copy's own size, before it collapses
 	height: number, -- 0 at the bottom of the body, 1 at the top
 	goneAt: number,
-	count: number, -- pixels it leaves as
+	count: number, -- glitching squares it leaves as
 	released: number,
 	head: boolean,
 }
+type Emitters = { holder: BasePart, pixels: ParticleEmitter, motes: ParticleEmitter, scanlines: ParticleEmitter }
 type Derez = {
 	model: Model,
 	startedAt: number,
@@ -71,29 +72,16 @@ type Derez = {
 	glow: Highlight?,
 	anchor: BasePart?,
 	light: PointLight?,
+	emitters: Emitters?,
+	bounds: CFrame?, -- the body's box when it froze
+	extent: Vector3?,
 	lastStep: number,
-}
-type Pixel = {
-	part: BasePart,
-	position: Vector3,
-	velocity: Vector3,
-	turn: CFrame,
-	size: number,
-	age: number,
-	life: number,
-	phase: number, -- so they don't all jump on the same frame
-	lastJump: number,
-	seed: number,
 }
 
 local derezzes: { Derez } = {}
-local pixels: { Pixel } = {}
 local started: { [Model]: boolean } = setmetatable({}, { __mode = "k" }) :: any
 local clock = 0
-
-local function between(range: { number }): number
-	return random:NextNumber(range[1], range[2])
-end
+local speed = 1
 
 local function setShown(piece: Piece, shown: boolean)
 	piece.part.Transparency = if shown then piece.transparency else 1
@@ -102,46 +90,106 @@ local function setShown(piece: Piece, shown: boolean)
 	end
 end
 
--- Lets count pixels go from a part, wherever its copy stands now.
+local function emitter(holder: BasePart, texture: string): ParticleEmitter
+	local made = Instance.new("ParticleEmitter")
+	made.Texture = texture
+	made.Rate = 0
+	made.Shape = Enum.ParticleEmitterShape.Box
+	made.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+	made.LightEmission = 1
+	made.LightInfluence = 0
+	made.Orientation = Enum.ParticleOrientation.FacingCamera
+	made.SpreadAngle = Vector2.new(180, 180)
+	made.ZOffset = 0.5
+	made.Parent = holder
+	return made
+end
+
+-- Three emitters for one body, blown the way its shot went. A Box-shaped emitter fills whatever part its holder
+-- is moved onto, so one set serves every part.
+local function makeEmitters(wind: Vector3): Emitters
+	local holder = Instance.new("Part")
+	holder.Name = "DerezEmit"
+	holder.Anchored = true
+	holder.CanCollide = false
+	holder.CanQuery = false
+	holder.CanTouch = false
+	holder.Transparency = 1
+	holder.Parent = folder
+
+	local pixels = emitter(holder, KillFx.TEXTURES.pixel)
+	pixels.FlipbookLayout = Enum.ParticleFlipbookLayout.Grid4x4
+	pixels.FlipbookMode = Enum.ParticleFlipbookMode.OneShot
+	pixels.Lifetime = NumberRange.new(0.3, 0.55)
+	pixels.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.34, 0.12),
+		NumberSequenceKeypoint.new(1, 0.26, 0.1),
+	})
+	pixels.Speed = NumberRange.new(1, 4)
+	pixels.Drag = 3
+	pixels.Acceleration = wind * WIND + Vector3.yAxis * LIFT
+	pixels.Brightness = 2
+	pixels.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, HOT),
+		ColorSequenceKeypoint.new(0.25, COOL),
+		ColorSequenceKeypoint.new(1, COOL),
+	})
+	pixels.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.75, 0.1),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+
+	local motes = emitter(holder, KillFx.TEXTURES.mote)
+	motes.Lifetime = NumberRange.new(0.45, 0.9)
+	motes.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.14, 0.06),
+		NumberSequenceKeypoint.new(0.7, 0.1, 0.04),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	motes.Speed = NumberRange.new(0.5, 3)
+	motes.Drag = 1.5
+	motes.Acceleration = wind * MOTE_WIND + Vector3.yAxis * LIFT
+	motes.Brightness = 3
+	motes.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, HOT),
+		ColorSequenceKeypoint.new(0.4, COOL),
+		ColorSequenceKeypoint.new(1, COOL),
+	})
+	motes.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.6, 0.15),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+
+	local scanlines = emitter(holder, KillFx.TEXTURES.scanline)
+	scanlines.Lifetime = NumberRange.new(0.05, 0.1)
+	scanlines.Speed = NumberRange.new(0)
+	scanlines.Brightness = 3
+	scanlines.Color = ColorSequence.new(COOL, HOT)
+	scanlines.Transparency = NumberSequence.new(0, 1)
+	return { holder = holder, pixels = pixels, motes = motes, scanlines = scanlines }
+end
+
+-- Lets count squares, and their dust, go from a part, wherever its copy stands now.
 local function release(derez: Derez, piece: Piece, count: number)
+	local emitters = derez.emitters :: Emitters
 	local source = piece.ghost or piece.part
-	for _ = 1, count do
-		local size = between(KillFx.PIXEL_SIZE)
-		local offset = Vector3.new(random:NextNumber(-0.5, 0.5), random:NextNumber(-0.5, 0.5), random:NextNumber(-0.5, 0.5))
-			* source.Size
-		local at = source.CFrame:PointToWorldSpace(offset)
-		local roll = random:NextNumber()
-		local color = if roll < BODY_COLOR_SHARE
-			then piece.part.Color
-			elseif roll < BODY_COLOR_SHARE + WHITE_SHARE then HOT
-			else COOL
-		local pixel = Instance.new("Part")
-		pixel.Name = "Pixel"
-		pixel.Anchored = true
-		pixel.CanCollide = false
-		pixel.CanQuery = false
-		pixel.CanTouch = false
-		pixel.CastShadow = false
-		pixel.Material = Enum.Material.Neon
-		pixel.Color = color
-		pixel.Size = Vector3.one * size
-		-- Square on to the world, like a pixel, with a little turn.
-		local turn = CFrame.Angles(0, random:NextNumber(0, math.pi / 2), 0)
-		pixel.CFrame = CFrame.new(at) * turn
-		pixel.Parent = folder
-		table.insert(pixels, {
-			part = pixel,
-			position = at,
-			velocity = derez.wind * between(WIND) + Vector3.yAxis * between(LIFT) + random:NextUnitVector() * random:NextNumber(0, SCATTER),
-			turn = turn,
-			size = size,
-			age = 0,
-			life = between(KillFx.PIXEL_LIFE),
-			phase = random:NextNumber(0, KillFx.PIXEL_STEP),
-			lastJump = -1,
-			seed = random:NextNumber(0, 1000),
-		})
-	end
+	emitters.holder.Size = piece.size
+	emitters.holder.CFrame = source.CFrame
+	emitters.pixels:Emit(count)
+	emitters.motes:Emit(count * MOTES)
+end
+
+-- A tear flashes thin lines across the body at its height.
+local function flashScanlines(derez: Derez, height: number)
+	local emitters = derez.emitters :: Emitters
+	local bounds, extent = derez.bounds :: CFrame, derez.extent :: Vector3
+	local width = math.max(extent.X, extent.Z) + SCANLINE_WIDTH
+	emitters.scanlines.Size = NumberSequence.new(width)
+	emitters.holder.Size = Vector3.new(0.2, extent.Y * 0.15, 0.2)
+	emitters.holder.CFrame = bounds + Vector3.yAxis * (height - 0.5) * extent.Y
+	emitters.scanlines:Emit(SCANLINES)
 end
 
 -- A copy of a part that stays where it is and touches nothing.
@@ -168,7 +216,7 @@ local function ghostOf(part: BasePart): BasePart?
 	return copy
 end
 
--- Swaps the body for its frozen copy and works out when each part goes and how many pixels it leaves as.
+-- Swaps the body for its frozen copy and works out when each part goes and how many squares it leaves as.
 local function freeze(derez: Derez)
 	local copy = Instance.new("Model")
 	copy.Name = "Derez"
@@ -181,6 +229,7 @@ local function freeze(derez: Derez)
 			piece.ghost = ghost
 			piece.frame = ghost.CFrame
 		end
+		piece.size = piece.part.Size
 		local y = piece.part.Position.Y
 		bottom, top = math.min(bottom, y), math.max(top, y)
 		local size = piece.part.Size
@@ -190,6 +239,8 @@ local function freeze(derez: Derez)
 	copy.Parent = folder
 	derez.copy = copy
 	derez.model:SetAttribute("Derezzed", true) -- RemotePoses hides the gun and hands it shows on this body
+	local bounds, extent = copy:GetBoundingBox()
+	derez.bounds, derez.extent = CFrame.new(bounds.Position), extent
 
 	local counts = KillFx.pixelCounts(volumes, Perf.pick(PIXELS, math.floor(PIXELS / 2), math.floor(PIXELS / 4)))
 	local span = math.max(top - bottom, 0.01)
@@ -222,7 +273,7 @@ local function freeze(derez: Derez)
 	anchor.CanTouch = false
 	anchor.Transparency = 1
 	anchor.Size = Vector3.one * 0.2
-	anchor.CFrame = CFrame.new(derez.model:GetPivot().Position)
+	anchor.CFrame = derez.bounds :: CFrame
 	anchor.Parent = folder
 	local light = Instance.new("PointLight")
 	light.Color = COOL
@@ -231,6 +282,7 @@ local function freeze(derez: Derez)
 	light.Shadows = false
 	light.Parent = anchor
 	derez.anchor, derez.light = anchor, light
+	derez.emitters = makeEmitters(derez.wind)
 end
 
 -- Keeps the real body hidden. BodyHands puts the soldier's own hand meshes back when the body dies, after the
@@ -247,15 +299,6 @@ local function hideRest(derez: Derez)
 	end
 end
 
-local function finish(derez: Derez)
-	if derez.copy then
-		derez.copy:Destroy()
-	end
-	if derez.anchor then
-		derez.anchor:Destroy()
-	end
-end
-
 local function stepDerez(derez: Derez): boolean
 	local age = clock - derez.startedAt
 	if age < 0 then
@@ -266,6 +309,22 @@ local function stepDerez(derez: Derez): boolean
 			return false -- gone before it could start
 		end
 		freeze(derez)
+	end
+	local emitters = derez.emitters :: Emitters
+	for _, made in { emitters.pixels, emitters.motes, emitters.scanlines } do
+		made.TimeScale = speed
+	end
+	if KillFx.done(age) then
+		-- The body has gone; the last particles clear, then everything goes.
+		if derez.copy and derez.copy.Parent then
+			derez.copy:Destroy();
+			(derez.anchor :: BasePart):Destroy()
+		end
+		if age >= KillFx.DISSOLVE + LINGER then
+			emitters.holder:Destroy()
+			return false
+		end
+		return true
 	end
 
 	local glow = derez.glow :: Highlight
@@ -282,8 +341,11 @@ local function stepDerez(derez: Derez): boolean
 	if newStep and derez.model.Parent then
 		hideRest(derez)
 	end
-	-- A tear shifts everything above a height sideways across the screen, for one step.
+	-- A tear shifts everything above a height sideways across the screen, for one step, and flashes scanlines.
 	local tearHeight, tearShift = KillFx.tear(step, age)
+	if newStep and tearHeight then
+		flashScanlines(derez, tearHeight)
+	end
 	local camera = workspace.CurrentCamera
 	local across = Vector3.new(camera.CFrame.RightVector.X, 0, camera.CFrame.RightVector.Z)
 	across = if across.Magnitude > 0.01 then across.Unit else Vector3.xAxis
@@ -299,71 +361,41 @@ local function stepDerez(derez: Derez): boolean
 		if ghost and ghost.Parent then
 			if left <= 0 then
 				ghost:Destroy()
-			elseif newStep then
-				local out = KillFx.blinkedOut(step, index, left)
-				ghost.Transparency = if out then 1 else piece.transparency
-				for _, child in ghost:GetChildren() do
-					if child:IsA("Decal") then
-						child.Transparency = if out then 1 else 0
+			else
+				-- It collapses smoothly, every frame; the glitches land on the steps.
+				if left < KillFx.COLLAPSE then
+					local wide, high = KillFx.squash(left)
+					ghost.Size = piece.size * Vector3.new(wide, high, wide)
+				end
+				if newStep then
+					local out = KillFx.blinkedOut(step, index, left)
+					ghost.Transparency = if out then 1 else piece.transparency
+					for _, child in ghost:GetChildren() do
+						if child:IsA("Decal") then
+							child.Transparency = if out then 1 else 0
+						end
 					end
+					local shift = KillFx.jitter(step, index, left)
+					if tearHeight and piece.height >= tearHeight then
+						shift += tearShift :: number
+					end
+					ghost.CFrame = (piece.frame :: CFrame) + across * shift
 				end
-				local shift = KillFx.jitter(step, index, left)
-				if tearHeight and piece.height >= tearHeight then
-					shift += tearShift :: number
-				end
-				ghost.CFrame = (piece.frame :: CFrame) + across * shift
 			end
 		end
-	end
-
-	if KillFx.done(age) then
-		finish(derez)
-		return false
 	end
 	return true
 end
 
-local function stepPixels(dt: number)
-	local parts, frames = {}, {}
-	for index = #pixels, 1, -1 do
-		local pixel = pixels[index]
-		pixel.age += dt
-		local share = pixel.age / pixel.life
-		if share >= 1 then
-			pixel.part:Destroy()
-			table.remove(pixels, index)
-		else
-			pixel.velocity = pixel.velocity * math.exp(-dt * DRAG) + Vector3.yAxis * RISE * dt
-			pixel.position += pixel.velocity * dt
-			-- It's only redrawn on its jumps, and lands a little off its path each time.
-			local jump = math.floor((pixel.age + pixel.phase) / KillFx.PIXEL_STEP)
-			if jump ~= pixel.lastJump then
-				pixel.lastJump = jump
-				local size, transparency = KillFx.pixel(share)
-				local flickered = share > KillFx.PIXEL_HOLD and KillFx.noise(jump, pixel.seed) < 0.3
-				pixel.part.Size = Vector3.one * math.max(pixel.size * size, 0.02)
-				pixel.part.Transparency = if flickered then 1 else transparency
-				local twitch = random:NextUnitVector() * random:NextNumber(0, PIXEL_TWITCH)
-				table.insert(parts, pixel.part)
-				table.insert(frames, CFrame.new(pixel.position + twitch) * pixel.turn)
-			end
-		end
-	end
-	if #parts > 0 then
-		workspace:BulkMoveTo(parts, frames, Enum.BulkMoveMode.FireCFrameChanged)
-	end
-end
-
 RunService.RenderStepped:Connect(function(dt)
-	local speed = workspace:GetAttribute("KillFxSpeed")
-	dt *= if type(speed) == "number" and speed > 0 then speed else 1
-	clock += dt
+	local slow = workspace:GetAttribute("KillFxSpeed")
+	speed = if type(slow) == "number" and slow > 0 then math.min(slow, 1) else 1
+	clock += dt * speed
 	for index = #derezzes, 1, -1 do
 		if not stepDerez(derezzes[index]) then
 			table.remove(derezzes, index)
 		end
 	end
-	stepPixels(dt)
 end)
 
 -- The way the shot was going: from the killer through the body, flat. A random way if nobody is known.
@@ -400,12 +432,13 @@ local function begin(at: Vector3, killer: Player?, model: Model?, headshot: bool
 				and (
 					item == head
 					or item:IsDescendantOf(head) -- the soldier's head meshes sit inside its Head
-					or (item.Parent ~= nil and item.Parent:IsA("Accessory") and (item.Position - head.Position).Magnitude < HEAD_NEAR)
+					or (item.Parent ~= nil and item.Parent:IsA("Accessory") and (item.Position - head.Position).Magnitude < 2.5)
 				)
 			table.insert(pieces, {
 				part = item,
 				transparency = item.Transparency,
 				decals = decals,
+				size = item.Size,
 				height = 0,
 				goneAt = 0,
 				count = 0,
