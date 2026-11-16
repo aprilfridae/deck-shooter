@@ -60,3 +60,12 @@ All of it is written up in `docs/specs/cards.md` and `docs/specs/guns.md` ("Pull
 ## How edits have been made
 
 Small Python scripts that replace exact strings and assert each appears once, kept outside the repo. Image assets are baked with the Python tools in `tools/`, uploaded with `python tools/upload-group-assets.py`, and their ids put in Luau modules. Commits end with a `Co-Authored-By` line for the assistant.
+
+## Update, 2026-11-16 (overnight)
+
+Branch `feature/kill-fx` (from `feature/switchback-chain`, not pushed, no pull request) holds two pieces of work. River hasn't seen either at full speed yet.
+
+- **Kill effects:** a gun kill glitches the body away into drifting pixel dust; a headshot opens on a black silhouette with a flare, ring, spike and pixel spray; the killer gets an acid edge flash and a kill sound that climbs with the streak. River had the view snap and the old headshot disc taken out. `docs/specs/guns.md`, "Kill effects".
+- **Model textures:** the M57, Energy Pistol, Longscope, soldier body and first-person arms have baked textures and markings, and the soldier's arms are slimmed to 82%. The B33, SMG and Shotgun only got materials (no source files). These changes are in the group's place in Studio, not the repo: River needs to save or publish the place for them to stick. Backups are in `ServerStorage.ModelBackups`. `docs/specs/guns.md`, "Model textures".
+- Noticed, not changed: in first person the left hand floats beside the Energy Pistol instead of holding it. Pose code wasn't touched, so it's likely as before.
+- A warning `rbxassetid://138494251772196 ... No asset content representation found` shows in Play. Nothing in the place or the repo uses that id.
