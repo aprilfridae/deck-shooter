@@ -253,6 +253,17 @@ describe("Receipts", function()
 		expect(data.packs.Field).toBe(0)
 	end)
 
+	it("doesn't count a receipt as paid when paying out fails", function()
+		local data = SaveData.new()
+		data.packs.Field = 5
+		local broken = function(): number
+			error("no luck")
+		end
+		expect(pcall(Packs.redeem, data, "a", broken)).toBe(false)
+		expect(table.find(data.receipts, "a")).toBe(nil)
+		expect((Packs.redeem(data, "a", math.random)) ~= "Repeat").toBe(true)
+	end)
+
 	it("remembers only the newest receipts", function()
 		local data = SaveData.new()
 		for index = 1, Config.ReceiptMemory + 5 do

@@ -201,15 +201,20 @@ function Packs.redeem(data: any, purchaseId: string, rng: () -> number): (string
 	if table.find(data.receipts, purchaseId) then
 		return "Repeat", nil
 	end
+	local status, result
+	if Packs.pile(data) == 0 then
+		data.openAllCredits += 1
+		status = "Banked"
+	else
+		status, result = "Opened", Packs.openAll(data, rng)
+	end
+	-- Written down only after the payout: if paying out errors, Roblox asks again and this pays then. Written
+	-- first, the retry looked paid and the purchase was lost.
 	table.insert(data.receipts, purchaseId)
 	while #data.receipts > Config.ReceiptMemory do
 		table.remove(data.receipts, 1)
 	end
-	if Packs.pile(data) == 0 then
-		data.openAllCredits += 1
-		return "Banked", nil
-	end
-	return "Opened", Packs.openAll(data, rng)
+	return status, result
 end
 
 function Packs.useCredit(data: any, rng: () -> number): (boolean, any)

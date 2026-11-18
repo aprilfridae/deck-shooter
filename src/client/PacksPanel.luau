@@ -63,7 +63,7 @@ local player = Players.LocalPlayer
 local lastRolledAt: number? = nil
 
 CardData.packEvent:Connect(function(event: any)
-	-- RollWait: auto roll was just turned on and its first wait has begun.
+	-- RollWait: a wait began with no pack, when auto roll was just turned on or a roll landed on a full pile.
 	if event.kind == "Rolled" or event.kind == "RollWait" then
 		lastRolledAt = os.clock()
 	end
@@ -183,7 +183,8 @@ local function controls(view: Frame): () -> ()
 		end
 		local unlocked = player:GetAttribute("AutoRollUnlocked") == true
 		local rolling = player:GetAttribute("AutoRollOn") == true
-		local hidden = player:GetAttribute("OpenAllHidden") == true
+		-- Hidden until the server has heard Roblox's policy for this player (nil until then), not just once it says no.
+		local hidden = player:GetAttribute("OpenAllHidden") ~= false
 		local autoOpen = player:GetAttribute("AutoOpenOwned") == true
 		local price = Rebirth.price(snapshot.rebirths)
 		local canRebirth = snapshot.credits >= price
