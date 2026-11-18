@@ -112,7 +112,7 @@ This hasn't been mocked up. River judges it in Play. A rare pull is a Prototype 
 - **Burst:** when the cards turn, two rings and a spray of wrapper shards burst from the middle of the fan in the pack's two colours. The best card sets how far and how hard it goes, so it grows with rarity.
 - **Sound:** an opening sound plays once as the pack spins in, in the Menu volume group: `pack-open-common` for Field, `pack-open-rarer` for Redline and Prototype, `pack-open-rarest` for Zero-Day. The menu's select sound plays with it, since the opening sounds have no click. The flip and the burst have no sounds of their own yet (`docs/sound-list.md`).
 - **Open All:** each rare stack shows until clicked, with `SKIP` to pass the rest, then a list of everything that arrived.
-- **Auto Open:** a rare pull plays by itself beside the middle of the screen and leaves after 4 seconds. The world stays usable, so an idle player's screen never blocks. Only 3 can wait at once and the rest aren't shown, except a Zero-Day, which always is. A pack the player opens goes first.
+- **Auto Open:** a rare pull plays by itself beside the middle of the screen and leaves after 4 seconds. The world stays usable, so an idle player's screen never blocks. Only 3 can wait at once and the rest aren't shown, except a Zero-Day, which always is. A pack the player opens goes first. A rare pull that arrives while the title screen is up, or after the player has left the Outpost, isn't shown (2026-11-18); the card is in the index as usual. Auto Open still opens behind the title screen, since the player is standing in the Outpost.
 
 The cards can be inspected in 3D like any other.
 
