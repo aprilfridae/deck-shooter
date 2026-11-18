@@ -1,6 +1,20 @@
 # Matches
 
-**Status:** planned, not built. There is no round, match, team, tower or arena code yet. River has parked matches (Phase 4) until gameplay looks, sounds and feels good. The 1v1 map is the next step toward them.
+**Status:** Elimination is built (2026-11-18): the 1v1, 2v2 and 3v3 queues, rounds, scoring, spectating, the between-round class pick, the score display and the cheat-check change. It has been played alone in Studio against stand-ins, not yet by two or more people, and River hasn't judged its feel. Tower is not built. Matches were parked until gameplay felt good; River un-parked them by asking for "stuff from the overarching plan".
+
+## How Elimination is built
+
+- **Rules:** `src/shared/Guns/MatchRules.luau` (round result, forfeit, match winner, team split), tested in `tests/matchrules_spec.luau`. The HUD's words are in `src/shared/Guns/Hud/MatchText.luau`.
+- **Server:** `src/server/Matches.server.luau` runs the queues and every match. Up to 6 matches run at once; a full queue waits for a free arena.
+- **Arenas:** each match builds its own copy of its arena far out from the free-play maps (from x = 9000, 1600 studs apart) and removes it at the end. 1v1 plays a copy of Hex or Relay, picked at random, with its OUTPOST terminals turned off. 2v2 and 3v3 play the **Yard** (`src/server/Outpost/Yard.luau`): a walled 140 by 90 grey blockout with an unseen fence above the walls, a spawn bay behind a wall with two exits on each side, low cover and pillars down both flanks, and a raised middle with a ramp from each side. Side 1's accents are teal and side 2's orange; its lights are white. Players keep the map's zone (Hex, Relay or the new Yard zone), so its lighting and fall check work as in free play.
+- **Teams:** two Roblox Teams per match (teal and orange). Bullets pass through teammates, cards already treat a teammate as a friend, and teammates get an outline in the team colour.
+- **A round:** everyone still in the match gets a fresh body at their side's spawn (full health, ammo and cards), held in place for a 3-second countdown with guns and cards off (the `MatchFrozen` attribute). The round ends on a wipe or at 90 seconds. The dead stay dead (no 3-second respawn) and, after 2.5 seconds of the death view, watch a living teammate over the shoulder; a click moves to the next one.
+- **Between rounds:** 8 seconds, held at the spawn, with buttons for each class. The pick applies on the next round's body.
+- **The end:** VICTORY or DEFEAT for 6 seconds, then everyone goes back to the Outpost and the arena, teams and state are removed.
+- **Leaving:** a player who leaves the game counts as dead and stays out; a team with nobody left forfeits. Five movement strikes in a match remove the player from it, log it and send them to the Outpost instead of kicking them; strikes start over in each match.
+- **The Play page:** each Elimination row says JOIN, how many are waiting, or IN QUEUE n/size. Click to join, click again to leave. Leaving the Outpost leaves the queue. In Studio a right-click starts a match at once against stand-in bodies that never shoot, to test alone.
+- **What a client reads:** `ReplicatedStorage.Matches.<id>` attributes (Phase: Countdown, Playing, Between or Over; PhaseEnds; Round; Wins1; Wins2; RoundWinner, 0 for a replayed tie; Winner, 0 when nobody was left; Arena; TeamSize; RoundSeconds), the player's `MatchId` and `MatchTeam`, and queue counts on `ReplicatedStorage.MatchQueues`.
+- **Not built:** cross-server matchmaking (a queue only matches players on the same server), match rewards, a match sound set.
 
 This is the design agreed for matches. All numbers are starting values to tune by feel unless marked as decided.
 
@@ -59,14 +73,14 @@ The mode uses original arena names and layouts.
 
 ## What matches change in built systems
 
-- **Cards** reset at the start of each round instead of on each spawn (`AbilityServer.server.luau`). The Studio test decks (T and Y) go.
-- **Loadout:** the B and N test keys are replaced by the 8-second between-round screen.
-- **Death:** spectating replaces the 3-second respawn.
-- **Cheat checks:** 5 strikes remove the player from the match and log it, instead of kicking them from the server. Strikes count per match.
-- **Teams:** teams get assigned. Recon Pulse's teammate perk and the "everyone else is an enemy" rule in `AbilityServer` depend on it.
+- **Cards** reset at the start of each round: every round gives a fresh body, and cards reset on each spawn. The Studio test decks (T and Y) still work in matches, in Studio only.
+- **Loadout:** the 8-second between-round screen picks the class.
+- **Death:** spectating replaces the 3-second respawn (`Places.holdRespawn`).
+- **Cheat checks:** 5 strikes remove the player from the match and log it, instead of kicking them from the server. Strikes count per match. Built.
+- **Teams:** assigned per match. The "everyone else is an enemy" rule in `AbilityServer` already follows Team; guns now skip teammates.
 - **Server authority:** the server alone controls tower capture, as it already does health, ammo and ability use.
-- **HUD:** a basic score display.
-- **Queues:** the Play page's queue rows (`PlayPanel.luau`) and the matchmaking booth's prompt in the Outpost say `SOON` and do nothing until matches exist.
+- **HUD:** a score display at the top centre (`MatchHud.client.luau`).
+- **Queues:** the Play page's Elimination rows join queues; Tower still says `SOON`. The Outpost's matchmaking booth is scenery with no prompt (`outpost.md` says it has one; it isn't in the code).
 
 ## Risks
 

@@ -77,7 +77,7 @@ end)
 
 RunService.Heartbeat:Connect(function()
 	local keys = Input.readAbility()
-	if not Zones.allowsCombat(Zones.of(player)) then
+	if not Zones.canFight(player) then
 		CardHand.putAway(CardInHand)
 	else
 		local ready = { isReady(1), isReady(2), isReady(3) }

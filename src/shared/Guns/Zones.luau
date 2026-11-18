@@ -5,6 +5,7 @@ local Zones = {
 	TestRoom = "TestRoom",
 	Relay = "Relay",
 	Hex = "Hex",
+	Yard = "Yard", -- the Elimination arena for 2v2 and 3v3; only ever a match's own copy
 }
 
 local KNOWN = {
@@ -12,12 +13,14 @@ local KNOWN = {
 	[Zones.TestRoom] = true,
 	[Zones.Relay] = true,
 	[Zones.Hex] = true,
+	[Zones.Yard] = true,
 }
 
 local COMBAT = {
 	[Zones.TestRoom] = true,
 	[Zones.Relay] = true,
 	[Zones.Hex] = true,
+	[Zones.Yard] = true,
 }
 
 -- Anything missing or unknown counts as the Outpost, so a late attribute never allows shooting.
@@ -31,6 +34,17 @@ end
 
 function Zones.allowsCombat(zone: string): boolean
 	return COMBAT[zone] == true
+end
+
+-- Whether this player may shoot and use cards right now: in a combat zone, and not held at the spawn for a match
+-- round's countdown (the server sets MatchFrozen).
+function Zones.canFight(player: any): boolean
+	return Zones.allowsCombat(Zones.of(player)) and player:GetAttribute("MatchFrozen") ~= true
+end
+
+-- The zone for combat keys: the Outpost while combat is held off, so Zones.filter blocks them.
+function Zones.combatZone(player: any): string
+	return if Zones.canFight(player) then Zones.of(player) else Zones.Outpost
 end
 
 -- Makes every combat key false where combat is off.

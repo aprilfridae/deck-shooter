@@ -45,7 +45,7 @@ function Input.readGun(): { [string]: boolean }
 	end
 	-- Guns and cards are off in the Outpost.
 	local keys = PlayerSettings.get().keys
-	return Zones.filter(Zones.of(player), MenuState.filter(MenuState.shared, {
+	return Zones.filter(Zones.combatZone(player), MenuState.filter(MenuState.shared, {
 		fire = pressed(keys.fire),
 		aim = pressed(keys.aim),
 		reload = pressed(keys.reload),
@@ -74,7 +74,7 @@ function Input.readAbility(): { [string]: boolean }
 		return { slot1 = false, slot2 = false, slot3 = false, use = false, cycle = false, testDeck = false, testTier = false }
 	end
 	local keys = PlayerSettings.get().keys
-	return Zones.filter(Zones.of(player), MenuState.filter(MenuState.shared, {
+	return Zones.filter(Zones.combatZone(player), MenuState.filter(MenuState.shared, {
 		slot1 = pressed(keys.slot1),
 		slot2 = pressed(keys.slot2),
 		slot3 = pressed(keys.slot3),

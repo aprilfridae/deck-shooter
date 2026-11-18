@@ -140,8 +140,11 @@ local function hitsAlong(shooter: GunTargets.Target, shot: any, direction: any, 
 	local wall = firstWall(origin, Vector3.new(direction.x, direction.y, direction.z) * MAX_RANGE)
 	local reach = if wall then wall.Distance else MAX_RANGE
 	local hits = {}
+	-- Teammates in a match can't be hit: the bullet passes through them (matches.md).
+	local team = shooter.player and shooter.player.Team
 	for _, target in GunTargets.all() do
-		if target ~= shooter and GunTargets.isAlive(target) then
+		local teammate = team ~= nil and target.player ~= nil and target.player.Team == team
+		if target ~= shooter and not teammate and GunTargets.isAlive(target) then
 			local past = History.at(target.history, viewAt)
 			if past then
 				local zone, distance, pull = Hitbox.test(shot.origin, direction, past, target.shape, magnet)
@@ -160,7 +163,7 @@ end
 local function onFire(player: Player, raw: any)
 	local shooter = GunTargets.forPlayer(player)
 	local loadout = loadouts[player]
-	if not shooter or not loadout or not GunTargets.isAlive(shooter) or not Zones.allowsCombat(Zones.of(player)) then
+	if not shooter or not loadout or not GunTargets.isAlive(shooter) or not Zones.canFight(player) then
 		return
 	end
 	local now = workspace:GetServerTimeNow()
@@ -310,7 +313,7 @@ end
 local function onReload(player: Player)
 	local loadout = loadouts[player]
 	local now = workspace:GetServerTimeNow()
-	if loadout and allowRequest(player, now) and Zones.allowsCombat(Zones.of(player)) then
+	if loadout and allowRequest(player, now) and Zones.canFight(player) then
 		Weapon.startReload(loadout, now)
 	end
 end

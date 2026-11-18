@@ -1,5 +1,7 @@
--- The Play page: the areas you can travel to now (click one to go), then the launch queues from matches.md,
--- which say SOON until matches exist.
+-- The Play page: the areas you can travel to now (click one to go), then the match queues from matches.md. Click
+-- an Elimination row to join its queue and again to leave. In Studio, right-click one to start a match at once
+-- against stand-ins, to try it alone.
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -12,12 +14,13 @@ local Zones = require(Guns:WaitForChild("Zones"))
 local ROUNDS = "FIRST TO 5 ROUND WINS TAKES THE MATCH."
 local QUEUES = { -- the Label font has no commas or apostrophes
 	-- Areas open now. A row with a zone travels there when clicked (the server checks the request).
-	{ mode = "1V1 MAP", size = "HEX", status = "GO", zone = Zones.Hex, about = "A RUINED HALL WITH A RING OF WALLS IN THE MIDDLE.\nFREE PLAY. NO ROUNDS YET." },
-	{ mode = "1V1 MAP", size = "RELAY", status = "GO", zone = Zones.Relay, about = "TWO TOWERS IN THE FOG AND THE BRIDGE BETWEEN THEM.\nFREE PLAY. NO ROUNDS YET." },
+	{ mode = "1V1 MAP", size = "HEX", status = "GO", zone = Zones.Hex, about = "A RUINED HALL WITH A RING OF WALLS IN THE MIDDLE.\nFREE PLAY. RESPAWN AND GO AGAIN." },
+	{ mode = "1V1 MAP", size = "RELAY", status = "GO", zone = Zones.Relay, about = "TWO TOWERS IN THE FOG AND THE BRIDGE BETWEEN THEM.\nFREE PLAY. RESPAWN AND GO AGAIN." },
 	{ mode = "TEST ROOM", size = "TEST", status = "GO", zone = Zones.TestRoom, about = "TARGET DUMMIES AND ROOM TO MOVE.\nTRY GUNS AND CARDS HERE." },
-	{ mode = "ELIMINATION", size = "1V1", about = "ONE ON ONE. LAST PLAYER STANDING WINS THE ROUND.\n" .. ROUNDS },
-	{ mode = "ELIMINATION", size = "2V2", about = "TEAMS OF TWO. WIPE THE OTHER TEAM. NO RESPAWNS.\n" .. ROUNDS },
-	{ mode = "ELIMINATION", size = "3V3", about = "TEAMS OF THREE. WIPE THE OTHER TEAM. NO RESPAWNS.\n" .. ROUNDS },
+	-- Queues. A row with a queueId joins it when clicked.
+	{ mode = "ELIMINATION", size = "1V1", queueId = "Elimination1", teamSize = 1, about = "ONE ON ONE. LAST PLAYER STANDING WINS THE ROUND.\n" .. ROUNDS },
+	{ mode = "ELIMINATION", size = "2V2", queueId = "Elimination2", teamSize = 2, about = "TEAMS OF TWO. WIPE THE OTHER TEAM. NO RESPAWNS.\n" .. ROUNDS },
+	{ mode = "ELIMINATION", size = "3V3", queueId = "Elimination3", teamSize = 3, about = "TEAMS OF THREE. WIPE THE OTHER TEAM. NO RESPAWNS.\n" .. ROUNDS },
 	{
 		mode = "TOWER",
 		size = "5V5",
@@ -37,6 +40,8 @@ local ABOUT_GAP = 0.012 -- from the row's text to the first line of its descript
 local ABOUT_STEP = 0.016 -- between the lines of a description
 local ABOUT_LINES = 2
 
+local player = Players.LocalPlayer
+
 local PlayPanel = {}
 
 -- Draws a row inside its own box, which grows under the mouse and clips what's below its edge.
@@ -53,7 +58,7 @@ local function buildRow(content: Frame, queue: any): any
 	local tick = PanelKit.block(box, MARGIN, base - capHeight, TICK_WIDTH, capHeight, PanelKit.INK)
 	PanelKit.label(box, "Title", SIZE_TEXT, inkLeft - SIZE_TEXT * PanelKit.TITLE_INSET, base):set(queue.size)
 	PanelKit.line(box, queue.mode, if queue.zone then AREA_MODE_LEFT else MODE_LEFT, labelBase)
-	PanelKit.line(box, queue.status or "SOON", RIGHT, labelBase, true)
+	local status = PanelKit.line(box, queue.status or "SOON", RIGHT, labelBase, true)
 
 	-- The open row keeps the same space under its last line as it has above the size.
 	local smallCap = PanelKit.SMALL_SIZE * PanelKit.CAP_HEIGHT
@@ -66,6 +71,8 @@ local function buildRow(content: Frame, queue: any): any
 	return {
 		box = box,
 		tick = tick,
+		status = status,
+		queue = queue,
 		lines = lines,
 		about = queue.about,
 		rule = PanelKit.rule(content, MARGIN, 0, RIGHT - MARGIN),
@@ -114,6 +121,23 @@ function PlayPanel.fill(content: Frame)
 					(travel :: RemoteEvent):FireServer(queue.zone)
 				end
 			end)
+		elseif queue.queueId then
+			local function ask(id: any, solo: boolean)
+				local remotes = ReplicatedStorage:FindFirstChild("MatchRemotes")
+				local remote = remotes and remotes:FindFirstChild("Queue")
+				if remote then
+					(remote :: RemoteEvent):FireServer(id, solo)
+				end
+			end
+			row.box.MouseButton1Click:Connect(function()
+				-- Clicking the queue you're in leaves it.
+				ask(if player:GetAttribute("QueuedFor") == queue.queueId then false else queue.queueId, false)
+			end)
+			if RunService:IsStudio() then
+				row.box.MouseButton2Click:Connect(function()
+					ask(queue.queueId, true)
+				end)
+			end
 		end
 		row.box.MouseLeave:Connect(function()
 			if hovered == row then
@@ -163,7 +187,48 @@ function PlayPanel.fill(content: Frame)
 
 	local word = PanelKit.label(block, "LabelBold", PanelKit.LABEL_SIZE, 0, 0, nil, PanelKit.PAPER)
 	word:setPosition(UDim2.fromOffset(MARGIN * unit, (BLOCK_HEIGHT + PanelKit.LABEL_SIZE) / 2 * unit))
-	word:set("MATCHES ARE ON THE WAY")
+
+	-- Each queue's row says how full it is, and the block under the list says which one you're in.
+	local function showQueues()
+		local counts = ReplicatedStorage:FindFirstChild("MatchQueues")
+		local mine = player:GetAttribute("QueuedFor")
+		local joined = nil
+		for _, row in rows do
+			local queue = row.queue
+			if queue.queueId then
+				local count = if counts then counts:GetAttribute(queue.queueId) or 0 else 0
+				local full = queue.teamSize * 2
+				if mine == queue.queueId then
+					joined = queue
+					row.status:set(`IN QUEUE {count}/{full}`)
+				elseif count > 0 then
+					row.status:set(`{count}/{full} WAITING`)
+				else
+					row.status:set("JOIN")
+				end
+			end
+		end
+		word:set(if joined
+			then `LOOKING FOR {joined.mode} {joined.size}. CLICK IT AGAIN TO LEAVE.`
+			else "PICK A QUEUE TO FIND A MATCH")
+	end
+	showQueues()
+	local watching = {}
+	local function watch(signal: RBXScriptSignal)
+		table.insert(watching, signal:Connect(showQueues))
+	end
+	watch(player:GetAttributeChangedSignal("QueuedFor"))
+	local counts = ReplicatedStorage:FindFirstChild("MatchQueues")
+	if counts then
+		watch(counts.AttributeChanged)
+	end
+	content.AncestryChanged:Connect(function()
+		if not content.Parent then
+			for _, connection in watching do
+				connection:Disconnect()
+			end
+		end
+	end)
 end
 
 return PlayPanel

@@ -12,6 +12,7 @@ local Map = require(script.Parent.Map)
 local Relay = require(script.Parent.Relay)
 local Hex = require(script.Parent.Hex)
 local MoveGrace = require(script.Parent.Parent.MoveGrace)
+local Places = require(script.Parent.Places)
 
 local ORIGIN = CFrame.new(4000, 0, 0) -- far from the test room, which sits at the world origin
 local RELAY_ORIGIN = CFrame.new(-4000, 300, 0) -- the Relay map's centre, high enough to fall from
@@ -62,7 +63,10 @@ local function emptierSide(sides: { [Player]: number }): number
 end
 
 local function spawnFor(player: Player, zone: string): SpawnLocation
-	if zone == Zones.Relay then
+	local override = Places.spawnOverride[player]
+	if override and override.Parent then
+		return override -- a match's own spawn, in its own copy of the map
+	elseif zone == Zones.Relay then
 		return relay.spawns[relaySide[player] or 1]
 	elseif zone == Zones.Hex then
 		return hex.spawns[hexSide[player] or 1]
@@ -183,7 +187,8 @@ local function onCharacter(player: Player, character: Model)
 	if humanoid then
 		humanoid.Died:Once(function()
 			task.wait(Players.RespawnTime)
-			if player.Character == character then
+			-- In a match the dead wait for the next round, which loads everyone itself.
+			if player.Character == character and not Places.holdRespawn[player] then
 				loadBody(player)
 			end
 		end)
@@ -210,6 +215,14 @@ local function onPlayer(player: Player)
 	loadBody(player)
 end
 
+Places.setZone = setZone
+Places.loadBody = loadBody
+Places.travel = function(player: Player, zone: string)
+	lastTravel[player] = nil -- a match sending players about isn't held to the travel cooldown
+	travel(player, zone)
+end
+Places.markReady()
+
 Players.PlayerAdded:Connect(onPlayer)
 for _, player in Players:GetPlayers() do
 	task.spawn(onPlayer, player)
@@ -219,6 +232,8 @@ Players.PlayerRemoving:Connect(function(player)
 	moving[player] = nil
 	relaySide[player] = nil
 	hexSide[player] = nil
+	Places.spawnOverride[player] = nil
+	Places.holdRespawn[player] = nil
 end)
 
 -- Getting out of the building somehow sends you back to the spawn.
