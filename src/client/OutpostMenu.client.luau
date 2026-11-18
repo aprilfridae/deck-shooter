@@ -214,11 +214,25 @@ local function buildNav()
 end
 
 buildNav()
+-- Dragging a window's edge changes the size every frame, and rebuilding the nav and the open page each time was
+-- heavy. They're rebuilt once the size has held still for a moment, and only if it really changed.
+local RESIZE_SETTLE = 0.2 -- seconds
+local builtFor = Workspace.CurrentCamera.ViewportSize
+local resizes = 0
 Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-	buildNav()
-	if openPage then
-		fillPage(openPage)
-	end
+	resizes += 1
+	local this = resizes
+	task.delay(RESIZE_SETTLE, function()
+		local size = Workspace.CurrentCamera.ViewportSize
+		if this ~= resizes or size == builtFor then
+			return
+		end
+		builtFor = size
+		buildNav()
+		if openPage then
+			fillPage(openPage)
+		end
+	end)
 end)
 
 local function fadeNav(dt: number)
