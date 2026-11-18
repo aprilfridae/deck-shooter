@@ -257,7 +257,7 @@ handlers.kickplate = function(player, target, slot, aim)
 	local speed = CardAim.launchSpeed(Cards.stat(slot.cardId, slot.tier, "height"), workspace.Gravity)
 	MoveGrace.give(player, Config.KickplateGraceSeconds)
 	pushRemote:FireClient(player, way * speed)
-	fxRemote:FireAllClients("blast", hit.Position, hit.Position + hit.Normal)
+	fxRemote:FireAllClients("blast", hit.Position, hit.Position + hit.Normal, false, slot.tier, player.UserId)
 	return true
 end
 
@@ -304,12 +304,16 @@ handlers.siphon = function(player, target, slot, aim)
 	local from = eye(target)
 	local enemy = aimedEnemy(player, target, aim, Config.SiphonRange)
 	if not enemy then
-		fxRemote:FireAllClients("bolt", from, from + asVector(aim) * Config.SiphonRange)
+		-- A miss stops at the first wall, so the bolt isn't drawn through it.
+		local wall = workspace:Raycast(from, asVector(aim) * Config.SiphonRange, without(target.model))
+		local ends = if wall then wall.Position else from + asVector(aim) * Config.SiphonRange
+		fxRemote:FireAllClients("bolt", from, ends, false, slot.tier, player.UserId)
 		return MISS
 	end
 	local steal = Cards.stat(slot.cardId, slot.tier, "speedSteal")
 	local seconds = Cards.stat(slot.cardId, slot.tier, "duration")
-	fxRemote:FireAllClients("bolt", from, enemy.root.Position)
+	-- The body hit and how long the drain lasts go along, for the tether drawn between the two of you.
+	fxRemote:FireAllClients("bolt", from, enemy.root.Position, true, slot.tier, player.UserId, enemy.model, seconds)
 	-- No grace from the movement guard: the fastest ordinary move with the biggest boost is still under its
 	-- limit, and grace would switch the guard off for seconds at a time.
 	boosts[player] = steal
