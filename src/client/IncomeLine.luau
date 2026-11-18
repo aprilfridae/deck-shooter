@@ -24,6 +24,7 @@ local LABEL_SIZE = 0.0095
 local CREDITS_SIZE = 0.03
 local LABEL_TRACKING = 0.0022
 local INCOME_GAP = 0.008 -- from the Credits to the income beside them
+local CATALYST_GAP = 0.014 -- from the rebirths to the Catalysts beside them
 local GREY = Color3.fromRGB(170, 176, 182) -- the radio's artist line
 
 local IncomeLine = {}
@@ -52,6 +53,8 @@ function IncomeLine.new(parent: Instance): Frame
 	local credits = line("Title", CREDITS_SIZE, CREDITS_LINE, 0, Palette.Bone)
 	local income = line("Label", LABEL_SIZE, CREDITS_LINE, LABEL_TRACKING, GREY)
 	local rebirths = line("LabelBold", LABEL_SIZE, REBIRTH_LINE, LABEL_TRACKING, Palette.Bone)
+	-- Catalysts (from match wins) beside the rebirths, once there are any.
+	local catalysts = line("Label", LABEL_SIZE, REBIRTH_LINE, LABEL_TRACKING, GREY)
 
 	local function draw()
 		local snapshot = CardData.get()
@@ -60,6 +63,9 @@ function IncomeLine.new(parent: Instance): Frame
 			income:set(PackText.income(snapshot.ratePerSecond))
 			income:setPosition(UDim2.fromOffset(credits:width() + INCOME_GAP * unit, CREDITS_LINE * unit))
 			rebirths:set(string.format("REBIRTH %02d", snapshot.rebirths))
+			local count = snapshot.catalysts or 0
+			catalysts:set(if count > 0 then string.format("CATALYSTS %02d", count) else "")
+			catalysts:setPosition(UDim2.fromOffset(rebirths:width() + CATALYST_GAP * unit, REBIRTH_LINE * unit))
 		end
 	end
 	local changed = CardData.changed:Connect(draw)
