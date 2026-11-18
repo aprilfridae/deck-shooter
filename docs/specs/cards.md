@@ -137,12 +137,13 @@ Requests go through `Requests.luau`, which drops bad types, NaN, extra fields an
 - Credits and income in the Outpost's top left (`IncomeLine.luau`).
 - The Loadout page: DPR and the deck, with a card picker (`LoadoutPanel.luau`, see `outpost-ui.md`).
 - The Profile page: Credits, DPR and the card index with copy counts (`ProfilePanel.luau`).
-- Nothing shows Catalysts or fusion yet.
+- **Fusing** (2026-11-18): on your own Profile, clicking a card you own holds it up with a button under it (`CardInspect` action, `ProfilePanel.fuseAction`, `Fusion.offer`). It reads `FUSE 5 INTO REDLINE - 100 CR`. Too few copies or Credits show as plain Bone words instead (`FUSE 1/5 INTO REDLINE`, `FUSING NEEDS 600 CR`). When the Base copies aren't enough, the first press changes it to `SPENDS VARIANTS - PRESS AGAIN`, and only the second fuses. The new card is then held up and the page redraws. Prototype cards and other players' cards get no button.
+- Nothing shows Catalysts yet, and the fuse button never uses one.
 
 ## Not built
 
 - The player market and serialized seasonal cards.
-- A fusion screen, ways to get Catalysts, gun upgrades, teams.
+- Ways to get Catalysts, gun upgrades, teams.
 
 ## Known issues
 

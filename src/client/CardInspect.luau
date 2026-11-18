@@ -13,6 +13,8 @@ local CardSpin = require(Guns:WaitForChild("Hud"):WaitForChild("CardSpin"))
 local Palette = require(Guns:WaitForChild("Palette"))
 local CardFace = require(script.Parent.CardFace)
 local MenuCamera = require(script.Parent.MenuCamera)
+local MenuPanel = require(script.Parent.MenuPanel)
+local PanelKit = require(script.Parent.PanelKit)
 
 local STEP_NAME = "CardInspect"
 local ASPECT = 150 / 240
@@ -28,6 +30,11 @@ local DIM_SIZE = 200
 local DIM_CLEAR = 0.35 -- transparency once it's fully dimmed
 local DRAG_START = 6 -- pixels the mouse moves before a press counts as a drag
 local STILL_TURN = 0.02 -- radians: closer than this, the shine goes back to its timed sweep
+-- The action button under the card (fusing, in the Profile), in menu units.
+local ACTION_WIDTH = 0.3
+local ACTION_HEIGHT = 0.032
+local ACTION_GAP = 0.014 -- below the card's bottom edge
+local ACTION_LAYER = 3 -- over the card's hit box and the click-outside-to-close button
 
 local current: any = nil
 
@@ -199,7 +206,55 @@ function CardInspect.close()
 	end
 end
 
--- Takes the card's CardFace options, plus how many copies the player owns.
+-- A button under the held card. action is { text, disabled?, run? }; run gets a function that relabels the button,
+-- for a press that needs a second press to confirm.
+local function actionButton(inspect: any, gui: ScreenGui, action: any)
+	if inspect.action then
+		inspect.action:Destroy()
+		inspect.action = nil
+	end
+	local view = Workspace.CurrentCamera.ViewportSize
+	local unit = MenuPanel.unit()
+	local x = view.X * SCREEN_X / unit - ACTION_WIDTH / 2
+	local top = view.Y * (SCREEN_Y + HEIGHT_SHARE / 2) / unit + ACTION_GAP
+	if action.disabled then
+		-- Just the words in Bone: a greyed-out button is navy on the dimmed world and can hardly be read.
+		local holder = Instance.new("Frame")
+		holder.Name = "CardInspectAction"
+		holder.BackgroundTransparency = 1
+		holder.Position = UDim2.fromOffset(x * unit, top * unit)
+		holder.Size = UDim2.fromOffset(ACTION_WIDTH * unit, ACTION_HEIGHT * unit)
+		holder.ZIndex = ACTION_LAYER
+		holder.Parent = gui
+		local words = PanelKit.label(holder, "LabelBold", PanelKit.SMALL_SIZE, 0, 0, nil, PanelKit.PAPER)
+		words:set(action.text)
+		local line = (ACTION_HEIGHT + PanelKit.SMALL_SIZE) / 2 * unit
+		words:setPosition(UDim2.new(0.5, -words:width() / 2, 0, line))
+		inspect.action = holder
+		return
+	end
+	local button = PanelKit.button(gui, action.text, x, top, ACTION_WIDTH, ACTION_HEIGHT, {
+		size = PanelKit.SMALL_SIZE,
+	})
+	button.Name = "CardInspectAction"
+	button.ZIndex = ACTION_LAYER
+	inspect.action = button
+	if action.run then
+		button.Activated:Connect(function()
+			if current ~= inspect or inspect.closedAt then
+				return
+			end
+			action.run(function(next: any)
+				if current == inspect and not inspect.closedAt then
+					actionButton(inspect, gui, next)
+				end
+			end)
+		end)
+	end
+end
+
+-- Takes the card's CardFace options, plus how many copies the player owns, and an optional action for a button
+-- under the card (see actionButton).
 function CardInspect.open(options: any)
 	if current then
 		destroy(current)
@@ -275,6 +330,9 @@ function CardInspect.open(options: any)
 		inspect.grade = grade
 	end
 	listen(inspect, hit, outside)
+	if options.action then
+		actionButton(inspect, input, options.action)
+	end
 	RunService:BindToRenderStep(STEP_NAME, Enum.RenderPriority.Camera.Value + 1, function(dt)
 		step(inspect, dt)
 	end)

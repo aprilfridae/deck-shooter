@@ -1,10 +1,13 @@
 -- The Profile page, for the player or anyone else in the server: headshot, name, Credits and Deck
 -- Power Rating, then the card index and comments.
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local CardIndex = require(CardCore:WaitForChild("CardIndex"))
+local CardLook = require(CardCore:WaitForChild("CardLook"))
+local Fusion = require(CardCore:WaitForChild("Fusion"))
 local Variant = require(CardCore:WaitForChild("Variant"))
 local CardData = require(script.Parent.CardData)
 local CardGrid = require(script.Parent.CardGrid)
@@ -55,13 +58,74 @@ local function header(content: Frame, profile: any)
 	PanelKit.line(content, string.format("OWNED %02d/%02d", index.owned, index.total), PanelKit.RIGHT, STATS_LINE, true)
 end
 
-local function cell(grid: ScrollingFrame, column: number, row: number, options: any)
+-- The fuse button under one of your own cards held up: what it would take, greyed out when it can't be done.
+-- Spending Chromatic or rarer copies takes a second press. The new card is held up once it's made.
+local function fuseAction(cardId: string, tier: string, refresh: () -> ()): any?
+	local snapshot = CardData.get()
+	if not snapshot then
+		return nil
+	end
+	local offer = Fusion.offer(snapshot.stacks, snapshot.credits, cardId, tier)
+	if not offer then
+		return nil
+	end
+	local into = CardLook.tierName(offer.nextTier)
+	if not offer.enough then
+		return { text = `FUSE {offer.have}/{offer.needed} INTO {into}`, disabled = true }
+	elseif not offer.affordable then
+		return { text = `FUSING NEEDS {offer.fee} CR`, disabled = true }
+	end
+	local function send(includeVariants: boolean, relabel: (any) -> ())
+		relabel({ text = "FUSING", disabled = true })
+		task.spawn(function()
+			local reply = CardData.ask("Fuse", {
+				cardId = cardId,
+				tier = tier,
+				useCatalyst = false,
+				includeVariants = includeVariants,
+			})
+			if reply.ok then
+				local made = reply.result
+				CardInspect.open({ cardId = made.cardId, tier = made.tier, variant = made.variant, count = 1 })
+				refresh()
+			else
+				relabel({ text = "COULD NOT FUSE", disabled = true })
+			end
+		end)
+	end
+	local text = `FUSE {offer.needed} INTO {into} - {offer.fee} CR`
+	if offer.spendsVariants then
+		return {
+			text = text,
+			run = function(relabel)
+				relabel({
+					text = "SPENDS VARIANTS - PRESS AGAIN",
+					run = function(again)
+						send(true, again)
+					end,
+				})
+			end,
+		}
+	end
+	return {
+		text = text,
+		run = function(relabel)
+			send(false, relabel)
+		end,
+	}
+end
+
+-- refresh, given only on your own profile, redraws it after a fusion and offers the fuse button.
+local function cell(grid: ScrollingFrame, column: number, row: number, options: any, refresh: (() -> ())?)
 	CardGrid.add(grid, column, row, options, function()
 		-- Held up, a card shows its lowest serial where the index showed how many you have.
 		local held = table.clone(options)
 		if held.lowest then
 			held.corner = nil
 			held.serial = held.lowest
+		end
+		if refresh and options.count > 0 then
+			held.action = fuseAction(options.cardId, options.tier, refresh)
 		end
 		CardInspect.open(held)
 	end)
@@ -74,7 +138,7 @@ local function zeroDayPreviews(grid: ScrollingFrame, cards: { any }, row: number
 	end
 end
 
-local function cardGrid(page: Frame, profile: any)
+local function cardGrid(page: Frame, profile: any, refresh: (() -> ())?)
 	local index = CardIndex.build(profile.stacks)
 	local tiers = #index.cards[1].tiers
 	local preview = RunService:IsStudio()
@@ -90,7 +154,7 @@ local function cardGrid(page: Frame, profile: any)
 				corner = if owned then `X{entry.count}` else nil,
 				lowest = profile.lowest and profile.lowest[`{card.cardId}:{entry.tier}:{entry.variant}`],
 				ghost = not owned,
-			})
+			}, refresh)
 		end
 	end
 	if preview then
@@ -121,7 +185,17 @@ function ProfilePanel.draw(content: Frame, profile: any, tab: string)
 	if tab == "COMMENTS" then
 		CommentsPanel.fill(page, profile, PAGE_TOP)
 	else
-		cardGrid(page, profile)
+		local own = profile.userId == Players.LocalPlayer.UserId
+		cardGrid(page, profile, if own
+			then function()
+				task.spawn(function()
+					local reply = CardData.ask("GetProfile", profile.userId)
+					if reply.ok and content.Parent then
+						ProfilePanel.draw(content, reply.result, "CARD INDEX")
+					end
+				end)
+			end
+			else nil)
 	end
 end
 
