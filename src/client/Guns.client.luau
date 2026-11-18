@@ -147,7 +147,7 @@ local function onFrame(dt: number)
 	camera.CFrame *= CFrame.Angles(pitch, yaw, 0)
 
 	-- Dead, or in the Outpost where guns are put away.
-	if not isAlive() or not Zones.allowsCombat(Zones.of(player)) then
+	if not isAlive() or not Zones.canFight(player) then
 		GunView.hide()
 		player:SetAttribute("AimFov", nil)
 		CardHand.putAway(CardInHand)

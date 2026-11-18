@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 
 local SpeedLimit = require(ReplicatedStorage:WaitForChild("Movement"):WaitForChild("SpeedLimit"))
 local MoveGrace = require(script.Parent.MoveGrace)
+local MatchHooks = require(script.Parent.MatchHooks)
 
 local SAMPLE_EVERY_SECONDS = 0.1
 local SPAWN_GRACE_SECONDS = 1 -- the root part may not be at the spawn yet
@@ -176,7 +177,14 @@ local function onFail(player: Player, guard: Guard, now: number)
 	local valid = track.lastValid
 	warn(`[MovementGuard] strike {track.strikes}/5 for {player.UserId}`)
 	guard.character:SetAttribute("MoveStrikes", track.strikes)
-	if removed then
+	if removed and player:GetAttribute("MatchId") then
+		-- In a match it costs the match, not the server (matches.md). The count starts over for the next one.
+		warn(`[MovementGuard] removed {player.UserId} from their match`)
+		track.strikes = 0
+		guard.character:SetAttribute("MoveStrikes", 0)
+		MatchHooks.cheat(player, "movement")
+		return
+	elseif removed then
 		warn(`[MovementGuard] removed {player.UserId}`)
 		guards[player] = nil -- the kick can take a moment to land
 		player:Kick("Removed for unusual movement.")
@@ -226,6 +234,15 @@ MoveGrace.allowed:Connect(function(player, seconds, velocity: Vector3)
 	guard.allowSpeed = math.max(if still then guard.allowSpeed else 0, Vector3.new(velocity.X, 0, velocity.Z).Magnitude)
 	guard.allowRise = math.max(if still then guard.allowRise else 0, math.max(velocity.Y, 0))
 	guard.allowUntil = math.max(guard.allowUntil, untilAt)
+end)
+
+-- Strikes count per match: a player joining one starts at none.
+MatchHooks.joined:Connect(function(player)
+	local guard = guards[player]
+	if guard then
+		guard.track.strikes = 0
+		guard.character:SetAttribute("MoveStrikes", 0)
+	end
 end)
 
 local function onPlayer(player: Player)

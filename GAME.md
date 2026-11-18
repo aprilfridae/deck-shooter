@@ -13,7 +13,7 @@ packs in a social hub to build that deck.
 
 ## Pillars
 1. Skill beats collection: a good player with a Field deck can beat a weaker one with a Prototype deck. Luck never affects combat.
-2. Feel first: movement, gun handling, animation and sound are judged by River in Play, and matches wait until those feel good.
+2. Feel first: movement, gun handling, animation and sound are judged by River in Play. Matches were parked for this until River asked on 2026-11-18 for the plan's next pieces; their feel still needs River's sign-off.
 3. The server decides everything that matters: hits, health, ammo, cards, Credits, packs, trades.
 4. Clean and readable (inferred): maps without clutter or z-fighting, a restrained six-colour palette, red only for threats and purchases.
 5. Rolling and opening are free; Robux buys convenience only (inferred from `packs.md`).
@@ -22,7 +22,7 @@ packs in a social hub to build that deck.
 - 30 seconds: move (sprint, slide, chain jump, wall jump, parry), shoot, use a card, get the kill, see the pop-ups and Credits land.
 - Session: fight in the test room or a 1v1 map, go back to the Outpost, roll and open packs, fuse and edit the deck, check the market.
 - Long term: cards earn Credits while you play; Credits buy rebirths; each rebirth raises luck; better pulls can be sold at auction for more Credits.
-- Not observed in Play this session. Matches (the intended main loop) are not built.
+- Matches: queue on the Play page, play Elimination rounds (first to 5) in a private arena copy, back to the Outpost. Built 2026-11-18, tested alone in Studio against stand-ins; not yet played by two people.
 
 ## Player and devices
 - Audience: not stated. Reference point is Black Ops style movement shooters (inferred).
@@ -53,7 +53,7 @@ Redacted, Zero-Day). Tier changes ability stats; variant only changes income. Ev
 - All of these are "starting numbers to tune".
 
 ## Combat numbers
-- Health 100, respawn 3s. Hip fire only, except the Longscope, which scopes.
+- Health 100, respawn 3s in free play; no respawn inside a match round. Hip fire only, except the Longscope, which scopes.
 - Classes players can pick: Assault (M57 + Energy Pistol) and Marksman (Longscope + Energy Pistol). Rusher (SMG), Breacher (Shotgun) and the B33 wait in the data.
 - Cards (10, set_01): Phase Dash, Overclock, Aegis Shell, Switchback, Kickplate, Siphon, and since 2026-11-17 Flashpoint (blinding flash), Bulwark (giant card wall), Split (running decoy) and Rewind (back 3s, some health back). Starter deck: Phase Dash, Overclock, Siphon. A Prototype is about twice a Field. No card does damage.
 - Movement: walk 15, sprint 18.5, slide start 31, speed limit 48 studs/s; gravity 75.
@@ -81,7 +81,9 @@ SoundService and Teams are empty.
 - Test room (two dummies): built.
 - Relay (1v1 map, two towers and a bridge): built as free play; latest pass not checked in Play.
 - Hex (box 1v1 map): built with a first art pass; art pass not checked in Play.
-- Matches (Elimination, Tower, 7 + 1 Tower arenas): planned, parked. `docs/specs/matches.md`.
+- Elimination matches (1v1 on a copy of Hex or Relay, 2v2 and 3v3 on Yard): built. `docs/specs/matches.md`.
+- Yard (Elimination arena for 2v2 and 3v3): grey blockout with teal and orange ends, only ever built as a match's own copy. `src/server/Outpost/Yard.luau`.
+- Tower 5v5 and its 7 + 1 arenas: planned, not built.
 - Guns: 3 in play (M57, Energy Pistol, Longscope); B33, SMG, Shotgun and three more pistols in data only.
 - Cards: 10. Recon Pulse and Arc Mine were removed. The four newest have no card art or sounds yet.
 
@@ -89,8 +91,9 @@ SoundService and Teams are empty.
 All UI is built in code by client scripts under `src/client/`; nothing is authored in StarterGui (inferred).
 - Title screen: `TitleScreen.client.luau` - built, approved.
 - Combat HUD, kill pop-ups, kill feed, hit markers: `Hud.client.luau`, `KillPopups.luau`, `KillFeed.client.luau` - built; feed seen with one player only.
+- Match HUD (score, clock, round banners, class pick between rounds, spectating a teammate, teammate outlines): `MatchHud.client.luau` - built; spectating and outlines not yet seen (they need two players).
 - Outpost nav and sliding panel: `OutpostMenu.client.luau`, `NavButton.luau`, `MenuPanel.luau`, `PanelKit.luau` - built, approved.
-- Pages: Play (`PlayPanel`, queues read `SOON`), Packs (`PacksPanel`), Loadout (`LoadoutPanel`), Profile with card index and comments (`ProfilePanel`, `CommentsPanel`), Market (`MarketPanel`, not seen in Play), Settings (`SettingsPanel`).
+- Pages: Play (`PlayPanel`, Elimination queues join and leave, Tower reads `SOON`), Packs (`PacksPanel`), Loadout (`LoadoutPanel`), Profile with card index and comments (`ProfilePanel`, `CommentsPanel`), Market (`MarketPanel`, not seen in Play), Settings (`SettingsPanel`).
 - Credits and rebirth line: `IncomeLine.luau`. Radio strip: `RadioHud.luau`.
 - Cards: face, inspect in 3D, in hand, pack reveal (`CardFace`, `CardInspect`, `CardInHand`, `PullStage`, `PullReveal`).
 
@@ -106,6 +109,7 @@ All UI is built in code by client scripts under `src/client/`; nothing is author
   - `MovementRemotes`: Pose, Look, WallJump, Cards.
   - `CardCoreRemotes`: Snapshot, PackEvent, MarketNews (events); RemoteFunctions Fuse, SetDeck, GetProfile, comments and settings calls, GetSnapshot, Roll, OpenPack, Rebirth, SetAutoRoll, ClaimFavorite, CheckGroup, OpenAll, BuyAutoOpen, ListCard, PlaceBid, CancelListing, BrowseAuctions, AuctionInfo, MySerials, MyAuctions.
   - `OutpostRemotes`: Travel.
+  - `MatchRemotes`: Queue (a queue id, or false to leave; a second `true` in Studio starts at once against stand-ins). Match state is attributes on `ReplicatedStorage.Matches.<id>`; queue counts are attributes on `ReplicatedStorage.MatchQueues`.
 - Config modules: `src/shared/CardCore/Config.luau` (cards, economy, packs), `src/shared/Guns/GunConfig.luau`, `src/shared/Movement/MoveConfig.luau`, `src/shared/Guns/KillRewards.luau`. Full table in `docs/README.md`.
 - Place: Fridae Studios group 237720778, universe 10774901448, place 70756985983915, private. `StreamingEnabled` off, first person locked, R15-shaped soldier rig.
 - Known constraints: the market list is one memory store map (about 64 KB + 1 KB per player online). Audio only plays in group-owned experiences.
@@ -117,7 +121,7 @@ All UI is built in code by client scripts under `src/client/`; nothing is author
 - DataStores end in `_v1`. Branches are `feature/<topic>`. Tests are `tests/<module>_spec.luau`, listed in `tests/run.luau`.
 
 ## Out of scope
-- For now: matches and matchmaking, gun upgrades, mobile and console controls, bots, offline rolling.
+- For now: cross-server matchmaking, match rewards, gun upgrades, mobile and console controls, bots outside Studio tests, offline rolling.
 - Never: committing `assets/`, place files or keys; touching `Marathon guns V3.blend`; green map lighting.
 
 ## Open questions
@@ -155,3 +159,6 @@ Older decisions are in the specs and git history. Only the ones a new agent must
 | 2026-11-18 | Kickplate's launch is checked against its own speed instead of pausing the movement guard; Siphon's client-side slow is accepted | The 3s pause let a cheat teleport anywhere (tested: now caught). Ignoring a slow gains nothing past the guard's normal limit, and scaling the limit would strike honest slowed dashes |
 | 2026-11-18 | Auto Open keeps opening behind the title screen, but its rare reveals only show in the Outpost with the menu up | Opening is idle progress and the cards reach the index; a card popping up over the title or in the test room was the problem |
 | 2026-11-18 | Siphon gets a jagged bolt and a drain tether; Kickplate punches its own card out of the surface with a ring, lines, sparks and dust | They were the last cards with placeholder effects. Flat neon like the HUD; the Kickplate light kept small and pale because pure acid washed rooms green |
+| 2026-11-18 | Matches un-parked: Elimination 1v1, 2v2 and 3v3 built as the spec describes, each match in its own copy of its arena far from free play | River: "Add in stuff from the overarching plan for the game". Matches are the plan's main loop; Tower comes after. Their feel still needs River in Play |
+| 2026-11-18 | In a match, 5 movement strikes remove you from the match instead of the server; teammates can't be shot | matches.md; match teams are real Roblox Teams |
+| 2026-11-18 | The Yard's lamps are white, not team-coloured | A teal lamp turned the whole half teal-green; the neon strips carry the side colours |

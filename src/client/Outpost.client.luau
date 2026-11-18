@@ -64,6 +64,20 @@ local HEX_LIGHTING = {
 	GlobalShadows = true,
 	ShadowSoftness = 0.7,
 }
+-- The Yard, the 2v2 and 3v3 match arena: a flat grey overcast noon, so a grey blockout reads plainly and the
+-- teal and orange ends are the only colour.
+local YARD_LIGHTING = {
+	Ambient = Color3.fromRGB(86, 84, 82),
+	OutdoorAmbient = Color3.fromRGB(146, 144, 140),
+	Brightness = 2,
+	ClockTime = 13,
+	-- Low, or the blue sky turns the grey walls teal.
+	EnvironmentDiffuseScale = 0.1,
+	EnvironmentSpecularScale = 0.2,
+	ExposureCompensation = 0,
+	GlobalShadows = true,
+	ShadowSoftness = 0.3,
+}
 -- Effects the Outpost and the Relay map replace while you're there.
 local REPLACED = {
 	Atmosphere = true,
@@ -142,7 +156,27 @@ local hexEffects = {
 	effect("BloomEffect", { Intensity = 1.1, Size = 32, Threshold = 1.1 }),
 }
 
+local yardEffects = {
+	effect("Atmosphere", {
+		Density = 0.35,
+		Offset = 0,
+		Color = Color3.fromRGB(198, 196, 192),
+		Decay = Color3.fromRGB(140, 138, 134),
+		Glare = 0,
+		Haze = 1,
+	}),
+	effect("Sky", { CelestialBodiesShown = false, StarCount = 0 }),
+	effect("ColorCorrectionEffect", {
+		Saturation = -0.1,
+		Contrast = 0.1,
+		Brightness = 0,
+		TintColor = Color3.fromRGB(240, 240, 244),
+	}),
+	effect("BloomEffect", { Intensity = 0.6, Size = 24, Threshold = 1.4 }),
+}
+
 local PROFILES = {
+	[Zones.Yard] = { lighting = YARD_LIGHTING, effects = yardEffects },
 	[Zones.Outpost] = { lighting = OUTPOST_LIGHTING, effects = outpostEffects },
 	[Zones.Relay] = { lighting = RELAY_LIGHTING, effects = relayEffects },
 	[Zones.Hex] = { lighting = HEX_LIGHTING, effects = hexEffects },

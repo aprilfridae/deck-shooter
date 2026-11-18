@@ -653,7 +653,7 @@ local function onUse(player: Player, raw: any, rawAim: any)
 	local index = Ability.parseSlot(raw)
 	local target = GunTargets.forPlayer(player)
 	local slots = slotsOf[player]
-	if not index or not target or not slots or not GunTargets.isAlive(target) or not Zones.allowsCombat(Zones.of(player)) then
+	if not index or not target or not slots or not GunTargets.isAlive(target) or not Zones.canFight(player) then
 		return
 	end
 	local now = workspace:GetServerTimeNow()

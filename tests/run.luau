@@ -79,6 +79,8 @@ local listed = {
 	pullmotion_spec = true,
 	pullparticles_spec = true,
 	killfx_spec = true,
+	matchrules_spec = true,
+	matchtext_spec = true,
 }
 
 require("./tier_spec")
@@ -156,6 +158,8 @@ require("./comments_spec")
 require("./zones_spec")
 require("./relay_spec")
 require("./flyby_spec")
+require("./matchrules_spec")
+require("./matchtext_spec")
 
 local missing = 0
 for _, name in fs.readDir("tests") do

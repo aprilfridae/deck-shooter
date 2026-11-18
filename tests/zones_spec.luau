@@ -44,6 +44,31 @@ describe("Zones", function()
 	end)
 end)
 
+describe("Zones.canFight", function()
+	local function frozenIn(zone: string, frozen: boolean?)
+		return {
+			GetAttribute = function(_, name: string)
+				if name == "Zone" then
+					return zone
+				end
+				return if name == "MatchFrozen" then frozen else nil
+			end,
+		}
+	end
+
+	it("allows fighting in a combat zone, including a match's Yard", function()
+		expect(Zones.canFight(frozenIn("Hex"))).toBe(true)
+		expect(Zones.canFight(frozenIn("Yard"))).toBe(true)
+		expect(Zones.canFight(frozenIn("Outpost"))).toBe(false)
+	end)
+
+	it("holds fighting off during a round's countdown", function()
+		expect(Zones.canFight(frozenIn("Yard", true))).toBe(false)
+		expect(Zones.combatZone(frozenIn("Yard", true))).toBe(Zones.Outpost)
+		expect(Zones.combatZone(frozenIn("Yard", false))).toBe(Zones.Yard)
+	end)
+end)
+
 describe("Zones.autoRotates", function()
 	it("turns the body with movement only in the Outpost", function()
 		expect(Zones.autoRotates(Zones.Outpost)).toBe(true)
