@@ -81,6 +81,7 @@ local listed = {
 	killfx_spec = true,
 	matchrules_spec = true,
 	matchtext_spec = true,
+	towerrules_spec = true,
 }
 
 require("./tier_spec")
@@ -160,6 +161,7 @@ require("./relay_spec")
 require("./flyby_spec")
 require("./matchrules_spec")
 require("./matchtext_spec")
+require("./towerrules_spec")
 
 local missing = 0
 for _, name in fs.readDir("tests") do
