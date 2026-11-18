@@ -165,6 +165,6 @@ Details in `docs/specs/cards.md`. River tried the cards in Play and said they wo
 - Switchback, Kickplate and Siphon were added, Recon Pulse was removed, and Prototype is now about twice Field.
 - Aimed cards send the camera's look direction with `Use`. The server works out the hit itself (`CardCore/CardAim.luau`, `AbilityServer.server.luau`).
 - Pressing the key of the card already in hand uses it. Only a weapon key or another card's key puts a card away.
-- **Open from the review:** the nav rebuilds on every frame of a window resize. Since 2026-11-18 Kickplate no longer pauses the movement guard; it allows the launch's speed instead (`movement.md`). Siphon's client-side slow is accepted, with the reason in `movement.md`.
+- **From the review, all settled on 2026-11-18:** the nav and open page now rebuild once a resize has held still for 0.2s, not every frame (not tried with a real window drag; Studio's tools can't resize the view). Since 2026-11-18 Kickplate no longer pauses the movement guard; it allows the launch's speed instead (`movement.md`). Siphon's client-side slow is accepted, with the reason in `movement.md`.
 - Siphon and Kickplate have proper effects since 2026-11-18 (`AimedCardFx.luau`, described in `cards.md`), checked frame by frame in Studio and in Play against the dummy, not yet with two players. Still no sounds or arm animations.
 
