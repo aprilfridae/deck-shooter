@@ -37,6 +37,12 @@ describe("MatchText", function()
 		expect(MatchText.banner(state("Over", { winner = 0 }))).toBe("MATCH OVER")
 	end)
 
+	it("tells the winners about their Catalyst at the end", function()
+		expect(MatchText.line(state("Over", { winner = 1, catalysts = 1 }))).toBe("+1 CATALYST")
+		expect(MatchText.line(state("Over", { winner = 2, catalysts = 1 }))).toBe("BACK TO THE OUTPOST")
+		expect(MatchText.line(state("Over", { winner = 1, catalysts = 0 }))).toBe("BACK TO THE OUTPOST")
+	end)
+
 	it("names the round while it's on", function()
 		expect(MatchText.line(state("Playing"))).toBe("ROUND 3")
 	end)

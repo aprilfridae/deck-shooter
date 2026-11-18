@@ -335,6 +335,7 @@ RunService.RenderStepped:Connect(function()
 		winner = state:GetAttribute("Winner"),
 		mine = mine,
 		left = left,
+		catalysts = state:GetAttribute("Catalysts"),
 	}
 
 	local width = size().X

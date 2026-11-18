@@ -75,17 +75,19 @@ export type Offer = {
 	enough: boolean, -- copies
 	affordable: boolean,
 	spendsVariants: boolean, -- there aren't enough Base copies, so variants would go too
+	catalyst: boolean, -- a Catalyst would be spent, saving a copy
 }
 
--- What fusing this card and tier would take, for the button that offers it, or nil at the top tier.
--- Catalysts aren't offered: nothing gives them yet.
-function Fusion.offer(stacks: { [string]: number }, credits: number, cardId: string, tier: string): Offer?
+-- What fusing this card and tier would take, for the button that offers it, or nil at the top tier. A Catalyst
+-- is used whenever there is one (catalysts is how many the player has), since it only ever saves a copy.
+function Fusion.offer(stacks: { [string]: number }, credits: number, cardId: string, tier: string, catalysts: number?): Offer?
 	local nextTier = Tier.next(tier)
 	if not nextTier or not Cards.isValid(cardId) then
 		return nil
 	end
 	local data = { stacks = stacks }
-	local needed = Config.CopiesToFuse
+	local catalyst = (catalysts or 0) >= 1
+	local needed = if catalyst then Config.CatalystCopies else Config.CopiesToFuse
 	local fee = Config.FusionFee[tier]
 	local have = Inventory.count(data, cardId, tier)
 	return {
@@ -96,6 +98,7 @@ function Fusion.offer(stacks: { [string]: number }, credits: number, cardId: str
 		enough = have >= needed,
 		affordable = credits >= fee,
 		spendsVariants = Inventory.count(data, cardId, tier, Variant.Base) < needed,
+		catalyst = catalyst,
 	}
 end
 

@@ -15,6 +15,7 @@ export type State = {
 	winner: number?, -- 0 when the match ended with nobody left
 	mine: number, -- the player's team
 	left: number, -- seconds left in the phase
+	catalysts: number?, -- each winner's Catalysts for the match
 }
 
 -- The big word in the middle of the screen, or "" for none.
@@ -44,6 +45,10 @@ function MatchText.line(state: State): string
 	elseif phase == "Between" then
 		return if state.roundWinner == 0 then "NOBODY SCORES. THE ROUND IS REPLAYED" else "NEXT ROUND SOON"
 	elseif phase == "Over" then
+		local won = state.winner ~= nil and state.winner == state.mine
+		if won and (state.catalysts or 0) > 0 then
+			return if state.catalysts == 1 then "+1 CATALYST" else `+{state.catalysts} CATALYSTS`
+		end
 		return "BACK TO THE OUTPOST"
 	end
 	return ""

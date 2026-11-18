@@ -85,6 +85,16 @@ function MatchRules.matchWinner(rules: ModeRules, wins: { number }, scored: numb
 	return nil
 end
 
+-- Catalysts each winner gets for a match. Only a match won on rounds pays: a forfeit could be farmed by a friend
+-- leaving at once, and a Studio test against stand-ins isn't a match.
+MatchRules.CATALYSTS_PER_WIN = 1
+function MatchRules.catalystsFor(rules: ModeRules, wins: { number }, winner: number?, withStandIns: boolean): number
+	if not winner or winner == 0 or withStandIns or wins[winner] < rules.winsNeeded then
+		return 0
+	end
+	return MatchRules.CATALYSTS_PER_WIN
+end
+
 -- Splits queued players into two teams of `size`, first come first served, alternating so friends who joined
 -- together aren't all stacked on one side. Returns nil until there are enough.
 function MatchRules.split<T>(waiting: { T }, size: number): ({ T }?, { T }?)

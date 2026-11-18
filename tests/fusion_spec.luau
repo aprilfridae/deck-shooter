@@ -236,4 +236,26 @@ describe("Fusion.offer", function()
 		expect(o.enough and o.affordable and not o.spendsVariants).toBe(true)
 		expect((Fusion.fuse(data, req("bulwark", "Field"), base))).toBe(true)
 	end)
+
+	it("uses a Catalyst when there is one, so 4 copies are enough", function()
+		local o = Fusion.offer(stacks({ { "siphon", "Field", "Base", 4 } }), 100, "siphon", "Field", 2) :: any
+		expect(o.catalyst).toBe(true)
+		expect(o.needed).toBe(4)
+		expect(o.enough).toBe(true)
+		local without = Fusion.offer(stacks({ { "siphon", "Field", "Base", 4 } }), 100, "siphon", "Field", 0) :: any
+		expect(without.catalyst).toBe(false)
+		expect(without.needed).toBe(5)
+		expect(without.enough).toBe(false)
+	end)
+
+	it("agrees with fuse when a Catalyst is offered", function()
+		local data = SaveData.new()
+		Inventory.add(data, "bulwark", "Field", "Base", 4)
+		data.credits = 100
+		data.catalysts = 1
+		local o = Fusion.offer(data.stacks, data.credits, "bulwark", "Field", data.catalysts) :: any
+		expect(o.enough and o.affordable and o.catalyst).toBe(true)
+		expect((Fusion.fuse(data, req("bulwark", "Field", { useCatalyst = o.catalyst }), base))).toBe(true)
+		expect(data.catalysts).toBe(0)
+	end)
 end)
