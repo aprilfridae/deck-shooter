@@ -11,7 +11,10 @@ local CardHand = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild
 local Zones = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Zones"))
 local CardInHand = require(script.Parent.CardInHand)
 local CardThrowFx = require(script.Parent.CardThrowFx)
+local FlashFx = require(script.Parent.FlashFx)
 local Input = require(script.Parent.Input)
+local RewindFx = require(script.Parent.RewindFx)
+local SplitFx = require(script.Parent.SplitFx)
 
 local remotes = ReplicatedStorage:WaitForChild("AbilityRemotes")
 local useRemote = remotes:WaitForChild("Use") :: RemoteEvent
@@ -64,6 +67,31 @@ fxRemote.OnClientEvent:Connect(function(kind: any, from: any, to: any, hit: any,
 			CardThrowFx.throw(from, to, hit == true, tier)
 		end
 		return
+	elseif kind == "flash" then
+		if thrower == player.UserId then
+			FlashFx.report(to, tier)
+		else
+			FlashFx.throw(from, to, tier)
+		end
+		return
+	elseif kind == "blind" then
+		if type(tier) == "number" and tier > 0 then
+			FlashFx.blind(from, math.min(tier, 5))
+		end
+		return
+	elseif kind == "decoy" then
+		if thrower == player.UserId then
+			SplitFx.report(to, tier)
+		else
+			SplitFx.throw(from, to, tier)
+		end
+		return
+	elseif kind == "rewind" then
+		local who = if type(thrower) == "number" then Players:GetPlayerByUserId(thrower) else nil
+		RewindFx.trail(from, to, who and who.Character, who == player)
+		return
+	elseif kind == "vanish" then
+		return -- KillDerez glitches the double away
 	end
 	local color = FX_COLORS[kind]
 	if not color then

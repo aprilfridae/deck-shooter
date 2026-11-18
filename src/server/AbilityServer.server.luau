@@ -12,6 +12,9 @@ local Config = require(CardCore:WaitForChild("Config"))
 local Deck = require(CardCore:WaitForChild("Deck"))
 local Tier = require(CardCore:WaitForChild("Tier"))
 local Zones = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Zones"))
+local CardFlourish = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("CardFlourish"))
+local CardWalls = require(script.Parent.CardWalls)
+local Decoys = require(script.Parent.Decoys)
 local GunTargets = require(script.Parent.GunTargets)
 local loadouts = require(script.Parent.Loadouts)
 local MoveGrace = require(script.Parent.MoveGrace)
@@ -20,10 +23,12 @@ local PlayerCards = require(script.Parent.PlayerCards)
 local SHIELD_SIZE = 8
 local SHIELD_COLOR = Palette.DataCyan
 
--- Test room only: two decks cover all 6 cards. Phase 4 removes these.
+-- Test room only: these decks cover all 10 cards. Phase 4 removes them.
 local TEST_DECKS = {
 	{ "switchback", "kickplate", "siphon" },
 	{ "aegis_shell", "phase_dash", "overclock" },
+	{ "flashpoint", "bulwark", "split" },
+	{ "rewind", "flashpoint", "bulwark" },
 }
 local EYE = Vector3.new(0, 1.5, 0) -- from a body's middle up to its eyes
 local USE_GAP = 0.1 -- seconds: the least time between one player's card uses
@@ -52,12 +57,13 @@ local testChoices: { [Player]: { deck: number, tier: number } } = {}
 -- comes back sooner), and anything else if it worked. `aim` is the unit direction the player was looking.
 local handlers: { [string]: (Player, GunTargets.Target, Ability.Slot, CardAim.Point?) -> any } = {}
 
--- With no teams, everyone else is an enemy.
+-- With no teams, everyone else is an enemy. A double counts as the player whose double it is.
 local function isEnemy(owner: Player, target: GunTargets.Target): boolean
-	if target.player == owner then
+	local whose = target.player or target.owner
+	if whose == owner then
 		return false
 	end
-	return not (owner.Team and target.player and target.player.Team == owner.Team)
+	return not (owner.Team and whose and whose.Team == owner.Team)
 end
 
 -- Runs finish(true) after the time, or finish(false) if the player's cards reset first.
@@ -397,6 +403,238 @@ handlers.aegis_shell = function(player, target, slot)
 	return true
 end
 
+-- The way someone is looking, flat on the ground. Their body's facing if they look straight up or down.
+local function flatWay(target: GunTargets.Target, aim: CardAim.Point): Vector3
+	local flat = Vector3.new(aim.x, 0, aim.z)
+	if flat.Magnitude < 0.05 then
+		flat = Vector3.new(target.root.CFrame.LookVector.X, 0, target.root.CFrame.LookVector.Z)
+	end
+	return if flat.Magnitude > 0.01 then flat.Unit else Vector3.zAxis
+end
+
+-- Rays that only walls stop: no body blocks them.
+local function wallsOnly(): RaycastParams
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local bodies = {}
+	for model in GunTargets.all() do
+		table.insert(bodies, model)
+	end
+	params.FilterDescendantsInstances = bodies
+	params.RespectCanCollide = true
+	return params
+end
+
+-- Flashpoint: the card is flicked the way you look, and bursts where it meets something or runs out. Every enemy
+-- who could see the burst is told how long they're blind for at most; their own client takes off for the way they
+-- were facing (CardAim.flashFacing), since only it knows that to the frame. A cheat could ignore the flash, but it
+-- couldn't gain anything else.
+handlers.flashpoint = function(player, target, slot, aim)
+	if not aim then
+		return false
+	end
+	local from = eye(target)
+	local way = asVector(aim)
+	local stop = workspace:Raycast(from, way * Config.FlashRange, without(target.model))
+	-- It bursts just off what it hit, so the light isn't inside a wall.
+	local burst = if stop then stop.Position + stop.Normal * 0.75 else from + way * Config.FlashRange
+	local hand = target.root.Position
+	local seconds = Cards.stat(slot.cardId, slot.tier, "blind")
+	fxRemote:FireAllClients("flash", hand, burst, false, slot.tier, player.UserId)
+	local flight = CardAim.flashFlight((burst - hand).Magnitude, Config.FlashSpeed, Config.FlashLeast)
+	task.delay(CardFlourish.FLICK_RELEASE + flight, function()
+		local params = wallsOnly()
+		for _, other in GunTargets.all() do
+			if other.player and isEnemy(player, other) and GunTargets.isAlive(other) then
+				local at = eye(other)
+				local reach = CardAim.flashReach((at - burst).Magnitude, Config.FlashRadius, Config.FlashFullWithin, Config.FlashEdge)
+				if reach > 0 and not workspace:Raycast(burst, at - burst, params) then
+					fxRemote:FireClient(other.player, "blind", burst, burst, false, seconds * reach)
+				end
+			end
+		end
+	end)
+	return true
+end
+
+-- Where a Bulwark stands: on the ground you aim at, if that's in reach and flat enough to stand on, or else on the
+-- ground in front of you. Its face looks the way you do. nil if there's no ground for it.
+local function wallSpot(target: GunTargets.Target, aim: CardAim.Point): CFrame?
+	local params = without(target.model)
+	local way = flatWay(target, aim)
+	local hit = workspace:Raycast(eye(target), asVector(aim) * Config.WallReach, params)
+	local spot: Vector3? = nil
+	if hit and hit.Normal.Y >= 0.7 then
+		spot = hit.Position
+		for model in GunTargets.all() do
+			if hit.Instance:IsDescendantOf(model) then
+				spot = nil -- a body isn't ground
+				break
+			end
+		end
+	end
+	if not spot then
+		local ahead = target.root.Position + way * Config.WallAhead
+		-- Not through a wall in front of you.
+		if workspace:Raycast(target.root.Position, ahead - target.root.Position, params) then
+			return nil
+		end
+		local down = workspace:Raycast(ahead, Vector3.new(0, -12, 0), params)
+		if not down or down.Normal.Y < 0.7 then
+			return nil
+		end
+		spot = down.Position
+	end
+	local at = spot :: Vector3
+	return CFrame.lookAt(at, at + way)
+end
+
+-- Bulwark: a giant card stands up where the card was slapped down, when the hand lands (CardFlourish.SLAM_HIT).
+-- Nothing happens if there's no ground for it, and the card isn't spent.
+handlers.bulwark = function(player, target, slot, aim)
+	if not aim then
+		return false
+	end
+	local spot = wallSpot(target, aim)
+	if not spot then
+		return false
+	end
+	local hp = Cards.stat(slot.cardId, slot.tier, "wallHp")
+	local seconds = Cards.stat(slot.cardId, slot.tier, "duration")
+	local size = Vector3.new(Config.WallWidth, Config.WallHeight, Config.WallThick)
+	local wall: BasePart? = nil
+	local stop = timed(player, CardFlourish.SLAM_HIT + seconds, function()
+		if wall then
+			CardWalls.remove(wall)
+			wall = nil
+		end
+	end)
+	task.delay(CardFlourish.SLAM_HIT, function()
+		local running = effectsOf[player]
+		if not running or not running[stop] then
+			return -- the player died or their cards reset before it landed
+		end
+		wall = CardWalls.place(spot, size, hp, slot.tier, player, function()
+			stop(true)
+		end)
+	end)
+	return true
+end
+
+-- Split: the copy card drops in front of you and your double stands up there, then sprints the way you looked.
+handlers.split = function(player, target, slot, aim)
+	if not aim then
+		return false
+	end
+	local way = flatWay(target, aim)
+	local start = target.root.Position
+	local land = start + way * Config.DecoyAhead
+	if workspace:Raycast(start, land - start, without(target.model)) then
+		land = start -- something's in the way: it stands up where you are
+	end
+	local hand = target.root.Position
+	fxRemote:FireAllClients("decoy", hand, land, false, slot.tier, player.UserId)
+	local seconds = Cards.stat(slot.cardId, slot.tier, "duration")
+	local gunId = player:GetAttribute("GunId")
+	local double: GunTargets.Target? = nil
+	local stop = timed(player, CardFlourish.SPLIT_RELEASE + Config.DecoyFall + seconds, function()
+		if double then
+			Decoys.vanish(double)
+		end
+	end)
+	task.delay(CardFlourish.SPLIT_RELEASE + Config.DecoyFall, function()
+		local running = effectsOf[player]
+		if not running or not running[stop] or not GunTargets.isAlive(target) then
+			return
+		end
+		double = Decoys.spawn(
+			player,
+			target.model,
+			CFrame.lookAt(land, land + way),
+			if type(gunId) == "string" then gunId else nil,
+			Config.DecoyHealth,
+			function(model)
+				fxRemote:FireAllClients("vanish", model:GetPivot().Position, model:GetPivot().Position, false, slot.tier, player.UserId, model)
+			end,
+			Config.DecoyVanish
+		)
+	end)
+	return true
+end
+
+-- Where each player has been lately, for Rewind: their root and health every PATH_EVERY seconds, oldest first.
+local PATH_EVERY = 0.1
+type PathPoint = { at: number, position: Vector3, health: number, zone: string }
+local paths: { [Player]: { PathPoint } } = {}
+
+-- Rewind: you snap back to where you were RewindSeconds ago (only within the zone you're in now), facing the way
+-- you face now, at the hand's snap (CardFlourish.REWIND_SNAP), and get back the health you've lost since, up to
+-- the card's heal. Not spent if there isn't enough path yet.
+handlers.rewind = function(player, target, slot)
+	local path = paths[player]
+	if not path then
+		return false
+	end
+	local zone = Zones.of(player)
+	local same = {}
+	for _, point in path do
+		if point.zone == zone then
+			table.insert(same, point)
+		end
+	end
+	local now = workspace:GetServerTimeNow()
+	local index = CardAim.rewindPoint(same, now, Config.RewindSeconds, Config.RewindLeast)
+	if not index then
+		return false
+	end
+	local back = same[index]
+	-- Standing still with nothing lost, there is nowhere to go back to: the card isn't spent on nothing.
+	local moved = (back.position - target.root.Position).Magnitude >= Config.RewindLeastDistance
+	if not moved and back.health <= target.health then
+		return false
+	end
+	local heal = Cards.stat(slot.cardId, slot.tier, "heal")
+	task.delay(CardFlourish.REWIND_SNAP, function()
+		if not GunTargets.isAlive(target) or Zones.of(player) ~= zone then
+			return
+		end
+		local from = target.root.Position
+		MoveGrace.give(player, Config.RewindGraceSeconds)
+		target.root.CFrame = target.root.CFrame.Rotation + back.position
+		target.root.AssemblyLinearVelocity = Vector3.zero
+		local lost = back.health - target.health
+		if lost > 0 then
+			local health = math.min(target.health + math.min(lost, heal), target.humanoid.MaxHealth)
+			target.health = health
+			target.humanoid.Health = health
+			target.model:SetAttribute("Health", health)
+		end
+		fxRemote:FireAllClients("rewind", from, back.position, false, slot.tier, player.UserId)
+	end)
+	return true
+end
+
+local pathWaited = 0
+RunService.Heartbeat:Connect(function(dt)
+	pathWaited += dt
+	if pathWaited < PATH_EVERY then
+		return
+	end
+	pathWaited = 0
+	local now = workspace:GetServerTimeNow()
+	for _, player in Players:GetPlayers() do
+		local target = GunTargets.forPlayer(player)
+		if target and GunTargets.isAlive(target) then
+			local path = paths[player] or {}
+			paths[player] = path
+			table.insert(path, { at = now, position = target.root.Position, health = target.health, zone = Zones.of(player) })
+			while path[1] and now - path[1].at > Config.RewindSeconds + 1 do
+				table.remove(path, 1)
+			end
+		end
+	end
+end)
+
 local lastUse: { [Player]: number } = {}
 
 local function onUse(player: Player, raw: any, rawAim: any)
@@ -448,6 +686,7 @@ end
 -- Effects end at death, not at the next spawn, so they can't outlive the player.
 local function onCharacter(player: Player, character: Model)
 	resetCards(player)
+	paths[player] = nil -- Rewind never takes you back into your last life
 	-- A new life starts at full speed, whoever had slowed the last one.
 	slows[player] = nil
 	publishSpeed(player)
@@ -485,4 +724,5 @@ Players.PlayerRemoving:Connect(function(player)
 	slows[player] = nil
 	slotsOf[player] = nil
 	testChoices[player] = nil
+	paths[player] = nil
 end)

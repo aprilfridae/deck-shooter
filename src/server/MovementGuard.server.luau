@@ -104,9 +104,13 @@ cardsRemote.Name = "Cards"
 cardsRemote.Parent = remotes
 local MAX_CARDS_PER_SECOND = 15
 local cardsWindows: { [Player]: { startedAt: number, count: number } } = {}
-cardsRemote.OnServerEvent:Connect(function(player, out, turns, used)
+cardsRemote.OnServerEvent:Connect(function(player, out, turns, used, usedId)
 	if type(out) ~= "boolean" or type(turns) ~= "number" or type(used) ~= "number" or turns ~= turns or used ~= used then
 		return
+	end
+	-- Which card the last one used was, for the move other players see. Only for show; empty if it's anything odd.
+	if type(usedId) ~= "string" or #usedId > 32 or not string.match(usedId, "^[%w_]*$") then
+		usedId = ""
 	end
 	local now = os.clock()
 	local window = cardsWindows[player]
@@ -121,6 +125,7 @@ cardsRemote.OnServerEvent:Connect(function(player, out, turns, used)
 	player.Character:SetAttribute("CardsOut", out)
 	player.Character:SetAttribute("CardTurns", math.clamp(math.floor(turns), 0, 1e6))
 	player.Character:SetAttribute("CardUsed", math.clamp(math.floor(used), 0, 1e6))
+	player.Character:SetAttribute("CardUsedId", usedId)
 end)
 Players.PlayerRemoving:Connect(function(player)
 	cardsWindows[player] = nil

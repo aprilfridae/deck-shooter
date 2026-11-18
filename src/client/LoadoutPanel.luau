@@ -78,7 +78,7 @@ local function chooser(content: Frame, snapshot: any, slot: number)
 	end)
 
 	local index = CardIndex.build(snapshot.stacks)
-	local grid = CardGrid.new(content, CHOOSER_TOP, #index.cards[1].tiers)
+	local grid = CardGrid.new(content, CHOOSER_TOP, #index.cards[1].tiers, #index.cards)
 	for column, card in index.cards do
 		for row, entry in card.tiers do
 			local choice = CardIndex.choice(snapshot.deck, slot, card.cardId, entry.tier, entry.count)

@@ -534,8 +534,11 @@ local function sampleStance(body: Body, now: number)
 		if cards and not out then
 			if not cards.crushAt and used ~= cards.used then
 				cards.crushAt = now
+				-- The card used picks the move: a crush, Switchback's throw, Flashpoint's flick and so on.
+				local id = hand:GetAttribute("CardUsedId")
+				cards.usedId = if type(id) == "string" and id ~= "" then id else nil
 			end
-			if not cards.crushAt or now - cards.crushAt >= CardFlourish.CRUSH then
+			if not cards.crushAt or now - cards.crushAt >= CardFlourish.useLength(cards.usedId) then
 				cards = nil
 			end
 		end
@@ -555,7 +558,7 @@ local function sampleStance(body: Body, now: number)
 					elapsed = CardFlourish.LENGTH
 				end
 			end
-			local crush = if cards.crushAt then CardFlourish.crush(elapsed, now - cards.crushAt, cards.turns) else nil
+			local crush = if cards.crushAt then CardFlourish.use(cards.usedId, elapsed, now - cards.crushAt, cards.turns) else nil
 			local pose = if crush
 				then crush.pose
 				elseif cards.turns > 0 then CardFlourish.turn(cards.turns, now - cards.turnAt)
@@ -563,7 +566,15 @@ local function sampleStance(body: Body, now: number)
 			pose = CardFlourish.sway(pose, cards.life + now)
 			-- The card that shows its face: the one flipped up at the flourish's end, or turned to since.
 			local faceUp = if cards.turns > 0 or elapsed >= CardFlourish.LENGTH - 0.3 or crush then CardFlourish.top(cards.turns) else nil
-			body.cardPose = { pose = pose, faceUp = faceUp, gone = if crush then crush.crushed else nil, since = now - cards.at }
+			body.cardPose = {
+				pose = pose,
+				faceUp = faceUp,
+				gone = if crush then crush.crushed else nil,
+				since = now - cards.at,
+				-- Split's copy shows the card's face too, until it has left the hand.
+				copy = if crush and crush.copy then crush.copy else nil,
+				copyGone = crush ~= nil and crush.copyGone == true,
+			}
 		end
 	end
 
@@ -1316,7 +1327,7 @@ RunService.PreRender:Connect(function()
 				SlideSparks.hide(character)
 			end
 			if visible and cards and deckView then
-				BodyCards.show(character, deckView, cards.pose.cards, cards.faceUp, cards.gone)
+				BodyCards.show(character, deckView, cards.pose.cards, cards.faceUp, cards.gone, cards.copy, cards.copyGone)
 			else
 				BodyCards.hide(character)
 			end

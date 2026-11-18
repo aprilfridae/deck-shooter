@@ -61,6 +61,47 @@ local Cards = {
 			cooldown = 18,
 			stats = { speedSteal = { 0.15, 0.22, 0.3 }, duration = { 3, 4.5, 6 } },
 		},
+		-- The second wave (2026-11-17). None of them does damage.
+		-- A card flicked spinning across the room that bursts in a white flash where it lands. Enemies who can see
+		-- the burst are blinded for up to `blind` seconds, less the further off they are and the more they had
+		-- their back to it.
+		flashpoint = {
+			id = "flashpoint",
+			name = "Flashpoint",
+			category = "debuff",
+			set = "set_01",
+			stats = { blind = { 1.4, 2, 2.6 }, cooldown = { 20, 17, 14 } },
+			lowerIsBetter = { cooldown = true },
+		},
+		-- The card slapped down on the ground ahead stands up as a giant card: cover that stops bullets, cards and
+		-- bodies until it is shot down or runs out.
+		bulwark = {
+			id = "bulwark",
+			name = "Bulwark",
+			category = "defense",
+			set = "set_01",
+			cooldown = 24,
+			stats = { wallHp = { 150, 225, 300 }, duration = { 6, 8, 10 } },
+		},
+		-- A copy of you that sprints off the way you look, holding your gun. It can be shot, and glitches away
+		-- when it is shot down or its time is up.
+		split = {
+			id = "split",
+			name = "Split",
+			category = "deception",
+			set = "set_01",
+			stats = { duration = { 3, 4.5, 6 }, cooldown = { 22, 19, 15 } },
+			lowerIsBetter = { cooldown = true },
+		},
+		-- Snaps you back to where you were a few seconds ago, and gives back health lost since, up to `heal`.
+		rewind = {
+			id = "rewind",
+			name = "Rewind",
+			category = "mobility",
+			set = "set_01",
+			stats = { heal = { 20, 30, 40 }, cooldown = { 24, 20, 16 } },
+			lowerIsBetter = { cooldown = true },
+		},
 	} :: { [string]: any },
 	ids = {} :: { string },
 	sets = {} :: { [string]: { string } },

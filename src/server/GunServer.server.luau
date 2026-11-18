@@ -15,6 +15,8 @@ local Collision = require(Guns:WaitForChild("Collision"))
 local KillRewards = require(Guns:WaitForChild("KillRewards"))
 local Requests = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Requests"))
 local CardConfig = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Config"))
+local CardWalls = require(script.Parent.CardWalls)
+local Decoys = require(script.Parent.Decoys)
 local GunTargets = require(script.Parent.GunTargets)
 local loadouts = require(script.Parent.Loadouts)
 local PlayerCards = require(script.Parent.PlayerCards)
@@ -216,6 +218,7 @@ local function onFire(player: Player, raw: any)
 			end
 			if wall then
 				table.insert(impacts, { position = wall.Position, normal = wall.Normal })
+				CardWalls.struck(wall.Instance, Damage.hit(gun, wall.Distance, false))
 			end
 			table.insert(shots, { to = origin + line * reach, direction = line })
 		else
@@ -226,6 +229,7 @@ local function onFire(player: Player, raw: any)
 				headshot = headshot or isHead
 			elseif wall then
 				table.insert(impacts, { position = wall.Position, normal = wall.Normal })
+				CardWalls.struck(wall.Instance, Damage.hit(gun, wall.Distance, false)) -- a Bulwark takes the hit
 			end
 			-- A shot magnetism pulled in ends on the body, and the tracer bends onto it (pulled).
 			local pull = if first then first.pull else nil
@@ -252,7 +256,12 @@ local function onFire(player: Player, raw: any)
 		if amount > 0 then
 			local fullHealth = target.shield == nil and target.health >= target.humanoid.MaxHealth
 			local killed = if collaterals[target] then GunTargets.kill(target) else GunTargets.damage(target, amount)
-			if killed then
+			if killed and Decoys.isDecoy(target) then
+				-- A Split double: it glitches away. No coins, no feed, nothing paid, and the shooter hears a hit, not
+				-- a kill, so they find out it was never anyone.
+				Decoys.vanish(target)
+				killed = false
+			elseif killed then
 				local hit = struck[target]
 				-- The killer, who the coins fly to; the body, which clients scan away; and whether it was a headshot,
 				-- which pops the head first (KillDerez).

@@ -23,8 +23,6 @@ local STATS_GAP = 0.13
 local TABS_TOP = 0.13
 local TABS_HEIGHT = 0.03
 local TABS_GAP = 0.008
-local COUNT_SIZE = 0.04
-local COUNT_LINE = 0.215
 local GRID_TOP = 0.176
 local PAGE_TOP = 0.172
 
@@ -52,6 +50,9 @@ local function header(content: Frame, profile: any)
 	end
 	PanelKit.line(content, `CREDITS {profile.credits}`, INFO_LEFT, STATS_LINE)
 	PanelKit.line(content, `DPR {profile.dpr}`, INFO_LEFT + STATS_GAP, STATS_LINE)
+	-- In the header, not over the grid: the grid's sixth column fills the panel's right edge.
+	local index = CardIndex.build(profile.stacks)
+	PanelKit.line(content, string.format("OWNED %02d/%02d", index.owned, index.total), PanelKit.RIGHT, STATS_LINE, true)
 end
 
 local function cell(grid: ScrollingFrame, column: number, row: number, options: any)
@@ -74,14 +75,10 @@ local function zeroDayPreviews(grid: ScrollingFrame, cards: { any }, row: number
 end
 
 local function cardGrid(page: Frame, profile: any)
-	local RIGHT = PanelKit.RIGHT
 	local index = CardIndex.build(profile.stacks)
-	PanelKit.label(page, "Title", COUNT_SIZE, RIGHT, COUNT_LINE, true)
-		:set(string.format("%02d/%02d", index.owned, index.total))
-	PanelKit.label(page, "LabelBold", PanelKit.SMALL_SIZE, RIGHT, COUNT_LINE + 0.016, true):set("OWNED")
 	local tiers = #index.cards[1].tiers
 	local preview = RunService:IsStudio()
-	local grid = CardGrid.new(page, GRID_TOP, if preview then tiers + 1 else tiers)
+	local grid = CardGrid.new(page, GRID_TOP, if preview then tiers + 1 else tiers, #index.cards)
 	for column, card in index.cards do
 		for row, entry in card.tiers do
 			local owned = entry.count > 0

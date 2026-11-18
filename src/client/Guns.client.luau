@@ -185,12 +185,16 @@ local function onFrame(dt: number)
 
 	local pressed = keys.fire and not previous.fire
 	-- A click a moment before the gun is ready isn't lost: it fires as soon as it can. Without this a
-	-- single-shot gun eats every click that comes early, and feels like it only fires when it wants to.
-	if pressed then
+	-- single-shot gun eats every click that comes early, and feels like it only fires when it wants to. A click
+	-- that used a card is the card's, though: it is forgotten, or the gun fired it the moment it came back.
+	local blocked = CardHand.blocksFire(CardInHand, keys.fire)
+	if blocked then
+		firePressedAt = -math.huge
+	elseif pressed then
 		firePressedAt = now
 	end
 	local wanted = pressed or now - firePressedAt < FIRE_PRESS_MEMORY
-	if not CardHand.blocksFire(CardInHand, keys.fire) then
+	if not blocked then
 		local shotTime = nextShot(wanted, keys.fire, now)
 		if shotTime then
 			firePressedAt = -math.huge

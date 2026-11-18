@@ -8,6 +8,10 @@ local BLURBS = {
 	kickplate = "BLAST THE GROUND NEAR YOU AND GET THROWN AWAY FROM IT",
 	siphon = "A BOLT THAT STEALS SPEED FROM THE ENEMY IT HITS",
 	aegis_shell = "A BUBBLE THAT TAKES EVERY HIT THEN PUSHES ENEMIES AWAY",
+	flashpoint = "FLICK A CARD THAT BURSTS IN A BLINDING FLASH",
+	bulwark = "SLAP DOWN A GIANT CARD THAT STOPS BULLETS",
+	split = "SEND A COPY OF YOURSELF RUNNING THE WAY YOU LOOK",
+	rewind = "SNAP BACK TO WHERE YOU WERE AND GET HEALTH BACK",
 }
 
 -- The card's stats in the order they're listed, leaving out the cooldown, which always goes last.
@@ -27,6 +31,13 @@ local STATS = {
 		{ "shieldHp", "SHIELD", "%g HP" },
 		{ "duration", "DURATION", "%g S" },
 	},
+	flashpoint = { { "blind", "BLIND", "%g S" } },
+	bulwark = {
+		{ "wallHp", "WALL", "%g HP" },
+		{ "duration", "DURATION", "%g S" },
+	},
+	split = { { "duration", "DURATION", "%g S" } },
+	rewind = { { "heal", "HEALTH BACK", "%g HP" } },
 }
 
 local CardText = {}

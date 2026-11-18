@@ -16,7 +16,7 @@ local CardFlourish = require(ReplicatedStorage.Guns.CardFlourish)
 local GunConfig = require(ReplicatedStorage.Guns.GunConfig)
 local GunDraw = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("GunDraw"))
 local CardInHand = require(script.Parent.CardInHand)
-local CardThrowFx = require(script.Parent.CardThrowFx)
+local CardMoveFx = require(script.Parent.CardMoveFx)
 local CardView = require(script.Parent.CardView)
 local ViewArms = require(script.Parent.ViewArms)
 
@@ -687,11 +687,12 @@ local leverOpen = 0 -- how far open the gun shown's lever is, 0 to 1
 local snapAt: number? = nil
 local cardAt: number? = nil
 local cardUsed = 0 -- how many cards had been used when this one came out
-local THROWN = { switchback = true } -- cards whose use is a throw
 local THROWN_THICK = Vector3.new(0, 0.006, 0) -- a card in the hand is too thin to see edge on
 local crushAt: number? = nil -- when the card in hand was used
-local throwing = false -- that card is thrown, not crushed
-local released = false -- and has left the hand
+local usedId: string? = nil -- which card that was: it picks the move (CardFlourish.use)
+local released = false -- a thrown card has left the hand
+local copyReleased = false -- and Split's copy has
+local hitPlayed = false -- the move's impact has been heard
 local cardTurns = 0 -- CardInHand.turns as of the last look
 local turns = 0 -- how many times the card held has been changed since the cards came out
 local turnAt = 0 -- when it last was
@@ -1321,15 +1322,12 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 		if not crushAt and CardInHand.used ~= cardUsed then
 			crushAt = now
 			local used = CardInHand.lastUsed
-			throwing = used ~= nil and THROWN[Players.LocalPlayer:GetAttribute(`Ability{used}Id`)] == true
-			released = false
-			if throwing then
-				GunAudio.stopCards() -- no crush sound: the card isn't crushed
-			else
-				GunAudio.playCardCrush()
-			end
+			local id = if used then Players.LocalPlayer:GetAttribute(`Ability{used}Id`) else nil
+			usedId = if type(id) == "string" then id else nil
+			released, copyReleased, hitPlayed = false, false, false
+			CardMoveFx.started(usedId)
 		end
-		if not crushAt or now - crushAt >= (if throwing then CardFlourish.THROW else CardFlourish.CRUSH) then
+		if not crushAt or now - crushAt >= CardFlourish.useLength(usedId) then
 			cardAt, crushAt = nil, nil
 			GunAudio.stopCards()
 			shownFrame, shownBase, shownSnap = nil, nil, nil
@@ -1366,10 +1364,7 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 		table.clear(history)
 	end
 	local held = camera.CFrame * cardSway
-	local crush = if not crushAt
-		then nil
-		elseif throwing then CardFlourish.throw(elapsed, now - crushAt, turns)
-		else CardFlourish.crush(elapsed, now - crushAt, turns)
+	local crush = if crushAt then CardFlourish.use(usedId, elapsed, now - crushAt, turns) else nil
 	local pose = if crush
 		then crush.pose
 		elseif turns > 0 then CardFlourish.turn(turns, now - turnAt)
@@ -1381,7 +1376,15 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 		if crush.thrown and crush.crushed >= 1 and not released then
 			-- The card leaves the hand: the world carries on with it from exactly where and how it was held.
 			released = true
-			CardThrowFx.release(held * pose.cards[crush.card], CardFlourish.CARD_SIZE + THROWN_THICK, camera.CFrame)
+			CardMoveFx.release(usedId, held * pose.cards[crush.card], CardFlourish.CARD_SIZE + THROWN_THICK, camera.CFrame)
+		end
+		if crush.copy and crush.copyGone and not copyReleased then
+			copyReleased = true
+			CardMoveFx.release(usedId, held * pose.cards[crush.copy], CardFlourish.CARD_SIZE + THROWN_THICK, camera.CFrame)
+		end
+		if crush.hit and not hitPlayed then
+			hitPlayed = true
+			CardMoveFx.impact(usedId)
 		end
 	end
 	ViewArms.holdCards(pose.right, pose.left, pose.fingers)

@@ -605,3 +605,11 @@ local function begin(at: Vector3, killer: Player?, model: Model?, headshot: bool
 end
 
 deathRemote.OnClientEvent:Connect(begin)
+
+-- A Split double that's shot down or out of time glitches away the same way, though nobody died.
+local abilityFx = ReplicatedStorage:WaitForChild("AbilityRemotes"):WaitForChild("Fx") :: RemoteEvent
+abilityFx.OnClientEvent:Connect(function(kind: any, at: any, _: any, _: any, _: any, _: any, model: any)
+	if kind == "vanish" and typeof(at) == "Vector3" then
+		begin(at, nil, model, false)
+	end
+end)
