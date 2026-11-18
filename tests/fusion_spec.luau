@@ -183,3 +183,57 @@ describe("Fusion", function()
 		expect(Inventory.count(data, "aegis_shell", "BlackSite")).toBe(0)
 	end)
 end)
+
+describe("Fusion.offer", function()
+	local function stacks(entries)
+		local data = { stacks = {} }
+		for _, e in entries do
+			Inventory.add(data, e[1], e[2], e[3], e[4])
+		end
+		return data.stacks
+	end
+
+	it("offers 5 Field for a Redline at 100 Credits", function()
+		local offer = Fusion.offer(stacks({ { "siphon", "Field", "Base", 5 } }), 100, "siphon", "Field")
+		expect(offer ~= nil).toBe(true)
+		local o = offer :: any
+		expect(o.nextTier).toBe("BlackSite")
+		expect(o.needed).toBe(5)
+		expect(o.have).toBe(5)
+		expect(o.fee).toBe(100)
+		expect(o.enough).toBe(true)
+		expect(o.affordable).toBe(true)
+		expect(o.spendsVariants).toBe(false)
+	end)
+
+	it("says when there are too few copies or Credits", function()
+		local o = Fusion.offer(stacks({ { "siphon", "BlackSite", "Base", 3 } }), 599, "siphon", "BlackSite") :: any
+		expect(o.nextTier).toBe("Prototype")
+		expect(o.fee).toBe(600)
+		expect(o.have).toBe(3)
+		expect(o.enough).toBe(false)
+		expect(o.affordable).toBe(false)
+	end)
+
+	it("counts variants and warns that they would be spent", function()
+		local o = Fusion.offer(stacks({ { "rewind", "Field", "Base", 4 }, { "rewind", "Field", "Chromatic", 1 } }), 500,
+			"rewind", "Field") :: any
+		expect(o.have).toBe(5)
+		expect(o.enough).toBe(true)
+		expect(o.spendsVariants).toBe(true)
+	end)
+
+	it("offers nothing at the top tier or for an unknown card", function()
+		expect(Fusion.offer({}, 1000, "siphon", "Prototype")).toBe(nil)
+		expect(Fusion.offer({}, 1000, "no_such_card", "Field")).toBe(nil)
+	end)
+
+	it("agrees with fuse: an offer that's ready goes through", function()
+		local data = SaveData.new()
+		Inventory.add(data, "bulwark", "Field", "Base", 5)
+		data.credits = 100
+		local o = Fusion.offer(data.stacks, data.credits, "bulwark", "Field") :: any
+		expect(o.enough and o.affordable and not o.spendsVariants).toBe(true)
+		expect((Fusion.fuse(data, req("bulwark", "Field"), base))).toBe(true)
+	end)
+end)

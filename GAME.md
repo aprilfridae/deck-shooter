@@ -149,4 +149,5 @@ Older decisions are in the specs and git history. Only the ones a new agent must
 | 2026-11-17 | A click that uses a card no longer fires the gun when it comes back | Found in the playtest: every card use cost a bullet |
 | 2026-11-17 | Rojo wasn't syncing, so the repo's changes were copied into Studio by hand for the playtest | Shell commands needed approval overnight; Studio now matches the repo for these files, and Rojo will overwrite them with the same code |
 | 2026-11-18 | The card grid shares cards evenly into full-width bands (10 = 5 + 5) and scrolls; the Profile's owned count moved to the header | River: the chooser couldn't reach the new cards, and the short last band left empty space |
+| 2026-11-18 | Fusing gets a button under a card held up on your own Profile (5 copies + the fee, a second press when variants would be spent) | The server's Fuse had no way in from the game. The index is the only page with copy counts; this reverses outpost-ui's "fusion stays out of Profile", River can move it |
 | 2026-11-18 | Split's monogram is SL | SP is already Siphon's, and every monogram must be different |

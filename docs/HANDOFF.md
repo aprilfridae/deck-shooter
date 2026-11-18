@@ -93,14 +93,14 @@ Split Deck is a Roblox PvP shooter: fast Black Ops style movement, 2 guns plus a
 
 ## Known gaps
 
-- Other players' footsteps and shots can't be heard. Roblox's default footsteps are muted and ours play only for the local player, and only your own shots make a sound.
+- Other players' footsteps and shots are in the code (2026-11-11): shots from where they were fired (`GunAudio.playFarShot`, from `ShotEffects`), footsteps from their feet while they run normally (`GunAudio.playFarStep`, from `RemotePoses`). Not yet heard with two players.
 - Sounds still to record and hook up are in `docs/sound-list.md`, among them landing, slide, parry, and the pack tear and card flip. The M57's reload hit isn't aligned to the new assault reload sound.
 - Fonts: River has the Pro downloads in `Downloads`. KH Interference's file still names itself TRIAL, and the titles and card monograms use it, so River needs to confirm the licence before publishing.
 - Packs, waiting on a live game: purchases, the favourite and the group check. The new wrappers were still in Roblox's review on 2026-11-07 and show blank until they pass. Before launch, River creates the Open All developer product and the Auto Open gamepass, puts their ids in `Config.luau`, and opens the group.
 - Smaller pack loose ends: a full pile lets auto roll skip the wait on other rarities; a receipt during a rejoin may wait for the next join; the receipt is recorded before the payout; Auto Open runs behind the title screen; a reveal can land in the test room; the group check after leaving; `OPEN ALL` isn't blocked until the policy check; and the auto loop has no pcall.
 - Comments need testing with two players, and the live filter, DataStores and reports need a live server.
 - A lag issue was noticed earlier and never diagnosed.
-- The console shows `CardCoreRemotes.Snapshot` events with no listener. The likely cause is that the first snapshot fires before `Outpost.client.luau` connects its listener. Not verified.
+- The console shows `CardCoreRemotes.Snapshot` events with no listener. The likely cause is that the first snapshot fires before `Outpost.client.luau` connects its listener. Not verified. Not seen in the console during five playtests on 2026-11-18.
 - If Studio says "We could not open the place [70756985983915]. Failed to fetch place info." again: it's a known 2026 Studio bug. Roblox staff suggest logging out of Studio, ending it in Task Manager and logging back in. River's group role is listed as "Member" (rank 1) and the group has no Owner role, which is worth checking in the group's settings if that doesn't work.
 
 **Confirmed in Play by River:** the Outpost floor, textures and lamp shadows, the title screen, the selection and jump sounds (2026-11-05); and later the Outpost UI and the pack opening.

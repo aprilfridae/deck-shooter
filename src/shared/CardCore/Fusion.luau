@@ -67,4 +67,36 @@ function Fusion.fuse(data: any, req: FuseRequest, rng: () -> number): (boolean, 
 	return true, result
 end
 
+export type Offer = {
+	nextTier: string,
+	needed: number, -- copies a fusion spends
+	have: number, -- copies at this tier, all variants
+	fee: number,
+	enough: boolean, -- copies
+	affordable: boolean,
+	spendsVariants: boolean, -- there aren't enough Base copies, so variants would go too
+}
+
+-- What fusing this card and tier would take, for the button that offers it, or nil at the top tier.
+-- Catalysts aren't offered: nothing gives them yet.
+function Fusion.offer(stacks: { [string]: number }, credits: number, cardId: string, tier: string): Offer?
+	local nextTier = Tier.next(tier)
+	if not nextTier or not Cards.isValid(cardId) then
+		return nil
+	end
+	local data = { stacks = stacks }
+	local needed = Config.CopiesToFuse
+	local fee = Config.FusionFee[tier]
+	local have = Inventory.count(data, cardId, tier)
+	return {
+		nextTier = nextTier,
+		needed = needed,
+		have = have,
+		fee = fee,
+		enough = have >= needed,
+		affordable = credits >= fee,
+		spendsVariants = Inventory.count(data, cardId, tier, Variant.Base) < needed,
+	}
+end
+
 return Fusion
