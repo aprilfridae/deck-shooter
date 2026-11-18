@@ -13,7 +13,9 @@ local Inventory = require(CardCore:WaitForChild("Inventory"))
 local Packs = require(CardCore:WaitForChild("Packs"))
 local PullMotion = require(CardCore:WaitForChild("PullMotion"))
 local GunSounds = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("GunSounds"))
+local MenuState = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("MenuState"))
 local Palette = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Palette"))
+local Zones = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("Zones"))
 local CardData = require(script.Parent.CardData)
 local CardFace = require(script.Parent.CardFace)
 local CardInspect = require(script.Parent.CardInspect)
@@ -328,6 +330,12 @@ end
 
 -- One rare card from Auto Open. There's no sheet, so an idle player can still walk and click.
 function PullReveal.rare(pack: string, card: any)
+	-- Only where the menu shows: not behind the title screen, and not in the test room or a map when the opening
+	-- arrives just after travel. Leaving the Outpost already clears the queue; the card is in the index either way.
+	local player = game:GetService("Players").LocalPlayer
+	if Zones.of(player) ~= Zones.Outpost or MenuState.isOpen(MenuState.shared) then
+		return
+	end
 	local waiting = 0
 	for _, entry in queue do
 		waiting += if entry.auto then 1 else 0
