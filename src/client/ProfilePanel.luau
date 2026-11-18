@@ -8,6 +8,7 @@ local CardCore = ReplicatedStorage:WaitForChild("CardCore")
 local CardIndex = require(CardCore:WaitForChild("CardIndex"))
 local CardLook = require(CardCore:WaitForChild("CardLook"))
 local Fusion = require(CardCore:WaitForChild("Fusion"))
+local PackText = require(CardCore:WaitForChild("PackText"))
 local Variant = require(CardCore:WaitForChild("Variant"))
 local CardData = require(script.Parent.CardData)
 local CardGrid = require(script.Parent.CardGrid)
@@ -21,8 +22,10 @@ local HEAD_SIZE = 0.09
 local INFO_LEFT = 0.125
 local NAME_SIZE = 0.042
 local NAME_LINE = 0.065
+local NAME_FIT = 0.96
 local STATS_LINE = 0.09
 local STATS_GAP = 0.13
+local STATS_SPACE = 0.02 -- the least room between the Credits and DPR
 local TABS_TOP = 0.13
 local TABS_HEIGHT = 0.03
 local TABS_GAP = 0.008
@@ -47,12 +50,16 @@ local function header(content: Frame, profile: any)
 	measured:set(name)
 	local room = (RIGHT - INFO_LEFT) * unit
 	if measured:width() > room then
-		local size = NAME_SIZE * room / measured:width()
+		-- A little under the exact fit: the shrunk name came out about 3% wider than measured, past the margin.
+		local size = NAME_SIZE * room / measured:width() * NAME_FIT
 		measured:setVisible(false)
 		PanelKit.label(content, "Title", size, INFO_LEFT, NAME_LINE):set(name)
 	end
-	PanelKit.line(content, `CREDITS {profile.credits}`, INFO_LEFT, STATS_LINE)
-	PanelKit.line(content, `DPR {profile.dpr}`, INFO_LEFT + STATS_GAP, STATS_LINE)
+	-- Shortened as in the Outpost's corner (1.01K), so even a huge balance leaves room on the line for OWNED.
+	local credits = PanelKit.line(content, `CREDITS {PackText.balance(profile.credits)}`, INFO_LEFT, STATS_LINE)
+	-- After the Credits however long they run, so a big number can't run into DPR.
+	local dprX = math.max(INFO_LEFT + STATS_GAP, INFO_LEFT + credits:width() / unit + STATS_SPACE)
+	PanelKit.line(content, `DPR {profile.dpr}`, dprX, STATS_LINE)
 	-- In the header, not over the grid: the grid's sixth column fills the panel's right edge.
 	local index = CardIndex.build(profile.stacks)
 	PanelKit.line(content, string.format("OWNED %02d/%02d", index.owned, index.total), PanelKit.RIGHT, STATS_LINE, true)
