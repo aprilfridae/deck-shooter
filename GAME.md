@@ -148,3 +148,5 @@ Older decisions are in the specs and git history. Only the ones a new agent must
 | 2026-11-17 | Four cards added (Flashpoint, Bulwark, Split, Rewind), none doing damage, each with its own hand move built from the flourish's pieces | River asked for more cards with first- and third-person animations; utility keeps "skill beats collection" |
 | 2026-11-17 | A click that uses a card no longer fires the gun when it comes back | Found in the playtest: every card use cost a bullet |
 | 2026-11-17 | Rojo wasn't syncing, so the repo's changes were copied into Studio by hand for the playtest | Shell commands needed approval overnight; Studio now matches the repo for these files, and Rojo will overwrite them with the same code |
+| 2026-11-18 | The card grid shares cards evenly into full-width bands (10 = 5 + 5) and scrolls; the Profile's owned count moved to the header | River: the chooser couldn't reach the new cards, and the short last band left empty space |
+| 2026-11-18 | Split's monogram is SL | SP is already Siphon's, and every monogram must be different |

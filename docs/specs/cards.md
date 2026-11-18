@@ -147,5 +147,5 @@ Requests go through `Requests.luau`, which drops bad types, NaN, extra fields an
 ## Known issues
 
 - A deck change or a fusion that moves a slot up doesn't reach the abilities until the next respawn, because the server reads the deck only when cards reset.
-- Flashpoint, Bulwark, Split and Rewind have no baked card art yet (`tools/make-card-art.py`), so their faces, the HUD cards and the Bulwark wall show the plain placeholder face. They also have no sounds of their own: Bulwark's slap borrows the hard landing's thud (`docs/sound-list.md`).
+- Flashpoint (FP), Bulwark (BW), Split (SL, since SP is Siphon's) and Rewind (RW) got their baked art on 2026-11-18, in the same format as the others (`tools/make-card-art.py`, ids in `CardArt.luau`). They have no sounds of their own yet: Bulwark's slap borrows the hard landing's thud (`docs/sound-list.md`).
 - The first `Snapshot` fires when the save loads. The listener (`CardData.luau`) connects later, which is the likely cause of the "no listener" console warning. Not verified.
