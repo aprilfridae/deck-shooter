@@ -43,6 +43,16 @@ describe("CardAim", function()
 		expect(CardAim.pick(ORIGIN, AHEAD, 40, 3, {})).toBe(nil)
 	end)
 
+	it("takes longer to throw a card further", function()
+		expect(CardAim.flight(CardAim.THROW_SPEED)).toBe(1)
+		expect(CardAim.flight(500) > CardAim.flight(250)).toBe(true)
+	end)
+
+	it("keeps a close throw in the air long enough to see", function()
+		expect(CardAim.flight(0)).toBe(CardAim.THROW_LEAST)
+		expect(CardAim.flight(10)).toBe(CardAim.THROW_LEAST)
+	end)
+
 	it("launches fast enough to reach the height", function()
 		local speed = CardAim.launchSpeed(24, 196.2)
 		expect(math.round(speed * speed / (2 * 196.2))).toBe(24)
@@ -64,5 +74,41 @@ describe("CardAim", function()
 		local way = CardAim.blastDirection(point(0, 5, 0), point(3, 0, 0))
 		expect(way.y).toBe(0)
 		expect(way.x).toBe(1)
+	end)
+
+	it("flicks Flashpoint slower than a throw, and never too fast to see", function()
+		expect(CardAim.flashFlight(55, 110, 0.15)).toBe(0.5)
+		expect(CardAim.flashFlight(3, 110, 0.15)).toBe(0.15)
+	end)
+
+	it("blinds fully near the burst and less toward the edge", function()
+		expect(CardAim.flashReach(0, 34, 0.5, 0.35)).toBe(1)
+		expect(CardAim.flashReach(17, 34, 0.5, 0.35)).toBe(1)
+		expect(math.abs(CardAim.flashReach(34, 34, 0.5, 0.35) - 0.35) < 1e-9).toBe(true)
+		expect(CardAim.flashReach(34.1, 34, 0.5, 0.35)).toBe(0)
+		local last = 1
+		for distance = 17, 34 do
+			local reach = CardAim.flashReach(distance, 34, 0.5, 0.35)
+			expect(reach <= last).toBe(true)
+			last = reach
+		end
+	end)
+
+	it("blinds whoever looks at the burst most and spares a turned back a little", function()
+		expect(math.abs(CardAim.flashFacing(1) - 1) < 1e-9).toBe(true)
+		expect(math.abs(CardAim.flashFacing(0.5) - 1) < 1e-9).toBe(true)
+		expect(math.abs(CardAim.flashFacing(-1) - 0.33) < 1e-9).toBe(true)
+		expect(CardAim.flashFacing(0) > CardAim.flashFacing(-0.5)).toBe(true)
+	end)
+
+	it("rewinds to the oldest point within the window", function()
+		local path = {}
+		for step = 0, 50 do
+			table.insert(path, { at = step * 0.1 })
+		end
+		expect(CardAim.rewindPoint(path, 5, 3, 0.5)).toBe(21) -- at 2.0, three seconds before 5
+		expect(CardAim.rewindPoint(path, 1, 3, 0.5)).toBe(1) -- not three seconds of path: as far back as there is
+		expect(CardAim.rewindPoint({ { at = 4.8 } }, 5, 3, 0.5)).toBeNil() -- too little to go back along
+		expect(CardAim.rewindPoint({}, 5, 3, 0.5)).toBeNil()
 	end)
 end)

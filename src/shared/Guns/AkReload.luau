@@ -68,11 +68,19 @@ end
 -- curves forward, with its wrist below: higher up, the hand sat in the right hand's fingers at the trigger.
 local MAG_HOLD = h(0.107, 0, -0.125)
 local ON_MAG = grip(MAG_HOLD, 0.085, 0.035, Vector3.new(0.2, 0.6, -0.8), Vector3.new(1, 0, 0))
--- The right hand on the knob: well out from the gun's right side and below the knob, reaching in with only its
--- fingertips on the knob's end, palm facing back to pull. The hand is big next to the gun, so anything closer puts
--- its palm through the receiver.
-local KNOB_END = KNOB + Vector3.new(0.014, 0, 0)
-local ON_KNOB = grip(KNOB_END, 0.14, 0.012, Vector3.new(-0.62, 0.74, -0.25), Vector3.new(0, 0, 1), true)
+-- The right hand on the knob: over it from above, palm down to the ground, pointing forward and a little in, with
+-- the knob under the first joints of its index and middle fingers, which wrap down round the front of it, and the
+-- thumb coming round under it (River, 2026-11-12: "the palm needs to be facing downward to the ground with the
+-- index and middle wrapping around the tab, and the thumb naturally wraping around the bottom of the tab"). With
+-- the palm down the forearm runs back to an elbow that is out and down, as it would be. It first reached in from
+-- the side with its palm facing back, then lay along the gun with its palm to the receiver.
+-- The hand is big next to the gun: a finger is wider than the knob is long. So the hand is out to the right far
+-- enough that its index finger, the innermost, is over the knob and clear of the receiver's wall, and high enough
+-- that the palm and the thumb's root clear the receiver's top edge. Measured in Play against the gun's parts
+-- (River, 2026-11-12: "make sure the fingers arent clipping either"): turned in toward the gun, the index finger
+-- and the thumb were inside the receiver.
+local KNOB_END = KNOB + Vector3.new(0.045, 0, 0)
+local ON_KNOB = grip(KNOB_END, 0.127, 0.05, Vector3.new(0, 0, -1), Vector3.new(0, -1, 0), true)
 -- A magazine in the hand down out of view, in the hold.
 local FETCHED = CFrame.new(-0.2, -0.36, 0.02) * CFrame.Angles(0, 0, math.rad(50))
 
@@ -284,6 +292,26 @@ function AkReload.at(t: number): Pose
 	}
 end
 
+-- Just the end of the reload, for the pull-out: the right hand goes from the grip to the knob, racks the bolt and
+-- goes back, `t` seconds in. Nothing else moves.
+function AkReload.rack(t: number): Pose
+	local _, _, _, _, bolt, _, right, rightWeight, rightSwing = keyed(REACH_FROM + math.clamp(t, 0, GRIP_TO - REACH_FROM))
+	return {
+		gun = CFrame.identity,
+		mag = CFrame.identity,
+		spare = nil,
+		bolt = bolt,
+		palm = CFrame.identity,
+		weight = 0,
+		right = right,
+		rightWeight = rightWeight,
+		rightSwing = rightSwing,
+	}
+end
+
+AkReload.RACK = GRIP_TO - REACH_FROM -- how long that takes
+AkReload.RACK_PULL = PULL_AT - REACH_FROM -- when in it the handle starts back
+AkReload.RACK_HOME = HOME_AT - REACH_FROM -- and when the bolt is home
 AkReload.LENGTH = LENGTH
 AkReload.SOUND = 1.26 -- one reload: all of it fits in the gun's reload time
 AkReload.TRAVEL = TRAVEL

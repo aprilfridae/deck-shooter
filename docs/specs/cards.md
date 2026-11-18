@@ -1,6 +1,6 @@
 # Cards and the card economy
 
-**Status:** changed on 2026-11-11: Switchback, Kickplate and Siphon were added, Recon Pulse was removed, and tiers were made to matter far more. None of that has been seen in Play. Before that: the 4 ability cards and the card rules (tiers, fusion, income, Deck Power Rating, saves) are built. The Outpost menu shows Credits, DPR and the collection and edits the deck, and packs give new cards (`packs.md`). Nothing shows fusion or Catalysts yet. Checked against the code on 2026-11-07.
+**Status:** changed on 2026-11-17: Flashpoint, Bulwark, Split and Rewind were added, each with its own move in both hands (first and third person), tried in a Studio playtest in the test room. They have no card art or sounds of their own yet. Changed on 2026-11-11: Switchback, Kickplate and Siphon were added, Recon Pulse was removed, and tiers were made to matter far more. None of that has been seen in Play. Before that: the 4 ability cards and the card rules (tiers, fusion, income, Deck Power Rating, saves) are built. The Outpost menu shows Credits, DPR and the collection and edits the deck, and packs give new cards (`packs.md`). Nothing shows fusion or Catalysts yet. Checked against the code on 2026-11-07.
 
 **Values live in:** `src/shared/CardCore/Cards.luau` (cards and their stats) and `src/shared/CardCore/Config.luau` (everything else). The rules are pure modules in `src/shared/CardCore/`, tested in Lune. The server side is `src/server/CardCore.server.luau`, `PlayerCards.luau` and `AbilityServer.server.luau`.
 
@@ -26,7 +26,7 @@
 
 ## The cards
 
-All 6 are in set `set_01`. Stats are listed Field / Redline / Prototype.
+All 10 are in set `set_01`. Stats are listed Field / Redline / Prototype.
 
 | Card | Id | Stats | Cooldown | Perk |
 | --- | --- | --- | --- | --- |
@@ -36,15 +36,34 @@ All 6 are in set `set_01`. Stats are listed Field / Redline / Prototype.
 | Switchback | `switchback` | Range 40 / 60 / 80 studs | 20 / 16 / 12s | None |
 | Kickplate | `kickplate` | Launch height 24 / 36 / 48 studs | 14 / 12 / 10s | None |
 | Siphon | `siphon` | Speed stolen 15 / 22 / 30% for 3 / 4.5 / 6s | 18s | None |
+| Flashpoint | `flashpoint` | Blind up to 1.4 / 2 / 2.6s | 20 / 17 / 14s | None |
+| Bulwark | `bulwark` | Wall of 150 / 225 / 300 HP for 6 / 8 / 10s | 24s | None |
+| Split | `split` | A double that runs for 3 / 4.5 / 6s | 22 / 19 / 15s | None |
+| Rewind | `rewind` | Back 3s, and up to 20 / 30 / 40 HP of what you lost since | 24 / 20 / 16s | None |
+
+**The second wave (2026-11-17).** Four cards that do no damage, each built round one move of the right hand, made from the pieces the crush and the throw already use (`CardFlourish.flick`, `slam`, `split`, `rewind`; `CardFlourish.use` picks the move by card, and any card not listed is crushed). Every move starts the same way: the hands settle onto the flourish's end in 0.08s, the right hand taking its card. The moves are keyed as beats (where a hand is and how it's turned at a moment, with an ease into it), and each thing that lands knocks its hand as the flourish's do. Other players see the same move on your body, because the card used is sent with the cards' state (`CardUsedId`, checked by `MovementGuard`).
+
+- **Flashpoint** (0.62s): a backhand flick, like skimming a card across a room. The card is drawn back flat across the front of the deck, then whipped out to the right and let go at 0.22s at the whip's fastest. It flies flat and spinning on a shallow arc at 110 studs a second, up to 48 studs or the first thing it meets, glowing acid, and bursts in a white flash (`FlashFx.luau`). Every enemy within 34 studs with a clear line to the burst is blinded: fully within half that, falling to 35% at the edge, and their own client takes off more the more they faced away (a third with their back to it). The screen goes white, holds for a third of the time and fades back with the world greyed under it. A second flash only makes it longer. The thrower is never blinded.
+- **Bulwark** (0.66s): the card is lifted high, face out, then slapped face down on the ground ahead with an open palm at 0.29s, and sinks away under it. A giant card stands up where it went: on the ground you aim at within 16 studs, or 6 studs in front of you, facing the way you look; no ground means nothing happens and the card isn't spent. It is 11 by 6.9 studs (a card on its long edge) and stops bullets, cards and bodies (`CardWalls.luau`: an invisible server part). Each client draws it (`CardWallFx.client.luau`): it swings up like a drawbridge in 0.24s, springing past upright, with dust and an acid ring; its face (the card's art) to the enemy and its back to you; a tier-coloured rim; a jolt and white flash on each hit; a flicker under 35% health; and it shatters when shot down or sinks when its time is up. Bullets hurt it by their normal body damage.
+- **Split** (0.76s): a copy slides out from under the card and fans open beside it, the wrist tips and flicks the copy down at 0.37s, and the hand crushes the card left. The copy tumbles to the floor 3 studs ahead and your double builds up out of it in cyan pixels (`SplitFx.luau`), then sprints the way you looked, holding your gun (`Decoys.luau`). It has 40 health and can be shot like anyone; shot down or out of time, it glitches away the way a body does (`KillDerez`), pays nothing, and is in no kill feed, so the shooter learns it was never anyone. It counts as yours: you and your team can't hit it with cards.
+- **Rewind** (0.82s): the hand turns palm up with the card lying on its fingers, and the card spins backwards on them, faster and faster, while the world drains of colour and tints cyan. At 0.5s it bursts where it lies, the fingers snap shut on nothing, and you are where you were 3 seconds ago (within the zone you are in, facing the way you face now), with up to the card's heal of the health you lost since. A line of cyan copies of your body runs between the two places (your own stop 9 studs short of your eyes). Not spent if there is less than half a second of path, or if you'd go less than 2 studs and have lost no health.
 
 - **Phase Dash** was already strong at Prototype, so River had its lower tiers made worse instead of its top tier better.
-- **Switchback** fires a tether the way you look. If it reaches an enemy, the two of you swap places and each keeps facing the way they were.
+- **Switchback** is thrown, as one motion from hand to target (`CardFlourish.throw`, `CardThrowFx.luau`). Not seen in Play since the last rework.
+  - **The hand:** an overhand throw copied from a video River filmed. The card twirls once in the fingers on the way up, the hand tips back, then chops forward in a curve with a flick, and hangs out there a beat. The wrist doesn't roll. The left hand takes the deck down and left out of the way, lazily: it sets off late, swings out in an arc, tips the deck over as it goes and is the last thing back.
+  - **Leaving the hand:** 0.22 seconds after you use it. By then the card is on its edge, pointing exactly the way you look, just right of and under the crosshair.
+  - **The handover:** the world's card starts as the very card in the hand, same place, turn and size, then grows as it flies. A separate card used to pop up in front of the camera.
+  - **In the air:** 500 studs a second, never less than 0.14 seconds. It tumbles slowly, stays plainly the card for the first third, then turns blue, glowing and see-through with a blue trail.
+  - **Landing:** on a hit the two of you swap places, each keeping the way they faced. On a miss it stops at a wall or its range and fades.
+  - **Cards under it:** after turning to another card, the ones under the thrown card in the right hand are put straight back on the deck, not slid across.
+  - A chain was tried first and replaced the same day.
 - **Kickplate** blasts the surface you aim at, if it is within 14 studs, and throws you straight away from that point. Aimed at your feet it sends you up by its height. With nothing in reach it does nothing and isn't spent.
 - **Siphon** shoots a bolt the way you look. The enemy it hits is slowed and you are sped up by the same share. It does no damage.
 - **Aimed cards are forgiving:** Switchback and Siphon hit the nearest enemy within 3 studs of your line of sight, with nothing solid in between. A miss brings the card back in 4 seconds, not its full cooldown.
 - **The starter deck** is Phase Dash, Overclock and Siphon.
 - **Recon Pulse was removed** on 2026-11-11, the same way as Arc Mine below: saves keep the copies, it leaves the deck, and it does nothing.
-- **Effects are placeholders:** a cyan line for the tether, a red bolt for Siphon, a pale ring for the blast. No sounds or arm animations yet.
+- **Back to the gun:** when a card has been crushed or thrown, the gun is pulled out again with its own draw (`GunDraw.luau`, see `guns.md`). A lower-and-raise was tried first and River turned it down.
+- **Effects are placeholders:** a red bolt for Siphon, a pale ring for the blast. No sounds or arm animations yet.
 - Arc Mine was removed. Old saves keep their Arc Mine copies in case it returns, but it leaves the deck, the deck refills, and the copies earn nothing.
 - Cards with one cooldown for every tier use a top-level `cooldown` field, because the ceiling test needs every `stats` entry to rise by tier.
 
@@ -52,12 +71,12 @@ All 6 are in set `set_01`. Stats are listed Field / Redline / Prototype.
 
 - Key 3 (the default, `slot1`) pulls the cards out, starting on the first ready card, and puts them away again. With a card out, right click (the aim key) turns to the next ready card, round and round (`CardHand.cycle`). Keys 4 and 5 still go straight to the cards in slots 2 and 3 if they're ready.
 - Each turn skips what's left of the flourish and plays a flip (`CardFlourish.turn`): the left thumb flips the deck's next card across and it lands face up, showing the new card, on top of the ones the right hand already holds. Using a card crushes the top one and the rest go back to the deck.
-- Left click uses the held card. The gun can't fire while a card is out, or until that click is released.
+- Left click uses the held card. The gun can't fire while a card is out, or until that click is released. A click a card took is forgotten by the gun (it used to fire one shot as soon as the gun came back, found 2026-11-17).
 - Cards are put away when you swap guns and in the Outpost.
 - A cooldown starts when the card is used, even while its effect runs.
 - Every card comes back ready on each spawn. Matches will reset them each round instead (see `matches.md`). Effects end at death.
 - The server checks the slot number, that the player is alive, the zone and the cooldown (`Ability.luau`, `AbilityServer.server.luau`).
-- In Studio only, T cycles between two test decks ({Phase Dash, Overclock, Recon Pulse} and {Aegis Shell, Phase Dash, Overclock}) and Y cycles the tier. These choices are never saved. Matches remove them.
+- In Studio only, T cycles between four test decks ({Switchback, Kickplate, Siphon}, {Aegis Shell, Phase Dash, Overclock}, {Flashpoint, Bulwark, Split} and {Rewind, Flashpoint, Bulwark}) and Y cycles the tier. These choices are never saved. Matches remove them.
 
 ## What each card does
 
@@ -128,4 +147,5 @@ Requests go through `Requests.luau`, which drops bad types, NaN, extra fields an
 ## Known issues
 
 - A deck change or a fusion that moves a slot up doesn't reach the abilities until the next respawn, because the server reads the deck only when cards reset.
+- Flashpoint (FP), Bulwark (BW), Split (SL, since SP is Siphon's) and Rewind (RW) got their baked art on 2026-11-18, in the same format as the others (`tools/make-card-art.py`, ids in `CardArt.luau`). They have no sounds of their own yet: Bulwark's slap borrows the hard landing's thud (`docs/sound-list.md`).
 - The first `Snapshot` fires when the save loads. The listener (`CardData.luau`) connects later, which is the likely cause of the "no listener" console warning. Not verified.

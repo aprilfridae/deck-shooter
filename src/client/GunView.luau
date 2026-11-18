@@ -14,7 +14,9 @@ local SoldierPose = require(ReplicatedStorage.Guns.SoldierPose)
 local ArmClips = require(ReplicatedStorage.Guns.ArmClips)
 local CardFlourish = require(ReplicatedStorage.Guns.CardFlourish)
 local GunConfig = require(ReplicatedStorage.Guns.GunConfig)
+local GunDraw = require(ReplicatedStorage:WaitForChild("Guns"):WaitForChild("GunDraw"))
 local CardInHand = require(script.Parent.CardInHand)
+local CardMoveFx = require(script.Parent.CardMoveFx)
 local CardView = require(script.Parent.CardView)
 local ViewArms = require(script.Parent.ViewArms)
 
@@ -85,6 +87,21 @@ local PALM_FINGERS: { [string]: { [string]: { [string]: { rest: { Vector3 }, hel
 				},
 			},
 		},
+	},
+}
+-- The right hand's fingers while it is off the grip and on the charging knob, in its own palm's space (+Y along
+-- the fingers, +X the way the palm faces, -Z the thumb's side). The hand is over the knob, palm down: the index
+-- and middle fingers wrap down round the front of the knob, the other two curl the same way beside them (half
+-- open, they stuck out; River, 2026-11-12), and the thumb comes round under the knob. Left to the clip, they were the grip's shape with nothing in it, an open claw
+-- beside the knob (River, 2026-11-12: "the fingers to me look strange").
+local KNOB_WRAP = { Vector3.new(0.5, 0.85, 0).Unit, Vector3.new(0.98, 0.2, 0).Unit, Vector3.new(0.7, -0.7, 0).Unit }
+local KNOB_FINGERS: { [string]: { [string]: { Vector3 } } } = {
+	M57 = {
+		Indice = KNOB_WRAP,
+		DedoMedio = KNOB_WRAP,
+		Anular = KNOB_WRAP,
+		Menique = KNOB_WRAP,
+		Pulgar = { Vector3.new(0.35, 0.25, 0.9).Unit, Vector3.new(0.7, 0.2, 0.68).Unit, Vector3.new(0.4, 0.2, 0.9).Unit },
 	},
 }
 local clipPalms: { [string]: CFrame }? = nil -- this frame's moved palms, in the clip's space
@@ -337,6 +354,45 @@ local RELOADS: { [string]: any } = {
 	},
 }
 
+-- Pull-outs keyed like the reloads above, for guns that are thrown about in the hands, not just brought up
+-- (GunDraw has the plain ones). Seconds into the draw; `length` is how long it runs, and nothing stretches.
+-- Until `catch`, a key's hand is where the left hand is from its place in the hold, whatever the gun is doing: it
+-- is off the gun, waiting. It closes onto the gun over the last CATCH_CLOSE seconds before the catch, and after
+-- that it is on the gun as in a reload.
+--
+-- The Longscope's (River, 2026-11-12): "right arm needs to reach back and then pull the sniper with it and come
+-- down and the left arm needs to catch it". The gun starts up behind the right shoulder, out of view, muzzle to
+-- the sky, with only the right hand on it. That hand hauls it over the shoulder and down in front, muzzle swinging
+-- down level, and the left hand, waiting just under its place, catches it by the fore-end. Both sink with the
+-- weight, it is lifted and canted, and the lever is thrown open and slammed shut. Only the gun and hands move: the
+-- view isn't turned. Earlier versions: down from above with the whole view turning ("tilt the camera"), a full
+-- flip ("just make it come down from the top and land"), and a drop from straight above whose waiting left hand
+-- was placed in the falling gun's own turned space, which threw both arms far out in front.
+local CATCH_CLOSE = 0.1
+local KEYED_DRAWS: { [string]: any } = {
+	Longscope = {
+		length = 1.02,
+		catch = 0.42,
+		lever = { { 0.58, 0 }, { 0.66, 1 }, { 0.72, 1 }, { 0.8, 0 } },
+		keys = {
+			-- The left hand comes up from under the screen to wait under its place. It used to start there, so it
+			-- popped across from wherever the gun before had it (found frame by frame in Play, 2026-11-16).
+			key(0, tilt(-10, 0, 95, 0.8, 2.9, 2.2), Vector3.new(-0.05, -1.7, 0.35)),
+			key(0.12, tilt(-10, 0, 78, 0.75, 2.3, 1.2), Vector3.new(-0.05, -0.75, 0.2), "flow"),
+			key(0.24, tilt(-6, 0, 45, 0.35, 1.1, 0.5), Vector3.new(-0.04, -0.15, 0.05), "flow"),
+			key(0.34, tilt(-2, 0, 14, 0.04, 0.35, 0.1), Vector3.new(-0.02, -0.08, 0), "flow"),
+			key(0.42, tilt(3, -1, 2, 0, 0.1, 0.02), Vector3.zero, "flow"), -- it lands in the left hand
+			key(0.49, tilt(8, -3, -5, -0.01, -0.06, 0.03), Vector3.new(0, -0.03, 0), "flow"), -- both drop with the weight
+			key(0.58, tilt(11, -4, 6, -0.04, 0.46, 0.05), Vector3.zero, "flow"), -- lifted and canted, so the lever shows
+			key(0.66, tilt(9.5, -3, 9, -0.03, 0.38, -0.04), Vector3.zero, "flow"), -- the lever hits its stop, open
+			key(0.72, tilt(10.5, -4, 7, -0.04, 0.41, -0.02), Vector3.zero, "flow"),
+			key(0.8, tilt(6, -2, 2, -0.02, 0.46, 0.07), Vector3.zero, "flow"), -- slammed shut
+			key(0.9, tilt(-1, 0.3, -0.5, 0.002, -0.01, 0.015), Vector3.zero, "flow"),
+			key(1.02, CFrame.identity, Vector3.zero, "flow"),
+		},
+	},
+}
+
 local flowHand: (any, number, number) -> Vector3
 local flowing: (any, number, number) -> CFrame
 local function eased(ease: string, u: number): number
@@ -489,6 +545,27 @@ local shownGun: string? = nil
 local length = PRIMARY_LENGTH
 local barrelRise = 0
 local isSidearm = false
+local drawAt: number? = nil -- when the gun in hand started being pulled out
+local IN_STUDIO = game:GetService("RunService"):IsStudio()
+-- Where the left palm goes to rack a gun's slide in its pull-out, in the gun's space (x to its right side, y out of
+-- its top, z back toward the grip): over the back of the slide, palm down on its top, fingers across it. Placed by
+-- eye in Play. The place the reload clip slaps the gun was used first, and that is its underside (River, 2026-11-12:
+-- "your grabbing the underside of the gun, not the sliding back of the gun"). And for sidearms without clips, how
+-- far from the grip the slide is.
+local DRAW_SLAPS: { [string]: CFrame } = {
+	["Energy Pistol"] = CFrame.fromMatrix(
+		Vector3.new(-0.15, 0.46, 0.25),
+		Vector3.new(0, 1, 0),
+		Vector3.new(1, 0, 0),
+		Vector3.new(0, 0, -1)
+	),
+}
+local SIDEARM_SLIDE = Vector3.new(0.09, 0.32, 0)
+-- A model's parts named Slide_... are its slide, and go back when it is racked in the pull-out.
+local SLIDE_TRAVEL = 5 -- how far, in the stored model's studs (the Energy Pistol's slide is about 22 long)
+local slideParts: { { part: BasePart, rest: CFrame } } = {}
+local slideTravel = 0 -- in view studs, for the gun shown
+local drawSlap: CFrame? = nil -- the left palm on the slide, in the gun's space, for the gun shown
 local viewScale = 1
 local held = HIP
 
@@ -610,7 +687,12 @@ local leverOpen = 0 -- how far open the gun shown's lever is, 0 to 1
 local snapAt: number? = nil
 local cardAt: number? = nil
 local cardUsed = 0 -- how many cards had been used when this one came out
+local THROWN_THICK = Vector3.new(0, 0.006, 0) -- a card in the hand is too thin to see edge on
 local crushAt: number? = nil -- when the card in hand was used
+local usedId: string? = nil -- which card that was: it picks the move (CardFlourish.use)
+local released = false -- a thrown card has left the hand
+local copyReleased = false -- and Split's copy has
+local hitPlayed = false -- the move's impact has been heard
 local cardTurns = 0 -- CardInHand.turns as of the last look
 local turns = 0 -- how many times the card held has been changed since the cards came out
 local turnAt = 0 -- when it last was
@@ -975,10 +1057,12 @@ local function showFlash(camera: Camera, muzzle: CFrame)
 	flashModel.Parent = camera
 end
 
--- Holds that sat too close to the eye: the whole gun and arms move out by this much, so they look as far off as the
--- Longscope's.
+-- Every gun sits the same distance from the eye: the whole gun and arms move by this much so the right hand, on the
+-- grip, is 1.32 studs out at rest, as on the Longscope (River, 2026-11-16). Measured in Play: the M57's hand was at
+-- 1.19 and the Energy Pistol's at 1.58 (it had been pushed out 0.3 for its old model).
 local VIEW_REACH: { [string]: CFrame } = {
-	["Energy Pistol"] = CFrame.new(0.04, -0.02, -0.3),
+	M57 = CFrame.new(0, 0, -0.13),
+	["Energy Pistol"] = CFrame.new(0.04, -0.02, -0.04),
 }
 
 local GunView = {}
@@ -1072,10 +1156,23 @@ function GunView.setGun(gunId: string, slot: string)
 		scopeAim = CFrame.new(-back.X, -back.Y, -scope.eye - back.Z) * forward:Inverse()
 	end
 	clips = ArmClips[GunConfig.guns[gunId].name]
+	table.clear(slideParts)
+	slideTravel = SLIDE_TRAVEL * MODEL_SCALE * viewScale
+	if view:IsA("Model") then
+		local middle = view:GetPivot()
+		for _, part in view:GetDescendants() do
+			if part:IsA("BasePart") and part.Name:find("^Slide_") then
+				table.insert(slideParts, { part = part, rest = middle:ToObjectSpace(part.CFrame) })
+			end
+		end
+	end
+	drawSlap = if clips then DRAW_SLAPS[GunConfig.guns[gunId].name] else nil
 	firedAt = nil
 	keyedReloadAt = nil
 	reloadAt = nil
-	-- Swapping guns has no animation: the new gun is just there, in its hold, with nothing blending in.
+	-- A gun that comes out is pulled out: GunDraw has a draw for each kind (River, 2026-11-12). Nothing blends in
+	-- from the gun before.
+	drawAt = os.clock()
 	snapAt = nil
 	shownFrame = nil
 	shownBase = nil
@@ -1224,15 +1321,20 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 		end
 		if not crushAt and CardInHand.used ~= cardUsed then
 			crushAt = now
-			GunAudio.playCardCrush()
+			local used = CardInHand.lastUsed
+			local id = if used then Players.LocalPlayer:GetAttribute(`Ability{used}Id`) else nil
+			usedId = if type(id) == "string" then id else nil
+			released, copyReleased, hitPlayed = false, false, false
+			CardMoveFx.started(usedId)
 		end
-		if not crushAt or now - crushAt >= CardFlourish.CRUSH then
+		if not crushAt or now - crushAt >= CardFlourish.useLength(usedId) then
 			cardAt, crushAt = nil, nil
 			GunAudio.stopCards()
 			shownFrame, shownBase, shownSnap = nil, nil, nil
 			smearFrame = nil
 			CardView.hide()
 			ViewArms.clearBlur()
+			drawAt = now -- the gun is pulled out again, not just there
 			return false
 		end
 	end
@@ -1262,7 +1364,7 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 		table.clear(history)
 	end
 	local held = camera.CFrame * cardSway
-	local crush = if crushAt then CardFlourish.crush(elapsed, now - crushAt, turns) else nil
+	local crush = if crushAt then CardFlourish.use(usedId, elapsed, now - crushAt, turns) else nil
 	local pose = if crush
 		then crush.pose
 		elseif turns > 0 then CardFlourish.turn(turns, now - turnAt)
@@ -1271,6 +1373,19 @@ local function showCard(camera: Camera, cardOut: boolean, cardSway: CFrame): boo
 	pose, rightMoved = CardFlourish.sway(pose, cardLife + now)
 	if crush then
 		crush.palm = rightMoved * crush.palm
+		if crush.thrown and crush.crushed >= 1 and not released then
+			-- The card leaves the hand: the world carries on with it from exactly where and how it was held.
+			released = true
+			CardMoveFx.release(usedId, held * pose.cards[crush.card], CardFlourish.CARD_SIZE + THROWN_THICK, camera.CFrame)
+		end
+		if crush.copy and crush.copyGone and not copyReleased then
+			copyReleased = true
+			CardMoveFx.release(usedId, held * pose.cards[crush.copy], CardFlourish.CARD_SIZE + THROWN_THICK, camera.CFrame)
+		end
+		if crush.hit and not hitPlayed then
+			hitPlayed = true
+			CardMoveFx.impact(usedId)
+		end
 	end
 	ViewArms.holdCards(pose.right, pose.left, pose.fingers)
 	CardView.show(camera, held, pose.cards, crush, CardFlourish.top(turns), if crush then nil else pose.bends)
@@ -1383,6 +1498,41 @@ function GunView.update(
 		end
 		return
 	end
+	-- The pull-out: the gun and both arms come into place together, by the gun's own draw.
+	local drawKind: string? = nil
+	local drawSince = 0
+	local drawTurn: CFrame? = nil -- the pull-out's turn of the gun, when it is made at the wrist
+	-- For looking at a pull-out in Studio: workspace's PinDraw attribute holds it at that many seconds in.
+	local pinned = if IN_STUDIO then workspace:GetAttribute("PinDraw") else nil
+	if typeof(pinned) == "number" then
+		drawAt = os.clock() - pinned
+	end
+	local keyedDraw = if config and not clips then KEYED_DRAWS[config.name] else nil
+	local keyedDrawAt: number? = nil -- how far into a keyed pull-out the gun is
+	if drawAt and config then
+		local kind = GunDraw.kind(isSidearm, config.aimFov ~= nil)
+		local since = os.clock() - drawAt
+		if since >= (if keyedDraw then keyedDraw.length else GunDraw.length(kind)) then
+			drawAt = nil
+		elseif keyedDraw then
+			keyedDrawAt = since -- the gun and hands are moved below, as in a keyed reload
+		else
+			drawKind, drawSince = kind, since
+			local pose = GunDraw.at(kind, since)
+			local turn = CFrame.Angles(math.rad(pose.pitch), math.rad(pose.yaw), math.rad(pose.roll))
+			if clips and GunDraw.wrist(kind) then
+				-- A gun held in one hand turns at the wrist: the arm follows the hand, and the shoulders stay put.
+				-- Turned with the whole view, the arms swung round into a mass in front of the camera.
+				base *= CFrame.new(pose.x, pose.y, pose.z)
+				drawTurn = turn
+			else
+				local pivot = HIP.Position
+				base *= CFrame.new(pivot) * CFrame.new(pose.x, pose.y, pose.z) * turn * CFrame.new(-pivot)
+			end
+		end
+	end
+	-- The left hand's own part in the pull-out: it racks the slide.
+	local reach = if drawKind then GunDraw.hand(drawKind, drawSince) else nil
 	if clips then
 		local frame, kind = clipFrame(reloading, sprinting)
 		if kind ~= shownKind then
@@ -1417,7 +1567,7 @@ function GunView.update(
 		local moved: { [string]: CFrame }? = nil
 		local viewKick = config and VIEW_KICKS[config.name]
 		local stillLeft = viewKick ~= nil and viewKick.stillLeft == true
-		local palms = if nudged or codeReload or stillLeft or (viewKick ~= nil and viewKick.wrist ~= nil)
+		local palms = if nudged or codeReload or stillLeft or reach or drawTurn or (viewKick ~= nil and viewKick.wrist ~= nil)
 			then SoldierPose.clipPalms(clips.meshOffset, whole.bones)
 			else nil
 		if nudged and palms then
@@ -1445,6 +1595,21 @@ function GunView.update(
 			placed.Left = layerShown:Inverse() * recoil:Inverse() * layerShown * (placed.Left or palms.Left)
 			moved = placed
 		end
+		if drawTurn and palms then
+			local placed = moved or {}
+			local hand = placed.Right or palms.Right
+			local turn = CFrame.new(hand.Position) * drawTurn * CFrame.new(-hand.Position)
+			wristFlip = turn * wristFlip
+			placed.Right = turn * hand
+			moved = placed
+		end
+		if reach and palms and drawSlap then
+			-- From wherever the hold has it, across onto the slide, and back along the gun as it racks.
+			local placed = moved or {}
+			local onSlide = wristFlip * whole.gun * CFrame.new(0, 0, reach.back * slideTravel) * drawSlap
+			placed.Left = (placed.Left or palms.Left):Lerp(onSlide, reach.on)
+			moved = placed
+		end
 		-- A reload keyed in code takes the left hand off wherever the clip has it.
 		codePose, codeTurn = nil, CFrame.identity
 		if codeReload and config and palms then
@@ -1454,10 +1619,18 @@ function GunView.update(
 			codeReloading = reloading
 			local reload = codeReload.reload
 			local at = if codeReloadAt then (os.clock() - codeReloadAt) * reload.SOUND / config.reload else math.huge
+			local pose: any = nil
 			if at >= reload.LENGTH or (not reloading and at < reload.SOUND * 0.95) then
 				codeReloadAt = nil -- done, or cut short
 			else
-				local pose = reload.at(at)
+				pose = reload.at(at)
+			end
+			if not pose and drawKind and reload.rack then
+				-- The pull-out: the bolt is racked, by the same hands and bolt as at the end of a reload.
+				local racking = GunDraw.rack(drawKind, drawSince)
+				pose = if racking and racking < reload.RACK then reload.rack(racking) else nil
+			end
+			if pose then
 				local per, origin = codeReload.perMetre, codeReload.origin
 				codePose = pose
 				-- The gun turns in the right hand, which goes round with it, and so does the left hand's rest.
@@ -1515,6 +1688,20 @@ function GunView.update(
 			end
 			fingers = shapedFingers
 		end
+		local hooked = config and KNOB_FINGERS[config.name]
+		if hooked and palms and codePose and codePose.rightWeight > 0.5 then
+			local shapedFingers = fingers or {}
+			local palm = (clipPalms and clipPalms.Right or palms.Right).Rotation
+			shapedFingers.Right = {}
+			for digit, shape in hooked do
+				local aims = table.create(#shape)
+				for joint, aim in shape do
+					aims[joint] = palm * aim
+				end
+				shapedFingers.Right[digit] = aims
+			end
+			fingers = shapedFingers
+		end
 		ViewArms.showFrame(clips.meshOffset, whole.bones, clipPalms, fingers)
 		-- Reloading and scoping still move the whole hold, on top of the clip.
 		shown = held * HIP:Inverse() * wristFlip * frame.gun * codeTurn
@@ -1562,6 +1749,21 @@ function GunView.update(
 		else
 			reloadShown, handShown = CFrame.identity, Vector3.zero
 		end
+		if drawKind and leverOpen == 0 then
+			leverOpen = GunDraw.lever(drawKind, drawSince) -- the pull-out cocks the lever
+		end
+		if keyedDraw and keyedDrawAt and not keyedReloadAt then
+			reloadGun, reloadHand, spin, leverOpen = reloadPose(keyedDraw, keyedDrawAt, keyedDraw.length)
+			local catch = keyedDraw.catch
+			if catch then
+				-- Before the catch the left hand is placed in the hold, not on the gun: worked back into the gun's
+				-- space, which is where a hand's place is counted from.
+				local _, rest = grips()
+				local free = reloadGun.Rotation:Inverse() * (rest.wrist + reloadHand - reloadGun.Position) - rest.wrist
+				local on = math.clamp((keyedDrawAt - (catch - CATCH_CLOSE)) / CATCH_CLOSE, 0, 1)
+				reloadHand = free:Lerp(reloadHand, on * on * (3 - 2 * on))
+			end
+		end
 		local right, left = grips()
 		-- The hands go by the gun before its spin: the right stays put with its finger in the trigger guard while the
 		-- gun spins round it, and the left lets go and catches it.
@@ -1575,6 +1777,11 @@ function GunView.update(
 			left = table.clone(left)
 			left.wrist += reloadHand
 		end
+		if reach then
+			-- The left hand's own part in the pull-out: it comes off the gun to rack the slide.
+			left = table.clone(left)
+			left.wrist += SIDEARM_SLIDE * reach.on + Vector3.new(0, 0, reach.back * slideTravel)
+		end
 		if lever and leverOpen > 0 then
 			-- The right hand is in the lever's loop and rides it round.
 			local hinge = CFrame.Angles(lever.swing * leverOpen, 0, 0)
@@ -1587,6 +1794,13 @@ function GunView.update(
 		ViewArms.pose(shown, right, left, config and SHOULDERS[config.name], config and THUMB_WRAPS[config.name], hand, hand)
 	end
 	view:PivotTo(base * shown)
+	if reach and reach.slide > 0 then
+		-- The slide goes back with the hand that racks it.
+		local slid = base * shown * CFrame.new(0, 0, reach.slide * slideTravel)
+		for _, moving in slideParts do
+			moving.part.CFrame = slid * moving.rest
+		end
+	end
 	if lever and leverOpen > 0 then
 		local middle = base * shown
 		local swung = middle * CFrame.new(lever.pivot) * CFrame.Angles(lever.swing * leverOpen, 0, 0) * CFrame.new(-lever.pivot)

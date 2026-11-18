@@ -18,6 +18,9 @@ export type Target = {
 	shape: Hitbox.Shape,
 	health: number,
 	shield: { hp: number, onBreak: () -> () }?,
+	-- Split's double: shot like anyone, but glitches away instead of dying, pays nothing and is in no kill feed.
+	decoy: boolean?,
+	owner: Player?, -- whose double it is; they and their team can't hit it with cards
 }
 
 local targets: { [Model]: Target } = {}

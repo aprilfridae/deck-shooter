@@ -48,6 +48,30 @@ local BASE = {
 		Prototype = asset("127327035533667"),
 		ZeroDay = asset("132424218329350"),
 	},
+	flashpoint = {
+		Field = asset("125246117670519"),
+		Redline = asset("130064838036641"),
+		Prototype = asset("105877488980020"),
+		ZeroDay = asset("95412558087515"),
+	},
+	bulwark = {
+		Field = asset("127881117114191"),
+		Redline = asset("132822285592030"),
+		Prototype = asset("119562186530008"),
+		ZeroDay = asset("90728178857254"),
+	},
+	split = {
+		Field = asset("90705847259372"),
+		Redline = asset("133111117251564"),
+		Prototype = asset("98261664766499"),
+		ZeroDay = asset("134454428849533"),
+	},
+	rewind = {
+		Field = asset("140484442628652"),
+		Redline = asset("86560171488800"),
+		Prototype = asset("88142742718284"),
+		ZeroDay = asset("129686955425168"),
+	},
 }
 
 -- The acronym, turned to read up the card.
@@ -59,6 +83,10 @@ local MONOGRAM = {
 	switchback = asset("106456967351723"),
 	kickplate = asset("91932903945243"),
 	siphon = asset("110001473432004"),
+	flashpoint = asset("132332835595158"),
+	bulwark = asset("120260382938884"),
+	split = asset("140677216547940"),
+	rewind = asset("130371159110839"),
 }
 
 -- The name as printed: capitals, run together, medium weight.
@@ -70,6 +98,10 @@ local NAME = {
 	switchback = asset("92848347395955"),
 	kickplate = asset("91657764191287"),
 	siphon = asset("83911214140721"),
+	flashpoint = asset("70465956568256"),
+	bulwark = asset("120182327683433"),
+	split = asset("104356194449419"),
+	rewind = asset("75509329744966"),
 }
 
 -- The parts every card shares.

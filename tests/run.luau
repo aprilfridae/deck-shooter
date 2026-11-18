@@ -66,6 +66,7 @@ local listed = {
 	killrewards_spec = true,
 	killfeed_spec = true,
 	cardaim_spec = true,
+	gundraw_spec = true,
 	akreload_spec = true,
 	skipburst_spec = true,
 	cardtext_spec = true,
@@ -77,6 +78,7 @@ local listed = {
 	packart_spec = true,
 	pullmotion_spec = true,
 	pullparticles_spec = true,
+	killfx_spec = true,
 }
 
 require("./tier_spec")
@@ -97,6 +99,7 @@ require("./codelines_spec")
 require("./killrewards_spec")
 require("./killfeed_spec")
 require("./cardaim_spec")
+require("./gundraw_spec")
 require("./akreload_spec")
 require("./skipburst_spec")
 require("./cardtext_spec")
@@ -108,6 +111,7 @@ require("./packtext_spec")
 require("./packart_spec")
 require("./pullmotion_spec")
 require("./pullparticles_spec")
+require("./killfx_spec")
 require("./inventory_spec")
 require("./variant_spec")
 require("./deck_spec")

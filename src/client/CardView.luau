@@ -36,6 +36,7 @@ local art: { string } = {} -- the image of the card in each deck slot
 local topShown: number? = nil -- the card showing the held card's art
 local slotShown: number? = nil -- and the slot it shows
 local shrunk: number? = nil -- the card the crush has shrunk
+local copyOf: number? = nil -- the card showing Split's copy, if one is
 
 -- A card that's face up gets its whole face printed on it, text and all, the same as in the menus. The rest show
 -- only the baked image, which is all a card on its way over needs.
@@ -401,6 +402,10 @@ local CardView = {}
 -- Puts the card in hand back to full size, ready for the next one.
 local function restore()
 	burst = false
+	if copyOf then
+		setFace(copyOf, slots[copyOf]) -- Split's copy goes back to showing its own card
+		copyOf = nil
+	end
 	local card = shrunk and parts[shrunk]
 	if card then
 		card.Size = CardFlourish.CARD_SIZE
@@ -440,7 +445,14 @@ function CardView.show(
 		end
 		parts[crush.card].Size = CardFlourish.CARD_SIZE * Vector3.new(left, 1, left);
 		(fist :: BasePart).CFrame = view * CFrame.new(crush.palm)
-		if crush.crushed >= 1 and not burst then
+		-- Split's copy shows the same card as the one it came from.
+		if crush.copy and copyOf ~= crush.copy then
+			copyOf = crush.copy
+			faces[crush.copy].Texture = faces[crush.card].Texture
+		end
+		-- A thrown card has left the hand whole: it is only hidden here, and the world draws it flying. A quiet one
+		-- (Bulwark's) sinks away with no burst.
+		if crush.crushed >= 1 and not burst and not crush.thrown and not crush.quiet then
 			burst = true;
 			(shards :: ParticleEmitter):Emit(SHARDS);
 			(sparks :: ParticleEmitter):Emit(SPARKS)
@@ -451,6 +463,9 @@ function CardView.show(
 	local placed = table.create(#cards)
 	for index, frame in cards do
 		placed[index] = view * frame
+	end
+	if crush and crush.copy and crush.copyGone then
+		placed[crush.copy] = AWAY -- it has left the hand, and the world draws it falling
 	end
 	if snapAt then
 		local share = (os.clock() - snapAt) / SkipBurst.LENGTH

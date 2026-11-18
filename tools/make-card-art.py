@@ -54,7 +54,10 @@ BARS = [(0, 10), (20, 4), (34, 16), (60, 4), (72, 8), (92, 20), (120, 4), (132, 
 
 # Recon Pulse (RP) was removed from the game on 2026-11-11. Its uploaded art is still listed in CardArt.luau.
 CARDS = {"phase_dash": ("PD", "Phase Dash"), "overclock": ("OC", "Overclock"), "aegis_shell": ("AS", "Aegis Shell"),
-         "switchback": ("SB", "Switchback"), "kickplate": ("KP", "Kickplate"), "siphon": ("SP", "Siphon")}
+         "switchback": ("SB", "Switchback"), "kickplate": ("KP", "Kickplate"), "siphon": ("SP", "Siphon"),
+         # The second wave (2026-11-17). Split is SL: SP is Siphon's.
+         "flashpoint": ("FP", "Flashpoint"), "bulwark": ("BW", "Bulwark"), "split": ("SL", "Split"),
+         "rewind": ("RW", "Rewind")}
 NAVY, BONE, ACID = (41, 50, 79), (232, 230, 223), (194, 254, 11)
 RED, CYAN, VOID = (255, 13, 26), (1, 255, 255), (14, 16, 24)
 LOOKS = {  # background, acronym, ink

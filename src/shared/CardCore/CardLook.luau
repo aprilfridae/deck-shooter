@@ -11,6 +11,10 @@ local MONOGRAMS = {
 	kickplate = "KP",
 	siphon = "SP",
 	aegis_shell = "AS",
+	flashpoint = "FP",
+	bulwark = "BW",
+	split = "SL", -- SP is Siphon's
+	rewind = "RW",
 }
 local TIER_NAMES = { Field = "FIELD", BlackSite = "REDLINE", Prototype = "PROTOTYPE" }
 local VARIANT_NAMES = {

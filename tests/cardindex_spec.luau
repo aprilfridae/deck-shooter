@@ -8,9 +8,9 @@ local describe, it, expect = harness.describe, harness.it, harness.expect
 describe("CardIndex", function()
 	it("lists every card at every tier", function()
 		local index = CardIndex.build({})
-		expect(#index.cards).toBe(6)
+		expect(#index.cards).toBe(10)
 		expect(#index.cards[1].tiers).toBe(3)
-		expect(index.total).toBe(18)
+		expect(index.total).toBe(30)
 		expect(index.owned).toBe(0)
 	end)
 

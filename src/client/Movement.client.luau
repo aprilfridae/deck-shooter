@@ -488,13 +488,18 @@ local function onFrame(dt: number)
 	-- The cards in your hand, for the body: yours on the player for this client, everyone else's by the server.
 	local cardsOut, cardTurns, cardUsed = CardInHand.slot ~= nil, CardInHand.turns, CardInHand.used
 	if cardsOut ~= sentCards.out or cardTurns ~= sentCards.turns or cardUsed ~= sentCards.used then
+		-- Which card the last one used was, so the body plays its move (CardFlourish.use).
+		local lastUsed = CardInHand.lastUsed
+		local usedId = if lastUsed then player:GetAttribute(`Ability{lastUsed}Id`) else nil
+		usedId = if type(usedId) == "string" then usedId else ""
 		player:SetAttribute("CardsOut", cardsOut)
 		player:SetAttribute("CardTurns", cardTurns)
 		player:SetAttribute("CardUsed", cardUsed)
+		player:SetAttribute("CardUsedId", usedId)
 		if now - cardsSentAt >= CARDS_SEND_GAP then
 			sentCards = { out = cardsOut, turns = cardTurns, used = cardUsed }
 			cardsSentAt = now
-			cardsRemote:FireServer(cardsOut, cardTurns, cardUsed)
+			cardsRemote:FireServer(cardsOut, cardTurns, cardUsed, usedId)
 		end
 	end
 

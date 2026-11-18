@@ -4,8 +4,9 @@
 local CardHand = {}
 
 function CardHand.new(): { [string]: any }
-	-- used counts the cards used so far, and turns the times the held card was changed for another.
-	return { slot = nil, waitForRelease = false, used = 0, turns = 0 }
+	-- used counts the cards used so far, and turns the times the held card was changed for another. lastUsed is the
+	-- slot of the last card used, so the view can tell which card's animation to play.
+	return { slot = nil, waitForRelease = false, used = 0, turns = 0, lastUsed = nil }
 end
 
 -- A click: uses the held card, skipping whatever is left of the animation. Returns the slot used.
@@ -13,6 +14,7 @@ function CardHand.click(hand: any): number?
 	local slot = hand.slot
 	if slot then
 		hand.slot = nil
+		hand.lastUsed = slot
 		hand.waitForRelease = true
 		hand.used += 1
 	end

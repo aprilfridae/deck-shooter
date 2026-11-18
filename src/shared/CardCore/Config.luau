@@ -51,6 +51,30 @@ local Config = {
 	PushRadius = 15,
 	PushSpeed = 60, -- under the guard's 63 speed limit
 	PushRise = 35,
+	-- Flashpoint
+	FlashRange = 48, -- how far the card is flicked, if nothing stops it first
+	FlashSpeed = 110, -- studs a second it flies
+	FlashLeast = 0.15, -- seconds: the shortest flight, however close the wall
+	FlashRadius = 34, -- enemies further than this from the burst aren't blinded
+	FlashFullWithin = 0.5, -- of the radius: closer than this blinds fully, and it falls off to FlashEdge at the radius
+	FlashEdge = 0.35,
+	-- Bulwark
+	WallReach = 16, -- the ground you aim at can be this far away
+	WallAhead = 6, -- where it goes, in front of you, when you aim at no ground in reach
+	-- A card turned on its side, standing on its long edge (a card is 150 by 240, so 11 by 6.9 keeps its shape).
+	WallWidth = 11,
+	WallHeight = 6.9,
+	WallThick = 0.6,
+	-- Split
+	DecoyHealth = 40,
+	DecoyAhead = 3, -- studs in front of you the copy lands
+	DecoyFall = 0.2, -- seconds the copy card falls before the double stands up
+	DecoyVanish = 2.5, -- seconds a double that's gone stays in the world for its glitch
+	-- Rewind
+	RewindSeconds = 3, -- how far back you go
+	RewindLeast = 0.5, -- seconds of path needed before there is anywhere to go back to
+	RewindLeastDistance = 2, -- studs: closer than this, with no health lost, it isn't used up
+	RewindGraceSeconds = 1,
 
 	StarterDeck = { "phase_dash", "overclock", "siphon" },
 

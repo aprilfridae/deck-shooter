@@ -142,6 +142,78 @@ describe("CardFlourish", function()
 		expect(other.Y < 0).toBe(true)
 	end)
 
+	it("plays each card's own move, and crushes any other", function()
+		local moves = {
+			switchback = CardFlourish.throw,
+			flashpoint = CardFlourish.flick,
+			bulwark = CardFlourish.slam,
+			split = CardFlourish.split,
+			rewind = CardFlourish.rewind,
+		}
+		for id, move in moves do
+			local played = CardFlourish.use(id, CardFlourish.LENGTH, 0.2, 0)
+			local own = move(CardFlourish.LENGTH, 0.2, 0)
+			expect(played.crushed).toBe(own.crushed)
+			expect(CardFlourish.useLength(id) > 0.4).toBe(true)
+		end
+		expect(CardFlourish.useLength("overclock")).toBe(CardFlourish.CRUSH)
+		expect(CardFlourish.useLength(nil)).toBe(CardFlourish.CRUSH)
+		expect(CardFlourish.use("overclock", 1, 0.2, 0).crushed).toBe(CardFlourish.crush(1, 0.2, 0).crushed)
+	end)
+
+	it("places every card through every move, and ends each with the right hand home", function()
+		for _, id in { "switchback", "flashpoint", "bulwark", "split", "rewind", "overclock" } do
+			local length = CardFlourish.useLength(id)
+			for step = 0, 40 do
+				local crush = CardFlourish.use(id, CardFlourish.LENGTH, step * length / 40, 0)
+				expect(#crush.pose.cards).toBe(CardFlourish.COUNT)
+				for _, frame in crush.pose.cards do
+					expect(frame.Position.Magnitude < 4).toBe(true) -- nothing flung off the stage
+					expect(frame.Position.X == frame.Position.X).toBe(true) -- and nothing NaN
+				end
+			end
+		end
+	end)
+
+	it("lets Flashpoint's card go at the release, not before", function()
+		expect(CardFlourish.flick(CardFlourish.LENGTH, CardFlourish.FLICK_RELEASE - 0.01).crushed).toBe(0)
+		local flicked = CardFlourish.flick(CardFlourish.LENGTH, CardFlourish.FLICK_RELEASE)
+		expect(flicked.crushed).toBe(1)
+		expect(flicked.thrown).toBe(true)
+	end)
+
+	it("slaps Bulwark's card down at the hit, and lets the world know only then", function()
+		expect(CardFlourish.slam(CardFlourish.LENGTH, CardFlourish.SLAM_HIT - 0.01).hit).toBeNil()
+		local slapped = CardFlourish.slam(CardFlourish.LENGTH, CardFlourish.SLAM_HIT + 0.05)
+		expect(slapped.hit ~= nil and math.abs(slapped.hit - 0.05) < 1e-9).toBe(true)
+		expect(slapped.quiet).toBe(true)
+		expect(CardFlourish.slam(CardFlourish.LENGTH, CardFlourish.SLAM).crushed).toBe(1)
+	end)
+
+	it("splits a copy off the card, lets it go, and crushes the one left", function()
+		local before = CardFlourish.split(CardFlourish.LENGTH, 0)
+		expect(before.copy ~= before.card).toBe(true)
+		expect(before.copyGone).toBe(false)
+		-- At the start the copy lies on the card.
+		local apart = (before.pose.cards[before.copy].Position - before.pose.cards[before.card].Position).Magnitude
+		expect(apart < 0.01).toBe(true)
+		local open = CardFlourish.split(CardFlourish.LENGTH, 0.3)
+		local spread = (open.pose.cards[open.copy].Position - open.pose.cards[open.card].Position).Magnitude
+		expect(spread > 0.1).toBe(true)
+		expect(CardFlourish.split(CardFlourish.LENGTH, CardFlourish.SPLIT_RELEASE).copyGone).toBe(true)
+		expect(CardFlourish.split(CardFlourish.LENGTH, CardFlourish.SPLIT).crushed).toBe(1)
+		-- Turned to another card, the copy is still a different one.
+		local turned = CardFlourish.split(CardFlourish.LENGTH, 0.3, 1)
+		expect(turned.copy ~= turned.card).toBe(true)
+	end)
+
+	it("spins Rewind's card backwards and bursts it where it lies", function()
+		local snapped = CardFlourish.rewind(CardFlourish.LENGTH, CardFlourish.REWIND_SNAP + 0.02)
+		expect(snapped.crushed).toBe(1)
+		expect((snapped.pose.cards[snapped.card].Position - snapped.palm).Magnitude < 1e-6).toBe(true)
+		expect(CardFlourish.rewind(CardFlourish.LENGTH, 0.2).crushed).toBe(0)
+	end)
+
 	it("holds its end", function()
 		local last = CardFlourish.at(CardFlourish.LENGTH).cards[1]
 		local later = CardFlourish.at(CardFlourish.LENGTH + 10).cards[1]

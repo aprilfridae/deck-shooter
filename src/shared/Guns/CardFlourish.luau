@@ -30,6 +30,39 @@ local SPEED = 1.6 -- how much faster than its keys the whole flourish plays
 local LANDED_AT = SPRING_TO + FLIGHT -- the last card is in the left hand
 local CRUSH = 0.4 -- seconds the right hand takes to crush its card, once it's used
 local BURST_AT = 0.16 -- into the crush, the card is gone
+-- A card that is thrown, not crushed (Switchback). It is an overhand throw with the card on edge, from River's
+-- own video (2026-11-12): the right hand turns the card upright, lifts it up beside the head, then chops down
+-- and forward and lets go.
+-- River then had it made "smoother and more swaggy": it takes its time, every part eases in and out and runs
+-- into the next, the card twirls in the fingers on the way up, the hand sweeps out in a curve and flicks across as
+-- it lets go, and it hangs out there a beat with a little bounce before coming home.
+local THROW = 0.7 -- seconds the whole throw takes
+local THROW_BACK = 0.17 -- the hand is up and cocked by now
+local THROW_RELEASE = 0.22 -- and the card leaves it now: CardAim.THROW_WINDUP is the same moment
+local THROW_HANG = 0.16 -- how long the hand stays out after letting go
+local THROW_SWEEP = Vector3.new(0.09, 0.03, 0) -- how far out the chop curves on its way through
+local THROW_FLICK = math.rad(-22) -- the wrist's turn across as it lets go
+local THROW_TWIRL = math.rad(360) -- the card's spin in the fingers on the way up
+local THROW_BOUNCE = 0.035 -- how far the hand gives as the card leaves it
+local THROW_DRAW = Vector3.new(0.1, 0.34, 0.16) -- where the hand lifts to, from where it was: right, up, toward you
+-- Where the card is as it leaves the hand, from the camera: just right of and under the crosshair, an arm's length
+-- out. And how it is turned there: on its edge, long side pointing the way you look. The world's card starts from
+-- exactly this, so the throw is one motion.
+local THROW_LEAVES = Vector3.new(0.1, -0.1, -1.15)
+local THROW_AIMED = CFrame.Angles(0, 0, math.rad(90))
+-- The left hand takes the deck down and out to the left while the right throws, so it isn't in the way (River,
+-- 2026-11-12), and brings it back after the right hand has come home. River wanted it "swaggy and effortless": it
+-- sets off a touch late, swings out in an arc, not a straight line, tips the deck over lazily as it goes, gives a
+-- little as it gets there, and is the last thing to wander back.
+local THROW_CLEAR = Vector3.new(-0.3, -0.22, 0.1) -- left, down, toward you
+local THROW_CLEAR_LAG = 0.04 -- seconds it sets off after the right hand
+local THROW_CLEAR_TIME = 0.26 -- seconds it takes to get out there
+local THROW_CLEAR_ARC = Vector3.new(-0.06, 0.07, 0) -- how far the swing bows out and up on the way
+local THROW_CLEAR_TIP = CFrame.Angles(math.rad(-14), math.rad(20), math.rad(-16)) -- the deck's lazy tilt out there
+local THROW_CLEAR_BACK = 0.1 -- seconds after the right hand starts home that this one does
+local THROW_CLEAR_GIVE = 0.025 -- how far it sinks as it arrives
+local THROW_COCK = math.rad(50) -- how far the hand tips back at the top
+local THROW_SNAP = math.rad(-75) -- and how far it chops through
 
 local FAN_PIVOT = Vector3.new(0.05, 0, 0.13) -- on the card, under the right thumb
 local FAN_TOP = -60 -- degrees the top card leans
@@ -42,6 +75,11 @@ local FLIP_LEAD = 0.1 -- the flip's rounded corner starts this long before FLIP_
 -- Weight. Whatever lands in a hand knocks it down and it rings back, and the cards in it go with it.
 local SINK = Vector3.new(0, -1, 0.3) -- the way a hand gives, relative to the camera
 local CATCH = Vector3.new(0.7, -0.6, 0.2) -- and the way the right hand gives when the flipped card slaps into it
+
+-- A gentler ease than smooth: it starts and stops with no jolt at all.
+local function smoother(share: number): number
+	return share * share * share * (share * (share * 6 - 15) + 10)
+end
 
 local function smooth(share: number): number
 	return share * share * (3 - 2 * share)
@@ -420,6 +458,7 @@ local CardFlourish = {
 	CARD_SIZE = CARD_SIZE,
 	CRUSH = CRUSH,
 	BURST_AT = BURST_AT,
+	THROW = THROW,
 }
 
 -- sides is whose each card is: 0 in the left hand, 1 in the right, and between on its way across.
@@ -619,7 +658,21 @@ function CardFlourish.tempo(elapsed: number, life: number): number
 	return elapsed + TEMPO * wander(life, 13) * through(elapsed, 0, 0.3) * (1 - through(elapsed, length - 0.5, length))
 end
 
-export type Crush = { pose: Pose, crushed: number, palm: Vector3, card: number }
+-- thrown is set when the card is being thrown, not crushed: it leaves the hand whole, with no fist and no burst.
+-- quiet: the card shrinks away with no burst (Bulwark's card sinks into the ground it was slapped on).
+-- copy is a second card in play (Split's copy), and copyGone is set once it has left the hand.
+-- hit is how long ago the move's impact was, once it has happened (Bulwark's slap), for its sound.
+export type Crush = {
+	pose: Pose,
+	crushed: number,
+	palm: Vector3,
+	card: number,
+	thrown: boolean?,
+	quiet: boolean?,
+	copy: number?,
+	copyGone: boolean?,
+	hit: number?,
+}
 
 -- The card being used: `since` seconds ago, with the flourish `elapsed` seconds in. Wherever things were, the right
 -- hand snatches its card and closes into a fist around it, and the rest of the deck squares up in the left.
@@ -667,6 +720,453 @@ function CardFlourish.crush(elapsed: number, since: number, turns: number?): Cru
 	end
 	pose.fingers.Right = digits
 	return { pose = pose, crushed = fist, palm = palm, card = chosen }
+end
+
+-- The card being thrown: like crush, but the right hand lifts the card on its edge and chops it forward, and the card leaves it
+-- whole at THROW_RELEASE. crushed is 0 while the card is in the hand and 1 once it has gone.
+function CardFlourish.throw(elapsed: number, since: number, turns: number?): Crush
+	local turned = turns or 0
+	local chosen = CardFlourish.top(turned)
+	local pose = if turned > 0 then CardFlourish.turn(turned, 10) else CardFlourish.at(elapsed)
+	local final = final()
+	local grab = smoother(math.clamp(since / THROW_BACK, 0, 1))
+	-- The chop starts just before the lift has finished, so the hand never stops at the top.
+	local whipFrom = THROW_BACK * 0.8
+	local whip = smoother(math.clamp((since - whipFrom) / (THROW_RELEASE + 0.07 - whipFrom), 0, 1))
+	-- How far the card has come onto its line: all the way at the moment it leaves the hand.
+	local aimed = smoother(math.clamp((since - whipFrom) / (THROW_RELEASE - whipFrom), 0, 1))
+	local homeFrom = THROW_RELEASE + THROW_HANG
+	local home = smoother(math.clamp((since - homeFrom) / (THROW - homeFrom), 0, 1))
+	local settled = pose.right:Lerp(final.right, grab)
+
+	-- The card as it would sit in the still hand, before the throw moves it.
+	local cardRest = pose.cards[chosen]:Lerp(final.cards[CHOSEN], grab)
+	-- The chop carries the card to the point it leaves from, so the hand goes by however far the card has to.
+	local reach = THROW_LEAVES - cardRest.Position
+	local offset = THROW_DRAW * (grab - whip)
+		+ reach * (whip - home)
+		+ THROW_SWEEP * math.sin(math.pi * whip) -- out and round, not straight down the middle
+		+ SINK * (THROW_BOUNCE * knock(since - THROW_RELEASE)) -- the hand gives as the card goes
+	-- Turned about the camera's own axes, at the hand: tipped back then chopped forward. The wrist isn't rolled:
+	-- that twisted the hand inward (River, 2026-11-12). The card turns onto its edge in the fingers instead.
+	local tip = THROW_COCK * (grab - whip) + THROW_SNAP * (whip - home)
+	local at = settled.Position + offset
+	local flick = THROW_FLICK * (whip - home)
+	local right = CFrame.new(at) * CFrame.Angles(tip, flick, 0) * settled.Rotation
+	local carried = right * settled:Inverse() -- how the hand moved: the card in it goes the same way
+	-- The left hand's way out and back. Everything in it goes with it, turned about the hand.
+	local out = smoother(math.clamp((since - THROW_CLEAR_LAG) / THROW_CLEAR_TIME, 0, 1))
+	local backFrom = homeFrom + THROW_CLEAR_BACK
+	local back = smoother(math.clamp((since - backFrom) / (THROW - backFrom), 0, 1))
+	local away = out - back
+	local resting = pose.left:Lerp(final.left, grab)
+	local swing = THROW_CLEAR * away
+		+ THROW_CLEAR_ARC * math.sin(math.pi * away)
+		+ SINK * (THROW_CLEAR_GIVE * knock(since - THROW_CLEAR_LAG - THROW_CLEAR_TIME))
+	local left = CFrame.new(resting.Position + swing) * CFrame.new():Lerp(THROW_CLEAR_TIP, away) * resting.Rotation
+	local clear = left * resting:Inverse() -- how the left hand moved: the deck in it goes the same way
+	pose.right = right
+	pose.left = left
+	local holding: Shape = {}
+	for bone, aims in pose.fingers.Left do
+		local held = {}
+		for joint, direction in aims do
+			held[joint] = direction:Lerp(final.fingers.Left[bone][joint], grab).Unit
+		end
+		holding[bone] = held
+	end
+	pose.fingers.Left = holding
+	local digits: Shape = {}
+	for bone, aims in pose.fingers.Right do
+		local held = {}
+		for joint, direction in aims do
+			held[joint] = direction:Lerp(final.fingers.Right[bone][joint], grab).Unit
+		end
+		digits[bone] = held
+	end
+	pose.fingers.Right = digits
+	for index, frame in pose.cards do
+		if index ~= chosen then
+			local to = if index == CHOSEN then TOP_FRAME else final.cards[index]
+			-- A card that was under the thrown one in the right hand is put straight back on the deck. Eased
+			-- there, it could be seen sliding across to the left hand under the throw (River's clip, 2026-11-12).
+			pose.cards[index] = clear * (if pose.sides[index] > 0.5 then to else frame:Lerp(to, grab)) -- the deck goes with its hand
+			pose.sides[index] *= if pose.sides[index] > 0.5 then 0 else 1 - grab
+		end
+	end
+	pose.sides[chosen] += (1 - pose.sides[chosen]) * grab
+	-- The thrown card: it spins once on its own face on the way up, then comes onto its edge, pointing straight
+	-- down the throw, at the very point the world's card carries on from. So what leaves the hand is aimed.
+	local card = carried * cardRest * CFrame.Angles(0, THROW_TWIRL * grab, 0)
+	pose.cards[chosen] = CFrame.new(card.Position:Lerp(THROW_LEAVES, aimed)) * card.Rotation:Lerp(THROW_AIMED, aimed)
+	local palm = (pose.right * CFrame.new(0.06, 0.32, 0)).Position
+	return { pose = pose, crushed = if since >= THROW_RELEASE then 1 else 0, palm = palm, card = chosen, thrown = true }
+end
+
+-- The other cards' moves (2026-11-17). Each is the right hand doing one thing with the card it holds, built from
+-- the same pieces as the throw: the hand settles onto its card, then follows beats, and the card goes with it. The
+-- left hand keeps the deck out of the way and is knocked by whatever the right hand hits.
+--
+-- A beat is where a hand is at a moment: moved from where it rests by x, y, z studs along the camera's own axes,
+-- and turned by degrees: pitch tips it about the camera's x, then yaw turns it about the camera's y, then roll
+-- twists it about the view. ease is how the move into the beat goes: "in" sets off slowly and arrives fast (a
+-- whip or a slap), "out" leaves fast and settles, and "both" eases at each end.
+type Beat = { at: number, x: number, y: number, z: number, pitch: number, yaw: number, roll: number, ease: string }
+
+local function beat(at: number, x: number, y: number, z: number, pitch: number?, yaw: number?, roll: number?, ease: string?): Beat
+	return { at = at, x = x, y = y, z = z, pitch = pitch or 0, yaw = yaw or 0, roll = roll or 0, ease = ease or "both" }
+end
+
+local EASES: { [string]: (number) -> number } = {
+	["in"] = function(share: number): number
+		return share * share * share
+	end,
+	out = function(share: number): number
+		return 1 - (1 - share) ^ 3
+	end,
+	both = smoother,
+}
+
+local function beatAt(beats: { Beat }, at: number): Beat
+	if at <= beats[1].at then
+		return beats[1]
+	end
+	for index = 2, #beats do
+		local to = beats[index]
+		if at <= to.at then
+			local from = beats[index - 1]
+			local share = EASES[to.ease]((at - from.at) / (to.at - from.at))
+			local function mix(name: string): number
+				return (from :: any)[name] + ((to :: any)[name] - (from :: any)[name]) * share
+			end
+			return beat(at, mix("x"), mix("y"), mix("z"), mix("pitch"), mix("yaw"), mix("roll"))
+		end
+	end
+	return beats[#beats]
+end
+
+-- A hand that rests at `rest`, moved by a beat. It turns about its own palm.
+local function moved(rest: CFrame, b: Beat): CFrame
+	local turn = CFrame.Angles(0, 0, math.rad(b.roll))
+		* CFrame.Angles(0, math.rad(b.yaw), 0)
+		* CFrame.Angles(math.rad(b.pitch), 0, 0)
+	return CFrame.new(rest.Position + Vector3.new(b.x, b.y, b.z)) * turn * rest.Rotation
+end
+
+local function blendShape(from: Shape, to: Shape, share: number): Shape
+	local blended: Shape = {}
+	for bone, aims in from do
+		local joints = {}
+		for joint, direction in aims do
+			joints[joint] = direction:Lerp(to[bone][joint], share).Unit
+		end
+		blended[bone] = joints
+	end
+	return blended
+end
+
+-- More finger shapes for the moves.
+local RIGHT_FLAT = shape("Right", { 0.25, 0.9, 0.35 }, { 0.15, 0.95, 0.3 }, 0.1, { 2, 4, 3 }) -- an open hand, slapping
+local RIGHT_FLICKED = shape("Right", { 0.45, 0.7, 0.55 }, { 0.3, 0.8, 0.5 }, 0.3, { -8, 5, 4 }, { -4, 6, 6 }, { 0, 10, 8 }, { 4, 14, 10 }) -- fanned open as the card goes
+local RIGHT_CUP = shape("Right", { 0.4, 0.7, 0.6 }, { 0.3, 0.9, 0.3 }, 0.14, { 14, 22, 16 }) -- palm up, fingers curled a little round the card
+-- Thumb on the face; the fingers flat behind, holding the copy as it slides out from under the card. Spread any
+-- wider and the first two fan out past the card's edge and stand up beside it.
+local RIGHT_SPLIT = shape("Right", { 0.7, 0.7, 0 }, { 0, 0.95, -0.3 }, 0.1, { 3, 2, 2 }, { 3, 4, 4 }, { 7, 18, 14 }, { 12, 32, 24 })
+
+-- Where every move starts: the hands settle from wherever they were onto the flourish's end in `settle` seconds,
+-- the right hand taking its card. The cards under it go straight back on the deck, as in the throw.
+type Start = { pose: Pose, chosen: number, grab: number, right: CFrame, left: CFrame, card: CFrame }
+
+local function begin(elapsed: number, since: number, turns: number?, settle: number): Start
+	local turned = turns or 0
+	local chosen = CardFlourish.top(turned)
+	local pose = if turned > 0 then CardFlourish.turn(turned, 10) else CardFlourish.at(elapsed)
+	local done = final()
+	local grab = smoother(math.clamp(since / settle, 0, 1))
+	local start: Start = {
+		pose = pose,
+		chosen = chosen,
+		grab = grab,
+		right = pose.right:Lerp(done.right, grab),
+		left = pose.left:Lerp(done.left, grab),
+		card = pose.cards[chosen]:Lerp(done.cards[CHOSEN], grab),
+	}
+	pose.fingers = {
+		Right = blendShape(pose.fingers.Right, done.fingers.Right, grab),
+		Left = blendShape(pose.fingers.Left, done.fingers.Left, grab),
+	}
+	for index, frame in pose.cards do
+		if index ~= chosen then
+			local to = if index == CHOSEN then TOP_FRAME else done.cards[index]
+			pose.cards[index] = if pose.sides[index] > 0.5 then to else frame:Lerp(to, grab)
+			pose.sides[index] *= if pose.sides[index] > 0.5 then 0 else 1 - grab
+		end
+	end
+	pose.sides[chosen] += (1 - pose.sides[chosen]) * grab
+	pose.bends = nil
+	return start
+end
+
+-- Moves the right hand by a beat and returns where its card is carried to.
+local function moveRight(start: Start, b: Beat, give: Vector3): CFrame
+	local right = moved(start.right, b) + give
+	local carry = right * start.right:Inverse()
+	start.pose.right = right
+	return carry * start.card
+end
+
+-- Moves the left hand by a beat, and the deck in it with it.
+local function moveLeft(start: Start, b: Beat, give: Vector3)
+	local left = moved(start.left, b) + give
+	local carry = left * start.left:Inverse()
+	local pose = start.pose
+	for index, frame in pose.cards do
+		if index ~= start.chosen then
+			pose.cards[index] = carry * frame
+		end
+	end
+	pose.left = left
+end
+
+local function shapeRight(start: Start, keys: { FingerKey }, since: number)
+	start.pose.fingers.Right = blendShape(start.pose.fingers.Right, fingersAt(keys, since), start.grab)
+end
+
+local function palmOf(pose: Pose): Vector3
+	return (pose.right * CFrame.new(0.06, 0.32, 0)).Position
+end
+
+-- Flashpoint: a backhand flick, like skimming a card across a room. The right hand draws the card back across in
+-- front of the deck, lying flat, then whips it out to the right with the wrist snapping open, and the card leaves
+-- spinning flat at FLICK_RELEASE. The left hand dips the deck out of the way of the wind-up.
+local FLICK = 0.62
+local FLICK_RELEASE = 0.22
+local FLICK_RIGHT = {
+	beat(0, 0, 0, 0),
+	beat(0.15, -0.46, 0.05, 0.14, -55, 62, 0, "out"),
+	-- The whip arrives as the card goes: an "in" ease is fastest at its end, so the card leaves at full speed.
+	beat(FLICK_RELEASE, 0.22, -0.01, -0.22, -60, -48, 0, "in"),
+	beat(0.34, 0.27, -0.04, -0.2, -52, -56, 0, "out"),
+	beat(FLICK, 0, 0, 0, 0, 0, 0, "both"),
+}
+local FLICK_LEFT = {
+	beat(0, 0, 0, 0),
+	beat(0.04, 0, 0, 0),
+	beat(0.19, -0.12, -0.11, 0.06, -8, 14, -10, "out"),
+	beat(0.4, -0.12, -0.11, 0.06, -8, 14, -10),
+	beat(FLICK, 0, 0, 0, 0, 0, 0),
+}
+local FLICK_FINGERS: { FingerKey } = {
+	{ at = 0, shape = RIGHT_CARD },
+	{ at = 0.16, shape = RIGHT_PINCH },
+	{ at = FLICK_RELEASE, shape = RIGHT_PINCH },
+	{ at = 0.27, shape = RIGHT_FLICKED },
+	{ at = 0.42, shape = RIGHT_FLICKED },
+	{ at = 0.6, shape = RIGHT_CARD },
+}
+
+function CardFlourish.flick(elapsed: number, since: number, turns: number?): Crush
+	local start = begin(elapsed, since, turns, 0.08)
+	local give = CATCH * (0.025 * knock(since - FLICK_RELEASE))
+	local card = moveRight(start, beatAt(FLICK_RIGHT, since), give)
+	moveLeft(start, beatAt(FLICK_LEFT, since), SINK * (0.015 * knock(since - 0.19)))
+	shapeRight(start, FLICK_FINGERS, since)
+	start.pose.cards[start.chosen] = card
+	return {
+		pose = start.pose,
+		crushed = if since >= FLICK_RELEASE then 1 else 0,
+		palm = palmOf(start.pose),
+		card = start.chosen,
+		thrown = true,
+	}
+end
+
+-- Bulwark: the card is slapped face down on the ground ahead, and the wall rises where it went. The right hand
+-- lifts it high, cocks back a touch, then turns palm down and slaps it down and forward at SLAM_HIT, presses, and
+-- comes home. The card sinks away under the palm. The left hand pulls the deck in, braced, and jolts with the slap.
+local SLAM = 0.66
+local SLAM_HIT = 0.29
+local SLAM_RIGHT = {
+	beat(0, 0, 0, 0),
+	beat(0.15, -0.14, 0.38, 0.1, 22, 8, -14, "out"),
+	beat(0.2, -0.13, 0.44, 0.15, 32, 8, -20),
+	beat(SLAM_HIT, -0.24, -0.16, -0.2, -63, 0, 180, "in"),
+	beat(0.44, -0.24, -0.17, -0.2, -63, 0, 180),
+	beat(SLAM, 0, 0, 0, 0, 0, 0),
+}
+local SLAM_LEFT = {
+	beat(0, 0, 0, 0),
+	beat(0.06, 0, 0, 0),
+	beat(0.22, -0.06, -0.16, 0.08, -12, 16, -8, "out"),
+	beat(0.46, -0.06, -0.16, 0.08, -12, 16, -8),
+	beat(SLAM, 0, 0, 0, 0, 0, 0),
+}
+local SLAM_FINGERS: { FingerKey } = {
+	{ at = 0, shape = RIGHT_CARD },
+	{ at = 0.15, shape = RIGHT_CARD },
+	{ at = 0.26, shape = RIGHT_FLAT },
+	{ at = 0.46, shape = RIGHT_FLAT },
+	{ at = 0.64, shape = RIGHT_CARD },
+}
+
+function CardFlourish.slam(elapsed: number, since: number, turns: number?): Crush
+	local start = begin(elapsed, since, turns, 0.08)
+	local card = moveRight(start, beatAt(SLAM_RIGHT, since), SINK * (0.07 * knock(since - SLAM_HIT)))
+	moveLeft(start, beatAt(SLAM_LEFT, since), SINK * (0.03 * knock(since - SLAM_HIT - 0.02)))
+	shapeRight(start, SLAM_FINGERS, since)
+	start.pose.cards[start.chosen] = card
+	return {
+		pose = start.pose,
+		crushed = smoother(math.clamp((since - SLAM_HIT - 0.02) / 0.14, 0, 1)),
+		palm = palmOf(start.pose),
+		card = start.chosen,
+		quiet = true,
+		hit = if since >= SLAM_HIT then since - SLAM_HIT else nil,
+	}
+end
+
+-- Split: the card is shown, a copy of it slides out from behind and fans open beside it, the wrist tips and flicks
+-- the copy down and forward (it lands as your double), and the hand closes on the one left and crushes it.
+local SPLIT = 0.76
+local SPLIT_OPEN = 0.14 -- the copy starts to slide out
+local SPLIT_OPENED = 0.29
+local SPLIT_RELEASE = 0.37 -- and leaves the hand
+local SPLIT_FIST, SPLIT_CRUSHED = 0.42, 0.53
+local SPLIT_PIVOT = Vector3.new(0, 0, 0.19) -- on the card, near its bottom end, where the two turn apart
+local SPLIT_RIGHT = {
+	beat(0, 0, 0, 0),
+	beat(SPLIT_OPEN, -0.2, 0.14, -0.04, 14, -8, -6, "out"),
+	beat(0.31, -0.2, 0.15, -0.05, 16, -8, -10),
+	beat(SPLIT_RELEASE + 0.02, -0.12, 0.04, -0.16, -22, -4, -4, "in"),
+	beat(0.5, -0.16, 0.08, -0.06, 0, -6, -6, "out"),
+	beat(SPLIT, 0, 0, 0, 0, 0, 0),
+}
+local SPLIT_LEFT = {
+	beat(0, 0, 0, 0),
+	beat(0.12, -0.05, -0.06, 0.03, -4, 8, -5, "out"),
+	beat(0.5, -0.05, -0.06, 0.03, -4, 8, -5),
+	beat(SPLIT, 0, 0, 0, 0, 0, 0),
+}
+local SPLIT_FINGERS: { FingerKey } = {
+	{ at = 0, shape = RIGHT_CARD },
+	{ at = 0.16, shape = RIGHT_SPLIT },
+	{ at = 0.33, shape = RIGHT_SPLIT },
+	{ at = SPLIT_RELEASE + 0.03, shape = RIGHT_FLICKED },
+	{ at = SPLIT_FIST, shape = RIGHT_CARD },
+	{ at = SPLIT_CRUSHED, shape = RIGHT_FIST },
+	{ at = 0.58, shape = RIGHT_FIST },
+	{ at = 0.74, shape = RIGHT_CARD },
+}
+
+function CardFlourish.split(elapsed: number, since: number, turns: number?): Crush
+	local start = begin(elapsed, since, turns, 0.08)
+	local card = moveRight(start, beatAt(SPLIT_RIGHT, since), SINK * (0.02 * knock(since - SPLIT_RELEASE)))
+	moveLeft(start, beatAt(SPLIT_LEFT, since), Vector3.zero)
+	shapeRight(start, SPLIT_FINGERS, since)
+	local pose = start.pose
+	-- The copy is any other card: the deck has plenty, and nobody counts them.
+	local copy = if start.chosen == CHOSEN then CHOSEN - 1 else CHOSEN
+	local open = smoother(math.clamp((since - SPLIT_OPEN) / (SPLIT_OPENED - SPLIT_OPEN), 0, 1))
+	local flicked = smoother(math.clamp((since - SPLIT_OPENED) / (SPLIT_RELEASE - SPLIT_OPENED), 0, 1))
+	pose.cards[copy] = card
+		* CFrame.new(SPLIT_PIVOT)
+		* CFrame.Angles(0, math.rad(-26) * open, 0)
+		* CFrame.new(-SPLIT_PIVOT)
+		* CFrame.new(0.17 * open, -0.004, 0)
+		* CFrame.Angles(math.rad(-30) * flicked, 0, 0)
+		+ Vector3.new(0.02, -0.07, -0.08) * flicked
+	pose.sides[copy] = 1
+	-- The one left is crushed in the fist, like any card.
+	local fist = smoother(math.clamp((since - SPLIT_FIST) / (SPLIT_CRUSHED - SPLIT_FIST), 0, 1))
+	local palm = palmOf(pose)
+	pose.cards[start.chosen] = card - card.Position + card.Position:Lerp(palm, fist)
+	return {
+		pose = pose,
+		crushed = fist,
+		palm = palm,
+		card = start.chosen,
+		copy = copy,
+		copyGone = since >= SPLIT_RELEASE,
+	}
+end
+
+-- Rewind: the hand turns palm up with the card lying on its fingers, and the card spins backwards on them, faster
+-- and faster, as the hand draws it in toward you. At REWIND_SNAP it glitches out of being, and you are where you
+-- were. The fingers snap shut on nothing.
+local REWIND = 0.82
+local REWIND_SNAP = 0.5
+local REWIND_TURNS = 3 -- times round, backwards
+local REWIND_RIGHT = {
+	beat(0, 0, 0, 0),
+	-- Not far across: the card has to spin in the clear, right of the deck, not in front of it.
+	beat(0.14, -0.13, 0.1, 0.02, -30, -10, 0, "out"),
+	beat(0.46, -0.11, 0.16, 0.15, -22, -16, 4),
+	beat(0.56, -0.11, 0.13, 0.11, -18, -14, 2, "out"),
+	beat(REWIND, 0, 0, 0, 0, 0, 0),
+}
+local REWIND_LEFT = {
+	beat(0, 0, 0, 0),
+	beat(0.16, 0.02, 0.03, 0.02, 0, -6, 4, "out"),
+	beat(0.5, 0.02, 0.03, 0.02, 0, -6, 4),
+	beat(REWIND, 0, 0, 0, 0, 0, 0),
+}
+local REWIND_FINGERS: { FingerKey } = {
+	{ at = 0, shape = RIGHT_CARD },
+	{ at = 0.14, shape = RIGHT_CUP },
+	{ at = 0.46, shape = RIGHT_CUP },
+	{ at = 0.53, shape = RIGHT_FIST },
+	{ at = 0.6, shape = RIGHT_FIST },
+	{ at = 0.8, shape = RIGHT_CARD },
+}
+
+function CardFlourish.rewind(elapsed: number, since: number, turns: number?): Crush
+	local start = begin(elapsed, since, turns, 0.08)
+	local card = moveRight(start, beatAt(REWIND_RIGHT, since), SINK * (0.03 * knock(since - REWIND_SNAP)))
+	moveLeft(start, beatAt(REWIND_LEFT, since), Vector3.zero)
+	shapeRight(start, REWIND_FINGERS, since)
+	local spun = math.clamp((since - 0.1) / (REWIND_SNAP - 0.1), 0, 1)
+	card *= CFrame.Angles(0, -REWIND_TURNS * 2 * math.pi * spun * spun, 0)
+	start.pose.cards[start.chosen] = card
+	return {
+		pose = start.pose,
+		crushed = smoother(math.clamp((since - (REWIND_SNAP - 0.06)) / 0.08, 0, 1)),
+		palm = card.Position, -- it bursts where it lies, not in a fist
+		card = start.chosen,
+	}
+end
+
+CardFlourish.FLICK = FLICK
+CardFlourish.FLICK_RELEASE = FLICK_RELEASE
+CardFlourish.SLAM = SLAM
+CardFlourish.SLAM_HIT = SLAM_HIT
+CardFlourish.SPLIT = SPLIT
+CardFlourish.SPLIT_RELEASE = SPLIT_RELEASE
+CardFlourish.REWIND = REWIND
+CardFlourish.REWIND_SNAP = REWIND_SNAP
+
+-- Which move each card plays when it's used. Any card not listed is crushed in the fist.
+local MOVES: { [string]: { play: (number, number, number?) -> Crush, length: number } } = {
+	switchback = { play = CardFlourish.throw, length = THROW },
+	flashpoint = { play = CardFlourish.flick, length = FLICK },
+	bulwark = { play = CardFlourish.slam, length = SLAM },
+	split = { play = CardFlourish.split, length = SPLIT },
+	rewind = { play = CardFlourish.rewind, length = REWIND },
+}
+
+-- The card `cardId` being used: `since` seconds ago, with the flourish `elapsed` seconds in. turns is how many
+-- times the held card had been changed.
+function CardFlourish.use(cardId: string?, elapsed: number, since: number, turns: number?): Crush
+	local move = if cardId then MOVES[cardId] else nil
+	if move then
+		return move.play(elapsed, since, turns)
+	end
+	return CardFlourish.crush(elapsed, since, turns)
+end
+
+-- How long using `cardId` takes, after which the gun comes back.
+function CardFlourish.useLength(cardId: string?): number
+	local move = if cardId then MOVES[cardId] else nil
+	return if move then move.length else CRUSH
 end
 
 return CardFlourish

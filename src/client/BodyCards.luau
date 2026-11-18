@@ -45,8 +45,8 @@ end
 
 -- Shows a body's deck. view is the frame the flourish hangs from (first person's is the camera); frames are the
 -- flourish's cards, from it. faceUp is the card showing its face, if one is, and gone is how far that card has
--- been crushed away, 0 to 1.
-function BodyCards.show(character: Model, view: CFrame, frames: { CFrame }, faceUp: number?, gone: number?)
+-- been crushed away, 0 to 1. copy is Split's copy of it, which shows its face too and is hidden once copyGone.
+function BodyCards.show(character: Model, view: CFrame, frames: { CFrame }, faceUp: number?, gone: number?, copy: number?, copyGone: boolean?)
 	local deck = decks[character]
 	if not deck then
 		deck = build()
@@ -55,8 +55,9 @@ function BodyCards.show(character: Model, view: CFrame, frames: { CFrame }, face
 	for index, card in deck.cards do
 		deck.frames[index] = view * frames[index]
 		local isFace = index == faceUp
-		card.Color = if isFace then FACE else BACK
-		card.Transparency = if isFace and gone then math.clamp(gone, 0, 1) else 0
+		local isCopy = index == copy
+		card.Color = if isFace or isCopy then FACE else BACK
+		card.Transparency = if isFace and gone then math.clamp(gone, 0, 1) elseif isCopy and copyGone then 1 else 0
 	end
 	workspace:BulkMoveTo(deck.cards, deck.frames, Enum.BulkMoveMode.FireCFrameChanged)
 	deck.model.Parent = folder

@@ -99,6 +99,18 @@ These need to be recognisable, because they tell other players what you just did
 | `shield-loop` | Hum while the shield is up. Must loop with no click | Mono | 1–2s |
 | `shield-hit` | A shot lands on a shield. Should sound nothing like hitting a body | Mono | 0.2s |
 | `shield-end` | The shield ends and pushes enemies away | Mono | 0.8s |
+| `flashpoint-flick` | Flashpoint's card leaves the hand: a sharp snap and a whirr (`CardMoveFx`, at `CardFlourish.FLICK_RELEASE`) | Mono | 0.3s |
+| `flashpoint-burst` | The flash goes off. Loud and bright; everyone near hears it | Mono | 0.8s |
+| `flashpoint-blind` | A ringing tone while you're blinded, faded out as your screen comes back | Stereo | 2.6s |
+| `bulwark-slap` | The palm slaps the card down. Now borrows the hard landing's thud | Mono | 0.3s |
+| `bulwark-rise` | The giant card swings up onto its edge | Mono | 0.5s |
+| `bulwark-hit` | A shot lands on the wall: card stock, not metal or a body | Mono | 0.15s |
+| `bulwark-break` | The wall is shot down and shatters | Mono | 0.8s |
+| `split-flick` | The copy is flicked down out of the hand | Mono | 0.25s |
+| `split-build` | Your double builds up out of the card in pixels | Mono | 0.6s |
+| `split-vanish` | A double glitches away. Should sound unlike a kill | Mono | 0.6s |
+| `rewind-wind` | The card spinning backwards, rising in pitch to the snap | Mono | 0.5s |
+| `rewind-snap` | You snap back. A reversed whoosh | Stereo | 0.5s |
 | `move-parry` | An edge parry | Mono | 0.25s |
 | `move-chain-jump` | The big jump after a fast fall and slide | Mono | 0.4s |
 | `wind-fall` | Air rushing during a fast fall. Must loop with no click | Stereo | 2s |
