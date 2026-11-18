@@ -20,6 +20,10 @@ type Guard = {
 	track: SpeedLimit.Track,
 	settledAt: number,
 	pausedUntil: number,
+	-- A launch allowed on top of ordinary movement until allowUntil (MoveGrace.allow).
+	allowUntil: number,
+	allowSpeed: number,
+	allowRise: number,
 }
 
 local guards: { [Player]: Guard } = {}
@@ -160,6 +164,9 @@ local function onCharacter(player: Player, character: Model)
 		track = track,
 		settledAt = now + SPAWN_GRACE_SECONDS,
 		pausedUntil = 0,
+		allowUntil = 0,
+		allowSpeed = 0,
+		allowRise = 0,
 	}
 end
 
@@ -189,7 +196,10 @@ local function check(player: Player, guard: Guard, now: number)
 	end
 	if now < guard.settledAt then
 		SpeedLimit.reset(guard.track, position.X, position.Y, position.Z, now)
-	elseif not SpeedLimit.sample(guard.track, position.X, position.Y, position.Z, now) then
+	elseif not SpeedLimit.sample(guard.track, position.X, position.Y, position.Z, now,
+		if now < guard.allowUntil then guard.allowSpeed else 0,
+		if now < guard.allowUntil then guard.allowRise else 0)
+	then
 		onFail(player, guard, now)
 	end
 end
@@ -201,6 +211,21 @@ MoveGrace.given:Connect(function(player, seconds)
 		local grace = seconds + 2 * player:GetNetworkPing()
 		guard.settledAt = math.max(guard.settledAt, os.clock() + grace)
 	end
+end)
+
+-- A launch the server knows the size of: checked against its speed, not looked away from. A second launch before the
+-- first runs out keeps the larger of each.
+MoveGrace.allowed:Connect(function(player, seconds, velocity: Vector3)
+	local guard = guards[player]
+	if not guard then
+		return
+	end
+	local now = os.clock()
+	local untilAt = now + seconds + 2 * player:GetNetworkPing()
+	local still = now < guard.allowUntil
+	guard.allowSpeed = math.max(if still then guard.allowSpeed else 0, Vector3.new(velocity.X, 0, velocity.Z).Magnitude)
+	guard.allowRise = math.max(if still then guard.allowRise else 0, math.max(velocity.Y, 0))
+	guard.allowUntil = math.max(guard.allowUntil, untilAt)
 end)
 
 local function onPlayer(player: Player)

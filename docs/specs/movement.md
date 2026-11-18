@@ -74,6 +74,8 @@ The server checks every player's movement in `src/server/MovementGuard.server.lu
 - Falling is never checked. Hovering isn't detected.
 - Checks run every 0.1s, with 1s of grace after spawning.
 - Moves the server causes pause the check through `MoveGrace.give`: Phase Dash for 1s, an Aegis Shell push for 0.5s and Outpost travel for 1s, each plus twice the player's ping.
+- A Kickplate launch doesn't pause it (2026-11-18). `MoveGrace.allow` raises the limits by the launch's own flat and rising speed for 3s plus twice the ping, so a cheat can't use the time to go anywhere. It used to pause the check for the whole 3s.
+- Siphon's slow is applied by the slowed player's own client, so a cheat can ignore it. That's accepted: the check already lets any client move up to the full limit, so ignoring the slow gains nothing past that. Lowering the limit for slowed players would strike honest ones, because dashes aren't slowed.
 - A failed check moves the player back to their last valid position and adds a strike. Checks then pause for 0.25s, or twice the ping plus 0.1s if that's longer, so the move-back can reach the client.
 - 5 strikes kick the player from the server with "Removed for unusual movement." and a server `warn`. There are no bans. Strikes survive respawns and clear when the player leaves. Once matches exist, strikes should remove the player from the match instead (see `matches.md`).
 - The pose remote accepts only Normal, Crouch and Slide, at most 10 per second.
