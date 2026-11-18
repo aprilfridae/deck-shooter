@@ -10,6 +10,8 @@ local Packs = require(CardCore.Packs)
 local PackServer = require(script.Parent.PackServer)
 local PlayerCards = require(script.Parent.PlayerCards)
 
+local RECEIPT_WAIT = 20 -- seconds a receipt waits for a save that's still loading
+
 local Purchases = {}
 
 -- Paying for random items is restricted in some places. If Roblox can't say, assume it is.
@@ -35,12 +37,26 @@ end
 function Purchases.start(remote: (string, (Player, any, any) -> any) -> (), rng: () -> number)
 	-- Roblox calls this again until it gets an answer, so nothing here may pay out twice.
 	MarketplaceService.ProcessReceipt = function(info: any)
-		local player = Players:GetPlayerByUserId(info.PlayerId)
-		local data = player and PlayerCards.get(player)
-		if not data or info.ProductId ~= Config.OpenAllProduct then
+		if info.ProductId ~= Config.OpenAllProduct then
 			return Enum.ProductPurchaseDecision.NotProcessedYet
 		end
-		local status, result = Packs.redeem(data, info.PurchaseId, rng)
+		local player = Players:GetPlayerByUserId(info.PlayerId)
+		-- A receipt can come in while the player's save is still loading, on a join or a rejoin. Waiting a little
+		-- pays it now instead of on their next join.
+		local data = player and PlayerCards.get(player)
+		local giveUpAt = os.clock() + RECEIPT_WAIT
+		while player and not data and player.Parent == Players and os.clock() < giveUpAt do
+			task.wait(0.5)
+			data = PlayerCards.get(player)
+		end
+		if not player or not data then
+			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
+		local paid, status, result = pcall(Packs.redeem, data, info.PurchaseId, rng)
+		if not paid then
+			warn(`Open All receipt {info.PurchaseId} failed, Roblox will ask again: {status}`)
+			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
 		PlayerCards.changed(player)
 		if status == "Opened" then
 			PackServer.announce(player, { kind = "OpenedAll", result = result })
@@ -64,7 +80,7 @@ function Purchases.start(remote: (string, (Player, any, any) -> any) -> (), rng:
 			PlayerCards.save(player)
 			PackServer.announce(player, { kind = "OpenedAll", result = result })
 			return { ok = true }
-		elseif player:GetAttribute("OpenAllHidden") then
+		elseif player:GetAttribute("OpenAllHidden") ~= false then -- also while the policy check hasn't answered
 			return { ok = false, code = "Blocked" }
 		elseif Config.OpenAllProduct == 0 then
 			return { ok = false, code = "NotReady" }

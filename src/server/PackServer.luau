@@ -60,7 +60,8 @@ local function checkGroup(player: Player)
 	local ok, groups = pcall(function()
 		return GroupService:GetGroupsAsync(player.UserId)
 	end)
-	if not ok then
+	-- The ask can finish after they've left, and session() would make a new entry nothing ever clears.
+	if not ok or player.Parent ~= Players then
 		return
 	end
 	local member = false
@@ -77,11 +78,14 @@ local function roll(player: Player, data: any, rng: () -> number): (boolean, str
 	if not Packs.canRoll(state.lastRollAt, now) then
 		return false, "TooSoon"
 	end
+	-- A roll that lands on a full pile still uses the wait. It used to leave it unstarted, so auto roll tried again
+	-- every step until it hit a rarity with room, skipping the wait.
+	state.lastRollAt = now
 	local ok, result = Packs.roll(data, rng)
 	if not ok then
+		PackServer.announce(player, { kind = "RollWait" }) -- so the bar starts over with the wait
 		return false, result
 	end
-	state.lastRollAt = now
 	PlayerCards.changed(player)
 	PackServer.announce(player, { kind = "Rolled", pack = result })
 	return true, result
@@ -106,11 +110,17 @@ local function autoLoop(rng: () -> number)
 		for _, player in PlayerCards.loaded() do
 			local data = PlayerCards.get(player)
 			if data and Zones.of(player) == Zones.Outpost then
-				if player:GetAttribute("AutoRollOn") then
-					roll(player, data, rng)
-				end
-				if player:GetAttribute("AutoOpenOwned") then
-					autoOpen(player, data, rng)
+				-- One player's error is reported and skipped; before, it ended the loop for the whole server.
+				local ok, problem = pcall(function()
+					if player:GetAttribute("AutoRollOn") then
+						roll(player, data, rng)
+					end
+					if player:GetAttribute("AutoOpenOwned") then
+						autoOpen(player, data, rng)
+					end
+				end)
+				if not ok then
+					warn(`Auto roll/open failed for {player.Name}: {problem}`)
 				end
 			end
 		end

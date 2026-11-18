@@ -62,10 +62,10 @@ A pack gives mostly its own rarity, with a small chance of each card being highe
 - That's only a little faster than auto roll adds packs, so a big pile takes hours of idling. Open All clears it at once, which is its use later on.
 - Free players open packs one at a time. The `OPEN ALL` button prompts the purchase.
 - If the pile is empty when an Open All purchase lands, because Auto Open got there first, the purchase is saved as `openAllCredits`. The player is told, the button reads `OPEN ALL X1`, and the next click on a pile spends it without a prompt.
-- A rarity's pile stops at 1,000,000 packs, and rolling that rarity does nothing until it's opened. A card stack stops at the same limit.
+- A rarity's pile stops at 1,000,000 packs, and rolling that rarity does nothing until it's opened, though the roll still uses its 3-second wait. A card stack stops at the same limit.
 - `Config.OpenAllProduct` and `Config.AutoOpenPass` are 0 until River creates them, and their buttons read `SOON`.
-- The server opens the pile only once Roblox's `ProcessReceipt` reports the payment, and accepts the payment only once the save has landed. A repeated receipt never opens anything twice.
-- The odds are always shown in the menu, and its `ODDS` button shows the card odds as well. `PolicyService` hides Open All where paid random items are restricted.
+- The server opens the pile only once Roblox's `ProcessReceipt` reports the payment, and accepts the payment only once the save has landed. A repeated receipt never opens anything twice. The receipt is written down only after the payout, so a payout that fails is tried again rather than counted as paid. A receipt that arrives while the save is still loading waits up to 20 seconds for it.
+- The odds are always shown in the menu, and its `ODDS` button shows the card odds as well. `PolicyService` hides Open All where paid random items are restricted, and it stays hidden and blocked until that check has answered.
 
 ## Rebirths and luck
 
