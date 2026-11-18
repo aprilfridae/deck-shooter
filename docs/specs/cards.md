@@ -94,7 +94,8 @@ All 10 are in set `set_01`. Stats are listed Field / Redline / Prototype.
   - Base copies are spent first. Spending any variant needs the request to confirm it, because variants are the most valuable copies.
   - The new copy's variant is rolled.
   - If fusion spends the last copy of an equipped card at that tier, the deck slot moves up to the new tier.
-  - Nothing gives Catalysts yet.
+  - **Getting Catalysts (2026-11-18):** each player still in a match on the winning side gets 1 Catalyst (`MatchRules.CATALYSTS_PER_WIN`), but only when the match was won on rounds: a forfeit pays nothing (a friend leaving at once could farm it), and neither does a Studio test against stand-ins. The match's end screen says `+1 CATALYST`.
+  - **Using them:** the fuse button on your own Profile uses a Catalyst whenever you have one, since it only ever saves a copy: it reads `FUSE 4 + CATALYST INTO ...`.
 - **Income:** each copy pays its tier's rate times its variant's multiplier. Per card and tier, the first 10 copies pay in full, best-paying first, and copies past 10 pay half. Owning every card in a set adds 10% to all income. The server pays every second for loaded players, and one payment covers at most 5s, so a server stall can't pay a lump sum. Fractions of a Credit carry over. A new player earns 0.3 Credits per second.
 - **Deck Power Rating (DPR):** the sum of the deck's tier points, plus 3 per gun upgrade level. Gun levels are always 0, so DPR runs from 300 (all Field) to 375 (all Prototype). Tier points of 100 / 112 / 125 follow the cards' real stat gains, so 1% DPR is about 1% power, and they can express the parent spec's lobby band of 10 to 15% higher DPR.
 - **Deck:** exactly 3 different owned cards. New players get 1 Field copy each of Phase Dash, Overclock and Recon Pulse, equipped.
@@ -138,12 +139,12 @@ Requests go through `Requests.luau`, which drops bad types, NaN, extra fields an
 - The Loadout page: DPR and the deck, with a card picker (`LoadoutPanel.luau`, see `outpost-ui.md`).
 - The Profile page: Credits, DPR and the card index with copy counts (`ProfilePanel.luau`).
 - **Fusing** (2026-11-18): on your own Profile, clicking a card you own holds it up with a button under it (`CardInspect` action, `ProfilePanel.fuseAction`, `Fusion.offer`). It reads `FUSE 5 INTO REDLINE - 100 CR`. Too few copies or Credits show as plain Bone words instead (`FUSE 1/5 INTO REDLINE`, `FUSING NEEDS 600 CR`). When the Base copies aren't enough, the first press changes it to `SPENDS VARIANTS - PRESS AGAIN`, and only the second fuses. The new card is then held up and the page redraws. Prototype cards and other players' cards get no button.
-- Nothing shows Catalysts yet, and the fuse button never uses one.
+- Nothing shows how many Catalysts you have; the fuse button only says when it will use one.
 
 ## Not built
 
 - The player market and serialized seasonal cards.
-- Ways to get Catalysts, gun upgrades, teams.
+- Other ways to get Catalysts, gun upgrades.
 
 ## Known issues
 

@@ -55,6 +55,15 @@ describe("MatchRules", function()
 		expect((MatchRules.split({ "a", "b", "c" }, 2))).toBeNil()
 	end)
 
+	it("pays a Catalyst to winners of a match won on rounds only", function()
+		local rules = MatchRules.Elimination
+		expect(MatchRules.catalystsFor(rules, { 5, 2 }, 1, false)).toBe(1)
+		expect(MatchRules.catalystsFor(rules, { 1, 5 }, 2, false)).toBe(1)
+		expect(MatchRules.catalystsFor(rules, { 2, 1 }, 1, false)).toBe(0) -- a forfeit
+		expect(MatchRules.catalystsFor(rules, { 5, 0 }, 1, true)).toBe(0) -- stand-ins
+		expect(MatchRules.catalystsFor(rules, { 0, 0 }, 0, false)).toBe(0) -- nobody left
+	end)
+
 	it("knows the launch queues", function()
 		expect(MatchRules.queue("Elimination1").size).toBe(1)
 		expect(MatchRules.queue("Elimination3").size).toBe(3)

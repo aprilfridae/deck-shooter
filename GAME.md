@@ -45,7 +45,7 @@ Redacted, Zero-Day). Tier changes ability stats; variant only changes income. Ev
 | Auto Open | 100 Robux once | Opens 1 pack every 2s in the Outpost | - | Gamepass, id 0 until River creates it |
 
 - Currencies: Credits only. Earned from card income (0.1 / 0.6 / 3.5 CR/s per Field / Redline / Prototype copy, x1.5 / 2.5 / 5 by variant, +10% set bonus, halved past 10 copies), kills (500, plus bonus lines 100 to 1,000, same victim pays once per 20s) and auction sales. Spent on fusion fees, rebirths and auction bids.
-- Catalysts exist in the save and the fusion rule; nothing gives or shows them yet.
+- Catalysts: 1 for each winner of a match won on rounds (not a forfeit). The fuse button uses one whenever you have it (4 copies instead of 5). Nothing shows the count yet.
 - Variant odds per card: Chromatic 1/50, Redacted 1/500, Zero-Day 1/5,000 (5% from a Prototype pack; guaranteed once in a Zero-Day pack).
 - Player market: auctions with bids and optional Buy Now, no market cut, lengths of 1, 6 or 24 hours.
 - Deck Power Rating: tier points 100 / 112 / 125 plus 3 per gun level. Gun upgrades wait until after launch.
@@ -161,4 +161,5 @@ Older decisions are in the specs and git history. Only the ones a new agent must
 | 2026-11-18 | Siphon gets a jagged bolt and a drain tether; Kickplate punches its own card out of the surface with a ring, lines, sparks and dust | They were the last cards with placeholder effects. Flat neon like the HUD; the Kickplate light kept small and pale because pure acid washed rooms green |
 | 2026-11-18 | Matches un-parked: Elimination 1v1, 2v2 and 3v3 built as the spec describes, each match in its own copy of its arena far from free play | River: "Add in stuff from the overarching plan for the game". Matches are the plan's main loop; Tower comes after. Their feel still needs River in Play |
 | 2026-11-18 | In a match, 5 movement strikes remove you from the match instead of the server; teammates can't be shot | matches.md; match teams are real Roblox Teams |
+| 2026-11-18 | Winning a match (on rounds, not a forfeit) gives 1 Catalyst; the fuse button uses one automatically | Nothing gave Catalysts. A starting number to tune; River can change the source or make using one a choice |
 | 2026-11-18 | The Yard's lamps are white, not team-coloured | A teal lamp turned the whole half teal-green; the neon strips carry the side colours |

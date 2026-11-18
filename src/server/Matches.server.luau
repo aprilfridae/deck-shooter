@@ -17,7 +17,9 @@ local Teams = game:GetService("Teams")
 local Guns = ReplicatedStorage:WaitForChild("Guns")
 local MatchRules = require(Guns:WaitForChild("MatchRules"))
 local Zones = require(Guns:WaitForChild("Zones"))
+local Config = require(ReplicatedStorage:WaitForChild("CardCore"):WaitForChild("Config"))
 local GunTargets = require(script.Parent.GunTargets)
+local PlayerCards = require(script.Parent.PlayerCards)
 local MatchHooks = require(script.Parent.MatchHooks)
 local MoveGrace = require(script.Parent.MoveGrace)
 local Hex = require(script.Parent.Outpost.Hex)
@@ -65,6 +67,7 @@ type Match = {
 	round: number,
 	state: Folder,
 	over: boolean,
+	standIns: boolean, -- a Studio test against stand-in bodies, which pays nothing
 }
 
 local remotes = Instance.new("Folder")
@@ -260,9 +263,27 @@ local function remove(match: Match, player: Player)
 	end
 end
 
+-- The winners' Catalysts (MatchRules.catalystsFor), saved with their cards.
+local function reward(match: Match, winner: number?)
+	local catalysts = MatchRules.catalystsFor(match.rules, match.wins, winner, match.standIns)
+	match.state:SetAttribute("Catalysts", catalysts)
+	if catalysts <= 0 then
+		return
+	end
+	for _, member in match.members do
+		local player = member.player
+		local data = player and member.present and member.team == winner and PlayerCards.get(player)
+		if player and data then
+			data.catalysts = math.min(data.catalysts + catalysts, Config.MaxStackCount)
+			PlayerCards.changed(player)
+		end
+	end
+end
+
 local function finish(match: Match, winner: number?)
 	match.over = true
 	match.state:SetAttribute("Winner", winner or 0)
+	reward(match, winner)
 	setPhase(match, "Over", RESULT_SECONDS)
 	for _, member in match.members do
 		if member.present then
@@ -407,6 +428,7 @@ local function start(queue: any, one: { Player }, two: { Player }, fillWithBots:
 		round = 0,
 		state = state,
 		over = false,
+		standIns = fillWithBots,
 	}
 	slots[slot] = match
 	for index = 1, 2 do

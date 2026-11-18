@@ -14,7 +14,8 @@
 - **Leaving:** a player who leaves the game counts as dead and stays out; a team with nobody left forfeits. Five movement strikes in a match remove the player from it, log it and send them to the Outpost instead of kicking them; strikes start over in each match.
 - **The Play page:** each Elimination row says JOIN, how many are waiting, or IN QUEUE n/size. Click to join, click again to leave. Leaving the Outpost leaves the queue. In Studio a right-click starts a match at once against stand-in bodies that never shoot, to test alone.
 - **What a client reads:** `ReplicatedStorage.Matches.<id>` attributes (Phase: Countdown, Playing, Between or Over; PhaseEnds; Round; Wins1; Wins2; RoundWinner, 0 for a replayed tie; Winner, 0 when nobody was left; Arena; TeamSize; RoundSeconds), the player's `MatchId` and `MatchTeam`, and queue counts on `ReplicatedStorage.MatchQueues`.
-- **Not built:** cross-server matchmaking (a queue only matches players on the same server), match rewards, a match sound set.
+- **Reward:** each winner still in the match gets 1 Catalyst when the match is won on rounds; a forfeit or a Studio test against stand-ins pays nothing (`cards.md`). Kills in a match pay Credits as anywhere else.
+- **Not built:** cross-server matchmaking (a queue only matches players on the same server), a match sound set.
 
 This is the design agreed for matches. All numbers are starting values to tune by feel unless marked as decided.
 

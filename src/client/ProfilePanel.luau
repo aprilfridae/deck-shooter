@@ -72,7 +72,7 @@ local function fuseAction(cardId: string, tier: string, refresh: () -> ()): any?
 	if not snapshot then
 		return nil
 	end
-	local offer = Fusion.offer(snapshot.stacks, snapshot.credits, cardId, tier)
+	local offer = Fusion.offer(snapshot.stacks, snapshot.credits, cardId, tier, snapshot.catalysts)
 	if not offer then
 		return nil
 	end
@@ -88,7 +88,7 @@ local function fuseAction(cardId: string, tier: string, refresh: () -> ()): any?
 			local reply = CardData.ask("Fuse", {
 				cardId = cardId,
 				tier = tier,
-				useCatalyst = false,
+				useCatalyst = offer.catalyst,
 				includeVariants = includeVariants,
 			})
 			if reply.ok then
@@ -100,7 +100,9 @@ local function fuseAction(cardId: string, tier: string, refresh: () -> ()): any?
 			end
 		end)
 	end
-	local text = `FUSE {offer.needed} INTO {into} - {offer.fee} CR`
+	local text = if offer.catalyst
+		then `FUSE {offer.needed} + CATALYST INTO {into} - {offer.fee} CR`
+		else `FUSE {offer.needed} INTO {into} - {offer.fee} CR`
 	if offer.spendsVariants then
 		return {
 			text = text,
