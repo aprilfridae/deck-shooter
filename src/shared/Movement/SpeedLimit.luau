@@ -28,7 +28,9 @@ function SpeedLimit.reset(track: Track, x: number, y: number, z: number, t: numb
 	track.lastValid = { x = x, y = y, z = z }
 end
 
-function SpeedLimit.sample(track: Track, x: number, y: number, z: number, t: number): boolean
+-- extraSpeed and extraRise (studs a second, 0 when left out) raise the limits for a fast move the server started,
+-- such as a Kickplate launch, so the check can stay on through it instead of looking away.
+function SpeedLimit.sample(track: Track, x: number, y: number, z: number, t: number, extraSpeed: number?, extraRise: number?): boolean
 	local samples = track.samples
 	-- Keeps one sample at least a full window old, so a gap in updates
 	-- still has something to compare against.
@@ -51,8 +53,8 @@ function SpeedLimit.sample(track: Track, x: number, y: number, z: number, t: num
 	local elapsed = math.min(t - oldest.t, MoveConfig.MaxLagSeconds)
 	local horizontal = math.sqrt((x - oldest.x) ^ 2 + (z - oldest.z) ^ 2)
 	local rise = y - oldest.y
-	local legal = horizontal <= MoveConfig.SpeedLimit * elapsed + MoveConfig.LagStuds
-		and rise <= MoveConfig.MaxRiseSpeed * elapsed + MoveConfig.LagStuds
+	local legal = horizontal <= (MoveConfig.SpeedLimit + (extraSpeed or 0)) * elapsed + MoveConfig.LagStuds
+		and rise <= (MoveConfig.MaxRiseSpeed + (extraRise or 0)) * elapsed + MoveConfig.LagStuds
 
 	if legal then
 		table.insert(samples, { x = x, y = y, z = z, t = t })

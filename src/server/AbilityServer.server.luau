@@ -255,7 +255,9 @@ handlers.kickplate = function(player, target, slot, aim)
 	end
 	local way = asVector(CardAim.blastDirection(asPoint(hit.Position), asPoint(target.root.Position)))
 	local speed = CardAim.launchSpeed(Cards.stat(slot.cardId, slot.tier, "height"), workspace.Gravity)
-	MoveGrace.give(player, Config.KickplateGraceSeconds)
+	-- The guard stays on and allows this launch's speed, rather than looking away for 3 seconds, which let a cheat
+	-- go anywhere in that time.
+	MoveGrace.allow(player, Config.KickplateGraceSeconds, way * speed)
 	pushRemote:FireClient(player, way * speed)
 	fxRemote:FireAllClients("blast", hit.Position, hit.Position + hit.Normal, false, slot.tier, player.UserId)
 	return true

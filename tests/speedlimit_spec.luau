@@ -27,6 +27,24 @@ describe("SpeedLimit", function()
 		expect(MoveConfig.SpeedLimit >= fastest + 5).toBe(true)
 	end)
 
+	it("allows a known launch on top of the limit, and no more", function()
+		local launch = 137 -- Kickplate's tallest, thrown flat off a wall
+		local function launched(speed: number, rise: number): number?
+			local track = SpeedLimit.new(0, 0, 0, 0)
+			for i = 1, 30 do
+				local t = i / 10
+				if not SpeedLimit.sample(track, speed * t, rise * t, 0, t, launch, launch) then
+					return i
+				end
+			end
+			return nil
+		end
+		expect(launched(launch + MoveConfig.SpeedLimit, launch)).toBeNil()
+		expect(launched(launch * 2 + MoveConfig.SpeedLimit, 0)).toBe(1)
+		expect(launched(0, launch * 2 + MoveConfig.MaxRiseSpeed)).toBe(1)
+		expect(run(SpeedLimit.new(0, 0, 0, 0), launch, 1)).toBe(1) -- the same move without the allowance fails
+	end)
+
 	it("fails a speed hack and keeps the last valid position", function()
 		local track = SpeedLimit.new(0, 0, 0, 0)
 		SpeedLimit.sample(track, 3, 0, 0, 0.1)
