@@ -166,5 +166,5 @@ Details in `docs/specs/cards.md`. River tried the cards in Play and said they wo
 - Aimed cards send the camera's look direction with `Use`. The server works out the hit itself (`CardCore/CardAim.luau`, `AbilityServer.server.luau`).
 - Pressing the key of the card already in hand uses it. Only a weapon key or another card's key puts a card away.
 - **Open from the review:** Kickplate pauses the movement guard for 3 seconds; Siphon's slow is applied by the slowed player's own client; the nav rebuilds on every frame of a window resize.
-- Effects are placeholders, with no sounds or arm animations.
+- Siphon and Kickplate have proper effects since 2026-11-18 (`AimedCardFx.luau`, described in `cards.md`), checked frame by frame in Studio and in Play against the dummy, not yet with two players. Still no sounds or arm animations.
 
