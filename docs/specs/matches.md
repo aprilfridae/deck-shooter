@@ -54,6 +54,8 @@ Mode and team size are settings, so the other 4 combinations can open later with
 
 The mode uses original arena names and layouts.
 
+**Built so far (2026-11-18):** only the rules, in `src/shared/Guns/TowerRules.luau` with tests in `tests/towerrules_spec.luau`: the arena line and push, roles, round lengths, capture range, the round result with the 14-second capture window, the sweep, the 15-round limit and the 7-7 tiebreaker. No arenas, server, queue or HUD yet. Three things the design below leaves open were chosen there, as starting values: when both teams are wiped together the tower's owner wins; the 14-second capture window runs on past the round clock; the tiebreaker round lasts 60 seconds.
+
 - **Arenas:** 7 in a line. Matches start in arena 4, and each side's end arena is its home arena.
 - **Tower:** each arena has one. A living player within 6 studs presses E to capture it instantly. Towers can be retaken any number of times.
 - **Attackers and defenders:** every round has one attacking and one defending team. Defenders own the tower when the round starts.

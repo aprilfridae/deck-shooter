@@ -83,7 +83,7 @@ SoundService and Teams are empty.
 - Hex (box 1v1 map): built with a first art pass; art pass not checked in Play.
 - Elimination matches (1v1 on a copy of Hex or Relay, 2v2 and 3v3 on Yard): built. `docs/specs/matches.md`.
 - Yard (Elimination arena for 2v2 and 3v3): grey blockout with teal and orange ends, only ever built as a match's own copy. `src/server/Outpost/Yard.luau`.
-- Tower 5v5 and its 7 + 1 arenas: planned, not built.
+- Tower 5v5 and its 7 + 1 arenas: rules module only (`TowerRules.luau`, tested); no arenas, server or HUD yet.
 - Guns: 3 in play (M57, Energy Pistol, Longscope); B33, SMG, Shotgun and three more pistols in data only.
 - Cards: 10. Recon Pulse and Arc Mine were removed. The four newest have no card art or sounds yet.
 
@@ -162,4 +162,5 @@ Older decisions are in the specs and git history. Only the ones a new agent must
 | 2026-11-18 | Matches un-parked: Elimination 1v1, 2v2 and 3v3 built as the spec describes, each match in its own copy of its arena far from free play | River: "Add in stuff from the overarching plan for the game". Matches are the plan's main loop; Tower comes after. Their feel still needs River in Play |
 | 2026-11-18 | In a match, 5 movement strikes remove you from the match instead of the server; teammates can't be shot | matches.md; match teams are real Roblox Teams |
 | 2026-11-18 | Winning a match (on rounds, not a forfeit) gives 1 Catalyst; the fuse button uses one automatically | Nothing gave Catalysts. A starting number to tune; River can change the source or make using one a choice |
+| 2026-11-18 | Tower rules: a double wipe goes to the tower's owner, the 14 s capture window runs past the clock, the tiebreaker is 60 s | The spec didn't say; starting values in `TowerRules.luau` for River to change |
 | 2026-11-18 | The Yard's lamps are white, not team-coloured | A teal lamp turned the whole half teal-green; the neon strips carry the side colours |
